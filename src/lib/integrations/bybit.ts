@@ -20,11 +20,32 @@ interface FundingHistoryRow {
   descriptionEn?: string;
 }
 
+interface DepositRow {
+  coin: string;
+  chain?: string;
+  amount: string;
+  txID?: string;
+  status: number;
+  successAt?: string;
+}
+
+interface InternalDepositRow {
+  id: string;
+  coin: string;
+  amount: string;
+  status: number;
+  createdTime: string;
+  txID?: string;
+}
+
 interface BybitResponse<T> {
   retCode: number;
   retMsg: string;
-  result: { list?: T[]; nextPageCursor?: string };
+  result: { list?: T[]; rows?: T[]; nextPageCursor?: string };
 }
+
+const DEPOSIT_SUCCESS_STATUS = 3;
+const INTERNAL_DEPOSIT_SUCCESS_STATUS = 2;
 
 // Funding-history rows whose business-type label matches these patterns move
 // money between user-owned accounts (Funding ↔ Spot ↔ Unified, sub-accounts).
@@ -87,6 +108,15 @@ async function get<T>(
 function tsToOccurred(secs: string): { occurredOn: string; occurredAt: string } {
   const ms = Number(secs) * 1000;
   const date = Number.isFinite(ms) ? new Date(ms) : new Date();
+  return {
+    occurredOn: date.toISOString().slice(0, 10),
+    occurredAt: date.toISOString(),
+  };
+}
+
+function msToOccurred(ms: string): { occurredOn: string; occurredAt: string } {
+  const n = Number(ms);
+  const date = Number.isFinite(n) && n > 0 ? new Date(n) : new Date();
   return {
     occurredOn: date.toISOString().slice(0, 10),
     occurredAt: date.toISOString(),
@@ -158,6 +188,68 @@ async function fetchWindow(
   return collected;
 }
 
+async function fetchPagedRows<T>(
+  path: string,
+  fromMs: number,
+  toMs: number,
+  creds: IntegrationCreds,
+): Promise<T[]> {
+  const collected: T[] = [];
+  let cursor: string | undefined;
+  let pages = 0;
+  do {
+    const params: Record<string, string> = {
+      startTime: Math.floor(fromMs).toString(),
+      endTime: Math.floor(toMs).toString(),
+      limit: "50",
+    };
+    if (cursor) params.cursor = cursor;
+
+    const data = await get<T>(path, params, creds);
+    const pageRows = data.result.rows ?? [];
+    collected.push(...pageRows);
+
+    cursor = data.result.nextPageCursor || undefined;
+    pages += 1;
+  } while (cursor && pages < MAX_PAGES_PER_WINDOW);
+
+  return collected;
+}
+
+function depositToNormalized(row: DepositRow): NormalizedTx | null {
+  if (row.status !== DEPOSIT_SUCCESS_STATUS) return null;
+  const amount = Number(row.amount);
+  if (!Number.isFinite(amount) || amount === 0) return null;
+  const { occurredOn, occurredAt } = msToOccurred(row.successAt ?? "");
+  return {
+    externalId: `d:${row.coin}:${row.successAt ?? ""}:${row.txID ?? ""}:${row.amount}`,
+    kind: "income",
+    amount: Math.abs(amount),
+    currency: row.coin,
+    occurredOn,
+    occurredAt,
+    category: null,
+    note: "Bybit Deposit",
+  };
+}
+
+function internalDepositToNormalized(row: InternalDepositRow): NormalizedTx | null {
+  if (row.status !== INTERNAL_DEPOSIT_SUCCESS_STATUS) return null;
+  const amount = Number(row.amount);
+  if (!Number.isFinite(amount) || amount === 0) return null;
+  const { occurredOn, occurredAt } = msToOccurred(row.createdTime);
+  return {
+    externalId: `di:${row.id}`,
+    kind: "income",
+    amount: Math.abs(amount),
+    currency: row.coin,
+    occurredOn,
+    occurredAt,
+    category: null,
+    note: "Bybit Transfer In",
+  };
+}
+
 export async function fetchTransactions(
   creds: IntegrationCreds,
   since: Date,
@@ -174,6 +266,7 @@ export async function fetchTransactions(
   let totalRaw = 0;
   let droppedInternal = 0;
   let droppedZero = 0;
+  let deposits = 0;
   const typePairs = new Map<string, string>();
 
   for (let from = since.getTime(); from < now; from += windowMs) {
@@ -185,6 +278,33 @@ export async function fetchTransactions(
       windowIdx,
     );
     totalRaw += rows.length;
+
+    const onChain = await fetchPagedRows<DepositRow>(
+      "/v5/asset/deposit/query-record",
+      from,
+      to,
+      creds,
+    );
+    const internal = await fetchPagedRows<InternalDepositRow>(
+      "/v5/asset/deposit/query-internal-record",
+      from,
+      to,
+      creds,
+    );
+    for (const row of onChain) {
+      const tx = depositToNormalized(row);
+      if (tx) {
+        out.push(tx);
+        deposits += 1;
+      }
+    }
+    for (const row of internal) {
+      const tx = internalDepositToNormalized(row);
+      if (tx) {
+        out.push(tx);
+        deposits += 1;
+      }
+    }
 
     for (const row of rows) {
       const busi = row.showBusiTypeEn?.trim() || "";
@@ -217,7 +337,7 @@ export async function fetchTransactions(
   }
 
   console.log(
-    `[bybit] fetchTransactions done windows=${windowIdx} rawRows=${totalRaw} droppedInternal=${droppedInternal} droppedZero=${droppedZero} normalized=${out.length}`,
+    `[bybit] fetchTransactions done windows=${windowIdx} rawRows=${totalRaw} droppedInternal=${droppedInternal} droppedZero=${droppedZero} deposits=${deposits} normalized=${out.length}`,
   );
   if (typePairs.size > 0) {
     const pairs = Array.from(typePairs.entries())

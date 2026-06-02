@@ -176,10 +176,6 @@ export async function syncIntegration(
     };
   }
 
-  console.log(
-    `[sync ${provider}] normalized=${normalized.length} since=${since.toISOString()} importIncome=${integration.import_income}`,
-  );
-
   let skippedNoRate = 0;
   let skippedIncome = 0;
   const rows = [];
@@ -214,10 +210,6 @@ export async function syncIntegration(
     rows.push(row);
   }
 
-  console.log(
-    `[sync ${provider}] rowsToUpsert=${rows.length} skippedIncome=${skippedIncome} skippedNoRate=${skippedNoRate}`,
-  );
-
   let imported = 0;
   if (rows.length > 0) {
     try {
@@ -233,23 +225,14 @@ export async function syncIntegration(
         })
         .returning({ id: transactions.id });
       imported = inserted.length;
-      console.log(
-        `[sync ${provider}] insert ok inserted=${imported} (dupes ignored=${rows.length - imported})`,
-      );
     } catch (error) {
       return {
         ok: false,
         error: error instanceof Error ? error.message : "Insert failed",
       };
     }
-  } else {
-    console.log(`[sync ${provider}] no rows to upsert`);
   }
 
-  // Only advance the cursor when the adapter actually produced rows. A sync
-  // returning 0 normalized rows could mean "no activity" OR "broken adapter /
-  // wrong creds / wrong endpoint" — we can't distinguish, so we keep the
-  // window so the next attempt covers the same range. Upserts are idempotent.
   if (normalized.length > 0) {
     await db
       .update(api_integrations)
@@ -260,10 +243,6 @@ export async function syncIntegration(
           eq(api_integrations.provider, provider),
         ),
       );
-  } else {
-    console.log(
-      `[sync ${provider}] not advancing last_synced_at (normalized=0)`,
-    );
   }
 
   revalidatePath("/", "layout");
