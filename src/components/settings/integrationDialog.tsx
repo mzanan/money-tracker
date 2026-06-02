@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useState } from "react";
 import { Loader2Icon } from "lucide-react";
 
+import { useServerAction } from "@/hooks/useServerAction";
 import { saveIntegration } from "@/lib/actions/integrations";
 import type { ApiIntegration, IntegrationProvider } from "@/types/db";
 
@@ -50,7 +49,6 @@ export function IntegrationDialog({
   open,
   onOpenChange,
 }: Props) {
-  const router = useRouter();
   const isFirstConnect = !integration;
   const [apiKey, setApiKey] = useState(integration?.api_key ?? "");
   const [apiSecret, setApiSecret] = useState(integration?.api_secret ?? "");
@@ -58,7 +56,7 @@ export function IntegrationDialog({
     integration?.import_income ?? false,
   );
   const [lookbackDays, setLookbackDays] = useState("30");
-  const [pending, startTransition] = useTransition();
+  const { run, pending } = useServerAction();
 
   function handleOpenChange(next: boolean) {
     if (next && !open) {
@@ -72,22 +70,20 @@ export function IntegrationDialog({
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    startTransition(async () => {
-      const result = await saveIntegration({
-        provider,
-        apiKey,
-        apiSecret,
-        importIncome,
-        initialSinceDays: isFirstConnect ? Number(lookbackDays) : undefined,
-      });
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(`${label} ${integration ? "updated" : "connected"}`);
-      handleOpenChange(false);
-      router.refresh();
-    });
+    run(
+      () =>
+        saveIntegration({
+          provider,
+          apiKey,
+          apiSecret,
+          importIncome,
+          initialSinceDays: isFirstConnect ? Number(lookbackDays) : undefined,
+        }),
+      {
+        success: `${label} ${integration ? "updated" : "connected"}`,
+        onSuccess: () => handleOpenChange(false),
+      },
+    );
   }
 
   const helpText =

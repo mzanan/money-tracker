@@ -1,44 +1,30 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { ClockIcon, HistoryIcon } from "lucide-react";
 
+import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { updateSettings } from "@/lib/actions/settings";
 import { useUiStore } from "@/stores/uiStore";
 
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { CurrencySelect } from "@/components/ui/currencySelect";
 
 export function DisplayControls() {
-  const router = useRouter();
   const settings = useSettings();
   const displayMode = useUiStore((state) => state.displayMode);
   const setDisplayMode = useUiStore((state) => state.setDisplayMode);
-  const [pending, startTransition] = useTransition();
+  const { run, pending } = useServerAction();
 
   function changeBase(code: string) {
     if (code === settings.base_currency) return;
-    startTransition(async () => {
-      const result = await updateSettings({
+    run(() =>
+      updateSettings({
         currencies: settings.currencies,
         baseCurrency: code,
         timezone: settings.timezone,
-      });
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      router.refresh();
-    });
+      }),
+    );
   }
 
   const isToday = displayMode === "today";
@@ -67,22 +53,14 @@ export function DisplayControls() {
         )}
         {isToday ? "Today's rate" : "Snapshot"}
       </Button>
-      <Select
+      <CurrencySelect
         value={settings.base_currency}
         onValueChange={changeBase}
+        currencies={settings.currencies}
         disabled={pending}
-      >
-        <SelectTrigger className="w-20" aria-label="Display currency">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {settings.currencies.map((code) => (
-            <SelectItem key={code} value={code}>
-              {code}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        className="w-20"
+        ariaLabel="Display currency"
+      />
     </div>
   );
 }

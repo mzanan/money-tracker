@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useState } from "react";
 import { Loader2Icon, MoreVerticalIcon, RefreshCwIcon } from "lucide-react";
 
+import { useServerAction } from "@/hooks/useServerAction";
 import {
   deleteIntegration,
   syncIntegration,
@@ -20,6 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ListRow } from "@/components/ui/listRow";
 
 import { IntegrationDialog } from "./integrationDialog";
 
@@ -42,58 +42,42 @@ function timeAgo(iso: string | null): string {
 }
 
 export function IntegrationRow({ provider, label, integration }: Props) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const { run, pending } = useServerAction();
   const connected = integration !== null;
 
   function handleSync() {
-    startTransition(async () => {
-      const result = await syncIntegration(provider);
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      const { imported, skipped } = result.data!;
-      toast.success(
-        `Imported ${imported} transaction${imported === 1 ? "" : "s"}` +
-          (skipped > 0 ? `, ${skipped} skipped` : ""),
-      );
-      router.refresh();
+    run(() => syncIntegration(provider), {
+      success: (data) =>
+        `Imported ${data?.imported ?? 0} transaction${data?.imported === 1 ? "" : "s"}` +
+        ((data?.skipped ?? 0) > 0 ? `, ${data?.skipped} skipped` : ""),
     });
   }
 
   function handleDisconnect() {
-    startTransition(async () => {
-      const result = await deleteIntegration(provider);
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(`${label} disconnected`);
-      router.refresh();
+    run(() => deleteIntegration(provider), {
+      success: `${label} disconnected`,
     });
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-medium">{label}</p>
-          <Badge
-            variant={connected ? "secondary" : "outline"}
-            className={cn("text-[10px]", connected && "text-income")}
-          >
-            {connected ? "Connected" : "Not connected"}
-          </Badge>
-        </div>
-        <p className="text-muted-foreground mt-0.5 text-xs">
-          {connected
-            ? `Last sync · ${timeAgo(integration.last_synced_at)}`
-            : "Connect to start syncing"}
-        </p>
-      </div>
-
+    <ListRow
+      title={label}
+      badge={
+        <Badge
+          variant={connected ? "secondary" : "outline"}
+          size="xs"
+          className={cn(connected && "text-income")}
+        >
+          {connected ? "Connected" : "Not connected"}
+        </Badge>
+      }
+      meta={
+        connected
+          ? `Last sync · ${timeAgo(integration.last_synced_at)}`
+          : "Connect to start syncing"
+      }
+    >
       <div className="flex items-center gap-1">
         {connected ? (
           <>
@@ -147,6 +131,6 @@ export function IntegrationRow({ provider, label, integration }: Props) {
         open={open}
         onOpenChange={setOpen}
       />
-    </div>
+    </ListRow>
   );
 }
