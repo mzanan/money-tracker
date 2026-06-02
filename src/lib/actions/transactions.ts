@@ -135,22 +135,22 @@ export async function updateTransaction(
   }
 }
 
-export async function updateTransactionNote(
+export async function updateTransactionComment(
   id: string,
-  note: string | null,
+  comment: string | null,
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const trimmed = note?.trim() ?? "";
+  const trimmed = comment?.trim() ?? "";
   if (trimmed.length > 280) {
-    return { ok: false, error: "Comment must be 280 characters or fewer" };
+    return { ok: false, error: "Note must be 280 characters or fewer" };
   }
 
   try {
     await db
       .update(transactions)
-      .set({ note: trimmed || null })
+      .set({ comment: trimmed || null })
       .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)));
     revalidatePath("/", "layout");
     return { ok: true };

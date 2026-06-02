@@ -1,38 +1,29 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { Loader2Icon, MoreVerticalIcon, Trash2Icon } from "lucide-react";
+import { Loader2Icon, StickyNoteIcon } from "lucide-react";
 
 import { useRates } from "@/hooks/useRates";
 import { useSettings } from "@/hooks/useSettings";
 import { labelForSource } from "@/lib/constants/sources";
-import { deleteTransaction } from "@/lib/actions/transactions";
 import { formatMoney } from "@/lib/currency";
 import { transactionInDisplay } from "@/lib/totals";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/uiStore";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { IconCircle } from "@/components/ui/iconCircle";
 
-import { EditableNote } from "./editableNote";
 import { ReminderButton } from "./reminderButton";
+import { useCommentEdit } from "./useCommentEdit";
 
 import type { Transaction } from "@/types/db";
 
 export function TransactionRow({ tx }: { tx: Transaction }) {
-  const router = useRouter();
   const settings = useSettings();
   const ratesQuery = useRates();
   const displayMode = useUiStore((s) => s.displayMode);
-  const [pending, startTransition] = useTransition();
+  const comment = useCommentEdit(tx.id, tx.comment);
 
   let inDisplay: number | null;
   try {
@@ -46,28 +37,6 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
     inDisplay = null;
   }
 
-  function handleDelete() {
-    if (
-      !confirm(
-        `Delete this ${tx.kind === "income" ? "income" : "expense"} of ${formatMoney(
-          tx.amount_original,
-          tx.currency_original,
-        )}?`,
-      )
-    ) {
-      return;
-    }
-    startTransition(async () => {
-      const result = await deleteTransaction(tx.id);
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("Deleted");
-      router.refresh();
-    });
-  }
-
   const sameAsBase = tx.currency_original === settings.base_currency;
   const sign = tx.kind === "income" ? "+" : "-";
   const showConverted = !sameAsBase && inDisplay !== null;
@@ -77,60 +46,84 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   if (tx.category) identifierSegments.push(tx.category);
   const identifier = identifierSegments.join(" · ");
 
+  const description = tx.note?.trim();
   const avatarSeed = tx.category || sourceLabel;
-  const reminderTitle = tx.note?.trim() || identifier;
+  const reminderTitle = comment.current || description || identifier;
 
   return (
     <div className="group hover:bg-surface-2/60 flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors">
       <Avatar seed={avatarSeed} />
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-muted-foreground truncate text-[11px] tracking-wide uppercase">
-            {identifier}
-          </span>
-          <span
-            className={cn(
-              "shrink-0 text-sm leading-tight font-semibold tabular-nums",
-              tx.kind === "income" ? "text-income" : "text-foreground",
+        <span className="text-foreground block truncate text-sm leading-tight font-medium">
+          {identifier}
+        </span>
+        {(description || comment.current || comment.editing) && (
+          <div className="mt-0.5 flex items-center gap-2">
+            {description && (
+              <span className="text-muted-foreground min-w-0 truncate text-meta">
+                {description}
+              </span>
             )}
-          >
-            {sign}
-            {formatMoney(tx.amount_original, tx.currency_original)}
-          </span>
-        </div>
-        <div className="mt-0.5 flex items-baseline justify-between gap-3">
-          <EditableNote id={tx.id} note={tx.note} />
-          {showConverted && (
-            <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
-              ≈ {formatMoney(inDisplay!, settings.base_currency)}
-            </span>
-          )}
-        </div>
-      </div>
-      <ReminderButton tx={tx} defaultTitle={reminderTitle} />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            disabled={pending}
-            className="text-muted-foreground hover:text-foreground -mr-1 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
-            aria-label="More actions"
-          >
-            {pending ? (
-              <Loader2Icon className="animate-spin" />
+            {comment.editing ? (
+              <input
+                {...comment.inputProps}
+                onBlur={comment.submit}
+                placeholder="What was this for?"
+                disabled={comment.pending}
+                maxLength={280}
+                className="border-primary/50 focus:border-primary min-w-0 flex-1 border-b bg-transparent text-sm leading-tight font-medium outline-none disabled:opacity-60"
+              />
             ) : (
-              <MoreVerticalIcon />
+              comment.current && (
+                <Badge asChild variant="secondary" className="max-w-[60%] shrink-0">
+                  <button
+                    type="button"
+                    onClick={comment.start}
+                    aria-label="Edit note"
+                  >
+                    <StickyNoteIcon />
+                    <span className="truncate">{comment.current}</span>
+                  </button>
+                </Badge>
+              )
             )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={handleDelete} variant="destructive">
-            <Trash2Icon />
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </div>
+        )}
+      </div>
+      <div className="flex shrink-0 flex-col items-end">
+        <span
+          className={cn(
+            "text-sm leading-tight font-semibold tabular-nums",
+            tx.kind === "income" ? "text-income" : "text-foreground",
+          )}
+        >
+          {sign}
+          {formatMoney(tx.amount_original, tx.currency_original)}
+        </span>
+        {showConverted && (
+          <span className="text-muted-foreground mt-0.5 text-[11px] tabular-nums">
+            ≈ {formatMoney(inDisplay!, settings.base_currency)}
+          </span>
+        )}
+      </div>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        onClick={comment.start}
+        disabled={comment.pending}
+        aria-label={comment.current ? "Edit note" : "Add note"}
+        className={cn(
+          "hover:text-foreground -mr-0.5",
+          comment.current ? "text-foreground" : "text-muted-foreground",
+        )}
+      >
+        {comment.pending ? (
+          <Loader2Icon className="animate-spin" />
+        ) : (
+          <StickyNoteIcon />
+        )}
+      </Button>
+      <ReminderButton tx={tx} defaultTitle={reminderTitle} />
     </div>
   );
 }
@@ -155,14 +148,8 @@ function Avatar({ seed }: { seed: string }) {
   const tone = AVATAR_TONES[hash % AVATAR_TONES.length];
 
   return (
-    <span
-      aria-hidden
-      className={cn(
-        "flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
-        tone,
-      )}
-    >
+    <IconCircle className={cn("text-sm font-semibold", tone)}>
       {letter}
-    </span>
+    </IconCircle>
   );
 }
