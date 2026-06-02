@@ -1,7 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   ChevronDownIcon,
@@ -13,6 +12,7 @@ import {
 
 import { getCurrency } from "@/config/currencies";
 import { useRates } from "@/hooks/useRates";
+import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
 import { createTransaction } from "@/lib/actions/transactions";
 import { convert, formatMoney, roundForCurrency } from "@/lib/currency";
@@ -21,15 +21,10 @@ import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/uiStore";
 
 import { Button } from "@/components/ui/button";
+import { CurrencySelect } from "@/components/ui/currencySelect";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Surface } from "@/components/ui/surface";
 
 interface Props {
   recentCategories: string[];
@@ -46,11 +41,10 @@ function parseAmount(value: string): number | null {
 }
 
 export function QuickAddForm({ recentCategories, recentMerchants }: Props) {
-  const router = useRouter();
   const settings = useSettings();
   const timezone = useTimezone();
   const ratesQuery = useRates();
-  const [pending, startTransition] = useTransition();
+  const { run, pending } = useServerAction();
   const categoriesId = useId();
   const merchantsId = useId();
 
@@ -104,184 +98,167 @@ export function QuickAddForm({ recentCategories, recentMerchants }: Props) {
 
     const rounded = roundForCurrency(numericAmount, currency);
 
-    startTransition(async () => {
-      const result = await createTransaction({
-        kind,
-        amount: rounded,
-        currency,
-        category: category.trim() || null,
-        note: note.trim() || null,
-        occurredOn: date,
-      });
-
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-
-      toast.success(
-        `${kind === "income" ? "Income" : "Expense"} · ${formatMoney(rounded, currency)}`,
-      );
-      setAmount("");
-      setCategory("");
-      setNote("");
-      setLastCurrency(currency);
-      router.refresh();
-    });
+    run(
+      () =>
+        createTransaction({
+          kind,
+          amount: rounded,
+          currency,
+          category: category.trim() || null,
+          note: note.trim() || null,
+          occurredOn: date,
+        }),
+      {
+        success: `${kind === "income" ? "Income" : "Expense"} · ${formatMoney(rounded, currency)}`,
+        onSuccess: () => {
+          setAmount("");
+          setCategory("");
+          setNote("");
+          setLastCurrency(currency);
+        },
+      },
+    );
   }
 
   const currencyMeta = getCurrency(currency);
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-card grid gap-3 rounded-2xl px-4 py-4"
-    >
-      <div className="flex items-center gap-2">
-        <KindToggle kind={kind} onChange={setKind} />
-        <div className="bg-surface-2 relative flex flex-1 items-center rounded-xl">
-          <span className="text-muted-foreground pointer-events-none absolute left-3 text-sm tabular-nums">
-            {currencyMeta.symbol}
-          </span>
-          <Input
-            id="amount"
-            inputMode="decimal"
-            autoComplete="off"
-            placeholder="0"
-            value={amount}
-            onChange={(event) =>
-              setAmount(event.target.value.replace(/[^\d.,]/g, ""))
-            }
-            aria-label="Amount"
-            className="h-11 border-none bg-transparent pl-7 text-base tabular-nums focus-visible:ring-0"
-            required
-          />
-          {settings.currencies.length > 1 && (
-            <Select value={currency} onValueChange={setCurrency}>
-              <SelectTrigger
-                aria-label="Currency"
-                className="bg-background ml-1 h-8 w-[4.5rem] rounded-lg border-none text-xs"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {settings.currencies.map((code) => (
-                  <SelectItem key={code} value={code}>
-                    {code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-        <Button
-          type="submit"
-          disabled={pending || numericAmount === null}
-          className="h-11 rounded-xl px-4"
-        >
-          {pending ? (
-            <Loader2Icon className="animate-spin" />
-          ) : (
-            <PlusIcon />
-          )}
-          Add
-        </Button>
-      </div>
-
-      {(preview ||
-        (currency !== settings.base_currency &&
-          ratesQuery.isPending &&
-          numericAmount !== null)) && (
-        <div className="text-muted-foreground -mt-1 px-1 text-xs">
-          {preview ? (
-            <>
-              ≈ <span className="text-foreground">{preview}</span>{" "}
-              <span className="opacity-60">today&apos;s rate</span>
-            </>
-          ) : (
-            <span className="inline-flex items-center gap-1">
-              <Loader2Icon className="size-3 animate-spin" /> Calculating…
+    <Surface asChild radius="lg" padding="sm" className="grid gap-3">
+      <form onSubmit={handleSubmit}>
+        <div className="flex items-center gap-2">
+          <KindToggle kind={kind} onChange={setKind} />
+          <div className="bg-surface-2 relative flex flex-1 items-center rounded-xl">
+            <span className="text-muted-foreground pointer-events-none absolute left-3 text-sm tabular-nums">
+              {currencyMeta.symbol}
             </span>
-          )}
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={() => setShowExtras((value) => !value)}
-        className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 px-1 text-xs transition-colors"
-      >
-        <ChevronDownIcon
-          className={cn(
-            "size-3 transition-transform",
-            showExtras && "rotate-180",
-          )}
-        />
-        {showExtras ? "Hide details" : "Add category, note, date"}
-      </button>
-
-      {showExtras && (
-        <div className="grid gap-2 px-1">
-          <div className="grid gap-1.5">
-            <Label htmlFor="category" className="text-eyebrow">
-              Category
-            </Label>
             <Input
-              id="category"
-              list={categoriesId}
-              placeholder="food, transport, rent…"
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-              maxLength={60}
-              className="bg-surface-2 h-9 border-none"
-            />
-            {recentCategories.length > 0 && (
-              <datalist id={categoriesId}>
-                {recentCategories.map((cat) => (
-                  <option key={cat} value={cat} />
-                ))}
-              </datalist>
-            )}
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label htmlFor="note" className="text-eyebrow">
-              Note
-            </Label>
-            <Input
-              id="note"
-              list={merchantsId}
-              placeholder="merchant or details"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              maxLength={280}
-              className="bg-surface-2 h-9 border-none"
-            />
-            {recentMerchants.length > 0 && (
-              <datalist id={merchantsId}>
-                {recentMerchants.map((merchant) => (
-                  <option key={merchant} value={merchant} />
-                ))}
-              </datalist>
-            )}
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label htmlFor="date" className="text-eyebrow">
-              Date
-            </Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
+              id="amount"
+              inputMode="decimal"
+              autoComplete="off"
+              placeholder="0"
+              value={amount}
+              onChange={(event) =>
+                setAmount(event.target.value.replace(/[^\d.,]/g, ""))
+              }
+              aria-label="Amount"
+              className="h-11 border-none bg-transparent pl-7 text-base tabular-nums focus-visible:ring-0"
               required
-              className="bg-surface-2 h-9 border-none"
             />
+            {settings.currencies.length > 1 && (
+              <CurrencySelect
+                value={currency}
+                onValueChange={setCurrency}
+                currencies={settings.currencies}
+                ariaLabel="Currency"
+                className="bg-background ml-1 h-8 w-[4.5rem] rounded-lg border-none text-xs"
+              />
+            )}
           </div>
+          <Button
+            type="submit"
+            disabled={pending || numericAmount === null}
+            className="h-11 rounded-xl px-4"
+          >
+            {pending ? <Loader2Icon className="animate-spin" /> : <PlusIcon />}
+            Add
+          </Button>
         </div>
-      )}
-    </form>
+
+        {(preview ||
+          (currency !== settings.base_currency &&
+            ratesQuery.isPending &&
+            numericAmount !== null)) && (
+          <div className="text-muted-foreground -mt-1 px-1 text-xs">
+            {preview ? (
+              <>
+                ≈ <span className="text-foreground">{preview}</span>{" "}
+                <span className="opacity-60">today&apos;s rate</span>
+              </>
+            ) : (
+              <span className="inline-flex items-center gap-1">
+                <Loader2Icon className="size-3 animate-spin" /> Calculating…
+              </span>
+            )}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setShowExtras((value) => !value)}
+          className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 px-1 text-xs transition-colors"
+        >
+          <ChevronDownIcon
+            className={cn(
+              "size-3 transition-transform",
+              showExtras && "rotate-180",
+            )}
+          />
+          {showExtras ? "Hide details" : "Add category, note, date"}
+        </button>
+
+        {showExtras && (
+          <div className="grid gap-2 px-1">
+            <div className="grid gap-1.5">
+              <Label htmlFor="category" className="text-eyebrow">
+                Category
+              </Label>
+              <Input
+                id="category"
+                list={categoriesId}
+                placeholder="food, transport, rent…"
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+                maxLength={60}
+                className="bg-surface-2 h-9 border-none"
+              />
+              {recentCategories.length > 0 && (
+                <datalist id={categoriesId}>
+                  {recentCategories.map((cat) => (
+                    <option key={cat} value={cat} />
+                  ))}
+                </datalist>
+              )}
+            </div>
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="note" className="text-eyebrow">
+                Note
+              </Label>
+              <Input
+                id="note"
+                list={merchantsId}
+                placeholder="merchant or details"
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                maxLength={280}
+                className="bg-surface-2 h-9 border-none"
+              />
+              {recentMerchants.length > 0 && (
+                <datalist id={merchantsId}>
+                  {recentMerchants.map((merchant) => (
+                    <option key={merchant} value={merchant} />
+                  ))}
+                </datalist>
+              )}
+            </div>
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="date" className="text-eyebrow">
+                Date
+              </Label>
+              <Input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(event) => setDate(event.target.value)}
+                required
+                className="bg-surface-2 h-9 border-none"
+              />
+            </div>
+          </div>
+        )}
+      </form>
+    </Surface>
   );
 }
 

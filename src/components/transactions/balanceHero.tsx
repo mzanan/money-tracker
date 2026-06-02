@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { ArrowDownRightIcon, ArrowUpRightIcon } from "lucide-react";
 
+import { Surface } from "@/components/ui/surface";
 import { useRates } from "@/hooks/useRates";
 import { useSettings } from "@/hooks/useSettings";
 import { formatMoney } from "@/lib/currency";
@@ -18,6 +19,7 @@ export type KindFilter = "all" | "income" | "expense";
 interface Props {
   yearMonth: string;
   transactions: Transaction[];
+  lifetimeTransactions: Transaction[];
   selectedKind: KindFilter;
   onKindChange: (next: KindFilter) => void;
   nav?: React.ReactNode;
@@ -26,6 +28,7 @@ interface Props {
 export function BalanceHero({
   yearMonth,
   transactions,
+  lifetimeTransactions,
   selectedKind,
   onKindChange,
   nav,
@@ -34,7 +37,7 @@ export function BalanceHero({
   const ratesQuery = useRates();
   const displayMode = useUiStore((s) => s.displayMode);
 
-  const totals = useMemo(
+  const monthTotals = useMemo(
     () =>
       periodTotals(
         transactions,
@@ -45,8 +48,29 @@ export function BalanceHero({
     [transactions, settings.base_currency, displayMode, ratesQuery.data],
   );
 
-  const positive = totals.net >= 0;
-  const netSigned = formatMoney(totals.net, settings.base_currency, {
+  const lifetimeTotals = useMemo(
+    () =>
+      periodTotals(
+        lifetimeTransactions,
+        settings.base_currency,
+        displayMode,
+        ratesQuery.data?.rates,
+      ),
+    [
+      lifetimeTransactions,
+      settings.base_currency,
+      displayMode,
+      ratesQuery.data,
+    ],
+  );
+
+  const totalPositive = lifetimeTotals.net >= 0;
+  const totalSigned = formatMoney(lifetimeTotals.net, settings.base_currency, {
+    signed: true,
+  });
+
+  const monthPositive = monthTotals.net >= 0;
+  const monthSigned = formatMoney(monthTotals.net, settings.base_currency, {
     signed: true,
   });
 
@@ -55,42 +79,57 @@ export function BalanceHero({
   }
 
   return (
-    <section className="bg-card rounded-3xl px-6 py-6">
-      <div className="mb-6 flex items-center justify-between gap-2">
-        <span className="text-eyebrow">{formatYearMonthLong(yearMonth)}</span>
-        {nav}
-      </div>
+    <Surface padding="lg">
+      <span className="text-eyebrow">Total balance</span>
       <p
         className={cn(
           "font-heading text-[2.75rem] leading-[1.05] font-semibold tracking-tight tabular-nums",
-          positive ? "text-foreground" : "text-expense",
+          totalPositive ? "text-foreground" : "text-expense",
         )}
       >
-        {netSigned}
+        {totalSigned}
       </p>
-      <p className="text-muted-foreground mt-1 text-xs">Net this month</p>
 
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <Mini
-          label="In"
-          value={`+${formatMoney(totals.income, settings.base_currency)}`}
-          icon={<ArrowDownRightIcon className="size-4" />}
-          tone="income"
-          active={selectedKind === "income"}
-          dimmed={selectedKind === "expense"}
-          onClick={() => toggle("income")}
-        />
-        <Mini
-          label="Out"
-          value={`-${formatMoney(totals.expense, settings.base_currency)}`}
-          icon={<ArrowUpRightIcon className="size-4" />}
-          tone="expense"
-          active={selectedKind === "expense"}
-          dimmed={selectedKind === "income"}
-          onClick={() => toggle("expense")}
-        />
+      <div className="border-border mt-9 border-t pt-6">
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <span className="text-eyebrow">{formatYearMonthLong(yearMonth)}</span>
+          {nav}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Mini
+            label="In"
+            value={`+${formatMoney(monthTotals.income, settings.base_currency)}`}
+            icon={<ArrowDownRightIcon className="size-4" />}
+            tone="income"
+            active={selectedKind === "income"}
+            dimmed={selectedKind === "expense"}
+            onClick={() => toggle("income")}
+          />
+          <Mini
+            label="Out"
+            value={`-${formatMoney(monthTotals.expense, settings.base_currency)}`}
+            icon={<ArrowUpRightIcon className="size-4" />}
+            tone="expense"
+            active={selectedKind === "expense"}
+            dimmed={selectedKind === "income"}
+            onClick={() => toggle("expense")}
+          />
+        </div>
+
+        <div className="mt-4 flex items-center justify-between">
+          <span className="text-muted-foreground text-xs">Net this month</span>
+          <span
+            className={cn(
+              "text-sm font-semibold tabular-nums",
+              monthPositive ? "text-foreground" : "text-expense",
+            )}
+          >
+            {monthSigned}
+          </span>
+        </div>
       </div>
-    </section>
+    </Surface>
   );
 }
 

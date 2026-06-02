@@ -9,6 +9,7 @@ import {
   MONTH_INITIAL_DAYS,
   MONTH_STEP_DAYS,
 } from "@/lib/constants/pagination";
+import { Surface } from "@/components/ui/surface";
 import { dayTotalsList } from "@/lib/totals";
 import { useUiStore } from "@/stores/uiStore";
 
@@ -16,7 +17,13 @@ import type { Transaction } from "@/types/db";
 
 import { DayGroup } from "./dayGroup";
 
-export function MonthView({ transactions }: { transactions: Transaction[] }) {
+export function MonthView({
+  transactions,
+  emptyLabel = "No transactions this month.",
+}: {
+  transactions: Transaction[];
+  emptyLabel?: string;
+}) {
   const settings = useSettings();
   const ratesQuery = useRates();
   const displayMode = useUiStore((state) => state.displayMode);
@@ -55,14 +62,18 @@ export function MonthView({ transactions }: { transactions: Transaction[] }) {
 
   if (days.length === 0) {
     return (
-      <div className="bg-card text-muted-foreground rounded-2xl py-16 text-center text-sm">
-        No transactions this month.
-      </div>
+      <Surface
+        radius="lg"
+        padding="none"
+        className="text-muted-foreground py-16 text-center text-sm"
+      >
+        {emptyLabel}
+      </Surface>
     );
   }
 
   return (
-    <div className="bg-card rounded-2xl px-1 py-1">
+    <Surface radius="lg" padding="list">
       {shown.map((day) => (
         <DayGroup key={day.date} day={day} />
       ))}
@@ -75,6 +86,6 @@ export function MonthView({ transactions }: { transactions: Transaction[] }) {
           Loading more
         </div>
       )}
-    </div>
+    </Surface>
   );
 }

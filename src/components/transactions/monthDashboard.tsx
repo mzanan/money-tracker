@@ -1,21 +1,31 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
-import type { Transaction } from "@/types/db";
+import { usePresence } from "@/hooks/usePresence";
+import { useSettings } from "@/hooks/useSettings";
+import { cn } from "@/lib/utils";
 
-import { BalanceHero, type KindFilter } from "./balanceHero";
-import { LifetimeChip } from "./lifetimeChip";
+import type { RecurringPayment, Transaction } from "@/types/db";
+
+import { BalanceHero } from "./balanceHero";
+import { CalendarPanel } from "./calendarPanel";
+import { DashboardPanel } from "./dashboardPanel";
+import { DashboardToolbar } from "./dashboardToolbar";
+import { FiltersPanel } from "./filtersPanel";
 import { MonthView } from "./monthView";
 import { SourcePills } from "./sourcePills";
+import { useDashboardControls } from "./useDashboardControls";
 
 interface Props {
   yearMonth: string;
   monthTransactions: Transaction[];
   lifetimeTransactions: Transaction[];
   sources: string[];
+  reminders?: RecurringPayment[];
   quickAdd?: React.ReactNode;
   nav?: React.ReactNode;
+  banner?: React.ReactNode;
 }
 
 export function MonthDashboard({
@@ -23,54 +33,91 @@ export function MonthDashboard({
   monthTransactions,
   lifetimeTransactions,
   sources,
+  reminders = [],
   quickAdd,
   nav,
+  banner,
 }: Props) {
-  const [selectedSource, setSelectedSource] = useState<string>("all");
-  const [selectedKind, setSelectedKind] = useState<KindFilter>("all");
+  const settings = useSettings();
+  const c = useDashboardControls({
+    yearMonth,
+    monthTransactions,
+    lifetimeTransactions,
+    reminders,
+  });
 
-  // Source-only filter → drives hero totals + lifetime chip + source pills.
-  const sourceFilteredMonth = useMemo(
-    () =>
-      selectedSource === "all"
-        ? monthTransactions
-        : monthTransactions.filter((tx) => tx.source === selectedSource),
-    [selectedSource, monthTransactions],
-  );
-  const sourceFilteredLifetime = useMemo(
-    () =>
-      selectedSource === "all"
-        ? lifetimeTransactions
-        : lifetimeTransactions.filter((tx) => tx.source === selectedSource),
-    [selectedSource, lifetimeTransactions],
-  );
-
-  // Source + kind filter → drives the transaction list.
-  const listTransactions = useMemo(
-    () =>
-      selectedKind === "all"
-        ? sourceFilteredMonth
-        : sourceFilteredMonth.filter((tx) => tx.kind === selectedKind),
-    [selectedKind, sourceFilteredMonth],
-  );
+  const panelOpen = c.panel !== "none";
+  const panel = usePresence(panelOpen);
+  const [lastPanel, setLastPanel] = useState<"filters" | "calendar">("filters");
+  if (c.panel !== "none" && c.panel !== lastPanel) {
+    setLastPanel(c.panel);
+  }
+  const shownPanel = c.panel !== "none" ? c.panel : lastPanel;
 
   return (
-    <div className="grid gap-5">
-      <BalanceHero
-        yearMonth={yearMonth}
-        transactions={sourceFilteredMonth}
-        selectedKind={selectedKind}
-        onKindChange={setSelectedKind}
-        nav={nav}
-      />
-      {quickAdd}
-      <SourcePills
-        sources={sources}
-        selected={selectedSource}
-        onChange={setSelectedSource}
-      />
-      <MonthView transactions={listTransactions} />
-      <LifetimeChip transactions={sourceFilteredLifetime} />
+    <div
+      className={cn(
+        "mx-auto w-full max-w-xl",
+        panel.rendered &&
+          "lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,34rem)_minmax(0,24rem)] lg:items-start lg:gap-5",
+      )}
+    >
+      <div className="grid gap-5">
+        {banner}
+        <DashboardToolbar panel={c.panel} onToggle={c.togglePanel} />
+        <BalanceHero
+          yearMonth={yearMonth}
+          transactions={c.sourceFilteredMonth}
+          lifetimeTransactions={c.sourceFilteredLifetime}
+          selectedKind={c.selectedKind}
+          onKindChange={c.setSelectedKind}
+          nav={nav}
+        />
+        {c.showQuickAdd && quickAdd}
+        <SourcePills
+          sources={sources}
+          selected={c.selectedSource}
+          onChange={c.setSelectedSource}
+        />
+        <MonthView transactions={c.monthList} />
+      </div>
+
+      {panel.rendered && (
+        <DashboardPanel
+          title={shownPanel === "filters" ? "Filters" : "Calendar"}
+          state={panel.state}
+          onClose={c.closePanel}
+        >
+          {shownPanel === "filters" ? (
+            <FiltersPanel
+              baseCurrency={settings.base_currency}
+              minInput={c.minInput}
+              setMinInput={c.setMinInput}
+              maxInput={c.maxInput}
+              setMaxInput={c.setMaxInput}
+              scope={c.scope}
+              setScope={c.setScope}
+              onClear={() => {
+                c.setMinInput("");
+                c.setMaxInput("");
+              }}
+              amountActive={c.amountActive}
+              results={c.filterResults}
+            />
+          ) : (
+            <CalendarPanel
+              yearMonth={yearMonth}
+              activityDates={c.activityDates}
+              reminderDates={c.reminderDates}
+              selectedDay={c.selectedDay}
+              selectedDayGroup={c.selectedDayGroup}
+              onSelectDay={c.setSelectedDay}
+              reminders={c.monthReminders}
+              today={c.today}
+            />
+          )}
+        </DashboardPanel>
+      )}
     </div>
   );
 }
