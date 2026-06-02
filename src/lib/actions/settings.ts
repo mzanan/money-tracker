@@ -61,6 +61,25 @@ export async function saveOnboarding(
   }
 }
 
+export async function setCashEnabled(enabled: boolean): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  try {
+    await db
+      .update(user_settings)
+      .set({ cash_enabled: enabled })
+      .where(eq(user_settings.user_id, user.id));
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Save failed",
+    };
+  }
+}
+
 export async function updateSettings(
   input: UpdateSettingsInput,
 ): Promise<ActionResult> {

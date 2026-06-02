@@ -1,12 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useTransition } from "react";
-import { ExternalLinkIcon, Loader2Icon, RefreshCwIcon } from "lucide-react";
-import { toast } from "sonner";
+import {
+  ExternalLinkIcon,
+  Loader2Icon,
+  PlusIcon,
+  RefreshCwIcon,
+} from "lucide-react";
 
+import { useServerAction } from "@/hooks/useServerAction";
+import { useSettings } from "@/hooks/useSettings";
 import { syncIntegration } from "@/lib/actions/integrations";
+import { setCashEnabled } from "@/lib/actions/settings";
 import { kindOfSource, labelForSource } from "@/lib/constants/sources";
 import { cn } from "@/lib/utils";
 import type { IntegrationProvider } from "@/types/db";
@@ -20,25 +25,26 @@ interface Props {
 }
 
 export function SourcePills({ sources, selected, onChange }: Props) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const settings = useSettings();
+  const { run, pending } = useServerAction();
   const kind = selected === "all" ? null : kindOfSource(selected);
+
+  const hasManual = sources.includes("manual");
+  const showCashTab = settings.cash_enabled || hasManual;
+  const tabSources = showCashTab && !hasManual ? ["manual", ...sources] : sources;
 
   function handleSync() {
     if (kind !== "api") return;
-    startTransition(async () => {
-      const result = await syncIntegration(selected as IntegrationProvider);
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      const { imported, skipped } = result.data!;
-      toast.success(
-        `${labelForSource(selected)}: imported ${imported}` +
-          (skipped > 0 ? `, ${skipped} skipped` : ""),
-      );
-      router.refresh();
+    run(() => syncIntegration(selected as IntegrationProvider), {
+      success: (data) =>
+        `${labelForSource(selected)}: imported ${data?.imported ?? 0}` +
+        ((data?.skipped ?? 0) > 0 ? `, ${data?.skipped} skipped` : ""),
     });
+  }
+
+  function handleEnableCash() {
+    run(() => setCashEnabled(true), { success: "Cash account enabled" });
+    onChange("manual");
   }
 
   return (
@@ -50,7 +56,7 @@ export function SourcePills({ sources, selected, onChange }: Props) {
         <Tab selected={selected === "all"} onClick={() => onChange("all")}>
           All
         </Tab>
-        {sources.map((src) => (
+        {tabSources.map((src) => (
           <Tab
             key={src}
             selected={selected === src}
@@ -59,6 +65,17 @@ export function SourcePills({ sources, selected, onChange }: Props) {
             {labelForSource(src)}
           </Tab>
         ))}
+        {!showCashTab && (
+          <button
+            type="button"
+            onClick={handleEnableCash}
+            disabled={pending}
+            className="text-muted-foreground hover:text-foreground inline-flex shrink-0 items-center gap-1 py-3 text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            <PlusIcon className="size-3.5" />
+            Cash
+          </button>
+        )}
       </div>
       {kind === "api" && (
         <Button
