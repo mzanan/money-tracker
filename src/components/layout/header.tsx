@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOutIcon, SettingsIcon } from "lucide-react";
+import { BellIcon, LogOutIcon, SettingsIcon } from "lucide-react";
 
 import { authClient } from "@/lib/authClient";
 
@@ -34,6 +34,11 @@ export function Header() {
       <div className="flex items-center gap-0.5">
         <DisplayControls />
         <ThemeToggle />
+        <Button asChild variant="ghost" size="icon-sm" aria-label="Upcoming payments">
+          <Link href="/upcoming">
+            <BellIcon />
+          </Link>
+        </Button>
         <Button asChild variant="ghost" size="icon-sm" aria-label="Settings">
           <Link href="/settings">
             <SettingsIcon />

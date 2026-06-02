@@ -153,6 +153,9 @@
 @utility text-eyebrow {
   @apply text-muted-foreground text-[11px] font-semibold tracking-[0.1em] uppercase;
 }
+@utility text-meta {
+  @apply text-[11px] tracking-wide uppercase;
+}
 
 @layer utilities {
   .scrollbar-thin {

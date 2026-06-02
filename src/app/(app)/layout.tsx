@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
+import { AssistantWidget } from "@/components/assistant/assistantWidget";
 import { Header } from "@/components/layout/header";
 import { SettingsProvider } from "@/hooks/useSettings";
 import { db } from "@/lib/db";
@@ -30,10 +31,11 @@ export default async function AppLayout({
 
   return (
     <SettingsProvider value={settings}>
-      <div className="mx-auto flex w-full max-w-xl flex-1 flex-col">
+      <div className="mx-auto flex w-full max-w-xl flex-1 flex-col lg:max-w-6xl">
         <Header />
         <main className="flex-1 px-4 pt-2 pb-8">{children}</main>
       </div>
+      <AssistantWidget />
     </SettingsProvider>
   );
 }

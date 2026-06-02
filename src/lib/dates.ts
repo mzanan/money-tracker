@@ -57,3 +57,14 @@ export function oldestYearMonthFrom(
   }
   return oldest.slice(0, 7);
 }
+
+export function getSupportedTimezones(): string[] {
+  try {
+    const intl = Intl as typeof Intl & {
+      supportedValuesOf?: (key: string) => string[];
+    };
+    return intl.supportedValuesOf?.("timeZone") ?? [];
+  } catch {
+    return [];
+  }
+}

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { MonthDashboard } from "@/components/transactions/monthDashboard";
 import { MonthNav } from "@/components/transactions/monthNav";
 import { getMonthPageData } from "@/lib/data/monthData";
+import { getRemindersData } from "@/lib/data/reminders";
 import { isValidYearMonth } from "@/lib/dates";
 
 export default async function MonthPage({
@@ -15,7 +16,10 @@ export default async function MonthPage({
     notFound();
   }
 
-  const data = await getMonthPageData(ym);
+  const [data, remindersData] = await Promise.all([
+    getMonthPageData(ym),
+    getRemindersData(),
+  ]);
   const sources = collectSources(data.lifetimeTxs);
 
   return (
@@ -24,6 +28,7 @@ export default async function MonthPage({
       monthTransactions={data.monthTxs}
       lifetimeTransactions={data.lifetimeTxs}
       sources={sources}
+      reminders={remindersData.reminders}
       nav={
         <MonthNav
           key="month-nav"

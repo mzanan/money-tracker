@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeftIcon, Loader2Icon, WalletIcon, ZapIcon } from "lucide-react";
+import { ArrowLeftIcon, Loader2Icon, WalletIcon } from "lucide-react";
 
 import { authClient } from "@/lib/authClient";
 import { Button } from "@/components/ui/button";
@@ -19,11 +19,6 @@ import { Label } from "@/components/ui/label";
 
 type Step = "email" | "code";
 
-const DEV_EMAIL = process.env.NEXT_PUBLIC_DEV_LOGIN_EMAIL;
-const DEV_PASSWORD = process.env.NEXT_PUBLIC_DEV_LOGIN_PASSWORD;
-const DEV_LOGIN_AVAILABLE =
-  process.env.NODE_ENV !== "production" && !!DEV_EMAIL && !!DEV_PASSWORD;
-
 export default function LoginPage() {
   const router = useRouter();
 
@@ -31,23 +26,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
-
-  async function devLogin() {
-    if (!DEV_EMAIL || !DEV_PASSWORD) return;
-    setLoading(true);
-    const { error } = await authClient.signIn.email({
-      email: DEV_EMAIL,
-      password: DEV_PASSWORD,
-    });
-    setLoading(false);
-
-    if (error) {
-      toast.error(error.message ?? "Sign-in failed");
-      return;
-    }
-    router.replace("/");
-    router.refresh();
-  }
 
   async function sendCode(event: React.FormEvent) {
     event.preventDefault();
@@ -119,17 +97,6 @@ export default function LoginPage() {
                 {loading && <Loader2Icon className="animate-spin" />}
                 Send code
               </Button>
-              {DEV_LOGIN_AVAILABLE && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={loading}
-                  onClick={devLogin}
-                >
-                  <ZapIcon /> Dev login ({DEV_EMAIL})
-                </Button>
-              )}
             </form>
           ) : (
             <form onSubmit={verifyCode} className="grid gap-4">

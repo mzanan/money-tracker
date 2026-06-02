@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 
+import { CashCard } from "@/components/settings/cashCard";
 import { CsvImportCard } from "@/components/settings/csvImportCard";
+import { ImportedAccountsCard } from "@/components/settings/importedAccountsCard";
+import { IngestCard } from "@/components/settings/ingestCard";
 import { IntegrationsCard } from "@/components/settings/integrationsCard";
 import { SettingsForm } from "@/components/settings/settingsForm";
 import { Button } from "@/components/ui/button";
 
 export default function SettingsPage() {
   return (
-    <div className="grid gap-6">
+    <div className="mx-auto grid w-full max-w-xl gap-6">
       <header className="flex items-center gap-2">
         <Button asChild variant="ghost" size="icon" aria-label="Back">
           <Link href="/">
@@ -23,6 +26,13 @@ export default function SettingsPage() {
       </Section>
 
       <Section
+        title="Cash"
+        hint="A manual account for cash you spend or receive in hand."
+      >
+        <CashCard />
+      </Section>
+
+      <Section
         title="Integrations"
         hint="Sync transactions automatically from connected accounts."
       >
@@ -30,10 +40,24 @@ export default function SettingsPage() {
       </Section>
 
       <Section
+        title="Phone auto-import"
+        hint="Capture Wise / Google Wallet notifications from your Android phone."
+      >
+        <IngestCard />
+      </Section>
+
+      <Section
         title="Data import"
         hint="One-off CSV import from any bank or wallet."
       >
         <CsvImportCard />
+      </Section>
+
+      <Section
+        title="Imported accounts"
+        hint="Rename or wipe everything under an account."
+      >
+        <ImportedAccountsCard />
       </Section>
     </div>
   );
