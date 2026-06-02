@@ -8,6 +8,34 @@
       "when": 1779725081919,
       "tag": "0000_zippy_odin",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1780115259674,
+      "tag": "0001_married_norrin_radd",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1780137159549,
+      "tag": "0002_living_captain_marvel",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1780240909814,
+      "tag": "0003_amused_exodus",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1780243799688,
+      "tag": "0004_equal_vulcan",
+      "breakpoints": true
     }
   ]
 }
