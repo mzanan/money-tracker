@@ -1,9 +1,17 @@
 "use client";
 
-import { ClipboardIcon, Loader2Icon, UploadIcon, XIcon } from "lucide-react";
+import { useState } from "react";
+import {
+  ClipboardIcon,
+  Loader2Icon,
+  SlidersHorizontalIcon,
+  UploadIcon,
+  XIcon,
+} from "lucide-react";
 
 import { CURRENCIES } from "@/config/currencies";
 import { useCsvImport } from "@/hooks/useCsvImport";
+import { useInlineEdit } from "@/hooks/useInlineEdit";
 import type { CsvRow } from "@/lib/actions/csvImport";
 import type { DateFormat, SignConvention } from "@/lib/csvPresets";
 
@@ -28,6 +36,10 @@ import { Textarea } from "@/components/ui/textarea";
 
 export function CsvImportCard() {
   const csv = useCsvImport();
+  const [showMapping, setShowMapping] = useState(false);
+  const sourceEdit = useInlineEdit(csv.setSource);
+
+  const mappingVisible = showMapping || !csv.canSubmit;
 
   return (
     <Card>
@@ -39,7 +51,7 @@ export function CsvImportCard() {
           duplicate.
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-4">
+      <CardContent className="flex flex-col gap-4">
         {!csv.fileName ? (
           <FilePicker
             mode={csv.mode}
@@ -59,9 +71,45 @@ export function CsvImportCard() {
               onReset={csv.reset}
             />
 
-            <MappingForm csv={csv} />
+            {mappingVisible ? (
+              <MappingForm csv={csv} />
+            ) : (
+              <div className="bg-surface-2/60 flex items-center gap-2 rounded-xl px-3 py-2">
+                <div className="text-muted-foreground min-w-0 flex-1 text-sm">
+                  {sourceEdit.editing ? (
+                    <Input
+                      {...sourceEdit.inputProps}
+                      onBlur={sourceEdit.submit}
+                      placeholder="wise / astropay"
+                      className="h-7 text-sm"
+                    />
+                  ) : (
+                    <p className="truncate">
+                      <button
+                        type="button"
+                        onClick={() => sourceEdit.start(csv.source)}
+                        className="text-foreground decoration-muted-foreground/50 hover:text-primary font-medium underline decoration-dotted underline-offset-2"
+                        title="Click to rename this account"
+                      >
+                        {csv.source || "untitled"}
+                      </button>{" "}
+                      · {csv.totalNormalized.ok} ready to import
+                    </p>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => setShowMapping(true)}
+                >
+                  <SlidersHorizontalIcon className="size-4" />
+                  Adjust columns
+                </Button>
+              </div>
+            )}
 
-            {csv.previewRows.length > 0 && (
+            {mappingVisible && csv.previewRows.length > 0 && (
               <PreviewTable
                 rows={csv.previewRows}
                 okCount={csv.totalNormalized.ok}
@@ -80,6 +128,7 @@ export function CsvImportCard() {
               </Button>
               <Button
                 variant="ghost"
+                className="shrink-0"
                 onClick={csv.reset}
                 disabled={csv.pending}
               >
@@ -173,7 +222,7 @@ function FileHeader({
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{fileName}</p>
         <p className="text-muted-foreground text-xs">
           {rowCount} rows detected
@@ -182,6 +231,7 @@ function FileHeader({
       <Button
         variant="outline"
         size="sm"
+        className="shrink-0"
         onClick={onReset}
         disabled={pending}
       >

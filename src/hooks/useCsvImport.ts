@@ -24,6 +24,15 @@ import {
 
 type Mode = "file" | "paste";
 
+const LAST_FORMAT_KEY = "csv:lastFormat";
+
+function rememberedFormat(current: string): string {
+  if (current !== "custom") return current;
+  if (typeof window === "undefined") return current;
+  const stored = localStorage.getItem(LAST_FORMAT_KEY);
+  return stored && CSV_PRESET_BY_ID[stored] ? stored : current;
+}
+
 const EMPTY_MAPPING: CsvMapping = {
   dateCol: "",
   dateFormat: "iso",
@@ -79,6 +88,14 @@ export function useCsvImport() {
     if (inputRef.current) inputRef.current.value = "";
   }
 
+  async function applyCutoff(presetSource: string) {
+    const result = await getLastImportDate(presetSource);
+    if (result.ok && result.data?.date) {
+      const next = addOneDay(result.data.date);
+      setMapping((m) => ({ ...m, sinceDate: next }));
+    }
+  }
+
   function ingestParseResult(
     result: Papa.ParseResult<Record<string, string>>,
     label: string,
@@ -89,16 +106,19 @@ export function useCsvImport() {
       return;
     }
     const fields = result.meta.fields ?? [];
+    const effectiveFormat = rememberedFormat(formatId);
     const { mapping: nextMapping, presetSource } = buildMapping(
       fields,
       result.data,
-      formatId,
+      effectiveFormat,
     );
+    setFormatId(effectiveFormat);
     setFileName(label);
     setHeaders(fields);
     setRawRows(result.data);
     setSource(presetSource ?? sourceGuess);
     setMapping(nextMapping);
+    if (presetSource) void applyCutoff(presetSource);
   }
 
   function handleFile(event: React.ChangeEvent<HTMLInputElement>) {
@@ -132,6 +152,9 @@ export function useCsvImport() {
 
   async function handleFormatChange(nextId: string) {
     setFormatId(nextId);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(LAST_FORMAT_KEY, nextId);
+    }
     const { mapping: nextMapping, presetSource } =
       headers.length > 0
         ? buildMapping(headers, rawRows, nextId)
@@ -143,11 +166,7 @@ export function useCsvImport() {
     if (!presetSource) return;
 
     setSource(presetSource);
-    const result = await getLastImportDate(presetSource);
-    if (result.ok && result.data?.date) {
-      const next = addOneDay(result.data.date);
-      setMapping((m) => ({ ...m, sinceDate: next }));
-    }
+    await applyCutoff(presetSource);
   }
 
   const previewRows = useMemo(() => {
