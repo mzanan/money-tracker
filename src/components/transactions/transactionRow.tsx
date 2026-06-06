@@ -1,9 +1,11 @@
 "use client";
 
-import { Loader2Icon, StickyNoteIcon } from "lucide-react";
+import { Loader2Icon, StickyNoteIcon, Trash2Icon } from "lucide-react";
 
 import { useRates } from "@/hooks/useRates";
+import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
+import { deleteTransaction } from "@/lib/actions/transactions";
 import { labelForSource } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
 import { transactionInDisplay } from "@/lib/totals";
@@ -24,6 +26,8 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const ratesQuery = useRates();
   const displayMode = useUiStore((s) => s.displayMode);
   const comment = useCommentEdit(tx.id, tx.comment);
+  const remove = useServerAction();
+  const canDelete = tx.source === "manual";
 
   let inDisplay: number | null;
   try {
@@ -48,7 +52,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
 
   const description = tx.note?.trim();
   const avatarSeed = tx.category || sourceLabel;
-  const reminderTitle = comment.current || description || identifier;
+  const reminderTitle = description || identifier;
 
   return (
     <div className="group hover:bg-surface-2/60 flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors">
@@ -124,6 +128,27 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
         )}
       </Button>
       <ReminderButton tx={tx} defaultTitle={reminderTitle} />
+      {canDelete && (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={() =>
+            remove.run(() => deleteTransaction(tx.id), {
+              confirm: "Delete this transaction?",
+              success: "Deleted",
+            })
+          }
+          disabled={remove.pending}
+          aria-label="Delete transaction"
+          className="text-muted-foreground hover:text-destructive -mr-0.5"
+        >
+          {remove.pending ? (
+            <Loader2Icon className="animate-spin" />
+          ) : (
+            <Trash2Icon />
+          )}
+        </Button>
+      )}
     </div>
   );
 }
