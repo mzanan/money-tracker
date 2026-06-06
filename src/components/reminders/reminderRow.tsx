@@ -101,6 +101,11 @@ export function ReminderRow({
             {dueLabel(reminder.next_due_on, today)}
           </span>
         </div>
+        {reminder.note && (
+          <p className="text-muted-foreground/90 mt-1 truncate text-meta italic">
+            {reminder.note}
+          </p>
+        )}
       </div>
 
       <Button

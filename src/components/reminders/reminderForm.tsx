@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 import type { RecurringFrequency, RecurringPayment } from "@/types/db";
 
@@ -41,6 +42,7 @@ type Seed = {
   intervalMonths?: number | null;
   lastPaidOn?: string | null;
   nextDueOn?: string;
+  note?: string | null;
 };
 
 type Props = {
@@ -83,6 +85,7 @@ export function ReminderForm({
         intervalMonths: reminder.interval_months,
         lastPaidOn: reminder.last_paid_on,
         nextDueOn: reminder.next_due_on,
+        note: reminder.note,
       }
     : (seed ?? {});
 
@@ -102,12 +105,28 @@ export function ReminderForm({
   );
   const [lastPaidOn, setLastPaidOn] = useState(base.lastPaidOn ?? "");
   const [nextDueOn, setNextDueOn] = useState(base.nextDueOn ?? "");
+  const [note, setNote] = useState(base.note ?? "");
 
   function recalc() {
     const from = lastPaidOn || nextDueOn;
     if (!from) return;
     setNextDueOn(
       computeNextDue(from, frequency, Number(intervalMonths) || 1),
+    );
+  }
+
+  function recalcFrom(
+    nextLastPaid: string,
+    nextFrequency: RecurringFrequency,
+    nextInterval: string,
+  ) {
+    if (!nextLastPaid) return;
+    setNextDueOn(
+      computeNextDue(
+        nextLastPaid,
+        nextFrequency,
+        Number(nextInterval) || 1,
+      ),
     );
   }
 
@@ -120,6 +139,7 @@ export function ReminderForm({
     setIntervalMonths(base.intervalMonths != null ? String(base.intervalMonths) : "6");
     setLastPaidOn(base.lastPaidOn ?? "");
     setNextDueOn(base.nextDueOn ?? "");
+    setNote(base.note ?? "");
   }
 
   function submit() {
@@ -135,6 +155,7 @@ export function ReminderForm({
       lastPaidOn: lastPaidOn || null,
       nextDueOn,
       source: base.source ?? null,
+      note: note.trim() || null,
     };
 
     run<unknown>(
@@ -185,6 +206,18 @@ export function ReminderForm({
             />
           </div>
 
+          <div className="grid gap-2">
+            <Label htmlFor="reminder-note">Note (optional)</Label>
+            <Textarea
+              id="reminder-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="What's this for?"
+              rows={2}
+              maxLength={280}
+            />
+          </div>
+
           <div className="grid grid-cols-[1fr_auto] gap-3">
             <div className="grid gap-2">
               <Label htmlFor="reminder-amount">Amount (optional)</Label>
@@ -213,7 +246,11 @@ export function ReminderForm({
               <Label htmlFor="reminder-freq">Repeats</Label>
               <Select
                 value={frequency}
-                onValueChange={(v) => setFrequency(v as RecurringFrequency)}
+                onValueChange={(v) => {
+                  const next = v as RecurringFrequency;
+                  setFrequency(next);
+                  recalcFrom(lastPaidOn, next, intervalMonths);
+                }}
               >
                 <SelectTrigger id="reminder-freq">
                   <SelectValue />
@@ -234,7 +271,10 @@ export function ReminderForm({
                   id="reminder-interval"
                   inputMode="numeric"
                   value={intervalMonths}
-                  onChange={(e) => setIntervalMonths(e.target.value)}
+                  onChange={(e) => {
+                    setIntervalMonths(e.target.value);
+                    recalcFrom(lastPaidOn, frequency, e.target.value);
+                  }}
                   placeholder="6"
                 />
               </div>
@@ -248,7 +288,10 @@ export function ReminderForm({
                 id="reminder-lastpaid"
                 type="date"
                 value={lastPaidOn}
-                onChange={(e) => setLastPaidOn(e.target.value)}
+                onChange={(e) => {
+                  setLastPaidOn(e.target.value);
+                  recalcFrom(e.target.value, frequency, intervalMonths);
+                }}
               />
             </div>
             <div className="grid gap-2">
