@@ -3,15 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3020",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3020",
     "lint": "eslint",
     "format": "prettier --write .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "migrate:fromSupabase": "tsx scripts/migrateFromSupabase.ts"
+    "migrate:fromSupabase": "tsx scripts/migrateFromSupabase.ts",
+    "backfill:reminderNotes": "tsx scripts/backfillReminderNotes.ts",
+    "backfill:reminderDueDates": "tsx scripts/backfillReminderDueDates.ts",
+    "dedup:transactions": "tsx scripts/dedupTransactions.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.80",
