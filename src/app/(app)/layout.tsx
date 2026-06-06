@@ -15,7 +15,7 @@ export default async function AppLayout({
 }) {
   const user = await getUser();
   if (!user) {
-    redirect("/login");
+    redirect("/auth/sign-out");
   }
 
   const settings = await db

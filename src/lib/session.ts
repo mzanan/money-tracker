@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 
@@ -20,6 +21,6 @@ export async function getUser(): Promise<SessionUser | null> {
 
 export async function requireUser(): Promise<SessionUser> {
   const user = await getUser();
-  if (!user) throw new Error("Not authenticated");
+  if (!user) redirect("/auth/sign-out");
   return user;
 }
