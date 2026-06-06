@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
 export function CsvImportCard() {
@@ -117,6 +118,24 @@ export function CsvImportCard() {
               />
             )}
 
+            <label className="flex items-start gap-3 rounded-lg border px-3 py-2.5">
+              <Switch
+                checked={csv.replace}
+                onCheckedChange={csv.setReplace}
+                disabled={csv.pending}
+                className="mt-0.5"
+              />
+              <div className="grid gap-0.5">
+                <span className="text-sm font-medium">
+                  Replace existing transactions in this source
+                </span>
+                <span className="text-muted-foreground text-[11px]">
+                  Deletes every transaction under &quot;{csv.source || "this source"}&quot;
+                  before importing. Use it if a previous import duplicated rows.
+                </span>
+              </div>
+            </label>
+
             <div className="flex gap-2">
               <Button
                 onClick={csv.submit}
@@ -124,7 +143,7 @@ export function CsvImportCard() {
                 className="flex-1"
               >
                 {csv.pending && <Loader2Icon className="animate-spin" />}
-                Import {csv.totalNormalized.ok} transactions
+                {csv.replace ? "Replace" : "Import"} {csv.totalNormalized.ok} transactions
               </Button>
               <Button
                 variant="ghost"

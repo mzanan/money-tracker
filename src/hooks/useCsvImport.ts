@@ -62,6 +62,7 @@ export function useCsvImport() {
   const [source, setSource] = useState("");
   const [formatId, setFormatId] = useState<string>("custom");
   const [pasted, setPasted] = useState("");
+  const [replace, setReplace] = useState(false);
 
   function buildMapping(
     fields: string[],
@@ -85,6 +86,7 @@ export function useCsvImport() {
     setSource("");
     setFormatId("custom");
     setPasted("");
+    setReplace(false);
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -214,15 +216,24 @@ export function useCsvImport() {
       .map((row) => normalizeRow(row, mapping))
       .filter((row): row is CsvRow => row !== null);
 
+    if (
+      replace &&
+      !window.confirm(
+        `Replace all existing transactions in source "${source}" with this CSV?`,
+      )
+    ) {
+      return;
+    }
+
     startTransition(async () => {
-      const result = await importCsvRows({ source, rows: normalized });
+      const result = await importCsvRows({ source, rows: normalized, replace });
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
       const { imported, skipped, errors } = result.data!;
       toast.success(
-        `Imported ${imported}` +
+        `${replace ? "Replaced with " : "Imported "}${imported}` +
           (skipped > 0 ? `, ${skipped} duplicate` : "") +
           (errors > 0 ? `, ${errors} errors` : ""),
       );
@@ -242,6 +253,7 @@ export function useCsvImport() {
     source,
     formatId,
     pasted,
+    replace,
     previewRows,
     totalNormalized,
     canSubmit,
@@ -250,6 +262,7 @@ export function useCsvImport() {
     setPasted,
     setSource,
     setMapping,
+    setReplace,
     handleFile,
     handlePaste,
     handleFormatChange,

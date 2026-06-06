@@ -26,6 +26,7 @@ export interface CsvRow {
 export interface CsvImportInput {
   source: string;
   rows: CsvRow[];
+  replace?: boolean;
 }
 
 export async function getLastImportDate(
@@ -140,6 +141,17 @@ export async function importCsvRows(
       continue;
     }
     insertRows.push(built);
+  }
+
+  if (input.replace) {
+    await db
+      .delete(transactions)
+      .where(
+        and(
+          eq(transactions.user_id, user.id),
+          eq(transactions.source, source),
+        ),
+      );
   }
 
   const BATCH_SIZE = 500;
