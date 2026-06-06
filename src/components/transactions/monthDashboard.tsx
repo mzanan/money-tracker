@@ -23,6 +23,7 @@ interface Props {
   lifetimeTransactions: Transaction[];
   sources: string[];
   reminders?: RecurringPayment[];
+  today: string;
   quickAdd?: React.ReactNode;
   nav?: React.ReactNode;
   banner?: React.ReactNode;
@@ -34,6 +35,7 @@ export function MonthDashboard({
   lifetimeTransactions,
   sources,
   reminders = [],
+  today,
   quickAdd,
   nav,
   banner,
@@ -71,6 +73,7 @@ export function MonthDashboard({
           lifetimeTransactions={c.sourceFilteredLifetime}
           selectedKind={c.selectedKind}
           onKindChange={c.setSelectedKind}
+          today={today}
           nav={nav}
         />
         {c.showQuickAdd && quickAdd}

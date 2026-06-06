@@ -1,9 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ArrowDownRightIcon, ArrowUpRightIcon } from "lucide-react";
 
 import { Surface } from "@/components/ui/surface";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { useRates } from "@/hooks/useRates";
 import { useSettings } from "@/hooks/useSettings";
 import { formatMoney } from "@/lib/currency";
@@ -14,6 +20,8 @@ import { useUiStore } from "@/stores/uiStore";
 
 import type { Transaction } from "@/types/db";
 
+import { DaySpendView } from "./daySpendView";
+
 export type KindFilter = "all" | "income" | "expense";
 
 interface Props {
@@ -22,6 +30,7 @@ interface Props {
   lifetimeTransactions: Transaction[];
   selectedKind: KindFilter;
   onKindChange: (next: KindFilter) => void;
+  today: string;
   nav?: React.ReactNode;
 }
 
@@ -31,8 +40,10 @@ export function BalanceHero({
   lifetimeTransactions,
   selectedKind,
   onKindChange,
+  today,
   nav,
 }: Props) {
+  const [view, setView] = useState<"balance" | "daily">("balance");
   const settings = useSettings();
   const ratesQuery = useRates();
   const displayMode = useUiStore((s) => s.displayMode);
@@ -80,55 +91,79 @@ export function BalanceHero({
 
   return (
     <Surface padding="lg">
-      <span className="text-eyebrow">Total balance</span>
-      <p
-        className={cn(
-          "font-heading text-[2.75rem] leading-[1.05] font-semibold tracking-tight tabular-nums",
-          totalPositive ? "text-foreground" : "text-expense",
-        )}
+      <Tabs
+        value={view}
+        onValueChange={(v) => setView(v as "balance" | "daily")}
       >
-        {totalSigned}
-      </p>
+        <TabsList className="mb-4 self-start">
+          <TabsTrigger value="balance">Balance</TabsTrigger>
+          <TabsTrigger value="daily">Daily</TabsTrigger>
+        </TabsList>
 
-      <div className="border-border mt-9 border-t pt-6">
-        <div className="mb-4 flex items-center justify-between gap-2">
-          <span className="text-eyebrow">{formatYearMonthLong(yearMonth)}</span>
-          {nav}
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Mini
-            label="In"
-            value={`+${formatMoney(monthTotals.income, settings.base_currency)}`}
-            icon={<ArrowDownRightIcon className="size-4" />}
-            tone="income"
-            active={selectedKind === "income"}
-            dimmed={selectedKind === "expense"}
-            onClick={() => toggle("income")}
-          />
-          <Mini
-            label="Out"
-            value={`-${formatMoney(monthTotals.expense, settings.base_currency)}`}
-            icon={<ArrowUpRightIcon className="size-4" />}
-            tone="expense"
-            active={selectedKind === "expense"}
-            dimmed={selectedKind === "income"}
-            onClick={() => toggle("expense")}
-          />
-        </div>
-
-        <div className="mt-4 flex items-center justify-between">
-          <span className="text-muted-foreground text-xs">Net this month</span>
-          <span
+        <TabsContent value="balance">
+          <span className="text-eyebrow">Total balance</span>
+          <p
             className={cn(
-              "text-sm font-semibold tabular-nums",
-              monthPositive ? "text-foreground" : "text-expense",
+              "font-heading text-[2.75rem] leading-[1.05] font-semibold tracking-tight tabular-nums",
+              totalPositive ? "text-foreground" : "text-expense",
             )}
           >
-            {monthSigned}
-          </span>
-        </div>
-      </div>
+            {totalSigned}
+          </p>
+
+          <div className="border-border mt-9 border-t pt-6">
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <span className="text-eyebrow">
+                {formatYearMonthLong(yearMonth)}
+              </span>
+              {nav}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Mini
+                label="In"
+                value={`+${formatMoney(monthTotals.income, settings.base_currency)}`}
+                icon={<ArrowDownRightIcon className="size-4" />}
+                tone="income"
+                active={selectedKind === "income"}
+                dimmed={selectedKind === "expense"}
+                onClick={() => toggle("income")}
+              />
+              <Mini
+                label="Out"
+                value={`-${formatMoney(monthTotals.expense, settings.base_currency)}`}
+                icon={<ArrowUpRightIcon className="size-4" />}
+                tone="expense"
+                active={selectedKind === "expense"}
+                dimmed={selectedKind === "income"}
+                onClick={() => toggle("expense")}
+              />
+            </div>
+
+            <div className="mt-4 flex items-center justify-between">
+              <span className="text-muted-foreground text-xs">
+                Net this month
+              </span>
+              <span
+                className={cn(
+                  "text-sm font-semibold tabular-nums",
+                  monthPositive ? "text-foreground" : "text-expense",
+                )}
+              >
+                {monthSigned}
+              </span>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="daily">
+          <DaySpendView
+            yearMonth={yearMonth}
+            transactions={transactions}
+            today={today}
+          />
+        </TabsContent>
+      </Tabs>
     </Surface>
   );
 }

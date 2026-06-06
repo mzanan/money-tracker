@@ -29,6 +29,7 @@ export default async function MonthPage({
       lifetimeTransactions={data.lifetimeTxs}
       sources={sources}
       reminders={remindersData.reminders}
+      today={remindersData.today}
       nav={
         <MonthNav
           key="month-nav"
