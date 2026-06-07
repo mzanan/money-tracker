@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BellIcon, LogOutIcon, SettingsIcon } from "lucide-react";
+import {
+  BellIcon,
+  ImageUpIcon,
+  LogOutIcon,
+  SettingsIcon,
+} from "lucide-react";
 
 import { authClient } from "@/lib/authClient";
 
@@ -34,6 +39,16 @@ export function Header() {
       <div className="flex items-center gap-0.5">
         <DisplayControls />
         <ThemeToggle />
+        <Button
+          asChild
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Import from screenshot"
+        >
+          <Link href="/screenshot-import">
+            <ImageUpIcon />
+          </Link>
+        </Button>
         <Button asChild variant="ghost" size="icon-sm" aria-label="Upcoming payments">
           <Link href="/upcoming">
             <BellIcon />
