@@ -96,9 +96,21 @@ export function normalizeRowDetailed(
 
   const occurredAt = parseDateTime(raw[mapping.dateCol], occurredOn);
 
+  const externalId = mapping.externalIdCol
+    ? (raw[mapping.externalIdCol] ?? "").trim() || null
+    : null;
+
   return {
     ok: true,
-    row: { kind, amount, currency, occurredOn, occurredAt, description },
+    row: {
+      kind,
+      amount,
+      currency,
+      occurredOn,
+      occurredAt,
+      description,
+      externalId,
+    },
   };
 }
 

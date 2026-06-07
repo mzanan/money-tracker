@@ -117,6 +117,7 @@ export function detectMapping(
 
   const directionCol = pickByScore(headers, PATTERNS.direction);
   const statusCol = pickByScore(headers, PATTERNS.status);
+  const externalIdCol = pickByScore(headers, PATTERNS.externalId);
 
   let dateFormat: DateFormat = "iso";
   if (dateCol) {
@@ -178,6 +179,7 @@ export function detectMapping(
     creditCol: signConvention === "debit-credit-cols" ? creditCol : "",
     directionCol: signConvention === "direction-column" ? directionCol : "",
     statusCol,
+    externalIdCol,
     sinceDate: "",
   };
 }

@@ -8,8 +8,13 @@ import { IngestCard } from "@/components/settings/ingestCard";
 import { IntegrationsCard } from "@/components/settings/integrationsCard";
 import { SettingsForm } from "@/components/settings/settingsForm";
 import { Button } from "@/components/ui/button";
+import { getCsvSources } from "@/lib/data/sources";
+import { requireUser } from "@/lib/session";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const user = await requireUser();
+  const existingSources = await getCsvSources(user.id);
+
   return (
     <div className="mx-auto grid w-full max-w-xl gap-6">
       <header className="flex items-center gap-2">
@@ -50,7 +55,7 @@ export default function SettingsPage() {
         title="Data import"
         hint="One-off CSV import from any bank or wallet."
       >
-        <CsvImportCard />
+        <CsvImportCard existingSources={existingSources} />
       </Section>
 
       <Section

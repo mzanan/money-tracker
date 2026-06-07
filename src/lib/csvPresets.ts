@@ -20,6 +20,7 @@ export interface CsvMapping {
   creditCol: string;
   directionCol: string;
   statusCol: string;
+  externalIdCol: string;
   sinceDate: string;
 }
 

@@ -8,6 +8,7 @@ import { isSupportedCurrency } from "@/config/currencies";
 import { roundForCurrency } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
+import { isSyncable } from "@/lib/integrations";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
 import { buildTransactionRow } from "@/lib/transactions";
@@ -21,6 +22,7 @@ export interface CsvRow {
   occurredOn: string;
   occurredAt?: string;
   description: string | null;
+  externalId?: string | null;
 }
 
 export interface CsvImportInput {
@@ -75,6 +77,12 @@ export async function importCsvRows(
   if (source === "manual") {
     return { ok: false, error: "Account name 'manual' is reserved" };
   }
+  if (isSyncable(source)) {
+    return {
+      ok: false,
+      error: `Account name '${source}' is reserved for an API integration`,
+    };
+  }
   if (input.rows.length === 0) {
     return { ok: false, error: "No rows to import" };
   }
@@ -121,7 +129,10 @@ export async function importCsvRows(
       continue;
     }
 
-    const externalId = hashRow({ ...row, amount });
+    const providedId = row.externalId?.trim();
+    const externalId = providedId
+      ? `csv:${providedId.toLowerCase().slice(0, 64)}`
+      : hashRow({ ...row, amount });
     const built = buildTransactionRow(
       {
         userId: user.id,

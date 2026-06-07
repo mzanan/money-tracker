@@ -10,6 +10,7 @@ import {
   importCsvRows,
   type CsvRow,
 } from "@/lib/actions/csvImport";
+import { kindOfSource } from "@/lib/constants/sources";
 import { detectMapping } from "@/lib/csv/detect";
 import {
   normalizeRow,
@@ -46,6 +47,7 @@ const EMPTY_MAPPING: CsvMapping = {
   creditCol: "",
   directionCol: "",
   statusCol: "",
+  externalIdCol: "",
   sinceDate: "",
 };
 
@@ -197,8 +199,13 @@ export function useCsvImport() {
     return { ok, bad, cutoff };
   }, [rawRows, mapping]);
 
+  const normalizedSource = source.trim().toLowerCase();
+  const sourceReserved =
+    normalizedSource === "manual" || kindOfSource(normalizedSource) === "api";
+
   const canSubmit = Boolean(
     source.trim() &&
+      !sourceReserved &&
       mapping.dateCol &&
       (mapping.signConvention === "debit-credit-cols"
         ? mapping.debitCol && mapping.creditCol

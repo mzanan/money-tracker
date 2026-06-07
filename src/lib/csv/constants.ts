@@ -82,4 +82,13 @@ export const PATTERNS = {
   ],
   direction: [/direction/, /\bflow\b/, /\bin\/out\b/, /\btype\b/],
   status: [/\bstatus\b/, /\bstate\b/],
+  externalId: [
+    /transaction.?id/,
+    /\btx.?id\b/,
+    /\btxn.?id\b/,
+    /reference.?id/,
+    /\bref(?:erence)?\b/,
+    /\b(?:transfer|payment).?id\b/,
+    /^id$/,
+  ],
 } as const;
