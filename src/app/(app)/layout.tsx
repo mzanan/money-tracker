@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { AssistantWidget } from "@/components/assistant/assistantWidget";
 import { Header } from "@/components/layout/header";
+import { InstallHint } from "@/components/pwa/installHint";
 import { SettingsProvider } from "@/hooks/useSettings";
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
@@ -36,6 +37,7 @@ export default async function AppLayout({
         <main className="flex-1 px-4 pt-2 pb-8">{children}</main>
       </div>
       <AssistantWidget />
+      <InstallHint />
     </SettingsProvider>
   );
 }
