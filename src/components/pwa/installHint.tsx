@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { ShareIcon, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Surface } from "@/components/ui/surface";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -80,7 +81,11 @@ export function InstallHint() {
   if (!androidEvent && !showIos) return null;
 
   return (
-    <div className="bg-card fixed right-3 bottom-3 left-3 z-40 flex items-center gap-3 rounded-2xl border p-3 shadow-lg sm:right-auto sm:left-3 sm:max-w-sm">
+    <Surface
+      radius="lg"
+      padding="sm"
+      className="fixed right-3 bottom-3 left-3 z-40 flex items-center gap-3 border shadow-lg sm:right-auto sm:left-3 sm:max-w-sm"
+    >
       <div className="flex-1 text-sm">
         {androidEvent ? (
           <p>
@@ -106,6 +111,6 @@ export function InstallHint() {
       <Button size="icon" variant="ghost" onClick={close} aria-label="Dismiss">
         <XIcon className="size-4" />
       </Button>
-    </div>
+    </Surface>
   );
 }
