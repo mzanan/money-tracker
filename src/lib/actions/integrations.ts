@@ -1,6 +1,7 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { addDays, format, subDays } from "date-fns";
+import { and, between, eq, inArray, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { isSupportedCurrency } from "@/config/currencies";
@@ -14,6 +15,81 @@ import { buildTransactionRow } from "@/lib/transactions";
 import type { IntegrationProvider } from "@/types/db";
 
 import type { ActionResult } from "./transactions";
+
+const ABSORB_WINDOW_DAYS = 2;
+const ABSORB_AMOUNT_TOLERANCE = 0.01;
+
+async function absorbMatching(
+  userId: string,
+  syncSource: string,
+  insertedIds: string[],
+): Promise<number> {
+  if (insertedIds.length === 0) return 0;
+
+  const inserted = await db
+    .select({
+      id: transactions.id,
+      kind: transactions.kind,
+      amount: transactions.amount_original,
+      currency: transactions.currency_original,
+      occurred_on: transactions.occurred_on,
+      note: transactions.note,
+      comment: transactions.comment,
+    })
+    .from(transactions)
+    .where(inArray(transactions.id, insertedIds));
+
+  let absorbed = 0;
+  for (const row of inserted) {
+    const start = format(
+      subDays(new Date(`${row.occurred_on}T00:00:00Z`), ABSORB_WINDOW_DAYS),
+      "yyyy-MM-dd",
+    );
+    const end = format(
+      addDays(new Date(`${row.occurred_on}T00:00:00Z`), ABSORB_WINDOW_DAYS),
+      "yyyy-MM-dd",
+    );
+
+    const candidates = await db
+      .select({
+        id: transactions.id,
+        note: transactions.note,
+        comment: transactions.comment,
+      })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.user_id, userId),
+          ne(transactions.source, syncSource),
+          eq(transactions.kind, row.kind),
+          eq(transactions.currency_original, row.currency),
+          between(transactions.occurred_on, start, end),
+          sql`abs(${transactions.amount_original} - ${row.amount}) <= ${ABSORB_AMOUNT_TOLERANCE}`,
+        ),
+      );
+
+    if (candidates.length !== 1) continue;
+
+    const match = candidates[0];
+    const patch: { comment?: string; note?: string } = {};
+    if (!row.comment && match.comment) patch.comment = match.comment;
+    if (!row.note && match.note) patch.note = match.note;
+
+    await db.transaction(async (tx) => {
+      if (Object.keys(patch).length > 0) {
+        await tx
+          .update(transactions)
+          .set(patch)
+          .where(eq(transactions.id, row.id));
+      }
+      await tx.delete(transactions).where(eq(transactions.id, match.id));
+    });
+
+    absorbed += 1;
+  }
+
+  return absorbed;
+}
 
 const DEFAULT_SINCE_DAYS = 30;
 
@@ -116,7 +192,7 @@ export async function deleteIntegration(
 
 export async function syncIntegration(
   provider: IntegrationProvider,
-): Promise<ActionResult<{ imported: number; skipped: number }>> {
+): Promise<ActionResult<{ imported: number; skipped: number; absorbed: number }>> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
@@ -211,6 +287,7 @@ export async function syncIntegration(
   }
 
   let imported = 0;
+  let absorbed = 0;
   if (rows.length > 0) {
     try {
       const inserted = await db
@@ -225,6 +302,13 @@ export async function syncIntegration(
         })
         .returning({ id: transactions.id });
       imported = inserted.length;
+      if (inserted.length > 0) {
+        absorbed = await absorbMatching(
+          user.id,
+          provider,
+          inserted.map((row) => row.id),
+        );
+      }
     } catch (error) {
       return {
         ok: false,
@@ -250,5 +334,5 @@ export async function syncIntegration(
   const skipped = normalized.length - imported;
   void skippedIncome;
   void skippedNoRate;
-  return { ok: true, data: { imported, skipped } };
+  return { ok: true, data: { imported, skipped, absorbed } };
 }

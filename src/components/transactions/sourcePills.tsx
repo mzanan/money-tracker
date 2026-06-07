@@ -38,7 +38,10 @@ export function SourcePills({ sources, selected, onChange }: Props) {
     run(() => syncIntegration(selected as IntegrationProvider), {
       success: (data) =>
         `${labelForSource(selected)}: imported ${data?.imported ?? 0}` +
-        ((data?.skipped ?? 0) > 0 ? `, ${data?.skipped} skipped` : ""),
+        ((data?.skipped ?? 0) > 0 ? `, ${data?.skipped} skipped` : "") +
+        ((data?.absorbed ?? 0) > 0
+          ? `, ${data?.absorbed} merged from manual`
+          : ""),
     });
   }
 

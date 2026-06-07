@@ -50,7 +50,10 @@ export function IntegrationRow({ provider, label, integration }: Props) {
     run(() => syncIntegration(provider), {
       success: (data) =>
         `Imported ${data?.imported ?? 0} transaction${data?.imported === 1 ? "" : "s"}` +
-        ((data?.skipped ?? 0) > 0 ? `, ${data?.skipped} skipped` : ""),
+        ((data?.skipped ?? 0) > 0 ? `, ${data?.skipped} skipped` : "") +
+        ((data?.absorbed ?? 0) > 0
+          ? `, ${data?.absorbed} merged from manual entries`
+          : ""),
     });
   }
 
