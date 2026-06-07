@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { useRates } from "@/hooks/useRates";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
 import { kindOfSource } from "@/lib/constants/sources";
-import { monthBounds, todayInTz } from "@/lib/dates";
+import { todayInTz } from "@/lib/dates";
 import { filterByAmount } from "@/lib/filters";
 import { dayTotalsList } from "@/lib/totals";
 import { useUiStore } from "@/stores/uiStore";
@@ -28,12 +28,10 @@ function bySource(txs: Transaction[], source: string): Transaction[] {
 }
 
 export function useDashboardControls({
-  yearMonth,
   monthTransactions,
   lifetimeTransactions,
   reminders,
 }: {
-  yearMonth: string;
   monthTransactions: Transaction[];
   lifetimeTransactions: Transaction[];
   reminders: RecurringPayment[];
@@ -118,13 +116,6 @@ export function useDashboardControls({
     [reminders],
   );
 
-  const monthReminders = useMemo(() => {
-    const [start, end] = monthBounds(yearMonth);
-    return reminders
-      .filter((r) => r.next_due_on >= start && r.next_due_on <= end)
-      .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on));
-  }, [reminders, yearMonth]);
-
   const selectedDayGroup = useMemo<DayTotals | null>(() => {
     if (!selectedDay) return null;
     const dayTxs = lifetimeTransactions.filter(
@@ -171,7 +162,6 @@ export function useDashboardControls({
     filterResults,
     activityDates,
     reminderDates,
-    monthReminders,
     today,
     selectedDayGroup,
   };

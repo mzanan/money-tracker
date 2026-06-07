@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { format, parse } from "date-fns";
 
 import { Calendar } from "@/components/ui/calendar";
 import { Reveal } from "@/components/ui/reveal";
 import { Surface } from "@/components/ui/surface";
 import { ReminderRow } from "@/components/reminders/reminderRow";
-import { formatYearMonthLong } from "@/lib/dates";
+import { formatYearMonthLong, monthBounds } from "@/lib/dates";
 
 import type { DayTotals } from "@/lib/totals";
 import type { RecurringPayment } from "@/types/db";
@@ -15,6 +15,7 @@ import type { RecurringPayment } from "@/types/db";
 import { DaySection } from "./daySection";
 
 const ymd = (date: Date) => format(date, "yyyy-MM-dd");
+const ym = (date: Date) => format(date, "yyyy-MM");
 
 export function CalendarPanel({
   yearMonth,
@@ -40,10 +41,20 @@ export function CalendarPanel({
     ? parse(selectedDay, "yyyy-MM-dd", new Date())
     : undefined;
 
+  const [visibleMonth, setVisibleMonth] = useState<Date>(defaultMonth);
+  const visibleYearMonth = ym(visibleMonth);
+
   const [shownDay, setShownDay] = useState<DayTotals | null>(selectedDayGroup);
   if (selectedDayGroup && selectedDayGroup !== shownDay) {
     setShownDay(selectedDayGroup);
   }
+
+  const visibleReminders = useMemo(() => {
+    const [start, end] = monthBounds(visibleYearMonth);
+    return reminders
+      .filter((r) => r.next_due_on >= start && r.next_due_on <= end)
+      .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on));
+  }, [reminders, visibleYearMonth]);
 
   return (
     <>
@@ -52,7 +63,8 @@ export function CalendarPanel({
           <Calendar
             mode="single"
             className="bg-transparent"
-            defaultMonth={defaultMonth}
+            month={visibleMonth}
+            onMonthChange={setVisibleMonth}
             selected={selected}
             onSelect={(date) => onSelectDay(date ? ymd(date) : null)}
             modifiers={{
@@ -87,11 +99,11 @@ export function CalendarPanel({
 
       <Surface className="grid gap-2">
         <span className="text-eyebrow">
-          Due · {formatYearMonthLong(yearMonth)}
+          Due · {formatYearMonthLong(visibleYearMonth)}
         </span>
-        {reminders.length > 0 ? (
+        {visibleReminders.length > 0 ? (
           <ul className="grid gap-1">
-            {reminders.map((reminder) => (
+            {visibleReminders.map((reminder) => (
               <ReminderRow key={reminder.id} reminder={reminder} today={today} />
             ))}
           </ul>

@@ -42,7 +42,6 @@ export function MonthDashboard({
 }: Props) {
   const settings = useSettings();
   const c = useDashboardControls({
-    yearMonth,
     monthTransactions,
     lifetimeTransactions,
     reminders,
@@ -115,7 +114,7 @@ export function MonthDashboard({
               selectedDay={c.selectedDay}
               selectedDayGroup={c.selectedDayGroup}
               onSelectDay={c.setSelectedDay}
-              reminders={c.monthReminders}
+              reminders={reminders}
               today={c.today}
             />
           )}
