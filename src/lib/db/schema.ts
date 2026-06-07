@@ -138,6 +138,7 @@ export const user_settings = sqliteTable(
       .notNull()
       .default(false),
     ingest_token: text("ingest_token"),
+    calendar_token: text("calendar_token"),
     onboarded_at: text("onboarded_at"),
     created_at: text("created_at")
       .notNull()
@@ -147,7 +148,10 @@ export const user_settings = sqliteTable(
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
       .$onUpdate(() => new Date().toISOString()),
   },
-  (t) => [uniqueIndex("user_settings_ingest_token_uniq").on(t.ingest_token)],
+  (t) => [
+    uniqueIndex("user_settings_ingest_token_uniq").on(t.ingest_token),
+    uniqueIndex("user_settings_calendar_token_uniq").on(t.calendar_token),
+  ],
 );
 
 export const fx_rates_cache = sqliteTable("fx_rates_cache", {

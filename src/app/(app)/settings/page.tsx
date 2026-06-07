@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 
+import { CalendarFeedCard } from "@/components/settings/calendarFeedCard";
 import { CashCard } from "@/components/settings/cashCard";
 import { CsvImportCard } from "@/components/settings/csvImportCard";
 import { ImportedAccountsCard } from "@/components/settings/importedAccountsCard";
@@ -49,6 +50,13 @@ export default async function SettingsPage() {
         hint="Capture Wise / Google Wallet notifications from your Android phone."
       >
         <IngestCard />
+      </Section>
+
+      <Section
+        title="Calendar feed"
+        hint="Show your reminders inside Google / iOS / Outlook calendar."
+      >
+        <CalendarFeedCard />
       </Section>
 
       <Section
