@@ -44,9 +44,15 @@ portabilidad. Schema y migración one-shot documentados en el vault
   `ActionResult<T>` discriminado. Obtener user via `getUser()`/`requireUser()`
   (NUNCA construir db sin user_id filter).
 - **Snapshot de FX:** cada `transactions` row guarda `fx_rates_snapshot` (jsonb
-  USD-based) al momento de crear. Los totales históricos NO se recalculan;
-  el toggle "today" es un recálculo live explícito y separado. Nunca mezclar
-  snapshot y live en una misma suma.
+  USD-based) al momento de crear. Los totales siempre se calculan con esa
+  snapshot (`transactionInDisplay` / `periodTotals` / `dayTotalsList` /
+  `filterByAmount` no aceptan rates live). El único consumer de `useRates`
+  es el preview live en `quickAddForm`.
+- **Preferences server-readable:** preferencias de UI que no deben tener flash
+  al recargar (ej. `hide-amounts`) se guardan en cookie (`mt_*`) leída en
+  `(app)/layout.tsx` server-side y pasada a un Provider. Split convención:
+  `lib/preferences.ts` (constantes client-safe) + `lib/preferences.server.ts`
+  (reader con `next/headers`). Nunca importar el `.server.ts` desde client.
 - **Decimales por moneda:** usar `getCurrency(code).decimals` siempre que
   redondees o formatees. VND/JPY/KRW/CLP = 0 decimales. Nunca hardcodear 2.
 - **Huso horario:** `occurred_on` es un `date` puro (sin hora). Se asigna al

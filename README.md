@@ -139,11 +139,13 @@ src/
     api/rates/                # proxy + cache de open.er-api.com
     layout.tsx, manifest.ts
   components/
-    transactions/             # balanceHero, sourcePills, monthView, ...
-    layout/                   # header, displayControls, themeToggle
+    transactions/             # balanceHero (Monthly/Daily tabs), sourceFilter, monthView, amountsToggle, ...
+    layout/                   # header, baseCurrencyPicker, themeToggle
+    reminders/                # upcomingBanner, reminderRow, reminderForm
     onboarding/               # onboardingForm
     settings/                 # csvImportCard, integrations*
     providers/                # query, theme, toaster
+    screenshot/               # screenshotImporter (dialog + share target page)
     ui/                       # shadcn primitives (kebab-case por vendoring)
   config/currencies.ts        # ISO 4217 con decimals oficial
   hooks/                      # useSettings, useRates, useTimezone, useCsvImport
@@ -161,7 +163,8 @@ src/
     dates.ts                  # helpers de fecha (date-fns + tz)
     integrations/             # Bybit adapter (funding history)
     csv/                      # parse + detect + normalize
-  stores/uiStore.ts           # Zustand (displayMode, lastCurrency)
+  stores/uiStore.ts           # Zustand (lastCurrency)
+  hooks/useHideAmounts.tsx    # mask totals via mt_hide_amounts cookie
   types/db.ts                 # tipos derivados de Drizzle ($inferSelect)
   proxy.ts                    # ex-middleware (Next 16): cookie check + gate
 drizzle/migrations/           # SQL generado por drizzle-kit
@@ -173,11 +176,15 @@ scripts/migrateFromSupabase.ts   # one-shot data migration
 ## Decisiones clave
 
 - **Snapshot de FX por fila**: cada `transactions` row guarda un
-  `fx_rates_snapshot` (JSON USD-based) al cargar. Los totales históricos no se
-  mueven aunque cambien las tasas o la moneda base.
-- **Display modes**:
-  - `snapshot` (default): usa las tasas congeladas en cada fila.
-  - `today`: recalcula con las tasas live (toggle en el header).
+  `fx_rates_snapshot` (JSON USD-based) al cargar. Los totales siempre se
+  calculan con esa snapshot, así no se mueven aunque cambien las tasas o la
+  moneda base. `useRates` queda solo para el preview live en `quickAddForm`.
+- **Privacy toggle**: ojito al lado de "Total balance" / "Total spent"
+  enmascara los aggregates. Persistido en cookie `mt_hide_amounts`
+  (server-readable, sin flash al recargar).
+- **Reminders**: viven en el calendar panel (toolbar del dashboard) +
+  banner overdue arriba. El feed iCal (`/api/calendar/[token].ics`) los
+  expone a Google/iOS/Outlook Calendar.
 - **Huso horario**: `occurred_on` es un `date` puro asignado al cargar (día del
   dispositivo, o del override en settings). Cambiar el huso **no** re-mapea
   registros viejos.
