@@ -2,9 +2,12 @@
 
 import { format, parseISO } from "date-fns";
 
+import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useSettings } from "@/hooks/useSettings";
 import { formatMoney } from "@/lib/currency";
 import { cn } from "@/lib/utils";
+
+import { AmountsToggle, HIDDEN_AMOUNT } from "./amountsToggle";
 
 import type { useDaySpend } from "./useDaySpend";
 
@@ -17,6 +20,7 @@ interface Props {
 
 export function DaySpendView({ daySpend }: Props) {
   const settings = useSettings();
+  const { hideAmounts } = useHideAmounts();
   const {
     expense,
     count,
@@ -31,14 +35,19 @@ export function DaySpendView({ daySpend }: Props) {
 
   return (
     <div>
-      <span className="text-eyebrow">Total spent</span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-eyebrow">Total spent</span>
+        <AmountsToggle />
+      </div>
       <p
         className={cn(
           "font-heading text-[2.75rem] leading-[1.05] font-semibold tracking-tight tabular-nums",
           expense > 0 ? "text-foreground" : "text-muted-foreground",
         )}
       >
-        {formatMoney(expense, settings.base_currency)}
+        {hideAmounts
+          ? HIDDEN_AMOUNT
+          : formatMoney(expense, settings.base_currency)}
       </p>
       <p className="text-muted-foreground mt-1 text-xs">
         {count === 0

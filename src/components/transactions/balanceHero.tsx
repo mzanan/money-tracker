@@ -16,6 +16,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useSettings } from "@/hooks/useSettings";
 import { formatMoney } from "@/lib/currency";
 import { formatYearMonthShort } from "@/lib/dates";
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 
 import type { Transaction } from "@/types/db";
 
+import { AmountsToggle, HIDDEN_AMOUNT } from "./amountsToggle";
 import { DaySpendView } from "./daySpendView";
 import { useDaySpend } from "./useDaySpend";
 
@@ -54,6 +56,7 @@ export function BalanceHero({
 }: Props) {
   const [view, setView] = useState<"monthly" | "daily">("monthly");
   const settings = useSettings();
+  const { hideAmounts } = useHideAmounts();
   const daySpend = useDaySpend({ yearMonth, transactions, today });
 
   const monthTotals = useMemo(
@@ -114,21 +117,28 @@ export function BalanceHero({
         </div>
 
         <TabsContent value="monthly">
-          <span className="text-eyebrow">Total balance</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-eyebrow">Total balance</span>
+            <AmountsToggle />
+          </div>
           <p
             className={cn(
               "font-heading text-[2.75rem] leading-[1.05] font-semibold tracking-tight tabular-nums",
               totalPositive ? "text-foreground" : "text-expense",
             )}
           >
-            {totalSigned}
+            {hideAmounts ? HIDDEN_AMOUNT : totalSigned}
           </p>
 
           <div className="border-border mt-9 border-t pt-6">
             <div className="grid grid-cols-2 gap-3">
               <Mini
                 label="In"
-                value={`+${formatMoney(monthTotals.income, settings.base_currency)}`}
+                value={
+                  hideAmounts
+                    ? HIDDEN_AMOUNT
+                    : `+${formatMoney(monthTotals.income, settings.base_currency)}`
+                }
                 icon={<ArrowDownRightIcon className="size-4" />}
                 tone="income"
                 active={selectedKind === "income"}
@@ -137,7 +147,11 @@ export function BalanceHero({
               />
               <Mini
                 label="Out"
-                value={`-${formatMoney(monthTotals.expense, settings.base_currency)}`}
+                value={
+                  hideAmounts
+                    ? HIDDEN_AMOUNT
+                    : `-${formatMoney(monthTotals.expense, settings.base_currency)}`
+                }
                 icon={<ArrowUpRightIcon className="size-4" />}
                 tone="expense"
                 active={selectedKind === "expense"}
@@ -156,7 +170,7 @@ export function BalanceHero({
                   monthPositive ? "text-foreground" : "text-expense",
                 )}
               >
-                {monthSigned}
+                {hideAmounts ? HIDDEN_AMOUNT : monthSigned}
               </span>
             </div>
           </div>
