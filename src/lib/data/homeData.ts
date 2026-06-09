@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import {
@@ -6,12 +6,7 @@ import {
   transactions,
   user_settings,
 } from "@/lib/db/schema";
-import {
-  monthBounds,
-  oldestYearMonthFrom,
-  shiftYearMonth,
-  thisYearMonth,
-} from "@/lib/dates";
+import { thisYearMonth } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
 import type {
   IntegrationProvider,
@@ -22,14 +17,11 @@ import type {
 export interface HomePageData {
   settings: Pick<UserSettings, "timezone"> | null;
   yearMonth: string;
-  monthTxs: Transaction[];
   lifetimeTxs: Transaction[];
   connectedProviderIds: IntegrationProvider[];
   sources: string[];
   recentCategories: string[];
   recentMerchants: string[];
-  oldestYearMonth: string | null;
-  hasOlder: boolean;
 }
 
 export async function getHomePageData(): Promise<HomePageData> {
@@ -43,51 +35,34 @@ export async function getHomePageData(): Promise<HomePageData> {
     .then((rows) => rows[0]);
 
   const yearMonth = thisYearMonth(settings?.timezone ?? "UTC");
-  const [start, end] = monthBounds(yearMonth);
 
-  const [
-    monthTxs,
-    lifetimeTxs,
-    integrationsRows,
-    categoriesRows,
-    merchantsRows,
-  ] = await Promise.all([
-    db
-      .select()
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.user_id, user.id),
-          gte(transactions.occurred_on, start),
-          lte(transactions.occurred_on, end),
-        ),
-      )
-      .orderBy(desc(transactions.occurred_on), desc(transactions.occurred_at)),
-    db.select().from(transactions).where(eq(transactions.user_id, user.id)),
-    db
-      .select({ provider: api_integrations.provider })
-      .from(api_integrations)
-      .where(eq(api_integrations.user_id, user.id)),
-    db
-      .select({ category: transactions.category })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.user_id, user.id),
-          isNotNull(transactions.category),
-        ),
-      )
-      .orderBy(desc(transactions.occurred_at))
-      .limit(120),
-    db
-      .select({ note: transactions.note })
-      .from(transactions)
-      .where(
-        and(eq(transactions.user_id, user.id), isNotNull(transactions.note)),
-      )
-      .orderBy(desc(transactions.occurred_at))
-      .limit(200),
-  ]);
+  const [lifetimeTxs, integrationsRows, categoriesRows, merchantsRows] =
+    await Promise.all([
+      db.select().from(transactions).where(eq(transactions.user_id, user.id)),
+      db
+        .select({ provider: api_integrations.provider })
+        .from(api_integrations)
+        .where(eq(api_integrations.user_id, user.id)),
+      db
+        .select({ category: transactions.category })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.user_id, user.id),
+            isNotNull(transactions.category),
+          ),
+        )
+        .orderBy(desc(transactions.occurred_at))
+        .limit(120),
+      db
+        .select({ note: transactions.note })
+        .from(transactions)
+        .where(
+          and(eq(transactions.user_id, user.id), isNotNull(transactions.note)),
+        )
+        .orderBy(desc(transactions.occurred_at))
+        .limit(200),
+    ]);
 
   const connectedProviderIds = integrationsRows.map(
     (i) => i.provider as IntegrationProvider,
@@ -103,21 +78,14 @@ export async function getHomePageData(): Promise<HomePageData> {
 
   const sources = collectSources(lifetimeTxs, connectedProviderIds);
 
-  const oldestYearMonth = oldestYearMonthFrom(lifetimeTxs);
-  const prev = shiftYearMonth(yearMonth, -1);
-  const hasOlder = oldestYearMonth !== null && prev >= oldestYearMonth;
-
   return {
     settings: settings ?? null,
     yearMonth,
-    monthTxs,
     lifetimeTxs,
     connectedProviderIds,
     sources,
     recentCategories,
     recentMerchants,
-    oldestYearMonth,
-    hasOlder,
   };
 }
 

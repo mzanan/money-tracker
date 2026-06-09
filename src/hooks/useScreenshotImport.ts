@@ -50,10 +50,12 @@ export function useScreenshotImport({
   initialItems,
   initialIgnored,
   initialCandidates,
+  onDone,
 }: {
   initialItems: DetectedTransaction[] | null;
   initialIgnored: number;
   initialCandidates: Record<number, CandidateMatch[]>;
+  onDone?: () => void;
 }) {
   const router = useRouter();
   const [extracting, startExtract] = useTransition();
@@ -180,8 +182,9 @@ export function useScreenshotImport({
         `Imported ${imported}${errors > 0 ? `, ${errors} errors` : ""}`,
       );
       reset();
-      router.push("/");
       router.refresh();
+      if (onDone) onDone();
+      else router.push("/");
     });
   }
 

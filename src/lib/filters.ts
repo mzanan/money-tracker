@@ -1,6 +1,5 @@
 import { transactionInDisplay } from "@/lib/totals";
-import type { DisplayMode } from "@/stores/uiStore";
-import type { FxRates, Transaction } from "@/types/db";
+import type { Transaction } from "@/types/db";
 
 export interface AmountRange {
   min?: number;
@@ -15,8 +14,6 @@ export function filterByAmount(
   txs: Transaction[],
   range: AmountRange,
   displayCurrency: string,
-  mode: DisplayMode,
-  rates: FxRates | undefined,
 ): Transaction[] {
   const { min, max } = range;
   if (min == null && max == null) return txs;
@@ -24,9 +21,7 @@ export function filterByAmount(
   for (const tx of txs) {
     let value: number;
     try {
-      value = Math.abs(
-        transactionInDisplay(tx, displayCurrency, mode, rates),
-      );
+      value = Math.abs(transactionInDisplay(tx, displayCurrency));
     } catch {
       continue;
     }

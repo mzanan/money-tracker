@@ -16,12 +16,14 @@ interface Props {
   initialItems: DetectedTransaction[] | null;
   initialIgnored: number;
   initialCandidates: Record<number, CandidateMatch[]>;
+  onDone?: () => void;
 }
 
 export function ScreenshotImporter({
   initialItems,
   initialIgnored,
   initialCandidates,
+  onDone,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {
@@ -37,7 +39,12 @@ export function ScreenshotImporter({
     removeItem,
     submit,
     reset,
-  } = useScreenshotImport({ initialItems, initialIgnored, initialCandidates });
+  } = useScreenshotImport({
+    initialItems,
+    initialIgnored,
+    initialCandidates,
+    onDone,
+  });
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];

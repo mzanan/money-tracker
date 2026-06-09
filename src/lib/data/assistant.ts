@@ -68,7 +68,7 @@ export async function getBalance(
   baseCurrency: string,
 ): Promise<TotalsBreakdown> {
   const txs = await fetchRange(userId);
-  return periodTotals(txs, baseCurrency, "snapshot", undefined);
+  return periodTotals(txs, baseCurrency);
 }
 
 export async function getPeriodSummary(
@@ -78,7 +78,7 @@ export async function getPeriodSummary(
   to: string,
 ): Promise<TotalsBreakdown> {
   const txs = await fetchRange(userId, from, to);
-  return periodTotals(txs, baseCurrency, "snapshot", undefined);
+  return periodTotals(txs, baseCurrency);
 }
 
 export async function getDailySpend(
@@ -88,7 +88,7 @@ export async function getDailySpend(
   to: string,
 ): Promise<DaySpend[]> {
   const txs = await fetchRange(userId, from, to);
-  return dayTotalsList(txs, baseCurrency, "snapshot", undefined).map(
+  return dayTotalsList(txs, baseCurrency).map(
     ({ date, income, expense, net }) => ({ date, income, expense, net }),
   );
 }

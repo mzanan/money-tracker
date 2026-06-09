@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2Icon } from "lucide-react";
 
-import { useRates } from "@/hooks/useRates";
 import { useSettings } from "@/hooks/useSettings";
 import {
   MONTH_INITIAL_DAYS,
@@ -11,7 +10,6 @@ import {
 } from "@/lib/constants/pagination";
 import { Surface } from "@/components/ui/surface";
 import { dayTotalsList } from "@/lib/totals";
-import { useUiStore } from "@/stores/uiStore";
 
 import type { Transaction } from "@/types/db";
 
@@ -25,20 +23,12 @@ export function MonthView({
   emptyLabel?: string;
 }) {
   const settings = useSettings();
-  const ratesQuery = useRates();
-  const displayMode = useUiStore((state) => state.displayMode);
   const [visibleDays, setVisibleDays] = useState(MONTH_INITIAL_DAYS);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const days = useMemo(
-    () =>
-      dayTotalsList(
-        transactions,
-        settings.base_currency,
-        displayMode,
-        ratesQuery.data?.rates,
-      ),
-    [transactions, settings.base_currency, displayMode, ratesQuery.data],
+    () => dayTotalsList(transactions, settings.base_currency),
+    [transactions, settings.base_currency],
   );
 
   const shown = days.slice(0, visibleDays);

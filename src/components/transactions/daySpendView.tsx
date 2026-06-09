@@ -1,130 +1,40 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { addDays, format, parseISO } from "date-fns";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { format, parseISO } from "date-fns";
 
-import { useRates } from "@/hooks/useRates";
 import { useSettings } from "@/hooks/useSettings";
 import { formatMoney } from "@/lib/currency";
-import { monthBounds } from "@/lib/dates";
-import { dayTotalsList } from "@/lib/totals";
 import { cn } from "@/lib/utils";
-import { useUiStore } from "@/stores/uiStore";
 
-import { Button } from "@/components/ui/button";
-
-import type { Transaction } from "@/types/db";
+import type { useDaySpend } from "./useDaySpend";
 
 const CHART_HEIGHT = 56;
 const MIN_BAR_HEIGHT = 2;
 
 interface Props {
-  yearMonth: string;
-  transactions: Transaction[];
-  today: string;
+  daySpend: ReturnType<typeof useDaySpend>;
 }
 
-export function DaySpendView({ yearMonth, transactions, today }: Props) {
+export function DaySpendView({ daySpend }: Props) {
   const settings = useSettings();
-  const ratesQuery = useRates();
-  const displayMode = useUiStore((s) => s.displayMode);
-
-  const [monthStart, monthEnd] = monthBounds(yearMonth);
-  const todayInMonth = today >= monthStart && today <= monthEnd;
-
-  const byDay = useMemo(() => {
-    const map = new Map<string, { expense: number; count: number }>();
-    for (const day of dayTotalsList(
-      transactions,
-      settings.base_currency,
-      displayMode,
-      ratesQuery.data?.rates,
-    )) {
-      const expenseCount = day.transactions.filter(
-        (t) => t.kind === "expense",
-      ).length;
-      map.set(day.date, { expense: day.expense, count: expenseCount });
-    }
-    return map;
-  }, [transactions, settings.base_currency, displayMode, ratesQuery.data]);
-
-  const daysInMonth = useMemo(() => {
-    const out: string[] = [];
-    let cursor = parseISO(monthStart);
-    const end = parseISO(monthEnd);
-    while (cursor <= end) {
-      out.push(format(cursor, "yyyy-MM-dd"));
-      cursor = addDays(cursor, 1);
-    }
-    return out;
-  }, [monthStart, monthEnd]);
-
-  const maxExpense = useMemo(() => {
-    let max = 0;
-    for (const d of byDay.values()) if (d.expense > max) max = d.expense;
-    return max;
-  }, [byDay]);
-
-  const initialDate = (() => {
-    if (todayInMonth) return today;
-    const activity = Array.from(byDay.keys())
-      .filter((d) => d >= monthStart && d <= monthEnd)
-      .sort();
-    return activity[activity.length - 1] ?? monthEnd;
-  })();
-
-  const [selectedDate, setSelectedDate] = useState(initialDate);
-
-  const selected = byDay.get(selectedDate);
-  const expense = selected?.expense ?? 0;
-  const count = selected?.count ?? 0;
-
-  const canPrev = selectedDate > monthStart;
-  const canNext =
-    selectedDate < monthEnd && (!todayInMonth || selectedDate < today);
-
-  function shift(delta: number) {
-    const next = format(addDays(parseISO(selectedDate), delta), "yyyy-MM-dd");
-    if (next < monthStart || next > monthEnd) return;
-    if (todayInMonth && next > today) return;
-    setSelectedDate(next);
-  }
-
-  const isToday = selectedDate === today;
-  const eyebrow = isToday
-    ? "Total spent today"
-    : `Total spent · ${format(parseISO(selectedDate), "EEE LLL d")}`;
+  const {
+    expense,
+    count,
+    daysInMonth,
+    byDay,
+    maxExpense,
+    selectedDate,
+    setSelectedDate,
+    todayInMonth,
+    today,
+  } = daySpend;
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-eyebrow">{eyebrow}</span>
-        <div className="flex items-center gap-0.5">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => shift(-1)}
-            disabled={!canPrev}
-            aria-label="Previous day"
-          >
-            <ChevronLeftIcon />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => shift(1)}
-            disabled={!canNext}
-            aria-label="Next day"
-          >
-            <ChevronRightIcon />
-          </Button>
-        </div>
-      </div>
-
+      <span className="text-eyebrow">Total spent</span>
       <p
         className={cn(
-          "font-heading mt-2 text-[2.75rem] leading-[1.05] font-semibold tracking-tight tabular-nums",
+          "font-heading text-[2.75rem] leading-[1.05] font-semibold tracking-tight tabular-nums",
           expense > 0 ? "text-foreground" : "text-muted-foreground",
         )}
       >

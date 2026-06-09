@@ -2,7 +2,6 @@
 
 import { Loader2Icon, StickyNoteIcon, Trash2Icon } from "lucide-react";
 
-import { useRates } from "@/hooks/useRates";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { deleteTransaction } from "@/lib/actions/transactions";
@@ -10,7 +9,6 @@ import { labelForSource } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
 import { transactionInDisplay } from "@/lib/totals";
 import { cn } from "@/lib/utils";
-import { useUiStore } from "@/stores/uiStore";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,20 +21,13 @@ import type { Transaction } from "@/types/db";
 
 export function TransactionRow({ tx }: { tx: Transaction }) {
   const settings = useSettings();
-  const ratesQuery = useRates();
-  const displayMode = useUiStore((s) => s.displayMode);
   const comment = useCommentEdit(tx.id, tx.comment);
   const remove = useServerAction();
   const canDelete = tx.source === "manual";
 
   let inDisplay: number | null;
   try {
-    inDisplay = transactionInDisplay(
-      tx,
-      settings.base_currency,
-      displayMode,
-      ratesQuery.data?.rates,
-    );
+    inDisplay = transactionInDisplay(tx, settings.base_currency);
   } catch {
     inDisplay = null;
   }

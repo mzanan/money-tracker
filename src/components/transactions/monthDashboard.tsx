@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { usePresence } from "@/hooks/usePresence";
 import { useSettings } from "@/hooks/useSettings";
+import {
+  monthBounds,
+  oldestYearMonthFrom,
+  shiftYearMonth,
+} from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
 import type { RecurringPayment, Transaction } from "@/types/db";
@@ -14,33 +19,65 @@ import { DashboardPanel } from "./dashboardPanel";
 import { DashboardToolbar } from "./dashboardToolbar";
 import { FiltersPanel } from "./filtersPanel";
 import { MonthView } from "./monthView";
-import { SourcePills } from "./sourcePills";
+import { SourceFilter } from "./sourceFilter";
 import { useDashboardControls } from "./useDashboardControls";
 
 interface Props {
   yearMonth: string;
-  monthTransactions: Transaction[];
   lifetimeTransactions: Transaction[];
   sources: string[];
   reminders?: RecurringPayment[];
   today: string;
   quickAdd?: React.ReactNode;
-  nav?: React.ReactNode;
   banner?: React.ReactNode;
 }
 
 export function MonthDashboard({
-  yearMonth,
-  monthTransactions,
+  yearMonth: initialYearMonth,
   lifetimeTransactions,
   sources,
   reminders = [],
   today,
   quickAdd,
-  nav,
   banner,
 }: Props) {
   const settings = useSettings();
+  const [visibleYearMonth, setVisibleYearMonth] = useState(initialYearMonth);
+
+  const monthTransactions = useMemo(() => {
+    const [start, end] = monthBounds(visibleYearMonth);
+    return lifetimeTransactions
+      .filter((tx) => tx.occurred_on >= start && tx.occurred_on <= end)
+      .slice()
+      .sort((a, b) => {
+        if (a.occurred_on !== b.occurred_on) {
+          return a.occurred_on < b.occurred_on ? 1 : -1;
+        }
+        return (a.occurred_at ?? "") < (b.occurred_at ?? "") ? 1 : -1;
+      });
+  }, [lifetimeTransactions, visibleYearMonth]);
+
+  const todayYearMonth = today.slice(0, 7);
+  const oldestYearMonth = useMemo(
+    () => oldestYearMonthFrom(lifetimeTransactions),
+    [lifetimeTransactions],
+  );
+  const hasOlder =
+    oldestYearMonth !== null &&
+    shiftYearMonth(visibleYearMonth, -1) >= oldestYearMonth;
+  const hasNewer = visibleYearMonth < todayYearMonth;
+
+  function shiftMonth(delta: number) {
+    setVisibleYearMonth((current) => {
+      const next = shiftYearMonth(current, delta);
+      if (delta < 0 && oldestYearMonth !== null && next < oldestYearMonth) {
+        return current;
+      }
+      if (delta > 0 && next > todayYearMonth) return current;
+      return next;
+    });
+  }
+
   const c = useDashboardControls({
     monthTransactions,
     lifetimeTransactions,
@@ -67,16 +104,18 @@ export function MonthDashboard({
         {banner}
         <DashboardToolbar panel={c.panel} onToggle={c.togglePanel} />
         <BalanceHero
-          yearMonth={yearMonth}
+          yearMonth={visibleYearMonth}
           transactions={c.sourceFilteredMonth}
           lifetimeTransactions={c.sourceFilteredLifetime}
           selectedKind={c.selectedKind}
           onKindChange={c.setSelectedKind}
           today={today}
-          nav={nav}
+          hasOlder={hasOlder}
+          hasNewer={hasNewer}
+          onShiftMonth={shiftMonth}
         />
         {c.showQuickAdd && quickAdd}
-        <SourcePills
+        <SourceFilter
           sources={sources}
           selected={c.selectedSource}
           onChange={c.setSelectedSource}
@@ -108,7 +147,7 @@ export function MonthDashboard({
             />
           ) : (
             <CalendarPanel
-              yearMonth={yearMonth}
+              yearMonth={visibleYearMonth}
               activityDates={c.activityDates}
               reminderDates={c.reminderDates}
               selectedDay={c.selectedDay}

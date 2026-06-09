@@ -2,13 +2,11 @@
 
 import { useMemo, useState } from "react";
 
-import { useRates } from "@/hooks/useRates";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
 import { kindOfSource } from "@/lib/constants/sources";
 import { todayInTz } from "@/lib/dates";
 import { filterByAmount } from "@/lib/filters";
 import { dayTotalsList } from "@/lib/totals";
-import { useUiStore } from "@/stores/uiStore";
 
 import type { DayTotals } from "@/lib/totals";
 import type { RecurringPayment, Transaction } from "@/types/db";
@@ -38,9 +36,6 @@ export function useDashboardControls({
 }) {
   const settings = useSettings();
   const timezone = useTimezone();
-  const ratesQuery = useRates();
-  const displayMode = useUiStore((s) => s.displayMode);
-  const rates = ratesQuery.data?.rates;
   const today = todayInTz(timezone);
 
   const [panel, setPanel] = useState<PanelMode>("none");
@@ -88,13 +83,7 @@ export function useDashboardControls({
       selectedKind === "all"
         ? base
         : base.filter((tx) => tx.kind === selectedKind);
-    return filterByAmount(
-      byKind,
-      { min, max },
-      settings.base_currency,
-      displayMode,
-      rates,
-    );
+    return filterByAmount(byKind, { min, max }, settings.base_currency);
   }, [
     scope,
     sourceFilteredLifetime,
@@ -103,8 +92,6 @@ export function useDashboardControls({
     min,
     max,
     settings.base_currency,
-    displayMode,
-    rates,
   ]);
 
   const activityDates = useMemo(
@@ -121,12 +108,7 @@ export function useDashboardControls({
     const dayTxs = lifetimeTransactions.filter(
       (tx) => tx.occurred_on === selectedDay,
     );
-    const [group] = dayTotalsList(
-      dayTxs,
-      settings.base_currency,
-      displayMode,
-      rates,
-    );
+    const [group] = dayTotalsList(dayTxs, settings.base_currency);
     return (
       group ?? {
         date: selectedDay,
@@ -136,7 +118,7 @@ export function useDashboardControls({
         net: 0,
       }
     );
-  }, [selectedDay, lifetimeTransactions, settings.base_currency, displayMode, rates]);
+  }, [selectedDay, lifetimeTransactions, settings.base_currency]);
 
   return {
     panel,

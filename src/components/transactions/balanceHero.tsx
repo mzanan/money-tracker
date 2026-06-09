@@ -1,8 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowDownRightIcon, ArrowUpRightIcon } from "lucide-react";
+import {
+  ArrowDownRightIcon,
+  ArrowUpRightIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
 import {
   Tabs,
@@ -10,17 +16,16 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { useRates } from "@/hooks/useRates";
 import { useSettings } from "@/hooks/useSettings";
 import { formatMoney } from "@/lib/currency";
-import { formatYearMonthLong } from "@/lib/dates";
+import { formatYearMonthShort } from "@/lib/dates";
 import { periodTotals } from "@/lib/totals";
 import { cn } from "@/lib/utils";
-import { useUiStore } from "@/stores/uiStore";
 
 import type { Transaction } from "@/types/db";
 
 import { DaySpendView } from "./daySpendView";
+import { useDaySpend } from "./useDaySpend";
 
 export type KindFilter = "all" | "income" | "expense";
 
@@ -31,7 +36,9 @@ interface Props {
   selectedKind: KindFilter;
   onKindChange: (next: KindFilter) => void;
   today: string;
-  nav?: React.ReactNode;
+  hasOlder: boolean;
+  hasNewer: boolean;
+  onShiftMonth: (delta: number) => void;
 }
 
 export function BalanceHero({
@@ -41,38 +48,22 @@ export function BalanceHero({
   selectedKind,
   onKindChange,
   today,
-  nav,
+  hasOlder,
+  hasNewer,
+  onShiftMonth,
 }: Props) {
-  const [view, setView] = useState<"balance" | "daily">("balance");
+  const [view, setView] = useState<"monthly" | "daily">("monthly");
   const settings = useSettings();
-  const ratesQuery = useRates();
-  const displayMode = useUiStore((s) => s.displayMode);
+  const daySpend = useDaySpend({ yearMonth, transactions, today });
 
   const monthTotals = useMemo(
-    () =>
-      periodTotals(
-        transactions,
-        settings.base_currency,
-        displayMode,
-        ratesQuery.data?.rates,
-      ),
-    [transactions, settings.base_currency, displayMode, ratesQuery.data],
+    () => periodTotals(transactions, settings.base_currency),
+    [transactions, settings.base_currency],
   );
 
   const lifetimeTotals = useMemo(
-    () =>
-      periodTotals(
-        lifetimeTransactions,
-        settings.base_currency,
-        displayMode,
-        ratesQuery.data?.rates,
-      ),
-    [
-      lifetimeTransactions,
-      settings.base_currency,
-      displayMode,
-      ratesQuery.data,
-    ],
+    () => periodTotals(lifetimeTransactions, settings.base_currency),
+    [lifetimeTransactions, settings.base_currency],
   );
 
   const totalPositive = lifetimeTotals.net >= 0;
@@ -93,14 +84,36 @@ export function BalanceHero({
     <Surface padding="lg">
       <Tabs
         value={view}
-        onValueChange={(v) => setView(v as "balance" | "daily")}
+        onValueChange={(v) => setView(v as "monthly" | "daily")}
       >
-        <TabsList className="mb-4 self-start">
-          <TabsTrigger value="balance">Balance</TabsTrigger>
-          <TabsTrigger value="daily">Daily</TabsTrigger>
-        </TabsList>
+        <div className="mb-6 flex items-center justify-between gap-2">
+          <TabsList>
+            <TabsTrigger value="monthly">Monthly</TabsTrigger>
+            <TabsTrigger value="daily">Daily</TabsTrigger>
+          </TabsList>
+          {view === "monthly" ? (
+            <PeriodNav
+              label={formatYearMonthShort(yearMonth)}
+              canPrev={hasOlder}
+              canNext={hasNewer}
+              onShift={onShiftMonth}
+              prevLabel="Previous month"
+              nextLabel="Next month"
+              tabular
+            />
+          ) : (
+            <PeriodNav
+              label={daySpend.dayLabel}
+              canPrev={daySpend.canPrev}
+              canNext={daySpend.canNext}
+              onShift={daySpend.shift}
+              prevLabel="Previous day"
+              nextLabel="Next day"
+            />
+          )}
+        </div>
 
-        <TabsContent value="balance">
+        <TabsContent value="monthly">
           <span className="text-eyebrow">Total balance</span>
           <p
             className={cn(
@@ -112,13 +125,6 @@ export function BalanceHero({
           </p>
 
           <div className="border-border mt-9 border-t pt-6">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <span className="text-eyebrow">
-                {formatYearMonthLong(yearMonth)}
-              </span>
-              {nav}
-            </div>
-
             <div className="grid grid-cols-2 gap-3">
               <Mini
                 label="In"
@@ -157,14 +163,59 @@ export function BalanceHero({
         </TabsContent>
 
         <TabsContent value="daily">
-          <DaySpendView
-            yearMonth={yearMonth}
-            transactions={transactions}
-            today={today}
-          />
+          <DaySpendView daySpend={daySpend} />
         </TabsContent>
       </Tabs>
     </Surface>
+  );
+}
+
+function PeriodNav({
+  label,
+  canPrev,
+  canNext,
+  onShift,
+  prevLabel,
+  nextLabel,
+  tabular,
+}: {
+  label: string;
+  canPrev: boolean;
+  canNext: boolean;
+  onShift: (delta: number) => void;
+  prevLabel: string;
+  nextLabel: string;
+  tabular?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-0.5">
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={() => onShift(-1)}
+        disabled={!canPrev}
+        aria-label={prevLabel}
+      >
+        <ChevronLeftIcon />
+      </Button>
+      <span
+        className={cn(
+          "text-foreground min-w-[5.5rem] text-center text-sm font-medium",
+          tabular && "tabular-nums",
+        )}
+      >
+        {label}
+      </span>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={() => onShift(1)}
+        disabled={!canNext}
+        aria-label={nextLabel}
+      >
+        <ChevronRightIcon />
+      </Button>
+    </div>
   );
 }
 

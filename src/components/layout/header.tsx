@@ -2,18 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  BellIcon,
-  ImageUpIcon,
-  LogOutIcon,
-  SettingsIcon,
-} from "lucide-react";
+import { BellIcon, LogOutIcon, SettingsIcon } from "lucide-react";
 
 import { authClient } from "@/lib/authClient";
 
 import { Button } from "@/components/ui/button";
 
-import { DisplayControls } from "./displayControls";
+import { BaseCurrencyPicker } from "./baseCurrencyPicker";
 import { ThemeToggle } from "./themeToggle";
 
 export function Header() {
@@ -37,18 +32,8 @@ export function Header() {
         <span className="text-base font-semibold">Money</span>
       </Link>
       <div className="flex items-center gap-0.5">
-        <DisplayControls />
+        <BaseCurrencyPicker />
         <ThemeToggle />
-        <Button
-          asChild
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Import from screenshot"
-        >
-          <Link href="/screenshot-import">
-            <ImageUpIcon />
-          </Link>
-        </Button>
         <Button asChild variant="ghost" size="icon-sm" aria-label="Upcoming payments">
           <Link href="/upcoming">
             <BellIcon />
