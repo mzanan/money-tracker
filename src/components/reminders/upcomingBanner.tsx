@@ -1,4 +1,5 @@
-import Link from "next/link";
+"use client";
+
 import { BellRingIcon, ChevronRightIcon } from "lucide-react";
 
 import { daysBetween, dueLabel, dueSoon } from "@/lib/reminders";
@@ -8,10 +9,12 @@ import type { RecurringPayment } from "@/types/db";
 export function UpcomingBanner({
   reminders,
   today,
+  onOpen,
   withinDays = 7,
 }: {
   reminders: RecurringPayment[];
   today: string;
+  onOpen: () => void;
   withinDays?: number;
 }) {
   const soon = dueSoon(reminders, today, withinDays);
@@ -22,10 +25,11 @@ export function UpcomingBanner({
   const next = soon[0];
 
   return (
-    <Link
-      href="/upcoming"
+    <button
+      type="button"
+      onClick={onOpen}
       className={cn(
-        "flex items-center gap-3 rounded-2xl px-4 py-3 transition-colors",
+        "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors",
         overdue
           ? "bg-destructive/10 hover:bg-destructive/15"
           : "bg-primary/10 hover:bg-primary/15",
@@ -48,6 +52,6 @@ export function UpcomingBanner({
         </p>
       </div>
       <ChevronRightIcon className="text-muted-foreground size-4 shrink-0" />
-    </Link>
+    </button>
   );
 }

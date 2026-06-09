@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 
 import type { RecurringPayment, Transaction } from "@/types/db";
 
+import { UpcomingBanner } from "@/components/reminders/upcomingBanner";
+
 import { BalanceHero } from "./balanceHero";
 import { CalendarPanel } from "./calendarPanel";
 import { DashboardPanel } from "./dashboardPanel";
@@ -29,7 +31,6 @@ interface Props {
   reminders?: RecurringPayment[];
   today: string;
   quickAdd?: React.ReactNode;
-  banner?: React.ReactNode;
 }
 
 export function MonthDashboard({
@@ -39,7 +40,6 @@ export function MonthDashboard({
   reminders = [],
   today,
   quickAdd,
-  banner,
 }: Props) {
   const settings = useSettings();
   const [visibleYearMonth, setVisibleYearMonth] = useState(initialYearMonth);
@@ -101,7 +101,11 @@ export function MonthDashboard({
       )}
     >
       <div className="grid gap-5">
-        {banner}
+        <UpcomingBanner
+          reminders={reminders}
+          today={today}
+          onOpen={() => c.openPanel("calendar")}
+        />
         <DashboardToolbar panel={c.panel} onToggle={c.togglePanel} />
         <BalanceHero
           yearMonth={visibleYearMonth}

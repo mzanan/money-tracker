@@ -56,6 +56,10 @@ export function useDashboardControls({
     setPanel((current) => (current === mode ? "none" : mode));
   }
 
+  function openPanel(mode: Exclude<PanelMode, "none">) {
+    setPanel(mode);
+  }
+
   function closePanel() {
     setPanel("none");
   }
@@ -123,6 +127,7 @@ export function useDashboardControls({
   return {
     panel,
     togglePanel,
+    openPanel,
     closePanel,
     selectedSource,
     setSelectedSource,

@@ -53,7 +53,6 @@ export async function createReminder(
         note: d.note?.trim() || null,
       })
       .returning({ id: recurring_payments.id });
-    revalidatePath("/upcoming");
     revalidatePath("/", "layout");
     return { ok: true, data: { id: inserted.id } };
   } catch (error) {
@@ -96,7 +95,6 @@ export async function updateReminder(
           eq(recurring_payments.user_id, user.id),
         ),
       );
-    revalidatePath("/upcoming");
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -155,7 +153,6 @@ export async function markReminderPaid(
           eq(recurring_payments.user_id, user.id),
         ),
       );
-    revalidatePath("/upcoming");
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -179,7 +176,6 @@ export async function deleteReminder(id: string): Promise<ActionResult> {
           eq(recurring_payments.user_id, user.id),
         ),
       );
-    revalidatePath("/upcoming");
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {

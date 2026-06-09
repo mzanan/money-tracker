@@ -1,4 +1,3 @@
-import { UpcomingBanner } from "@/components/reminders/upcomingBanner";
 import { MonthDashboard } from "@/components/transactions/monthDashboard";
 import { QuickAddForm } from "@/components/transactions/quickAddForm";
 import { getHomePageData } from "@/lib/data/homeData";
@@ -17,12 +16,6 @@ export default async function DashboardPage() {
       sources={data.sources}
       reminders={remindersData.reminders}
       today={remindersData.today}
-      banner={
-        <UpcomingBanner
-          reminders={remindersData.reminders}
-          today={remindersData.today}
-        />
-      }
       quickAdd={
         <QuickAddForm
           key="quick-add"
