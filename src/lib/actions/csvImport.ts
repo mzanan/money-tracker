@@ -11,6 +11,7 @@ import { transactions, user_settings } from "@/lib/db/schema";
 import { isSyncable } from "@/lib/integrations";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
+import { applyAutoCategories } from "@/lib/categorization";
 import { buildTransactionRow } from "@/lib/transactions";
 
 import type { ActionResult } from "./transactions";
@@ -193,6 +194,9 @@ export async function importCsvRows(
   }
 
   const skipped = insertRows.length - imported;
+  if (imported > 0) {
+    await applyAutoCategories(user.id).catch(() => {});
+  }
   revalidatePath("/", "layout");
 
   return { ok: true, data: { imported, skipped, errors } };

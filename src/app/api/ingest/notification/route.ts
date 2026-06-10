@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
 import { parseNotification, sourceForApp } from "@/lib/ingest/notification";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
+import { applyAutoCategories } from "@/lib/categorization";
 import { buildTransactionRow } from "@/lib/transactions";
 
 interface IngestBody {
@@ -129,6 +130,7 @@ export async function POST(req: Request) {
     .returning({ id: transactions.id });
 
   if (inserted.length > 0) {
+    await applyAutoCategories(account.user_id).catch(() => {});
     revalidatePath("/", "layout");
   }
 

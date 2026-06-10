@@ -123,6 +123,28 @@ export const transactions = sqliteTable(
   ],
 );
 
+export const merchant_categories = sqliteTable(
+  "merchant_categories",
+  {
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    merchant: text("merchant").notNull(),
+    category: text("category"),
+    source: text("source", { enum: ["ai", "user"] }).notNull(),
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (t) => [
+    primaryKey({ columns: [t.user_id, t.merchant] }),
+    check(
+      "merchant_categories_source_check",
+      sql`${t.source} IN ('ai', 'user')`,
+    ),
+  ],
+);
+
 export const user_settings = sqliteTable(
   "user_settings",
   {

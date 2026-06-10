@@ -12,6 +12,7 @@ import { transactions, user_settings } from "@/lib/db/schema";
 import { sourceForApp } from "@/lib/ingest/notification";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
+import { applyAutoCategories } from "@/lib/categorization";
 import { buildTransactionRow } from "@/lib/transactions";
 
 import type { ActionResult } from "./transactions";
@@ -180,7 +181,10 @@ export async function importScreenshotRows(input: {
     }
   }
 
-  if (imported > 0) revalidatePath("/", "layout");
+  if (imported > 0) {
+    await applyAutoCategories(user.id).catch(() => {});
+    revalidatePath("/", "layout");
+  }
 
   return { ok: true, data: { imported, errors, bySource } };
 }

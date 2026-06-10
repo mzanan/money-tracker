@@ -13,6 +13,7 @@ import {
   type UpdateTransactionInput,
 } from "@/lib/schemas/transaction";
 import { getUser } from "@/lib/session";
+import { applyAutoCategories } from "@/lib/categorization";
 import { buildTransactionRow } from "@/lib/transactions";
 
 export type ActionResult<T = void> =
@@ -79,6 +80,9 @@ export async function createTransaction(
       .insert(transactions)
       .values(row)
       .returning({ id: transactions.id });
+    if (!row.category) {
+      await applyAutoCategories(user.id).catch(() => {});
+    }
     revalidatePath("/", "layout");
     return { ok: true, data: { id: inserted.id } };
   } catch (error) {
@@ -125,6 +129,33 @@ export async function updateTransaction(
           eq(transactions.user_id, user.id),
         ),
       );
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Update failed",
+    };
+  }
+}
+
+export async function updateTransactionCategory(
+  id: string,
+  category: string | null,
+): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const trimmed = category?.trim() ?? "";
+  if (trimmed.length > 40) {
+    return { ok: false, error: "Category must be 40 characters or fewer" };
+  }
+
+  try {
+    await db
+      .update(transactions)
+      .set({ category: trimmed || null })
+      .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)));
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
