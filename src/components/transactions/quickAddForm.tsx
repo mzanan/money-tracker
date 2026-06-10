@@ -2,13 +2,7 @@
 
 import { useId, useMemo, useState } from "react";
 import { toast } from "sonner";
-import {
-  ChevronDownIcon,
-  Loader2Icon,
-  PlusIcon,
-  TrendingDownIcon,
-  TrendingUpIcon,
-} from "lucide-react";
+import { ChevronDownIcon, Loader2Icon, PlusIcon } from "lucide-react";
 
 import { getCurrency } from "@/config/currencies";
 import { useRates } from "@/hooks/useRates";
@@ -281,14 +275,14 @@ function KindToggle({
         aria-checked={kind === "expense"}
         onClick={() => onChange("expense")}
         className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+          "flex h-9 items-center justify-center rounded-lg px-3 text-sm font-medium transition-colors",
           kind === "expense"
             ? "bg-card text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground",
         )}
         aria-label="Expense"
       >
-        <TrendingDownIcon className="size-4" />
+        Out
       </button>
       <button
         type="button"
@@ -296,14 +290,14 @@ function KindToggle({
         aria-checked={kind === "income"}
         onClick={() => onChange("income")}
         className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+          "flex h-9 items-center justify-center rounded-lg px-3 text-sm font-medium transition-colors",
           kind === "income"
             ? "bg-card text-income shadow-sm"
             : "text-muted-foreground hover:text-foreground",
         )}
         aria-label="Income"
       >
-        <TrendingUpIcon className="size-4" />
+        In
       </button>
     </div>
   );
