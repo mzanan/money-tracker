@@ -12,7 +12,15 @@ function init(): DrizzleDb {
   if (!url) {
     throw new Error("TURSO_DATABASE_URL is not set");
   }
-  const client = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
+  const replicaPath = process.env.TURSO_EMBEDDED_REPLICA_PATH;
+  const client = replicaPath
+    ? createClient({
+        url: `file:${replicaPath}`,
+        syncUrl: url,
+        authToken: process.env.TURSO_AUTH_TOKEN,
+        syncInterval: 60,
+      })
+    : createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
   return drizzle(client, { schema });
 }
 
