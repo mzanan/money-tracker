@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { useSettings, useTimezone } from "@/hooks/useSettings";
+import { UNCATEGORIZED_LABEL } from "@/lib/constants/categories";
 import { kindOfSource } from "@/lib/constants/sources";
 import { todayInTz } from "@/lib/dates";
 import { filterByAmount } from "@/lib/filters";
@@ -41,6 +42,7 @@ export function useDashboardControls({
   const [panel, setPanel] = useState<PanelMode>("none");
   const [selectedSource, setSelectedSource] = useState("all");
   const [selectedKind, setSelectedKind] = useState<KindFilter>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [minInput, setMinInput] = useState("");
   const [maxInput, setMaxInput] = useState("");
   const [scope, setScope] = useState<FilterScope>("all");
@@ -73,13 +75,18 @@ export function useDashboardControls({
     [lifetimeTransactions, selectedSource],
   );
 
-  const monthList = useMemo(
-    () =>
-      selectedKind === "all"
-        ? sourceFilteredMonth
-        : sourceFilteredMonth.filter((tx) => tx.kind === selectedKind),
-    [sourceFilteredMonth, selectedKind],
-  );
+  const monthList = useMemo(() => {
+    let list = sourceFilteredMonth;
+    if (selectedKind !== "all") {
+      list = list.filter((tx) => tx.kind === selectedKind);
+    }
+    if (selectedCategory !== null) {
+      list = list.filter(
+        (tx) => (tx.category ?? UNCATEGORIZED_LABEL) === selectedCategory,
+      );
+    }
+    return list;
+  }, [sourceFilteredMonth, selectedKind, selectedCategory]);
 
   const filterResults = useMemo(() => {
     const base = scope === "all" ? sourceFilteredLifetime : sourceFilteredMonth;
@@ -133,6 +140,8 @@ export function useDashboardControls({
     setSelectedSource,
     selectedKind,
     setSelectedKind,
+    selectedCategory,
+    setSelectedCategory,
     minInput,
     setMinInput,
     maxInput,

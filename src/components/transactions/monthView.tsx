@@ -64,8 +64,8 @@ export function MonthView({
 
   return (
     <Surface radius="lg" padding="list">
-      {shown.map((day) => (
-        <DayGroup key={day.date} day={day} />
+      {shown.map((day, index) => (
+        <DayGroup key={day.date} day={day} defaultOpen={index === 0} />
       ))}
       {hasMore && (
         <div

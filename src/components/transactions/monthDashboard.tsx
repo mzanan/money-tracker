@@ -17,12 +17,16 @@ import { UpcomingBanner } from "@/components/reminders/upcomingBanner";
 
 import { BalanceHero } from "./balanceHero";
 import { CalendarPanel } from "./calendarPanel";
+import { CategoryBreakdown } from "./categoryBreakdown";
 import { DashboardPanel } from "./dashboardPanel";
 import { DashboardToolbar } from "./dashboardToolbar";
 import { FiltersPanel } from "./filtersPanel";
 import { MonthView } from "./monthView";
 import { SourceFilter } from "./sourceFilter";
 import { useDashboardControls } from "./useDashboardControls";
+import { useDaySpend } from "./useDaySpend";
+
+import type { HeroView } from "./balanceHero";
 
 interface Props {
   yearMonth: string;
@@ -84,6 +88,32 @@ export function MonthDashboard({
     reminders,
   });
 
+  const [view, setView] = useState<HeroView>("monthly");
+  const daySpend = useDaySpend({
+    yearMonth: visibleYearMonth,
+    transactions: c.sourceFilteredMonth,
+    today,
+  });
+  const isDaily = view === "daily";
+
+  const breakdownTransactions = useMemo(
+    () =>
+      isDaily
+        ? c.sourceFilteredMonth.filter(
+            (tx) => tx.occurred_on === daySpend.selectedDate,
+          )
+        : c.sourceFilteredMonth,
+    [isDaily, c.sourceFilteredMonth, daySpend.selectedDate],
+  );
+
+  const feedTransactions = useMemo(
+    () =>
+      isDaily
+        ? c.monthList.filter((tx) => tx.occurred_on === daySpend.selectedDate)
+        : c.monthList,
+    [isDaily, c.monthList, daySpend.selectedDate],
+  );
+
   const panelOpen = c.panel !== "none";
   const panel = usePresence(panelOpen);
   const [lastPanel, setLastPanel] = useState<"filters" | "calendar">("filters");
@@ -117,6 +147,9 @@ export function MonthDashboard({
           hasOlder={hasOlder}
           hasNewer={hasNewer}
           onShiftMonth={shiftMonth}
+          view={view}
+          onViewChange={setView}
+          daySpend={daySpend}
         />
         {c.showQuickAdd && quickAdd}
         <SourceFilter
@@ -124,7 +157,17 @@ export function MonthDashboard({
           selected={c.selectedSource}
           onChange={c.setSelectedSource}
         />
-        <MonthView transactions={c.monthList} />
+        <CategoryBreakdown
+          transactions={breakdownTransactions}
+          selected={c.selectedCategory}
+          onSelect={c.setSelectedCategory}
+        />
+        <MonthView
+          transactions={feedTransactions}
+          emptyLabel={
+            isDaily ? "No transactions this day." : "No transactions this month."
+          }
+        />
       </div>
 
       {panel.rendered && (

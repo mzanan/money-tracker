@@ -39,7 +39,7 @@ export const CURRENCIES: CurrencyMeta[] = [
   { code: "ZAR", name: "South African Rand", symbol: "R", decimals: 2 },
   { code: "GEL", name: "Georgian Lari", symbol: "₾", decimals: 2 },
   { code: "MAD", name: "Moroccan Dirham", symbol: "DH", decimals: 2 },
-  { code: "USDT", name: "Tether USD", symbol: "₮", decimals: 4 },
+  { code: "USDT", name: "Tether USD", symbol: "USDT ", decimals: 2 },
 ];
 
 export const CURRENCY_MAP: Record<string, CurrencyMeta> = Object.fromEntries(

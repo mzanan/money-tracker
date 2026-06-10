@@ -4,7 +4,11 @@ import { Loader2Icon, StickyNoteIcon, Trash2Icon } from "lucide-react";
 
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
-import { deleteTransaction } from "@/lib/actions/transactions";
+import {
+  deleteTransaction,
+  updateTransactionCategory,
+} from "@/lib/actions/transactions";
+import { CATEGORIES } from "@/lib/constants/categories";
 import { labelForSource } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
 import { transactionInDisplay } from "@/lib/totals";
@@ -12,6 +16,12 @@ import { cn } from "@/lib/utils";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { IconCircle } from "@/components/ui/iconCircle";
 
 import { ReminderButton } from "./reminderButton";
@@ -23,6 +33,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const settings = useSettings();
   const comment = useCommentEdit(tx.id, tx.comment);
   const remove = useServerAction();
+  const setCategory = useServerAction();
   const canDelete = tx.source === "manual";
 
   let inDisplay: number | null;
@@ -47,7 +58,44 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
 
   return (
     <div className="group hover:bg-surface-2/60 flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors">
-      <Avatar seed={avatarSeed} />
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label="Set category"
+          disabled={setCategory.pending}
+          className="focus-visible:ring-ring shrink-0 cursor-pointer rounded-full focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <Avatar seed={avatarSeed} />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {CATEGORIES.map((category) => (
+            <DropdownMenuItem
+              key={category}
+              onClick={() =>
+                setCategory.run(
+                  () => updateTransactionCategory(tx.id, category),
+                  { success: `Categorized as ${category}` },
+                )
+              }
+              className={cn(tx.category === category && "font-semibold")}
+            >
+              {category}
+            </DropdownMenuItem>
+          ))}
+          {tx.category && (
+            <DropdownMenuItem
+              onClick={() =>
+                setCategory.run(
+                  () => updateTransactionCategory(tx.id, null),
+                  { success: "Category cleared" },
+                )
+              }
+              className="text-muted-foreground"
+            >
+              Clear category
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
       <div className="min-w-0 flex-1">
         <span className="text-foreground block truncate text-sm leading-tight font-medium">
           {identifier}
@@ -93,11 +141,13 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           )}
         >
           {sign}
-          {formatMoney(tx.amount_original, tx.currency_original)}
+          {inDisplay !== null
+            ? formatMoney(inDisplay, settings.base_currency)
+            : formatMoney(tx.amount_original, tx.currency_original)}
         </span>
         {showConverted && (
           <span className="text-muted-foreground mt-0.5 text-[11px] tabular-nums">
-            ≈ {formatMoney(inDisplay!, settings.base_currency)}
+            {formatMoney(tx.amount_original, tx.currency_original)}
           </span>
         )}
       </div>

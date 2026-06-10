@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   ArrowDownRightIcon,
   ArrowUpRightIcon,
@@ -19,7 +19,7 @@ import {
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useSettings } from "@/hooks/useSettings";
 import { formatMoney } from "@/lib/currency";
-import { formatYearMonthShort } from "@/lib/dates";
+import { formatYearMonthShort, monthBounds } from "@/lib/dates";
 import { periodTotals } from "@/lib/totals";
 import { cn } from "@/lib/utils";
 
@@ -27,9 +27,11 @@ import type { Transaction } from "@/types/db";
 
 import { AmountsToggle, HIDDEN_AMOUNT } from "./amountsToggle";
 import { DaySpendView } from "./daySpendView";
-import { useDaySpend } from "./useDaySpend";
+
+import type { useDaySpend } from "./useDaySpend";
 
 export type KindFilter = "all" | "income" | "expense";
+export type HeroView = "monthly" | "daily";
 
 interface Props {
   yearMonth: string;
@@ -41,6 +43,9 @@ interface Props {
   hasOlder: boolean;
   hasNewer: boolean;
   onShiftMonth: (delta: number) => void;
+  view: HeroView;
+  onViewChange: (next: HeroView) => void;
+  daySpend: ReturnType<typeof useDaySpend>;
 }
 
 export function BalanceHero({
@@ -53,11 +58,12 @@ export function BalanceHero({
   hasOlder,
   hasNewer,
   onShiftMonth,
+  view,
+  onViewChange,
+  daySpend,
 }: Props) {
-  const [view, setView] = useState<"monthly" | "daily">("monthly");
   const settings = useSettings();
   const { hideAmounts } = useHideAmounts();
-  const daySpend = useDaySpend({ yearMonth, transactions, today });
 
   const monthTotals = useMemo(
     () => periodTotals(transactions, settings.base_currency),
@@ -79,16 +85,24 @@ export function BalanceHero({
     signed: true,
   });
 
+  const isCurrentMonth = yearMonth === today.slice(0, 7);
+  const daysInMonth = Number(monthBounds(yearMonth)[1].slice(8, 10));
+  const daysElapsed = isCurrentMonth ? Number(today.slice(8, 10)) : daysInMonth;
+  const perDay = daysElapsed > 0 ? monthTotals.expense / daysElapsed : 0;
+  const projected = perDay * daysInMonth;
+  const pace =
+    `${formatMoney(perDay, settings.base_currency)}/day` +
+    (isCurrentMonth
+      ? ` · ~${formatMoney(projected, settings.base_currency)} by month end`
+      : "");
+
   function toggle(kind: "income" | "expense") {
     onKindChange(selectedKind === kind ? "all" : kind);
   }
 
   return (
     <Surface padding="lg">
-      <Tabs
-        value={view}
-        onValueChange={(v) => setView(v as "monthly" | "daily")}
-      >
+      <Tabs value={view} onValueChange={(v) => onViewChange(v as HeroView)}>
         <div className="mb-6 flex items-center justify-between gap-2">
           <TabsList>
             <TabsTrigger value="monthly">Monthly</TabsTrigger>
@@ -173,6 +187,16 @@ export function BalanceHero({
                 {hideAmounts ? HIDDEN_AMOUNT : monthSigned}
               </span>
             </div>
+            {monthTotals.expense > 0 && (
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-muted-foreground text-xs">
+                  Spending pace
+                </span>
+                <span className="text-muted-foreground text-xs tabular-nums">
+                  {hideAmounts ? HIDDEN_AMOUNT : pace}
+                </span>
+              </div>
+            )}
           </div>
         </TabsContent>
 
