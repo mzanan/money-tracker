@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 import { AssistantWidget } from "@/components/assistant/assistantWidget";
@@ -6,8 +5,7 @@ import { Header } from "@/components/layout/header";
 import { InstallHint } from "@/components/pwa/installHint";
 import { HideAmountsProvider } from "@/hooks/useHideAmounts";
 import { SettingsProvider } from "@/hooks/useSettings";
-import { db } from "@/lib/db";
-import { user_settings } from "@/lib/db/schema";
+import { getUserSettings } from "@/lib/data/userSettings";
 import { readHideAmountsCookie } from "@/lib/preferences.server";
 import { getUser } from "@/lib/session";
 
@@ -22,12 +20,7 @@ export default async function AppLayout({
   }
 
   const [settings, hideAmounts] = await Promise.all([
-    db
-      .select()
-      .from(user_settings)
-      .where(eq(user_settings.user_id, user.id))
-      .limit(1)
-      .then((rows) => rows[0]),
+    getUserSettings(user.id),
     readHideAmountsCookie(),
   ]);
 

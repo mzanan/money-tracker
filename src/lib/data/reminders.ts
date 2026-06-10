@@ -1,7 +1,8 @@
 import { and, asc, eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { recurring_payments, user_settings } from "@/lib/db/schema";
+import { recurring_payments } from "@/lib/db/schema";
+import { getUserSettings } from "@/lib/data/userSettings";
 import { todayInTz } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
 import type { RecurringPayment } from "@/types/db";
@@ -25,12 +26,7 @@ export async function getRemindersData(): Promise<RemindersData> {
         ),
       )
       .orderBy(asc(recurring_payments.next_due_on)),
-    db
-      .select({ timezone: user_settings.timezone })
-      .from(user_settings)
-      .where(eq(user_settings.user_id, user.id))
-      .limit(1)
-      .then((rows) => rows[0]),
+    getUserSettings(user.id),
   ]);
 
   return { reminders, today: todayInTz(settings?.timezone ?? "UTC") };

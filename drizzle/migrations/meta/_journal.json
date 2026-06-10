@@ -43,6 +43,13 @@
       "when": 1780803263981,
       "tag": "0005_married_firebird",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1781066286792,
+      "tag": "0006_harsh_kitty_pryde",
+      "breakpoints": true
     }
   ]
 }

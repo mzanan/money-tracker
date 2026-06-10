@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import { auth } from "@/lib/auth";
 
@@ -9,7 +10,7 @@ export interface SessionUser {
   name: string | null;
 }
 
-export async function getUser(): Promise<SessionUser | null> {
+export const getUser = cache(async (): Promise<SessionUser | null> => {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return null;
   return {
@@ -17,7 +18,7 @@ export async function getUser(): Promise<SessionUser | null> {
     email: session.user.email,
     name: session.user.name ?? null,
   };
-}
+});
 
 export async function requireUser(): Promise<SessionUser> {
   const user = await getUser();

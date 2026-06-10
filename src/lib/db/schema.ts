@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  index,
   integer,
   primaryKey,
   real,
@@ -118,6 +119,7 @@ export const transactions = sqliteTable(
       t.source,
       t.external_id,
     ),
+    index("transactions_user_occurred_idx").on(t.user_id, t.occurred_on),
   ],
 );
 

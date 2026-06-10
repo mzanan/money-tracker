@@ -23,6 +23,12 @@ export const auth = betterAuth({
       generateId: () => crypto.randomUUID(),
     },
   },
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60,
+    },
+  },
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,

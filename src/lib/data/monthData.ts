@@ -1,12 +1,11 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { transactions, user_settings } from "@/lib/db/schema";
+import { transactions } from "@/lib/db/schema";
 import { requireUser } from "@/lib/session";
-import type { Transaction, UserSettings } from "@/types/db";
+import type { Transaction } from "@/types/db";
 
 export interface MonthPageData {
-  settings: Pick<UserSettings, "timezone"> | null;
   yearMonth: string;
   lifetimeTxs: Transaction[];
 }
@@ -16,19 +15,10 @@ export async function getMonthPageData(
 ): Promise<MonthPageData> {
   const user = await requireUser();
 
-  const [settings, lifetimeTxs] = await Promise.all([
-    db
-      .select({ timezone: user_settings.timezone })
-      .from(user_settings)
-      .where(eq(user_settings.user_id, user.id))
-      .limit(1)
-      .then((rows) => rows[0]),
-    db.select().from(transactions).where(eq(transactions.user_id, user.id)),
-  ]);
+  const lifetimeTxs = await db
+    .select()
+    .from(transactions)
+    .where(eq(transactions.user_id, user.id));
 
-  return {
-    settings: settings ?? null,
-    yearMonth,
-    lifetimeTxs,
-  };
+  return { yearMonth, lifetimeTxs };
 }

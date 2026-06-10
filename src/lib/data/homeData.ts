@@ -1,24 +1,15 @@
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import {
-  api_integrations,
-  transactions,
-  user_settings,
-} from "@/lib/db/schema";
+import { api_integrations, transactions } from "@/lib/db/schema";
+import { getUserSettings } from "@/lib/data/userSettings";
 import { thisYearMonth } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
-import type {
-  IntegrationProvider,
-  Transaction,
-  UserSettings,
-} from "@/types/db";
+import type { IntegrationProvider, Transaction } from "@/types/db";
 
 export interface HomePageData {
-  settings: Pick<UserSettings, "timezone"> | null;
   yearMonth: string;
   lifetimeTxs: Transaction[];
-  connectedProviderIds: IntegrationProvider[];
   sources: string[];
   recentCategories: string[];
   recentMerchants: string[];
@@ -27,62 +18,38 @@ export interface HomePageData {
 export async function getHomePageData(): Promise<HomePageData> {
   const user = await requireUser();
 
-  const settings = await db
-    .select({ timezone: user_settings.timezone })
-    .from(user_settings)
-    .where(eq(user_settings.user_id, user.id))
-    .limit(1)
-    .then((rows) => rows[0]);
+  const [settings, lifetimeTxs, integrationsRows] = await Promise.all([
+    getUserSettings(user.id),
+    db.select().from(transactions).where(eq(transactions.user_id, user.id)),
+    db
+      .select({ provider: api_integrations.provider })
+      .from(api_integrations)
+      .where(eq(api_integrations.user_id, user.id)),
+  ]);
 
   const yearMonth = thisYearMonth(settings?.timezone ?? "UTC");
-
-  const [lifetimeTxs, integrationsRows, categoriesRows, merchantsRows] =
-    await Promise.all([
-      db.select().from(transactions).where(eq(transactions.user_id, user.id)),
-      db
-        .select({ provider: api_integrations.provider })
-        .from(api_integrations)
-        .where(eq(api_integrations.user_id, user.id)),
-      db
-        .select({ category: transactions.category })
-        .from(transactions)
-        .where(
-          and(
-            eq(transactions.user_id, user.id),
-            isNotNull(transactions.category),
-          ),
-        )
-        .orderBy(desc(transactions.occurred_at))
-        .limit(120),
-      db
-        .select({ note: transactions.note })
-        .from(transactions)
-        .where(
-          and(eq(transactions.user_id, user.id), isNotNull(transactions.note)),
-        )
-        .orderBy(desc(transactions.occurred_at))
-        .limit(200),
-    ]);
 
   const connectedProviderIds = integrationsRows.map(
     (i) => i.provider as IntegrationProvider,
   );
 
+  const byRecency = lifetimeTxs
+    .slice()
+    .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+
   const recentCategories = uniqueStrings(
-    categoriesRows.map((row) => row.category),
+    byRecency.map((tx) => tx.category),
   ).slice(0, 12);
 
   const recentMerchants = uniqueStrings(
-    merchantsRows.map((row) => row.note?.trim() ?? null),
+    byRecency.map((tx) => tx.note?.trim() ?? null),
   ).slice(0, 30);
 
   const sources = collectSources(lifetimeTxs, connectedProviderIds);
 
   return {
-    settings: settings ?? null,
     yearMonth,
     lifetimeTxs,
-    connectedProviderIds,
     sources,
     recentCategories,
     recentMerchants,
