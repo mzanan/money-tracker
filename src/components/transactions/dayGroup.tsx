@@ -20,8 +20,6 @@ export function DayGroup({
 }) {
   const settings = useSettings();
   const [open, setOpen] = useState(defaultOpen);
-  const net = day.income - day.expense;
-  const hasNet = day.income > 0 || day.expense > 0;
   const count = day.transactions.length;
 
   return (
@@ -43,20 +41,21 @@ export function DayGroup({
             {formatDayLong(day.date)}
           </span>
           <span className="text-muted-foreground shrink-0 text-meta">
-            {count} {count === 1 ? "tx" : "txs"}
+            {count === 1 ? "1 entry" : `${count} entries`}
           </span>
         </span>
-        {hasNet && (
-          <span
-            className={cn(
-              "shrink-0 text-base font-semibold tabular-nums",
-              net >= 0 ? "text-income" : "text-foreground",
-            )}
-          >
-            {net >= 0 ? "+" : "-"}
-            {formatMoney(Math.abs(net), settings.base_currency)}
-          </span>
-        )}
+        <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
+          {day.income > 0 && (
+            <span className="text-income text-base font-semibold">
+              +{formatMoney(day.income, settings.base_currency)}
+            </span>
+          )}
+          {day.expense > 0 && (
+            <span className="text-foreground text-base font-semibold">
+              -{formatMoney(day.expense, settings.base_currency)}
+            </span>
+          )}
+        </span>
       </button>
       {open && (
         <div className="grid">

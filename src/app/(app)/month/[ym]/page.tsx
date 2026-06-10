@@ -26,6 +26,7 @@ export default async function MonthPage({
       yearMonth={data.yearMonth}
       lifetimeTransactions={data.lifetimeTxs}
       sources={sources}
+      places={data.places}
       reminders={remindersData.reminders}
       today={remindersData.today}
     />

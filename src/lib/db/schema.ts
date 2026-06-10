@@ -123,6 +123,21 @@ export const transactions = sqliteTable(
   ],
 );
 
+export const locations = sqliteTable("locations", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  user_id: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  start_date: text("start_date"),
+  end_date: text("end_date"),
+  created_at: text("created_at")
+    .notNull()
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+});
+
 export const merchant_categories = sqliteTable(
   "merchant_categories",
   {

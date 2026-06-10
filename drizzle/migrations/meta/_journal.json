@@ -57,6 +57,20 @@
       "when": 1781079977059,
       "tag": "0007_light_nebula",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1781087822113,
+      "tag": "0008_jazzy_hannibal_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1781088393940,
+      "tag": "0009_lowly_leader",
+      "breakpoints": true
     }
   ]
 }

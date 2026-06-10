@@ -1,13 +1,14 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { transactions } from "@/lib/db/schema";
+import { locations, transactions } from "@/lib/db/schema";
 import { requireUser } from "@/lib/session";
-import type { Transaction } from "@/types/db";
+import type { Location, Transaction } from "@/types/db";
 
 export interface MonthPageData {
   yearMonth: string;
   lifetimeTxs: Transaction[];
+  places: Location[];
 }
 
 export async function getMonthPageData(
@@ -15,10 +16,10 @@ export async function getMonthPageData(
 ): Promise<MonthPageData> {
   const user = await requireUser();
 
-  const lifetimeTxs = await db
-    .select()
-    .from(transactions)
-    .where(eq(transactions.user_id, user.id));
+  const [lifetimeTxs, places] = await Promise.all([
+    db.select().from(transactions).where(eq(transactions.user_id, user.id)),
+    db.select().from(locations).where(eq(locations.user_id, user.id)),
+  ]);
 
-  return { yearMonth, lifetimeTxs };
+  return { yearMonth, lifetimeTxs, places };
 }

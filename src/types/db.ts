@@ -1,6 +1,7 @@
 import type {
   api_integrations,
   fx_rates_cache,
+  locations,
   recurring_payments,
   transactions,
   user_settings,
@@ -33,6 +34,9 @@ export type ApiIntegration = typeof api_integrations.$inferSelect;
 export type ApiIntegrationInsert = typeof api_integrations.$inferInsert;
 export type ApiIntegrationUpdate = Partial<ApiIntegrationInsert>;
 export type IntegrationProvider = ApiIntegration["provider"];
+
+export type Location = typeof locations.$inferSelect;
+export type LocationInsert = typeof locations.$inferInsert;
 
 export type RecurringPayment = typeof recurring_payments.$inferSelect;
 export type RecurringPaymentInsert = typeof recurring_payments.$inferInsert;

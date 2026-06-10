@@ -14,6 +14,7 @@ export default async function DashboardPage() {
       yearMonth={data.yearMonth}
       lifetimeTransactions={data.lifetimeTxs}
       sources={data.sources}
+      places={data.places}
       reminders={remindersData.reminders}
       today={remindersData.today}
       quickAdd={

@@ -7,10 +7,11 @@ import { UNCATEGORIZED_LABEL } from "@/lib/constants/categories";
 import { kindOfSource } from "@/lib/constants/sources";
 import { todayInTz } from "@/lib/dates";
 import { filterByAmount } from "@/lib/filters";
+import { placeOf } from "@/lib/places";
 import { dayTotalsList } from "@/lib/totals";
 
 import type { DayTotals } from "@/lib/totals";
-import type { RecurringPayment, Transaction } from "@/types/db";
+import type { Location, RecurringPayment, Transaction } from "@/types/db";
 
 import type { KindFilter } from "./balanceHero";
 
@@ -30,10 +31,12 @@ export function useDashboardControls({
   monthTransactions,
   lifetimeTransactions,
   reminders,
+  places,
 }: {
   monthTransactions: Transaction[];
   lifetimeTransactions: Transaction[];
   reminders: RecurringPayment[];
+  places: Location[];
 }) {
   const settings = useSettings();
   const timezone = useTimezone();
@@ -43,6 +46,7 @@ export function useDashboardControls({
   const [selectedSource, setSelectedSource] = useState("all");
   const [selectedKind, setSelectedKind] = useState<KindFilter>("all");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<string | null>(null);
   const [minInput, setMinInput] = useState("");
   const [maxInput, setMaxInput] = useState("");
   const [scope, setScope] = useState<FilterScope>("all");
@@ -85,8 +89,13 @@ export function useDashboardControls({
         (tx) => (tx.category ?? UNCATEGORIZED_LABEL) === selectedCategory,
       );
     }
+    if (selectedPlace !== null) {
+      list = list.filter(
+        (tx) => placeOf(tx.occurred_on, places) === selectedPlace,
+      );
+    }
     return list;
-  }, [sourceFilteredMonth, selectedKind, selectedCategory]);
+  }, [sourceFilteredMonth, selectedKind, selectedCategory, selectedPlace, places]);
 
   const filterResults = useMemo(() => {
     const base = scope === "all" ? sourceFilteredLifetime : sourceFilteredMonth;
@@ -142,6 +151,8 @@ export function useDashboardControls({
     setSelectedKind,
     selectedCategory,
     setSelectedCategory,
+    selectedPlace,
+    setSelectedPlace,
     minInput,
     setMinInput,
     maxInput,

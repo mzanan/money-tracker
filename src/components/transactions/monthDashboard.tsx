@@ -11,13 +11,13 @@ import {
 } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
-import type { RecurringPayment, Transaction } from "@/types/db";
+import type { Location, RecurringPayment, Transaction } from "@/types/db";
 
 import { UpcomingBanner } from "@/components/reminders/upcomingBanner";
 
 import { BalanceHero } from "./balanceHero";
 import { CalendarPanel } from "./calendarPanel";
-import { CategoryBreakdown } from "./categoryBreakdown";
+import { SpendingBreakdown } from "./spendingBreakdown";
 import { DashboardPanel } from "./dashboardPanel";
 import { DashboardToolbar } from "./dashboardToolbar";
 import { FiltersPanel } from "./filtersPanel";
@@ -32,6 +32,7 @@ interface Props {
   yearMonth: string;
   lifetimeTransactions: Transaction[];
   sources: string[];
+  places: Location[];
   reminders?: RecurringPayment[];
   today: string;
   quickAdd?: React.ReactNode;
@@ -41,6 +42,7 @@ export function MonthDashboard({
   yearMonth: initialYearMonth,
   lifetimeTransactions,
   sources,
+  places,
   reminders = [],
   today,
   quickAdd,
@@ -86,6 +88,7 @@ export function MonthDashboard({
     monthTransactions,
     lifetimeTransactions,
     reminders,
+    places,
   });
 
   const [view, setView] = useState<HeroView>("monthly");
@@ -157,10 +160,13 @@ export function MonthDashboard({
           selected={c.selectedSource}
           onChange={c.setSelectedSource}
         />
-        <CategoryBreakdown
+        <SpendingBreakdown
           transactions={breakdownTransactions}
-          selected={c.selectedCategory}
-          onSelect={c.setSelectedCategory}
+          places={places}
+          selectedCategory={c.selectedCategory}
+          onSelectCategory={c.setSelectedCategory}
+          selectedPlace={c.selectedPlace}
+          onSelectPlace={c.setSelectedPlace}
         />
         <MonthView
           transactions={feedTransactions}

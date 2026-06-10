@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { api_integrations, transactions } from "@/lib/db/schema";
+import { api_integrations, locations, transactions } from "@/lib/db/schema";
 import { getUserSettings } from "@/lib/data/userSettings";
 import { thisYearMonth } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
-import type { IntegrationProvider, Transaction } from "@/types/db";
+import type { IntegrationProvider, Location, Transaction } from "@/types/db";
 
 export interface HomePageData {
   yearMonth: string;
@@ -13,18 +13,20 @@ export interface HomePageData {
   sources: string[];
   recentCategories: string[];
   recentMerchants: string[];
+  places: Location[];
 }
 
 export async function getHomePageData(): Promise<HomePageData> {
   const user = await requireUser();
 
-  const [settings, lifetimeTxs, integrationsRows] = await Promise.all([
+  const [settings, lifetimeTxs, integrationsRows, places] = await Promise.all([
     getUserSettings(user.id),
     db.select().from(transactions).where(eq(transactions.user_id, user.id)),
     db
       .select({ provider: api_integrations.provider })
       .from(api_integrations)
       .where(eq(api_integrations.user_id, user.id)),
+    db.select().from(locations).where(eq(locations.user_id, user.id)),
   ]);
 
   const yearMonth = thisYearMonth(settings?.timezone ?? "UTC");
@@ -53,6 +55,7 @@ export async function getHomePageData(): Promise<HomePageData> {
     sources,
     recentCategories,
     recentMerchants,
+    places,
   };
 }
 
