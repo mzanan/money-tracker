@@ -16,6 +16,7 @@ import type { Location, RecurringPayment, Transaction } from "@/types/db";
 import { UpcomingBanner } from "@/components/reminders/upcomingBanner";
 
 import { BalanceHero } from "./balanceHero";
+import { BudgetPanel } from "./budgetPanel";
 import { CalendarPanel } from "./calendarPanel";
 import { SpendingBreakdown } from "./spendingBreakdown";
 import { DashboardPanel } from "./dashboardPanel";
@@ -24,6 +25,7 @@ import { FiltersPanel } from "./filtersPanel";
 import { MonthView } from "./monthView";
 import { SourceFilter } from "./sourceFilter";
 import { useDashboardControls } from "./useDashboardControls";
+import type { PanelMode } from "./useDashboardControls";
 import { useDaySpend } from "./useDaySpend";
 
 import type { HeroView } from "./balanceHero";
@@ -119,7 +121,8 @@ export function MonthDashboard({
 
   const panelOpen = c.panel !== "none";
   const panel = usePresence(panelOpen);
-  const [lastPanel, setLastPanel] = useState<"filters" | "calendar">("filters");
+  const [lastPanel, setLastPanel] =
+    useState<Exclude<PanelMode, "none">>("filters");
   if (c.panel !== "none" && c.panel !== lastPanel) {
     setLastPanel(c.panel);
   }
@@ -146,7 +149,6 @@ export function MonthDashboard({
           lifetimeTransactions={c.sourceFilteredLifetime}
           selectedKind={c.selectedKind}
           onKindChange={c.setSelectedKind}
-          today={today}
           hasOlder={hasOlder}
           hasNewer={hasNewer}
           onShiftMonth={shiftMonth}
@@ -178,7 +180,13 @@ export function MonthDashboard({
 
       {panel.rendered && (
         <DashboardPanel
-          title={shownPanel === "filters" ? "Filters" : "Calendar"}
+          title={
+            shownPanel === "filters"
+              ? "Filters"
+              : shownPanel === "calendar"
+                ? "Calendar"
+                : "Budget"
+          }
           state={panel.state}
           onClose={c.closePanel}
         >
@@ -198,7 +206,7 @@ export function MonthDashboard({
               amountActive={c.amountActive}
               results={c.filterResults}
             />
-          ) : (
+          ) : shownPanel === "calendar" ? (
             <CalendarPanel
               yearMonth={visibleYearMonth}
               activityDates={c.activityDates}
@@ -209,6 +217,8 @@ export function MonthDashboard({
               reminders={reminders}
               today={c.today}
             />
+          ) : (
+            <BudgetPanel />
           )}
         </DashboardPanel>
       )}

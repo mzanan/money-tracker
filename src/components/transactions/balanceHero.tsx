@@ -19,7 +19,7 @@ import {
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useSettings } from "@/hooks/useSettings";
 import { formatMoney } from "@/lib/currency";
-import { formatYearMonthShort, monthBounds } from "@/lib/dates";
+import { formatYearMonthShort } from "@/lib/dates";
 import { periodTotals } from "@/lib/totals";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +39,6 @@ interface Props {
   lifetimeTransactions: Transaction[];
   selectedKind: KindFilter;
   onKindChange: (next: KindFilter) => void;
-  today: string;
   hasOlder: boolean;
   hasNewer: boolean;
   onShiftMonth: (delta: number) => void;
@@ -54,7 +53,6 @@ export function BalanceHero({
   lifetimeTransactions,
   selectedKind,
   onKindChange,
-  today,
   hasOlder,
   hasNewer,
   onShiftMonth,
@@ -84,17 +82,6 @@ export function BalanceHero({
   const monthSigned = formatMoney(monthTotals.net, settings.base_currency, {
     signed: true,
   });
-
-  const isCurrentMonth = yearMonth === today.slice(0, 7);
-  const daysInMonth = Number(monthBounds(yearMonth)[1].slice(8, 10));
-  const daysElapsed = isCurrentMonth ? Number(today.slice(8, 10)) : daysInMonth;
-  const perDay = daysElapsed > 0 ? monthTotals.expense / daysElapsed : 0;
-  const projected = perDay * daysInMonth;
-  const pace =
-    `${formatMoney(perDay, settings.base_currency)}/day` +
-    (isCurrentMonth
-      ? ` · ~${formatMoney(projected, settings.base_currency)} by month end`
-      : "");
 
   function toggle(kind: "income" | "expense") {
     onKindChange(selectedKind === kind ? "all" : kind);
@@ -187,16 +174,6 @@ export function BalanceHero({
                 {hideAmounts ? HIDDEN_AMOUNT : monthSigned}
               </span>
             </div>
-            {monthTotals.expense > 0 && (
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-muted-foreground text-xs">
-                  Spending pace
-                </span>
-                <span className="text-muted-foreground text-xs tabular-nums">
-                  {hideAmounts ? HIDDEN_AMOUNT : pace}
-                </span>
-              </div>
-            )}
           </div>
         </TabsContent>
 
