@@ -5,8 +5,8 @@ nómade (cargás en VND y ves los totales en USD, por ejemplo). Mobile + desktop
 instalable como PWA.
 
 Stack: Next.js 16 + React 19 + TypeScript + Tailwind v4 + shadcn/ui + **Turso
-(libSQL) + Drizzle ORM** + **Better Auth** (emailOTP + Resend) + TanStack
-React Query + Zustand. Deploy: Vercel.
+(libSQL) + Drizzle ORM** + **Better Auth** (email+password + Google OAuth) +
+TanStack React Query + Zustand. Deploy: Vercel.
 
 > Migrado desde Supabase a Turso + Better Auth el 2026-05-25 por portabilidad
 > (un único `.db` exportable). El schema de tablas no cambió: `transactions`,
@@ -27,11 +27,13 @@ turso db show money-tracker --url          # → TURSO_DATABASE_URL
 turso db tokens create money-tracker       # → TURSO_AUTH_TOKEN
 ```
 
-### 2. Crear el Resend API key (email transaccional)
+### 2. Crear el OAuth client de Google (opcional)
 
-[resend.com](https://resend.com) → API Keys → Create. Sin esto, los OTPs
-caen a `console.log` (dev fallback). Para producción, verificá un dominio
-en Resend o usá el sandbox `onboarding@resend.dev`.
+[console.cloud.google.com](https://console.cloud.google.com) → APIs & Services
+→ Credentials → Create OAuth client ID (Web application). Redirect URIs:
+`http://localhost:3020/api/auth/callback/google` y
+`https://money.itsmatias.com/api/auth/callback/google`. Sin esto, el botón
+"Continue with Google" falla; email+password sigue funcionando.
 
 ### 3. Variables de entorno
 
@@ -45,8 +47,9 @@ BETTER_AUTH_SECRET=$(openssl rand -base64 32)
 BETTER_AUTH_URL=http://localhost:3000
 NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
 
-RESEND_API_KEY=re_...
-EMAIL_FROM="Money <onboarding@resend.dev>"
+GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-...
+AUTH_DISABLE_SIGNUPS=
 ```
 
 ### 4. Aplicar el schema
@@ -66,8 +69,8 @@ npm run migrate:fromSupabase
 ```
 
 El script es idempotente y preserva UUIDs. **Passwords NO migran** (Better
-Auth y Supabase usan hashes incompatibles); para entrar usá el OTP. Cuando
-hayas validado todo:
+Auth y Supabase usan hashes incompatibles); creá la cuenta de nuevo vía
+sign-up con el mismo email. Cuando hayas validado todo:
 
 ```bash
 npm uninstall @supabase/supabase-js @supabase/ssr
@@ -81,8 +84,8 @@ nvm use            # node 22
 npm run dev        # http://localhost:3000
 ```
 
-Primer ingreso: pide el email, te llega un código de 6 dígitos, lo pegás, y
-después el onboarding pide al menos 1 moneda + la moneda base.
+Primer ingreso: creás la cuenta con email+password (o Google), y después el
+onboarding pide al menos 1 moneda + la moneda base.
 
 ---
 
@@ -108,17 +111,17 @@ después el onboarding pide al menos 1 moneda + la moneda base.
    - `TURSO_DATABASE_URL`
    - `TURSO_AUTH_TOKEN`
    - `BETTER_AUTH_SECRET`
-   - `BETTER_AUTH_URL` (la URL prod de Vercel, ej `https://money.vercel.app`)
+   - `BETTER_AUTH_URL` (la URL prod, `https://money.itsmatias.com`)
    - `NEXT_PUBLIC_BETTER_AUTH_URL` (igual)
-   - `RESEND_API_KEY`
-   - `EMAIL_FROM` (dominio verificado en Resend)
+   - `GOOGLE_CLIENT_ID`
+   - `GOOGLE_CLIENT_SECRET`
+   - `GOOGLE_GENERATIVE_AI_API_KEY`
 4. Deploy.
-5. Loguearte una vez con tu email para crear la cuenta.
-6. **Single-user lockdown:** una vez creada tu cuenta, considerar setear
-   `emailAndPassword.disableSignUp: true` en `src/lib/auth.ts` y verificar que
-   el plugin OTP no permita crear nuevos usuarios (depende de versión —
-   chequear docs de Better Auth). Sin esto, cualquiera con tu URL puede
-   crearse cuenta vía OTP.
+5. Crear tu cuenta una vez (sign-up o Google).
+6. **Single-user lockdown:** una vez creada tu cuenta, setear
+   `AUTH_DISABLE_SIGNUPS=true` en Vercel y redeployar. Bloquea signups
+   nuevos por email+password y por Google. Sin esto, cualquiera con tu URL
+   puede crearse cuenta.
 
 En el celular, abrir la app deployada → "Add to Home Screen" → queda como app.
 
@@ -129,7 +132,7 @@ En el celular, abrir la app deployada → "Add to Home Screen" → queda como ap
 ```
 src/
   app/
-    (auth)/login/             # OTP de 6 dígitos (Better Auth)
+    (auth)/login/             # email+password + Google (Better Auth)
     (app)/                    # rutas protegidas (auth + onboarding)
       page.tsx                # dashboard: quick-add + mes actual
       month/[ym]/             # vista mensual
@@ -139,6 +142,7 @@ src/
     api/rates/                # proxy + cache de open.er-api.com
     layout.tsx, manifest.ts
   components/
+    auth/                     # loginCard + useLogin
     transactions/             # balanceHero (Monthly/Daily tabs), sourceFilter, monthView, amountsToggle, ...
     layout/                   # header, baseCurrencyPicker, themeToggle
     reminders/                # upcomingBanner, reminderRow, reminderForm
@@ -156,7 +160,6 @@ src/
     auth.ts                   # Better Auth server config
     authClient.ts             # Better Auth browser client
     session.ts                # getUser() / requireUser()
-    email.ts                  # Resend wrapper
     currency.ts               # convert / format / round (puro)
     rates.ts                  # fetch + cache (server-only)
     totals.ts                 # day/month totals
@@ -188,9 +191,10 @@ scripts/migrateFromSupabase.ts   # one-shot data migration
 - **Huso horario**: `occurred_on` es un `date` puro asignado al cargar (día del
   dispositivo, o del override en settings). Cambiar el huso **no** re-mapea
   registros viejos.
-- **Auth**: OTP de 6 dígitos por email vía Better Auth `emailOTP` plugin
-  (mejor que magic link en PWAs — el link abre otro browser y rompe la
-  sesión). Resend manda el email.
+- **Auth**: email+password + Google OAuth vía Better Auth.
+  `AUTH_DISABLE_SIGNUPS=true` bloquea registros nuevos en ambos métodos
+  (single-user). El OTP por email se descartó el 2026-06-11: dependía de
+  Resend y nunca se configuró en prod.
 - **Tasas**: [open.er-api.com](https://open.er-api.com) — gratis sin API key,
   incluye VND. Cacheada en `fx_rates_cache` (Turso). Si el proveedor cae, se
   sirve la cache stale.

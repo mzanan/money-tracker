@@ -14,8 +14,8 @@ para trabajar acá sin romper convenciones.
 ## Stack
 
 Next 16 (App Router) + React 19 + TS strict + Tailwind v4 + shadcn/ui (radix
-base, nova preset) + **Turso (libSQL) + Drizzle ORM** + **Better Auth** (con
-`emailOTP` plugin + Resend para email) + TanStack React Query v5 + Zustand v5
+base, nova preset) + **Turso (libSQL) + Drizzle ORM** + **Better Auth**
+(email+password + Google OAuth) + TanStack React Query v5 + Zustand v5
 + react-hook-form + Zod + date-fns / date-fns-tz + sonner + next-themes +
 lucide-react. Gestor: npm. Node 22 (`.nvmrc`).
 
