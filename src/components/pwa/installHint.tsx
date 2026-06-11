@@ -13,6 +13,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 const DISMISS_KEY = "pwa:installHintDismissed";
 const DISMISS_EVENT = "pwa:installHintDismissed";
+const AUTO_HIDE_MS = 10_000;
 
 function isIos(): boolean {
   if (typeof window === "undefined") return false;
@@ -46,12 +47,21 @@ function getIosServerSnapshot(): boolean {
 export function InstallHint() {
   const [androidEvent, setAndroidEvent] =
     useState<BeforeInstallPromptEvent | null>(null);
+  const [expired, setExpired] = useState(false);
 
   const showIos = useSyncExternalStore(
     subscribeDismiss,
     getIosSnapshot,
     getIosServerSnapshot,
   );
+
+  const visible = Boolean(androidEvent) || showIos;
+
+  useEffect(() => {
+    if (!visible) return;
+    const timer = window.setTimeout(() => setExpired(true), AUTO_HIDE_MS);
+    return () => window.clearTimeout(timer);
+  }, [visible]);
 
   useEffect(() => {
     const onBeforeInstall = (e: Event) => {
@@ -78,13 +88,13 @@ export function InstallHint() {
     else setAndroidEvent(null);
   }, [androidEvent, close]);
 
-  if (!androidEvent && !showIos) return null;
+  if (!visible || expired) return null;
 
   return (
     <Surface
       radius="lg"
       padding="sm"
-      className="fixed right-3 bottom-3 left-3 z-40 flex items-center gap-3 border shadow-lg sm:right-auto sm:left-3 sm:max-w-sm"
+      className="fixed right-3 bottom-20 left-3 z-40 flex items-center gap-3 border shadow-lg sm:right-auto sm:bottom-3 sm:left-3 sm:max-w-sm"
     >
       <div className="flex-1 text-sm">
         {androidEvent ? (
@@ -95,7 +105,7 @@ export function InstallHint() {
         ) : (
           <p className="flex items-center gap-1.5">
             <span className="font-medium">Add to Home Screen</span>
-            <span className="text-muted-foreground">— tap</span>
+            <span className="text-muted-foreground">: tap</span>
             <ShareIcon className="text-muted-foreground inline size-3.5" />
             <span className="text-muted-foreground">
               then “Add to Home Screen”.
