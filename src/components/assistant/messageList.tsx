@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 import { MessageBubble } from "./messageBubble";
 
-const SUGGESTIONS = [
+const DEFAULT_SUGGESTIONS = [
   "¿Cuál es mi balance?",
   "¿Cuánto gasté este mes?",
   "¿En qué categoría gasto más?",
@@ -17,9 +17,13 @@ const SUGGESTIONS = [
 export function MessageList({
   messages,
   onSuggest,
+  suggestions = DEFAULT_SUGGESTIONS,
+  emptyHint = "Preguntame sobre tus finanzas.",
 }: {
   messages: UIMessage[];
   onSuggest: (text: string) => void;
+  suggestions?: string[];
+  emptyHint?: string;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -30,11 +34,9 @@ export function MessageList({
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 flex-col justify-end gap-2 p-3">
-        <p className="text-sm text-muted-foreground">
-          Preguntame sobre tus finanzas.
-        </p>
+        <p className="text-sm text-muted-foreground">{emptyHint}</p>
         <div className="flex flex-col gap-1.5">
-          {SUGGESTIONS.map((text) => (
+          {suggestions.map((text) => (
             <Button
               key={text}
               variant="outline"

@@ -1,6 +1,10 @@
 "use client";
 
-import { CalendarDaysIcon, SlidersHorizontalIcon } from "lucide-react";
+import {
+  CalendarDaysIcon,
+  PiggyBankIcon,
+  SlidersHorizontalIcon,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -32,6 +36,15 @@ export function DashboardToolbar({
       >
         <CalendarDaysIcon />
         Calendar
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        aria-pressed={panel === "budget"}
+        onClick={() => onToggle("budget")}
+      >
+        <PiggyBankIcon />
+        Budget
       </Button>
     </div>
   );

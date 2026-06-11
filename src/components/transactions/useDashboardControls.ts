@@ -15,7 +15,7 @@ import type { Location, RecurringPayment, Transaction } from "@/types/db";
 
 import type { KindFilter } from "./balanceHero";
 
-export type PanelMode = "none" | "filters" | "calendar";
+export type PanelMode = "none" | "filters" | "calendar" | "budget";
 export type FilterScope = "month" | "all";
 
 function parseAmount(input: string): number | undefined {

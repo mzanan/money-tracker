@@ -4,8 +4,11 @@ import { z } from "zod";
 import {
   getBalance,
   getDailySpend,
+  getMonthlyTrend,
   getPeriodSummary,
+  getRecurringPayments,
   getTopCategories,
+  getTopMerchants,
   searchTransactions,
 } from "@/lib/data/assistant";
 
@@ -58,6 +61,31 @@ export function buildAssistantTools({ userId, baseCurrency }: AssistantContext) 
       }),
       execute: ({ from, to, kind, limit }) =>
         getTopCategories(userId, baseCurrency, { from, to, kind, limit }),
+    }),
+    getTopMerchants: tool({
+      description:
+        "Top expense merchants/payees (grouped by transaction note), ranked by total in the base currency. Use to answer where the money goes beyond categories.",
+      inputSchema: z.object({
+        from: isoDate.describe("Start date, inclusive").optional(),
+        to: isoDate.describe("End date, inclusive").optional(),
+        limit: z.number().int().min(1).max(30).default(10),
+      }),
+      execute: ({ from, to, limit }) =>
+        getTopMerchants(userId, baseCurrency, { from, to, limit }),
+    }),
+    getRecurringPayments: tool({
+      description:
+        "The user's recurring payments (rent, rentals, subscriptions) with amount, frequency, normalized monthly cost in the base currency, and next due date. Use to separate fixed costs from variable spending.",
+      inputSchema: z.object({}),
+      execute: () => getRecurringPayments(userId, baseCurrency),
+    }),
+    getMonthlyTrend: tool({
+      description:
+        "Income, expense and net per month for the last N months, in the base currency. Use for month-over-month comparisons and trends.",
+      inputSchema: z.object({
+        months: z.number().int().min(2).max(24).default(6),
+      }),
+      execute: ({ months }) => getMonthlyTrend(userId, baseCurrency, months),
     }),
     searchTransactions: tool({
       description:
