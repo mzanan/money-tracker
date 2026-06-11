@@ -70,24 +70,59 @@ Rules:
 
 Return strict JSON matching the schema. Empty items array is fine if the image has no financial content.`;
 
-export async function extractFromScreenshot(image: {
-  data: ArrayBuffer | Uint8Array;
-  mimeType: string;
-}): Promise<{ items: DetectedTransaction[]; ignored: number }> {
+const RECEIPT_SYSTEM = `You parse photos of purchase receipts, bills and invoices.
+
+Rules:
+- Emit ONE item per receipt with the final TOTAL paid (after tax, tip and discounts). Never emit line items.
+- If the photo shows multiple distinct receipts, emit one item each.
+- kind is "expense", unless the document is clearly a refund or credit note (then "income").
+- amount must be the total, positive, no sign, no thousand separators.
+- currency must be an ISO 4217 code. Infer from the symbol or the receipt's country/language when not printed (₫ or "đ" = VND, $ = USD unless context says otherwise, € = EUR).
+- occurredOn: the printed receipt date in YYYY-MM-DD if visible, else null (the user will default to today).
+- description: the merchant or store name as printed.
+- app: always null.
+- confidence:
+  - high: total, currency and merchant came directly from the print.
+  - medium: one field had to be inferred.
+  - low: more than one field guessed, or the photo is partially unreadable.
+
+Return strict JSON matching the schema. "ignored" is 0 unless the image contains clearly non-receipt content. Empty items array is fine if no receipt is readable.`;
+
+export type ExtractMode = "screenshot" | "receipt";
+
+const PROMPTS: Record<ExtractMode, { system: string; instruction: string }> = {
+  screenshot: {
+    system: SYSTEM,
+    instruction: "Extract every financial notification from this screenshot.",
+  },
+  receipt: {
+    system: RECEIPT_SYSTEM,
+    instruction: "Extract the purchase total from this receipt photo.",
+  },
+};
+
+export async function extractFromImage(
+  image: {
+    data: ArrayBuffer | Uint8Array;
+    mimeType: string;
+  },
+  mode: ExtractMode = "screenshot",
+): Promise<{ items: DetectedTransaction[]; ignored: number }> {
   const buffer =
     image.data instanceof Uint8Array ? image.data : new Uint8Array(image.data);
+  const prompt = PROMPTS[mode];
 
   const result = await generateObject({
     model: visionModel,
     schema: SCHEMA,
-    system: SYSTEM,
+    system: prompt.system,
     messages: [
       {
         role: "user",
         content: [
           {
             type: "text",
-            text: "Extract every financial notification from this screenshot.",
+            text: prompt.instruction,
           },
           {
             type: "image",

@@ -9,6 +9,10 @@ import {
   importScreenshotRows,
   previewCandidatesAction,
 } from "@/lib/actions/screenshotImport";
+import {
+  requestImageExtraction,
+  type ImageImportMode,
+} from "@/lib/imageExtract";
 
 export interface EditableItem {
   selected: boolean;
@@ -50,11 +54,13 @@ export function useScreenshotImport({
   initialItems,
   initialIgnored,
   initialCandidates,
+  mode = "screenshot",
   onDone,
 }: {
   initialItems: DetectedTransaction[] | null;
   initialIgnored: number;
   initialCandidates: Record<number, CandidateMatch[]>;
+  mode?: ImageImportMode;
   onDone?: () => void;
 }) {
   const router = useRouter();
@@ -89,40 +95,25 @@ export function useScreenshotImport({
   }, []);
 
   function processFile(file: File) {
-    const form = new FormData();
-    form.append("image", file);
-
     startExtract(async () => {
-      try {
-        const response = await fetch("/api/screenshot/extract", {
-          method: "POST",
-          body: form,
-        });
-        const payload = (await response.json()) as
-          | { items?: DetectedTransaction[]; ignored?: number }
-          | { error: string };
+      const extract = await requestImageExtraction(file, mode);
+      if (!extract.ok) {
+        toast.error(extract.error);
+        return;
+      }
 
-        if (!response.ok) {
-          toast.error(
-            "error" in payload
-              ? `Could not read: ${payload.error}`
-              : "Could not read screenshot",
-          );
-          return;
-        }
-
-        const detected = "items" in payload ? (payload.items ?? []) : [];
-        const editable = detected.map(detectedToEditable);
-        setItems(editable);
-        setIgnored("ignored" in payload ? (payload.ignored ?? 0) : 0);
-        setCandidatesByIndex({});
-        if (editable.length === 0) {
-          toast.info("No financial notifications found in that screenshot.");
-        } else {
-          void refreshCandidates(editable);
-        }
-      } catch {
-        toast.error("Network error while reading screenshot");
+      const editable = extract.items.map(detectedToEditable);
+      setItems(editable);
+      setIgnored(extract.ignored);
+      setCandidatesByIndex({});
+      if (editable.length === 0) {
+        toast.info(
+          mode === "receipt"
+            ? "No readable purchase found in that photo."
+            : "No financial notifications found in that screenshot.",
+        );
+      } else {
+        void refreshCandidates(editable);
       }
     });
   }
@@ -167,7 +158,7 @@ export function useScreenshotImport({
       currency: item.currency.trim().toUpperCase(),
       occurredOn: item.occurredOn,
       description: item.description.trim() || null,
-      app: item.app,
+      app: item.app ?? (mode === "receipt" ? "receipt" : null),
       comment: item.comment.trim() || null,
     }));
 

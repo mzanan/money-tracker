@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { extractFromScreenshot } from "@/lib/ai/screenshotExtract";
+import { extractFromImage } from "@/lib/ai/screenshotExtract";
 import { getUser } from "@/lib/session";
 
 const MAX_BYTES = 6 * 1024 * 1024;
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
 
   let payload;
   try {
-    payload = await extractFromScreenshot({
+    payload = await extractFromImage({
       data: new Uint8Array(await file.arrayBuffer()),
       mimeType: file.type,
     });

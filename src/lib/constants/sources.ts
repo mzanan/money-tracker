@@ -7,6 +7,7 @@ export const SOURCE_LABELS: Record<string, string> = {
   bybit: "Bybit",
   wise: "Wise",
   astropay: "Astropay",
+  receipt: "Receipt",
 };
 
 const API_SOURCES: ReadonlySet<string> = new Set<IntegrationProvider>(["bybit"]);

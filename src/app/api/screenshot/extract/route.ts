@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { extractFromScreenshot } from "@/lib/ai/screenshotExtract";
+import { extractFromImage, type ExtractMode } from "@/lib/ai/screenshotExtract";
 import { getUser } from "@/lib/session";
 
 const MAX_BYTES = 6 * 1024 * 1024;
@@ -41,12 +41,17 @@ export async function POST(req: Request) {
   }
 
   const buffer = new Uint8Array(await file.arrayBuffer());
+  const modeField = form.get("mode");
+  const mode: ExtractMode = modeField === "receipt" ? "receipt" : "screenshot";
 
   try {
-    const result = await extractFromScreenshot({
-      data: buffer,
-      mimeType: file.type,
-    });
+    const result = await extractFromImage(
+      {
+        data: buffer,
+        mimeType: file.type,
+      },
+      mode,
+    );
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(

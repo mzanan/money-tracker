@@ -6,6 +6,7 @@ import { ImageUpIcon, Loader2Icon } from "lucide-react";
 import { useScreenshotImport } from "@/hooks/useScreenshotImport";
 import type { CandidateMatch } from "@/hooks/useScreenshotImport";
 import type { DetectedTransaction } from "@/lib/ai/screenshotExtract";
+import type { ImageImportMode } from "@/lib/imageExtract";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +17,7 @@ interface Props {
   initialItems: DetectedTransaction[] | null;
   initialIgnored: number;
   initialCandidates: Record<number, CandidateMatch[]>;
+  mode?: ImageImportMode;
   onDone?: () => void;
 }
 
@@ -23,6 +25,7 @@ export function ScreenshotImporter({
   initialItems,
   initialIgnored,
   initialCandidates,
+  mode = "screenshot",
   onDone,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,6 +46,7 @@ export function ScreenshotImporter({
     initialItems,
     initialIgnored,
     initialCandidates,
+    mode,
     onDone,
   });
 
@@ -75,9 +79,13 @@ export function ScreenshotImporter({
               ) : (
                 <ImageUpIcon />
               )}
-              {items.length > 0
-                ? "Use another screenshot"
-                : "Upload screenshot"}
+              {mode === "receipt"
+                ? items.length > 0
+                  ? "Use another photo"
+                  : "Upload receipt photo"
+                : items.length > 0
+                  ? "Use another screenshot"
+                  : "Upload screenshot"}
             </Button>
             {items.length > 0 && (
               <Button
@@ -90,8 +98,9 @@ export function ScreenshotImporter({
             )}
           </div>
           <p className="text-muted-foreground text-xs">
-            PNG / JPEG / WebP. On Android with the app installed, share any
-            screenshot to Money Tracker from the share sheet — same flow.
+            {mode === "receipt"
+              ? "PNG / JPEG / WebP. Take the photo straight on, with the total readable."
+              : "PNG / JPEG / WebP. On Android with the app installed, share any screenshot to Money Tracker from the share sheet: same flow."}
           </p>
         </CardContent>
       </Card>
