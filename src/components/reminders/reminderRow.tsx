@@ -54,7 +54,10 @@ export function ReminderRow({
 
   function handleMarkPaid() {
     run(() => markReminderPaid(reminder.id), {
-      success: "Marked paid — next due updated",
+      success: (data) =>
+        data?.expenseAdded
+          ? "Marked paid, expense added"
+          : "Marked paid, next due updated",
     });
   }
 

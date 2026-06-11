@@ -4,8 +4,10 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
-import { recurring_payments, user_settings } from "@/lib/db/schema";
+import { recurring_payments, transactions, user_settings } from "@/lib/db/schema";
+import { getRates } from "@/lib/rates";
 import { computeNextDue } from "@/lib/reminders";
+import { buildTransactionRow } from "@/lib/transactions";
 import {
   createReminderSchema,
   updateReminderSchema,
@@ -105,10 +107,54 @@ export async function updateReminder(
   }
 }
 
+async function insertReminderExpense(
+  userId: string,
+  reminder: typeof recurring_payments.$inferSelect,
+  day: string,
+  userCurrencies: string[],
+): Promise<boolean> {
+  if (reminder.amount == null || !reminder.currency) return false;
+
+  let rates;
+  try {
+    rates = (await getRates()).rates;
+  } catch {
+    return false;
+  }
+
+  const row = buildTransactionRow(
+    {
+      userId,
+      kind: "expense",
+      amount: reminder.amount,
+      currency: reminder.currency,
+      occurredOn: day,
+      category: reminder.category,
+      note: reminder.label,
+      externalId: `reminder:${reminder.id}:${day}`,
+    },
+    { rates, userCurrencies },
+  );
+  if (!row) return false;
+
+  const inserted = await db
+    .insert(transactions)
+    .values(row)
+    .onConflictDoNothing({
+      target: [
+        transactions.user_id,
+        transactions.source,
+        transactions.external_id,
+      ],
+    })
+    .returning({ id: transactions.id });
+  return inserted.length > 0;
+}
+
 export async function markReminderPaid(
   id: string,
   paidOn?: string,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ expenseAdded: boolean }>> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
@@ -125,14 +171,18 @@ export async function markReminderPaid(
     .then((rows) => rows[0]);
   if (!reminder) return { ok: false, error: "Reminder not found" };
 
+  const settings = await db
+    .select({
+      timezone: user_settings.timezone,
+      currencies: user_settings.currencies,
+    })
+    .from(user_settings)
+    .where(eq(user_settings.user_id, user.id))
+    .limit(1)
+    .then((rows) => rows[0]);
+
   let day = paidOn;
   if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day)) {
-    const settings = await db
-      .select({ timezone: user_settings.timezone })
-      .from(user_settings)
-      .where(eq(user_settings.user_id, user.id))
-      .limit(1)
-      .then((rows) => rows[0]);
     day = todayInTz(settings?.timezone ?? "UTC");
   }
 
@@ -153,8 +203,14 @@ export async function markReminderPaid(
           eq(recurring_payments.user_id, user.id),
         ),
       );
+    const expenseAdded = await insertReminderExpense(
+      user.id,
+      reminder,
+      day,
+      settings?.currencies ?? [],
+    );
     revalidatePath("/", "layout");
-    return { ok: true };
+    return { ok: true, data: { expenseAdded } };
   } catch (error) {
     return {
       ok: false,

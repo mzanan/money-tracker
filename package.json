@@ -14,7 +14,8 @@
     "migrate:fromSupabase": "tsx scripts/migrateFromSupabase.ts",
     "backfill:reminderNotes": "tsx scripts/backfillReminderNotes.ts",
     "backfill:reminderDueDates": "tsx scripts/backfillReminderDueDates.ts",
-    "dedup:transactions": "tsx scripts/dedupTransactions.ts"
+    "dedup:transactions": "tsx scripts/dedupTransactions.ts",
+    "backfill:reminderPaidExpenses": "tsx scripts/backfillReminderPaidExpenses.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.80",
