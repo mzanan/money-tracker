@@ -145,10 +145,12 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
         </DropdownMenuContent>
       </DropdownMenu>
       <div className="min-w-0 flex-1">
-        <span className="text-foreground block truncate text-sm leading-tight font-medium">
-          {identifier}
+        <span className="flex items-center gap-1.5">
+          <span className="text-foreground min-w-0 truncate text-sm leading-tight font-medium">
+            {identifier}
+          </span>
           {isTransfer && (
-            <Badge variant="secondary" className="ml-1.5 align-middle">
+            <Badge variant="secondary" className="shrink-0">
               Transfer
             </Badge>
           )}

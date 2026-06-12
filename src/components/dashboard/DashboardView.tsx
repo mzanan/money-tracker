@@ -41,7 +41,7 @@ export function DashboardView({
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-xl gap-5">
+    <div className="mx-auto grid w-full max-w-xl gap-5 *:min-w-0">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-lg font-semibold tracking-tight">Dashboard</h1>
         <div className="flex items-center gap-1">
@@ -175,7 +175,9 @@ export function DashboardView({
                 key={merchant.label}
                 className="flex items-baseline justify-between gap-3 text-sm"
               >
-                <span className="truncate font-medium">{merchant.label}</span>
+                <span className="min-w-0 truncate font-medium">
+                  {merchant.label}
+                </span>
                 <span className="shrink-0 font-semibold tabular-nums">
                   {money(merchant.total)}
                   <span className="text-muted-foreground ml-1.5 text-[11px] font-normal">
