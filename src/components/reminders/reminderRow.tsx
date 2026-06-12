@@ -11,7 +11,12 @@ import {
 } from "lucide-react";
 
 import { useServerAction } from "@/hooks/useServerAction";
-import { deleteReminder, markReminderPaid } from "@/lib/actions/reminders";
+import {
+  deleteReminder,
+  markReminderPaid,
+  previewReminderPaymentCandidates,
+  type ReminderPaymentCandidate,
+} from "@/lib/actions/reminders";
 import { formatMoney } from "@/lib/currency";
 import { daysBetween, dueLabel, frequencyLabel } from "@/lib/reminders";
 import { cn } from "@/lib/utils";
@@ -25,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { IconCircle } from "@/components/ui/iconCircle";
 
+import { PayCandidatesDrawer } from "./payCandidatesDrawer";
 import { ReminderForm } from "./reminderForm";
 
 import type { RecurringPayment } from "@/types/db";
@@ -37,7 +43,12 @@ export function ReminderRow({
   today: string;
 }) {
   const [editOpen, setEditOpen] = useState(false);
+  const [candidates, setCandidates] = useState<
+    ReminderPaymentCandidate[] | null
+  >(null);
+  const [checking, setChecking] = useState(false);
   const { run, pending } = useServerAction();
+  const busy = pending || checking;
 
   const diff = daysBetween(today, reminder.next_due_on);
   const tone =
@@ -52,13 +63,33 @@ export function ReminderRow({
   ];
   if (reminder.category) metaSegments.push(reminder.category);
 
-  function handleMarkPaid() {
-    run(() => markReminderPaid(reminder.id), {
-      success: (data) =>
-        data?.expenseAdded
-          ? "Marked paid, expense added"
-          : "Marked paid, next due updated",
-    });
+  async function handleMarkPaid() {
+    setChecking(true);
+    const preview = await previewReminderPaymentCandidates(reminder.id);
+    setChecking(false);
+    const matches = preview.ok ? (preview.data?.matches ?? []) : [];
+    if (matches.length > 0) setCandidates(matches);
+    else confirmPaid();
+  }
+
+  function confirmPaid(linkTransactionId?: string) {
+    setCandidates(null);
+    run(
+      () =>
+        markReminderPaid(
+          reminder.id,
+          undefined,
+          linkTransactionId ? { linkTransactionId } : undefined,
+        ),
+      {
+        success: (data) =>
+          data?.linked
+            ? "Marked paid, linked to the existing payment"
+            : data?.expenseAdded
+              ? "Marked paid, expense added"
+              : "Marked paid, next due updated",
+      },
+    );
   }
 
   function handleDelete() {
@@ -115,11 +146,11 @@ export function ReminderRow({
         variant="ghost"
         size="icon-xs"
         onClick={handleMarkPaid}
-        disabled={pending}
+        disabled={busy}
         aria-label="Mark paid"
         className="text-muted-foreground hover:text-income"
       >
-        {pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon />}
+        {busy ? <Loader2Icon className="animate-spin" /> : <CheckIcon />}
       </Button>
 
       <DropdownMenu>
@@ -150,6 +181,13 @@ export function ReminderRow({
         reminder={reminder}
         open={editOpen}
         onOpenChange={setEditOpen}
+      />
+
+      <PayCandidatesDrawer
+        candidates={candidates}
+        onLink={(transactionId) => confirmPaid(transactionId)}
+        onCreate={() => confirmPaid()}
+        onClose={() => setCandidates(null)}
       />
     </li>
   );
