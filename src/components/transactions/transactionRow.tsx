@@ -3,7 +3,6 @@
 import {
   BanknoteIcon,
   CheckIcon,
-  ChevronDownIcon,
   Loader2Icon,
   StickyNoteIcon,
   Trash2Icon,
@@ -100,15 +99,9 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           )}
         >
           <Avatar seed={avatarSeed} />
-          {txSelectMode ? (
-            isSelected && (
-              <span className="bg-primary text-primary-foreground absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full">
-                <CheckIcon className="size-3" />
-              </span>
-            )
-          ) : (
-            <span className="bg-card text-muted-foreground ring-border absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full ring-1">
-              <ChevronDownIcon className="size-3" />
+          {txSelectMode && isSelected && (
+            <span className="bg-primary text-primary-foreground absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full">
+              <CheckIcon className="size-3" />
             </span>
           )}
         </DropdownMenuTrigger>

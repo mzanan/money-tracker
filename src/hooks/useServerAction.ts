@@ -4,6 +4,8 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { useConfirm } from "@/components/providers/confirmProvider";
+
 import type { ActionResult } from "@/lib/actions/transactions";
 
 interface RunOptions<T> {
@@ -15,13 +17,14 @@ interface RunOptions<T> {
 
 export function useServerAction() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [pending, startTransition] = useTransition();
 
-  function run<T>(
+  async function run<T>(
     action: () => Promise<ActionResult<T>>,
     options: RunOptions<T> = {},
   ) {
-    if (options.confirm && !window.confirm(options.confirm)) return;
+    if (options.confirm && !(await confirm(options.confirm))) return;
     startTransition(async () => {
       const result = await action();
       if (!result.ok) {

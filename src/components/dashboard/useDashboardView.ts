@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { format, parse } from "date-fns";
 
-import { useSettings } from "@/hooks/useSettings";
+import { useSettings, useTimezone } from "@/hooks/useSettings";
+import { todayInTz } from "@/lib/dates";
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import {
@@ -118,6 +119,27 @@ export function useDashboardView({
       .slice(0, 10);
   }, [monthTransactions, settings.base_currency]);
 
+  const timezone = useTimezone();
+  const monthStats = useMemo(() => {
+    let expense = 0;
+    for (const tx of excludeCanceledPairs(monthTransactions)) {
+      if (tx.kind !== "expense" || tx.transfer_group) continue;
+      try {
+        expense += transactionInDisplay(tx, settings.base_currency);
+      } catch {
+        continue;
+      }
+    }
+    const today = todayInTz(timezone);
+    const [, end] = monthBounds(visibleYearMonth);
+    const lastCounted = today < end ? today : end;
+    const elapsedDays =
+      lastCounted.slice(0, 7) === visibleYearMonth
+        ? Number(lastCounted.slice(8, 10))
+        : Number(end.slice(8, 10));
+    return { expense, avgPerDay: elapsedDays > 0 ? expense / elapsedDays : 0 };
+  }, [monthTransactions, settings.base_currency, timezone, visibleYearMonth]);
+
   const cashBalances = useMemo(() => {
     const byCurrency = new Map<string, number>();
     for (const tx of lifetimeTransactions) {
@@ -159,6 +181,8 @@ export function useDashboardView({
     trend,
     trendMax,
     topMerchants,
+    monthExpense: monthStats.expense,
+    avgPerDay: monthStats.avgPerDay,
     cashBalances,
     selectedTag,
     setSelectedTag,
