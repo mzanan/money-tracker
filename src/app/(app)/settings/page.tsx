@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, ChevronDownIcon } from "lucide-react";
 
 import { CalendarFeedCard } from "@/components/settings/calendarFeedCard";
 import { CashCard } from "@/components/settings/cashCard";
+import { CashExchangeForm } from "@/components/settings/cashExchangeForm";
 import { CsvImportCard } from "@/components/settings/csvImportCard";
 import { ImportedAccountsCard } from "@/components/settings/importedAccountsCard";
 import { IngestCard } from "@/components/settings/ingestCard";
@@ -35,7 +36,10 @@ export default async function SettingsPage() {
         title="Cash"
         hint="A manual account for cash you spend or receive in hand."
       >
-        <CashCard />
+        <div className="grid gap-3">
+          <CashCard />
+          <CashExchangeForm />
+        </div>
       </Section>
 
       <Section
@@ -43,20 +47,6 @@ export default async function SettingsPage() {
         hint="Sync transactions automatically from connected accounts."
       >
         <IntegrationsCard />
-      </Section>
-
-      <Section
-        title="Phone auto-import"
-        hint="Capture Wise / Google Wallet notifications from your Android phone."
-      >
-        <IngestCard />
-      </Section>
-
-      <Section
-        title="Calendar feed"
-        hint="Show your reminders inside Google / iOS / Outlook calendar."
-      >
-        <CalendarFeedCard />
       </Section>
 
       <Section
@@ -72,7 +62,46 @@ export default async function SettingsPage() {
       >
         <ImportedAccountsCard />
       </Section>
+
+      <CollapsedSection
+        title="Calendar feed"
+        hint="Show your reminders inside Google / iOS / Outlook calendar."
+      >
+        <CalendarFeedCard />
+      </CollapsedSection>
+
+      <CollapsedSection
+        title="Phone auto-import"
+        hint="Capture Wise / Google Wallet notifications from your Android phone."
+      >
+        <IngestCard />
+      </CollapsedSection>
     </div>
+  );
+}
+
+function CollapsedSection({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="group grid gap-3">
+      <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        <h2 className="flex items-center gap-1 text-xs font-semibold tracking-wider uppercase">
+          {title}
+          <ChevronDownIcon className="text-muted-foreground size-3.5 transition-transform group-open:rotate-180" />
+        </h2>
+        {hint && (
+          <p className="text-muted-foreground mt-0.5 text-xs">{hint}</p>
+        )}
+      </summary>
+      <div className="mt-3">{children}</div>
+    </details>
   );
 }
 
