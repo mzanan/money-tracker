@@ -132,37 +132,34 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
         <span className="text-foreground block truncate text-sm leading-tight font-medium">
           {identifier}
         </span>
-        {(description || comment.current || comment.editing) && (
-          <div className="mt-0.5 flex items-center gap-2">
-            {description && (
-              <span className="text-muted-foreground min-w-0 truncate text-meta">
-                {description}
-              </span>
-            )}
-            {comment.editing ? (
-              <input
-                {...comment.inputProps}
-                onBlur={comment.submit}
-                placeholder="What was this for?"
-                disabled={comment.pending}
-                maxLength={280}
-                className="border-primary/50 focus:border-primary min-w-0 flex-1 border-b bg-transparent text-sm leading-tight font-medium outline-none disabled:opacity-60"
-              />
-            ) : (
-              comment.current && (
-                <Badge asChild variant="secondary" className="max-w-[60%] shrink-0">
-                  <button
-                    type="button"
-                    onClick={comment.start}
-                    aria-label="Edit note"
-                  >
-                    <StickyNoteIcon />
-                    <span className="truncate">{comment.current}</span>
-                  </button>
-                </Badge>
-              )
-            )}
-          </div>
+        {description && (
+          <span className="text-muted-foreground mt-0.5 block truncate text-meta">
+            {description}
+          </span>
+        )}
+        {comment.editing ? (
+          <input
+            {...comment.inputProps}
+            onBlur={comment.submit}
+            placeholder="What was this for?"
+            disabled={comment.pending}
+            maxLength={280}
+            className="border-primary/50 focus:border-primary mt-1 block w-full max-w-[14rem] border-b bg-transparent text-sm leading-tight outline-none disabled:opacity-60"
+          />
+        ) : (
+          comment.current && (
+            <Badge asChild variant="secondary" className="mt-1 max-w-full">
+              <button
+                type="button"
+                onClick={comment.start}
+                aria-label="Edit note"
+                className="min-w-0"
+              >
+                <StickyNoteIcon />
+                <span className="truncate">{comment.current}</span>
+              </button>
+            </Badge>
+          )
         )}
       </div>
       <div className="flex shrink-0 flex-col items-end">

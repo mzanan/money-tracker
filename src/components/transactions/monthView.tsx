@@ -88,20 +88,23 @@ export function MonthView({
 
   return (
     <Surface radius="lg" padding="list">
-      {(txSelectMode || effectiveOpen.length > 0) && (
-        <div className="flex justify-end px-3 pt-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-pressed={txSelectMode}
-            onClick={() => setTxSelectMode(!txSelectMode)}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ListChecksIcon />
-            {txSelectMode ? "Done" : "Select"}
-          </Button>
-        </div>
-      )}
+      <div className="flex justify-end px-3 pt-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-pressed={txSelectMode}
+          onClick={() => {
+            if (!txSelectMode && effectiveOpen.length === 0 && firstDate) {
+              toggleDay(firstDate);
+            }
+            setTxSelectMode(!txSelectMode);
+          }}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <ListChecksIcon />
+          {txSelectMode ? "Done" : "Select"}
+        </Button>
+      </div>
       {shown.map((day) => (
         <DayGroup
           key={day.date}
