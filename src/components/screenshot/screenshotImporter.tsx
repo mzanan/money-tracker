@@ -130,10 +130,17 @@ export function ScreenshotImporter({
             <p className="text-muted-foreground text-sm">
               {selectedCount}/{items.length} selected
             </p>
-            <Button onClick={submit} disabled={!canSubmit || pending}>
-              {pending && <Loader2Icon className="animate-spin" />}
-              Import {selectedCount}
-            </Button>
+            <div className="flex items-center gap-2">
+              {onDone && (
+                <Button variant="ghost" onClick={onDone} disabled={pending}>
+                  Cancel
+                </Button>
+              )}
+              <Button onClick={submit} disabled={!canSubmit || pending}>
+                {pending && <Loader2Icon className="animate-spin" />}
+                Import {selectedCount}
+              </Button>
+            </div>
           </div>
         </>
       )}

@@ -2,6 +2,8 @@ import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
 
+import { CATEGORIES } from "@/lib/constants/categories";
+
 const visionModel = google(
   process.env.AI_VISION_MODEL ?? "gemini-2.5-flash",
 );
@@ -35,6 +37,12 @@ const DetectedTransactionSchema = z.object({
     .string()
     .nullable()
     .describe("Merchant / payee / payer / category. null if not shown."),
+  category: z
+    .enum(CATEGORIES)
+    .nullable()
+    .describe(
+      "Best matching spending category given the merchant and items (a coffee shop receipt = Coffee, a restaurant = Food, a supermarket = Groceries, a taxi = Transport). null if unclear.",
+    ),
   confidence: z
     .enum(["high", "medium", "low"])
     .describe(

@@ -23,8 +23,10 @@ export interface ScreenshotRow {
   currency: string;
   occurredOn: string | null;
   description: string | null;
+  category: string | null;
   app: string | null;
   comment: string | null;
+  replaceId: string | null;
 }
 
 function hashRow(row: {
@@ -145,6 +147,7 @@ export async function importScreenshotRows(input: {
         currency: row.currency,
         occurredOn,
         note: row.description,
+        category: row.category,
         source,
         externalId,
       },
@@ -175,6 +178,16 @@ export async function importScreenshotRows(input: {
       if (inserted.length > 0) {
         imported += 1;
         bySource[source] = (bySource[source] ?? 0) + 1;
+        if (row.replaceId) {
+          await db
+            .delete(transactions)
+            .where(
+              and(
+                eq(transactions.user_id, user.id),
+                eq(transactions.id, row.replaceId),
+              ),
+            );
+        }
       }
     } catch {
       errors += 1;
@@ -231,7 +244,10 @@ export async function previewCandidatesAction(
     currency: row.currency,
     kind: row.kind,
   }));
-  const result = await findCrossSourceCandidates(queries);
+  const rates = await getRates()
+    .then((r) => r.rates)
+    .catch(() => null);
+  const result = await findCrossSourceCandidates(queries, rates);
 
   return {
     ok: true,

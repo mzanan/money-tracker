@@ -21,9 +21,11 @@ export interface EditableItem {
   currency: string;
   occurredOn: string | null;
   description: string;
+  category: string | null;
   app: string | null;
   comment: string;
   confidence: "high" | "medium" | "low";
+  replaceId: string | null;
 }
 
 export interface CandidateMatch {
@@ -44,9 +46,11 @@ function detectedToEditable(detected: DetectedTransaction): EditableItem {
     currency: detected.currency.toUpperCase(),
     occurredOn: detected.occurredOn,
     description: detected.description ?? "",
+    category: detected.category,
     app: detected.app,
     comment: "",
     confidence: detected.confidence,
+    replaceId: null,
   };
 }
 
@@ -158,8 +162,10 @@ export function useScreenshotImport({
       currency: item.currency.trim().toUpperCase(),
       occurredOn: item.occurredOn,
       description: item.description.trim() || null,
+      category: item.category,
       app: item.app ?? (mode === "receipt" ? "receipt" : null),
       comment: item.comment.trim() || null,
+      replaceId: item.replaceId,
     }));
 
     startCommit(async () => {
