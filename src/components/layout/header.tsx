@@ -33,8 +33,8 @@ export function Header() {
         <span className="text-base font-semibold">Money</span>
       </Link>
       <div className="flex items-center gap-0.5">
-        <AssistantWidget />
         <BaseCurrencyPicker />
+        <AssistantWidget />
         <ThemeToggle />
         <Button asChild variant="ghost" size="icon-sm" aria-label="Settings">
           <Link href="/settings">

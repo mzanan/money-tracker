@@ -173,4 +173,15 @@
     );
     border-radius: 9999px;
   }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+body[data-scroll-locked] {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
 }

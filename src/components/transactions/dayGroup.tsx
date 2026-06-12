@@ -23,7 +23,7 @@ export function DayGroup({
   const count = day.transactions.length;
 
   return (
-    <section className="grid">
+    <section className="grid min-w-0">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
@@ -60,7 +60,7 @@ export function DayGroup({
         </span>
       </button>
       {open && (
-        <div className="grid">
+        <div className="grid min-w-0">
           {day.transactions.map((tx) => (
             <TransactionRow key={tx.id} tx={tx} />
           ))}

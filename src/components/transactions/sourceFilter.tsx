@@ -56,7 +56,7 @@ export function SourceFilter({ sources, selected, onChange }: Props) {
     <div className="flex items-center justify-between gap-3">
       <div
         role="tablist"
-        className="scrollbar-thin border-border/60 -mx-4 flex flex-1 gap-5 overflow-x-auto overflow-y-hidden border-b px-4"
+        className="scrollbar-none border-border/60 -mx-4 flex flex-1 gap-5 overflow-x-auto overflow-y-hidden border-b px-4"
       >
         <Tab selected={selected === "all"} onClick={() => onChange("all")}>
           All
