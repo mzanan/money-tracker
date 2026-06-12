@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { LogOutIcon, SettingsIcon } from "lucide-react";
 
 import { authClient } from "@/lib/authClient";
+import { ASSISTANT_ENABLED } from "@/lib/featureFlags";
 
 import { AssistantWidget } from "@/components/assistant/assistantWidget";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ export function Header() {
       </Link>
       <div className="flex items-center gap-0.5">
         <BaseCurrencyPicker />
-        <AssistantWidget />
+        {ASSISTANT_ENABLED && <AssistantWidget />}
         <ThemeToggle />
         <Button asChild variant="ghost" size="icon-sm" aria-label="Settings">
           <Link href="/settings">
