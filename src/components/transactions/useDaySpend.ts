@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { addDays, format, parseISO } from "date-fns";
 
 import { useSettings } from "@/hooks/useSettings";
+import { excludeCanceledPairs } from "@/lib/cancellations";
 import { monthBounds } from "@/lib/dates";
 import { dayTotalsList } from "@/lib/totals";
 
@@ -23,7 +24,8 @@ export function useDaySpend({ yearMonth, transactions, today }: Args) {
 
   const byDay = useMemo(() => {
     const map = new Map<string, { expense: number; count: number }>();
-    for (const day of dayTotalsList(transactions, settings.base_currency)) {
+    const real = excludeCanceledPairs(transactions);
+    for (const day of dayTotalsList(real, settings.base_currency)) {
       const expenseCount = day.transactions.filter(
         (t) => t.kind === "expense",
       ).length;

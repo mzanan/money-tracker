@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/tabs";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useSettings } from "@/hooks/useSettings";
+import { excludeCanceledPairs } from "@/lib/cancellations";
 import { formatMoney } from "@/lib/currency";
 import { formatYearMonthShort } from "@/lib/dates";
 import { periodTotals } from "@/lib/totals";
@@ -64,7 +65,8 @@ export function BalanceHero({
   const { hideAmounts } = useHideAmounts();
 
   const monthTotals = useMemo(
-    () => periodTotals(transactions, settings.base_currency),
+    () =>
+      periodTotals(excludeCanceledPairs(transactions), settings.base_currency),
     [transactions, settings.base_currency],
   );
 

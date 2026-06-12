@@ -5,6 +5,7 @@ import { MapPinIcon } from "lucide-react";
 
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useSettings } from "@/hooks/useSettings";
+import { excludeCanceledPairs } from "@/lib/cancellations";
 import { UNCATEGORIZED_LABEL } from "@/lib/constants/categories";
 import { formatMoney } from "@/lib/currency";
 import { placeOf } from "@/lib/places";
@@ -55,7 +56,7 @@ export function SpendingBreakdown({
   const breakdown = useMemo(() => {
     const totals = new Map<string, number>();
     let total = 0;
-    for (const tx of transactions) {
+    for (const tx of excludeCanceledPairs(transactions)) {
       if (tx.kind !== "expense") continue;
       let value: number;
       try {
