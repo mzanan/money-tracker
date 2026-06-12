@@ -59,25 +59,7 @@ npm install
 npm run db:migrate        # corre drizzle/migrations/*.sql contra Turso
 ```
 
-### 5. Migrar data existente (solo si venís de Supabase)
-
-```bash
-# Agregar al .env.local:
-#   SUPABASE_URL=
-#   SUPABASE_SERVICE_ROLE_KEY=     # Supabase dashboard → Settings → API
-npm run migrate:fromSupabase
-```
-
-El script es idempotente y preserva UUIDs. **Passwords NO migran** (Better
-Auth y Supabase usan hashes incompatibles); creá la cuenta de nuevo vía
-sign-up con el mismo email. Cuando hayas validado todo:
-
-```bash
-npm uninstall @supabase/supabase-js @supabase/ssr
-rm -rf supabase/migrations
-```
-
-### 6. Correr
+### 5. Correr
 
 ```bash
 nvm use            # node 22
@@ -99,7 +81,6 @@ onboarding pide al menos 1 moneda + la moneda base.
 - `npm run db:generate` — generar migration SQL desde `src/lib/db/schema.ts`
 - `npm run db:migrate` — aplicar migrations a Turso
 - `npm run db:studio` — abrir Drizzle Studio en el browser
-- `npm run migrate:fromSupabase` — one-shot data migration desde Supabase
 
 ---
 
@@ -171,7 +152,6 @@ src/
   types/db.ts                 # tipos derivados de Drizzle ($inferSelect)
   proxy.ts                    # ex-middleware (Next 16): cookie check + gate
 drizzle/migrations/           # SQL generado por drizzle-kit
-scripts/migrateFromSupabase.ts   # one-shot data migration
 ```
 
 ---
