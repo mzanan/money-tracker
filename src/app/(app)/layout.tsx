@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 
+import { BottomNav } from "@/components/layout/bottomNav";
 import { Header } from "@/components/layout/header";
+import { AutoSync } from "@/components/providers/autoSync";
 import { InstallHint } from "@/components/pwa/installHint";
 import { HideAmountsProvider } from "@/hooks/useHideAmounts";
 import { SettingsProvider } from "@/hooks/useSettings";
@@ -32,9 +34,11 @@ export default async function AppLayout({
       <HideAmountsProvider initial={hideAmounts}>
         <div className="mx-auto flex w-full max-w-xl flex-1 flex-col lg:max-w-6xl">
           <Header />
-          <main className="flex-1 px-4 pt-2 pb-8">{children}</main>
+          <main className="flex-1 px-4 pt-2 pb-24 lg:pb-8">{children}</main>
         </div>
+        <BottomNav />
         <InstallHint />
+        <AutoSync />
       </HideAmountsProvider>
     </SettingsProvider>
   );
