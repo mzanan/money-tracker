@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2Icon, StickyNoteIcon, Trash2Icon } from "lucide-react";
+import { CheckIcon, Loader2Icon, StickyNoteIcon, Trash2Icon } from "lucide-react";
 
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
@@ -13,6 +13,7 @@ import { labelForSource } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
 import { transactionInDisplay } from "@/lib/totals";
 import { cn } from "@/lib/utils";
+import { useUiStore } from "@/stores/uiStore";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,10 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const remove = useServerAction();
   const setCategory = useServerAction();
   const canDelete = tx.source === "manual";
+  const txSelectMode = useUiStore((s) => s.txSelectMode);
+  const selectedTxs = useUiStore((s) => s.selectedTxs);
+  const toggleTxSelected = useUiStore((s) => s.toggleTxSelected);
+  const isSelected = selectedTxs.some((t) => t.id === tx.id);
 
   let inDisplay: number | null;
   try {
@@ -57,7 +62,26 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const reminderTitle = description || identifier;
 
   return (
-    <div className="group hover:bg-surface-2/60 flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors">
+    <div
+      onClick={txSelectMode ? () => toggleTxSelected(tx) : undefined}
+      className={cn(
+        "group hover:bg-surface-2/60 flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors",
+        txSelectMode && "cursor-pointer",
+        isSelected && "bg-primary/10 hover:bg-primary/15",
+      )}
+    >
+      {txSelectMode ? (
+        <IconCircle
+          className={cn(
+            "shrink-0",
+            isSelected
+              ? "bg-primary text-primary-foreground"
+              : "bg-surface-2 text-transparent",
+          )}
+        >
+          <CheckIcon className="size-4" />
+        </IconCircle>
+      ) : (
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label="Set category"
@@ -96,6 +120,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      )}
       <div className="min-w-0 flex-1">
         <span className="text-foreground block truncate text-sm leading-tight font-medium">
           {identifier}
@@ -151,6 +176,8 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           </span>
         )}
       </div>
+      {!txSelectMode && (
+      <>
       <Button
         variant="ghost"
         size="icon-xs"
@@ -189,6 +216,8 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             <Trash2Icon />
           )}
         </Button>
+      )}
+      </>
       )}
     </div>
   );

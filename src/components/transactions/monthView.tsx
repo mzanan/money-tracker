@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2Icon } from "lucide-react";
+import { Loader2Icon, ListChecksIcon } from "lucide-react";
 
 import { useSettings } from "@/hooks/useSettings";
 import {
   MONTH_INITIAL_DAYS,
   MONTH_STEP_DAYS,
 } from "@/lib/constants/pagination";
+import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
 import { dayTotalsList } from "@/lib/totals";
+import { useUiStore } from "@/stores/uiStore";
 
 import type { Transaction } from "@/types/db";
 
@@ -23,6 +25,8 @@ export function MonthView({
   emptyLabel?: string;
 }) {
   const settings = useSettings();
+  const txSelectMode = useUiStore((s) => s.txSelectMode);
+  const setTxSelectMode = useUiStore((s) => s.setTxSelectMode);
   const [visibleDays, setVisibleDays] = useState(MONTH_INITIAL_DAYS);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -64,6 +68,18 @@ export function MonthView({
 
   return (
     <Surface radius="lg" padding="list">
+      <div className="flex justify-end px-3 pt-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-pressed={txSelectMode}
+          onClick={() => setTxSelectMode(!txSelectMode)}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <ListChecksIcon />
+          {txSelectMode ? "Done" : "Select"}
+        </Button>
+      </div>
       {shown.map((day, index) => (
         <DayGroup key={day.date} day={day} defaultOpen={index === 0} />
       ))}

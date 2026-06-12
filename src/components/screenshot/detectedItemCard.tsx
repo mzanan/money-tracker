@@ -150,7 +150,13 @@ export function DetectedItemCard({
           />
         </Field>
 
-        {candidates.length > 0 && <CandidateBlock candidates={candidates} />}
+        {candidates.length > 0 && (
+          <CandidateBlock
+            candidates={candidates}
+            item={item}
+            onChange={onChange}
+          />
+        )}
       </div>
     </Surface>
   );

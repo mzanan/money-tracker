@@ -1,10 +1,10 @@
 import { addDays, format, subDays } from "date-fns";
-import { and, between, eq, sql } from "drizzle-orm";
+import { and, between, eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 
-import type { Transaction } from "@/types/db";
+import type { FxRates, Transaction } from "@/types/db";
 
 export interface CandidateQuery {
   userId: string;
@@ -21,9 +21,32 @@ export interface MatchCandidate {
 
 const DEFAULT_WINDOW_DAYS = 2;
 const AMOUNT_TOLERANCE = 0.01;
+const CROSS_CURRENCY_TOLERANCE = 0.05;
+
+function isAmountMatch(
+  query: CandidateQuery,
+  tx: Transaction,
+  rates: FxRates | null,
+): boolean {
+  if (tx.currency_original === query.currency) {
+    return Math.abs(tx.amount_original - query.amount) <= AMOUNT_TOLERANCE;
+  }
+  if (!rates) return false;
+  const queryRate = rates[query.currency];
+  const txRate = rates[tx.currency_original];
+  if (!queryRate || !txRate) return false;
+  const queryUsd = query.amount / queryRate;
+  const txUsd = tx.amount_original / txRate;
+  const reference = Math.max(queryUsd, txUsd);
+  return (
+    reference > 0 &&
+    Math.abs(queryUsd - txUsd) / reference <= CROSS_CURRENCY_TOLERANCE
+  );
+}
 
 export async function findCrossSourceCandidates(
   queries: CandidateQuery[],
+  rates: FxRates | null = null,
   windowDays = DEFAULT_WINDOW_DAYS,
 ): Promise<MatchCandidate[]> {
   if (queries.length === 0) return [];
@@ -39,20 +62,21 @@ export async function findCrossSourceCandidates(
         "yyyy-MM-dd",
       );
 
-      const matches = await db
+      const rows = await db
         .select()
         .from(transactions)
         .where(
           and(
             eq(transactions.user_id, query.userId),
             eq(transactions.kind, query.kind),
-            eq(transactions.currency_original, query.currency),
             between(transactions.occurred_on, start, end),
-            sql`abs(${transactions.amount_original} - ${query.amount}) <= ${AMOUNT_TOLERANCE}`,
           ),
         );
 
-      return { query, matches };
+      return {
+        query,
+        matches: rows.filter((tx) => isAmountMatch(query, tx, rates)),
+      };
     }),
   );
 }

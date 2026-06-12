@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
@@ -189,6 +189,56 @@ export async function updateTransactionComment(
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Update failed",
+    };
+  }
+}
+
+export async function mergeTransactions(
+  keepId: string,
+  removeId: string,
+): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+  if (keepId === removeId) {
+    return { ok: false, error: "Pick two different transactions" };
+  }
+
+  try {
+    const rows = await db
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.user_id, user.id),
+          inArray(transactions.id, [keepId, removeId]),
+        ),
+      );
+    const keep = rows.find((row) => row.id === keepId);
+    const removed = rows.find((row) => row.id === removeId);
+    if (!keep || !removed) return { ok: false, error: "Transaction not found" };
+
+    const patch: Partial<typeof keep> = {};
+    if (!keep.note && removed.note) patch.note = removed.note;
+    if (!keep.category && removed.category) patch.category = removed.category;
+    if (!keep.comment && removed.comment) patch.comment = removed.comment;
+    if (Object.keys(patch).length > 0) {
+      await db
+        .update(transactions)
+        .set(patch)
+        .where(eq(transactions.id, keepId));
+    }
+
+    await db
+      .delete(transactions)
+      .where(
+        and(eq(transactions.user_id, user.id), eq(transactions.id, removeId)),
+      );
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Merge failed",
     };
   }
 }
