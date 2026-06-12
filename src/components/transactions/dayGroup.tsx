@@ -50,7 +50,10 @@ export function DayGroup({
       income -= inDisplayOrZero(pair.income, settings.base_currency);
       expense -= inDisplayOrZero(pair.expense, settings.base_currency);
     }
-    return { income: Math.max(income, 0), expense: Math.max(expense, 0) };
+    return {
+      income: income < 0.005 ? 0 : income,
+      expense: expense < 0.005 ? 0 : expense,
+    };
   }, [pairs, day.income, day.expense, settings.base_currency]);
 
   return (
