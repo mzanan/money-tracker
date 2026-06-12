@@ -14,6 +14,7 @@ import {
 } from "@/lib/schemas/transaction";
 import { getUser } from "@/lib/session";
 import { applyAutoCategories } from "@/lib/categorization";
+import { kindOfSource } from "@/lib/constants/sources";
 import { buildTransactionRow } from "@/lib/transactions";
 
 export type ActionResult<T = void> =
@@ -217,9 +218,16 @@ export async function mergeTransactions(
     const removed = rows.find((row) => row.id === removeId);
     if (!keep || !removed) return { ok: false, error: "Transaction not found" };
 
+    const preferRemovedDetails =
+      kindOfSource(keep.source) === "api" &&
+      kindOfSource(removed.source) !== "api";
     const patch: Partial<typeof keep> = {};
-    if (!keep.note && removed.note) patch.note = removed.note;
-    if (!keep.category && removed.category) patch.category = removed.category;
+    if (removed.note && (preferRemovedDetails || !keep.note)) {
+      patch.note = removed.note;
+    }
+    if (removed.category && (preferRemovedDetails || !keep.category)) {
+      patch.category = removed.category;
+    }
     if (!keep.comment && removed.comment) patch.comment = removed.comment;
     if (Object.keys(patch).length > 0) {
       await db

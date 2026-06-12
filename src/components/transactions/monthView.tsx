@@ -28,6 +28,10 @@ export function MonthView({
   const txSelectMode = useUiStore((s) => s.txSelectMode);
   const setTxSelectMode = useUiStore((s) => s.setTxSelectMode);
   const [visibleDays, setVisibleDays] = useState(MONTH_INITIAL_DAYS);
+  const [openState, setOpenState] = useState<{
+    key: string | undefined;
+    dates: string[] | null;
+  }>({ key: undefined, dates: null });
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const days = useMemo(
@@ -37,6 +41,22 @@ export function MonthView({
 
   const shown = days.slice(0, visibleDays);
   const hasMore = shown.length < days.length;
+
+  const firstDate = days[0]?.date;
+  if (openState.key !== firstDate) {
+    setOpenState({ key: firstDate, dates: null });
+  }
+
+  const effectiveOpen = openState.dates ?? (firstDate ? [firstDate] : []);
+
+  function toggleDay(date: string) {
+    setOpenState({
+      key: firstDate,
+      dates: effectiveOpen.includes(date)
+        ? effectiveOpen.filter((d) => d !== date)
+        : [...effectiveOpen, date],
+    });
+  }
 
   useEffect(() => {
     if (!hasMore) return;
@@ -68,20 +88,27 @@ export function MonthView({
 
   return (
     <Surface radius="lg" padding="list">
-      <div className="flex justify-end px-3 pt-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          aria-pressed={txSelectMode}
-          onClick={() => setTxSelectMode(!txSelectMode)}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <ListChecksIcon />
-          {txSelectMode ? "Done" : "Select"}
-        </Button>
-      </div>
-      {shown.map((day, index) => (
-        <DayGroup key={day.date} day={day} defaultOpen={index === 0} />
+      {(txSelectMode || effectiveOpen.length > 0) && (
+        <div className="flex justify-end px-3 pt-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-pressed={txSelectMode}
+            onClick={() => setTxSelectMode(!txSelectMode)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ListChecksIcon />
+            {txSelectMode ? "Done" : "Select"}
+          </Button>
+        </div>
+      )}
+      {shown.map((day) => (
+        <DayGroup
+          key={day.date}
+          day={day}
+          open={effectiveOpen.includes(day.date)}
+          onToggle={() => toggleDay(day.date)}
+        />
       ))}
       {hasMore && (
         <div

@@ -50,8 +50,9 @@ export function MergeBar() {
       <div className="bg-background/95 border-border fixed inset-x-0 bottom-0 z-40 border-t px-4 py-3 backdrop-blur">
         <div className="mx-auto flex w-full max-w-xl items-center justify-between gap-3">
           <p className="text-muted-foreground text-sm">
-            {selectedTxs.length} selected
-            {!canResolve && " — pick 2"}
+            {canResolve
+              ? "2 selected"
+              : `${selectedTxs.length} selected, pick 2`}
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -95,8 +96,8 @@ export function MergeBar() {
                       {txLabel(keepTx)}
                     </span>
                     <span className="text-muted-foreground block text-xs">
-                      {keepTx.occurred_on} · the other one is deleted; its
-                      note and category fill any blanks
+                      {keepTx.occurred_on} · keeps this amount, the other one
+                      is deleted and its details are preserved
                     </span>
                   </span>
                   <span className="shrink-0 text-sm font-semibold tabular-nums">
@@ -112,7 +113,7 @@ export function MergeBar() {
                 setTxSelectMode(false);
               }}
             >
-              Keep both — it&apos;s a repeated expense
+              Keep both, it&apos;s a repeated expense
             </Button>
           </div>
         </DrawerContent>

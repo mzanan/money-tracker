@@ -1,6 +1,12 @@
 "use client";
 
-import { CheckIcon, Loader2Icon, StickyNoteIcon, Trash2Icon } from "lucide-react";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  Loader2Icon,
+  StickyNoteIcon,
+  Trash2Icon,
+} from "lucide-react";
 
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
@@ -70,25 +76,27 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
         isSelected && "bg-primary/10 hover:bg-primary/15",
       )}
     >
-      {txSelectMode ? (
-        <IconCircle
-          className={cn(
-            "shrink-0",
-            isSelected
-              ? "bg-primary text-primary-foreground"
-              : "bg-surface-2 text-transparent",
-          )}
-        >
-          <CheckIcon className="size-4" />
-        </IconCircle>
-      ) : (
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label="Set category"
-          disabled={setCategory.pending}
-          className="focus-visible:ring-ring shrink-0 cursor-pointer rounded-full focus-visible:ring-2 focus-visible:outline-none"
+          disabled={txSelectMode || setCategory.pending}
+          className={cn(
+            "focus-visible:ring-ring relative shrink-0 cursor-pointer rounded-full focus-visible:ring-2 focus-visible:outline-none",
+            txSelectMode && "pointer-events-none",
+          )}
         >
           <Avatar seed={avatarSeed} />
+          {txSelectMode ? (
+            isSelected && (
+              <span className="bg-primary text-primary-foreground absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full">
+                <CheckIcon className="size-3" />
+              </span>
+            )
+          ) : (
+            <span className="bg-card text-muted-foreground ring-border absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full ring-1">
+              <ChevronDownIcon className="size-3" />
+            </span>
+          )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
           {CATEGORIES.map((category) => (
@@ -120,7 +128,6 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      )}
       <div className="min-w-0 flex-1">
         <span className="text-foreground block truncate text-sm leading-tight font-medium">
           {identifier}
@@ -176,8 +183,12 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           </span>
         )}
       </div>
-      {!txSelectMode && (
-      <>
+      <div
+        className={cn(
+          "flex items-center gap-3",
+          txSelectMode && "pointer-events-none opacity-30",
+        )}
+      >
       <Button
         variant="ghost"
         size="icon-xs"
@@ -217,8 +228,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           )}
         </Button>
       )}
-      </>
-      )}
+      </div>
     </div>
   );
 }

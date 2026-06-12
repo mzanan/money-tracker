@@ -121,7 +121,7 @@ export function QuickAddForm({ recentCategories, recentMerchants }: Props) {
       <form onSubmit={handleSubmit}>
         <div className="flex items-center gap-2">
           <KindToggle kind={kind} onChange={setKind} />
-          <div className="bg-surface-2 relative flex flex-1 items-center rounded-xl">
+          <div className="bg-surface-2 relative flex flex-1 items-center rounded-xl pr-1.5">
             <span className="text-muted-foreground pointer-events-none absolute left-3 text-sm tabular-nums">
               {currencyMeta.symbol}
             </span>
