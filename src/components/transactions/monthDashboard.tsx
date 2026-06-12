@@ -136,7 +136,7 @@ export function MonthDashboard({
           "lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,34rem)_minmax(0,24rem)] lg:items-start lg:gap-5",
       )}
     >
-      <div className="grid gap-5">
+      <div className="grid min-w-0 gap-5 *:min-w-0">
         <UpcomingBanner
           reminders={reminders}
           today={today}

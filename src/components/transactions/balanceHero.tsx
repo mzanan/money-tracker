@@ -124,7 +124,7 @@ export function BalanceHero({
           </div>
           <p
             className={cn(
-              "font-heading text-[2.75rem] leading-[1.05] font-semibold tracking-tight tabular-nums",
+              "font-heading text-[clamp(2rem,9vw,2.75rem)] leading-[1.05] font-semibold tracking-tight tabular-nums",
               totalPositive ? "text-foreground" : "text-expense",
             )}
           >
@@ -215,7 +215,7 @@ function PeriodNav({
       </Button>
       <span
         className={cn(
-          "text-foreground min-w-[5.5rem] text-center text-sm font-medium",
+          "text-foreground min-w-[5.5rem] truncate text-center text-sm font-medium",
           tabular && "tabular-nums",
         )}
       >

@@ -41,7 +41,7 @@ export function DaySpendView({ daySpend }: Props) {
       </div>
       <p
         className={cn(
-          "font-heading text-[2.75rem] leading-[1.05] font-semibold tracking-tight tabular-nums",
+          "font-heading text-[clamp(2rem,9vw,2.75rem)] leading-[1.05] font-semibold tracking-tight tabular-nums",
           expense > 0 ? "text-foreground" : "text-muted-foreground",
         )}
       >
@@ -73,7 +73,7 @@ export function DaySpendView({ daySpend }: Props) {
                 disabled={isAfterToday}
                 aria-label={format(parseISO(date), "EEE LLL d")}
                 className={cn(
-                  "group flex flex-1 flex-col justify-end",
+                  "group flex min-w-0 flex-1 flex-col justify-end",
                   isAfterToday && "cursor-not-allowed",
                 )}
               >
