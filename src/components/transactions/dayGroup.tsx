@@ -37,11 +37,13 @@ export function DayGroup({
               open && "rotate-90",
             )}
           />
-          <span className="text-foreground truncate text-sm font-medium">
-            {formatDayLong(day.date)}
-          </span>
-          <span className="text-muted-foreground shrink-0 text-meta">
-            {count === 1 ? "1 entry" : `${count} entries`}
+          <span className="grid min-w-0">
+            <span className="text-foreground truncate text-sm font-medium">
+              {formatDayLong(day.date)}
+            </span>
+            <span className="text-muted-foreground text-meta">
+              {count === 1 ? "1 entry" : `${count} entries`}
+            </span>
           </span>
         </span>
         <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
