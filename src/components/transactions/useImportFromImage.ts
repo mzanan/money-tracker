@@ -47,7 +47,14 @@ export function useImportFromImage() {
   function pickMode(mode: ImageImportMode) {
     modeRef.current = mode;
     setMenuOpen(false);
-    fileInputRef.current?.click();
+    const input = fileInputRef.current;
+    if (!input) return;
+    if (mode === "receipt") {
+      input.setAttribute("capture", "environment");
+    } else {
+      input.removeAttribute("capture");
+    }
+    input.click();
   }
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
