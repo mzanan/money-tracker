@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { BUDGET_ENABLED } from "@/lib/featureFlags";
 
 import type { PanelMode } from "./useDashboardControls";
 
@@ -37,15 +38,17 @@ export function DashboardToolbar({
         <CalendarDaysIcon />
         Calendar
       </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        aria-pressed={panel === "budget"}
-        onClick={() => onToggle("budget")}
-      >
-        <PiggyBankIcon />
-        Budget
-      </Button>
+      {BUDGET_ENABLED && (
+        <Button
+          variant="outline"
+          size="sm"
+          aria-pressed={panel === "budget"}
+          onClick={() => onToggle("budget")}
+        >
+          <PiggyBankIcon />
+          Budget
+        </Button>
+      )}
     </div>
   );
 }
