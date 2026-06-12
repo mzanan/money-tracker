@@ -73,8 +73,8 @@ export function CalendarPanel({
             }}
             modifiersClassNames={{
               hasTx:
-                "after:bg-muted-foreground after:absolute after:bottom-1 after:left-1/2 after:size-1 after:-translate-x-1/2 after:rounded-full",
-              due: "before:bg-primary before:absolute before:top-1 before:right-1 before:size-1.5 before:rounded-full",
+                "after:bg-muted-foreground after:absolute after:bottom-1 after:left-1/2 after:size-1 after:-translate-x-[calc(100%+1px)] after:rounded-full",
+              due: "before:bg-amber-500 before:absolute before:bottom-1 before:left-1/2 before:size-1 before:translate-x-[1px] before:rounded-full",
             }}
           />
         </div>
@@ -85,7 +85,7 @@ export function CalendarPanel({
             Movements
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="bg-primary size-1.5 rounded-full" />
+            <span className="bg-amber-500 size-1.5 rounded-full" />
             Reminder
           </span>
         </div>
