@@ -6,6 +6,7 @@ import { LogOutIcon, SettingsIcon } from "lucide-react";
 
 import { authClient } from "@/lib/authClient";
 
+import { AssistantWidget } from "@/components/assistant/assistantWidget";
 import { Button } from "@/components/ui/button";
 
 import { BaseCurrencyPicker } from "./baseCurrencyPicker";
@@ -32,6 +33,7 @@ export function Header() {
         <span className="text-base font-semibold">Money</span>
       </Link>
       <div className="flex items-center gap-0.5">
+        <AssistantWidget />
         <BaseCurrencyPicker />
         <ThemeToggle />
         <Button asChild variant="ghost" size="icon-sm" aria-label="Settings">

@@ -30,9 +30,9 @@ export function AssistantWidget() {
 
   return (
     <Button
-      size="icon"
-      aria-label="Abrir asistente"
-      className="fixed right-4 bottom-4 z-50 size-12 rounded-full shadow-lg"
+      variant="ghost"
+      size="icon-sm"
+      aria-label="Open assistant"
       onClick={() => setOpen(true)}
     >
       <SparklesIcon />

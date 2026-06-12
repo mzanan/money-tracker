@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 
-import { AssistantWidget } from "@/components/assistant/assistantWidget";
 import { Header } from "@/components/layout/header";
 import { InstallHint } from "@/components/pwa/installHint";
 import { HideAmountsProvider } from "@/hooks/useHideAmounts";
@@ -35,7 +34,6 @@ export default async function AppLayout({
           <Header />
           <main className="flex-1 px-4 pt-2 pb-8">{children}</main>
         </div>
-        <AssistantWidget />
         <InstallHint />
       </HideAmountsProvider>
     </SettingsProvider>

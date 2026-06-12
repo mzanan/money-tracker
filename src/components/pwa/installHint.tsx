@@ -94,7 +94,7 @@ export function InstallHint() {
     <Surface
       radius="lg"
       padding="sm"
-      className="fixed right-3 bottom-20 left-3 z-40 flex items-center gap-3 border shadow-lg sm:right-auto sm:bottom-3 sm:left-3 sm:max-w-sm"
+      className="fixed right-3 bottom-3 left-3 z-40 flex items-center gap-3 border shadow-lg sm:right-auto sm:left-3 sm:max-w-sm"
     >
       <div className="flex-1 text-sm">
         {androidEvent ? (
