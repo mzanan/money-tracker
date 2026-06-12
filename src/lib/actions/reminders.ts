@@ -129,7 +129,7 @@ async function insertReminderExpense(
       amount: reminder.amount,
       currency: reminder.currency,
       occurredOn: day,
-      category: reminder.category,
+      tags: reminder.category ? [reminder.category] : [],
       note: reminder.label,
       externalId: `reminder:${reminder.id}:${day}`,
     },
@@ -275,7 +275,14 @@ export async function markReminderPaid(
 
       const patch: Partial<typeof tx> = {};
       if (!tx.comment) patch.comment = reminder.label;
-      if (!tx.category && reminder.category) patch.category = reminder.category;
+      if (
+        reminder.category &&
+        !tx.tags.some(
+          (tag) => tag.toLowerCase() === reminder.category?.toLowerCase(),
+        )
+      ) {
+        patch.tags = [...tx.tags, reminder.category];
+      }
       if (Object.keys(patch).length > 0) {
         await db
           .update(transactions)

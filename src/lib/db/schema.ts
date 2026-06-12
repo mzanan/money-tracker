@@ -94,7 +94,7 @@ export const transactions = sqliteTable(
     fx_rates_snapshot: text("fx_rates_snapshot", { mode: "json" })
       .$type<FxRates>()
       .notNull(),
-    category: text("category"),
+    tags: text("tags", { mode: "json" }).$type<string[]>().notNull().default([]),
     note: text("note"),
     comment: text("comment"),
     occurred_on: text("occurred_on").notNull(),
@@ -103,6 +103,7 @@ export const transactions = sqliteTable(
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
     source: text("source").notNull().default("manual"),
     external_id: text("external_id"),
+    transfer_group: text("transfer_group"),
     created_at: text("created_at")
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),

@@ -31,6 +31,7 @@ export function periodTotals(
   let income = 0;
   let expense = 0;
   for (const tx of txs) {
+    if (tx.transfer_group) continue;
     let value: number;
     try {
       value = transactionInDisplay(tx, displayCurrency);

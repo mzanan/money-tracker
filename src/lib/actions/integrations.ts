@@ -19,6 +19,7 @@ import type { ActionResult } from "./transactions";
 
 const ABSORB_WINDOW_DAYS = 2;
 const ABSORB_AMOUNT_TOLERANCE = 0.01;
+const ABSORB_REMINDER_TOLERANCE_PCT = 0.05;
 
 async function absorbMatching(
   userId: string,
@@ -51,7 +52,15 @@ async function absorbMatching(
       "yyyy-MM-dd",
     );
 
-    const candidates = await db
+    const baseConditions = and(
+      eq(transactions.user_id, userId),
+      ne(transactions.source, syncSource),
+      eq(transactions.kind, row.kind),
+      eq(transactions.currency_original, row.currency),
+      between(transactions.occurred_on, start, end),
+    );
+
+    let candidates = await db
       .select({
         id: transactions.id,
         note: transactions.note,
@@ -60,14 +69,30 @@ async function absorbMatching(
       .from(transactions)
       .where(
         and(
-          eq(transactions.user_id, userId),
-          ne(transactions.source, syncSource),
-          eq(transactions.kind, row.kind),
-          eq(transactions.currency_original, row.currency),
-          between(transactions.occurred_on, start, end),
+          baseConditions,
           sql`abs(${transactions.amount_original} - ${row.amount}) <= ${ABSORB_AMOUNT_TOLERANCE}`,
         ),
       );
+
+    if (candidates.length === 0) {
+      // Reminder-created expenses carry the agreed amount, which can differ
+      // from the synced charge by provider fees — allow a wider match.
+      const tolerance = Math.abs(row.amount) * ABSORB_REMINDER_TOLERANCE_PCT;
+      candidates = await db
+        .select({
+          id: transactions.id,
+          note: transactions.note,
+          comment: transactions.comment,
+        })
+        .from(transactions)
+        .where(
+          and(
+            baseConditions,
+            sql`${transactions.external_id} like 'reminder:%'`,
+            sql`abs(${transactions.amount_original} - ${row.amount}) <= ${tolerance}`,
+          ),
+        );
+    }
 
     if (candidates.length !== 1) continue;
 
@@ -273,7 +298,7 @@ export async function syncIntegration(
         currency: tx.currency,
         occurredOn: tx.occurredOn,
         occurredAt: tx.occurredAt,
-        category: tx.category,
+        tags: tx.tags,
         note: tx.note,
         source: provider,
         externalId: tx.externalId,
@@ -339,4 +364,36 @@ export async function syncIntegration(
   void skippedIncome;
   void skippedNoRate;
   return { ok: true, data: { imported, skipped, absorbed } };
+}
+
+const AUTO_SYNC_MIN_INTERVAL_MS = 15 * 60 * 1000;
+
+export async function autoSyncIntegrations(): Promise<
+  ActionResult<{ imported: number }>
+> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const stale = await db
+    .select({
+      provider: api_integrations.provider,
+      last_synced_at: api_integrations.last_synced_at,
+    })
+    .from(api_integrations)
+    .where(eq(api_integrations.user_id, user.id))
+    .then((rows) =>
+      rows.filter(
+        (row) =>
+          !row.last_synced_at ||
+          Date.now() - new Date(row.last_synced_at).getTime() >
+            AUTO_SYNC_MIN_INTERVAL_MS,
+      ),
+    );
+
+  let imported = 0;
+  for (const row of stale) {
+    const result = await syncIntegration(row.provider as IntegrationProvider);
+    if (result.ok && result.data) imported += result.data.imported;
+  }
+  return { ok: true, data: { imported } };
 }

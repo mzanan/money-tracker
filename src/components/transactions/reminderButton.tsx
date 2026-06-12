@@ -22,7 +22,7 @@ export function ReminderButton({ tx, defaultTitle }: Props) {
         label: defaultTitle,
         amount: tx.amount_original,
         currency: tx.currency_original,
-        category: tx.category,
+        category: tx.tags[0] ?? null,
         source: tx.source,
         frequency: "MONTHLY",
         lastPaidOn: tx.occurred_on,

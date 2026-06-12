@@ -20,7 +20,7 @@ export default async function DashboardPage() {
       quickAdd={
         <QuickAddForm
           key="quick-add"
-          recentCategories={data.recentCategories}
+          recentTags={data.recentTags}
           recentMerchants={data.recentMerchants}
         />
       }

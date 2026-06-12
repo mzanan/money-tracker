@@ -228,7 +228,7 @@ function depositToNormalized(row: DepositRow): NormalizedTx | null {
     currency: row.coin,
     occurredOn,
     occurredAt,
-    category: null,
+    tags: [],
     note: "Bybit Deposit",
   };
 }
@@ -245,7 +245,7 @@ function internalDepositToNormalized(row: InternalDepositRow): NormalizedTx | nu
     currency: row.coin,
     occurredOn,
     occurredAt,
-    category: null,
+    tags: [],
     note: "Bybit Transfer In",
   };
 }
@@ -329,7 +329,7 @@ export async function fetchTransactions(
         currency: row.currency,
         occurredOn,
         occurredAt,
-        category: null,
+        tags: [],
         note: describe(row),
       });
     }

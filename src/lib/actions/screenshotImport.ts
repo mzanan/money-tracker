@@ -147,7 +147,7 @@ export async function importScreenshotRows(input: {
         currency: row.currency,
         occurredOn,
         note: row.description,
-        category: row.category,
+        tags: row.category ? [row.category] : [],
         source,
         externalId,
       },

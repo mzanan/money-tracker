@@ -15,7 +15,7 @@ import {
 import { getUser } from "@/lib/session";
 import { applyAutoCategories } from "@/lib/categorization";
 import { kindOfSource } from "@/lib/constants/sources";
-import { buildTransactionRow } from "@/lib/transactions";
+import { buildTransactionRow, normalizeTags } from "@/lib/transactions";
 
 export type ActionResult<T = void> =
   | { ok: true; data?: T }
@@ -63,7 +63,7 @@ export async function createTransaction(
       amount: parsed.data.amount,
       currency: parsed.data.currency,
       occurredOn: parsed.data.occurredOn,
-      category: parsed.data.category,
+      tags: parsed.data.tags,
       note: parsed.data.note,
     },
     { rates, userCurrencies: settings.currencies },
@@ -81,7 +81,7 @@ export async function createTransaction(
       .insert(transactions)
       .values(row)
       .returning({ id: transactions.id });
-    if (!row.category) {
+    if ((row.tags ?? []).length === 0) {
       await applyAutoCategories(user.id).catch(() => {});
     }
     revalidatePath("/", "layout");
@@ -120,7 +120,7 @@ export async function updateTransaction(
         kind: parsed.data.kind,
         amount_original: parsed.data.amount,
         currency_original: parsed.data.currency,
-        category: parsed.data.category?.trim() || null,
+        tags: normalizeTags(parsed.data.tags),
         note: parsed.data.note?.trim() || null,
         occurred_on: parsed.data.occurredOn,
       })
@@ -140,22 +140,22 @@ export async function updateTransaction(
   }
 }
 
-export async function updateTransactionCategory(
+export async function updateTransactionTags(
   id: string,
-  category: string | null,
+  tags: string[],
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const trimmed = category?.trim() ?? "";
-  if (trimmed.length > 40) {
-    return { ok: false, error: "Category must be 40 characters or fewer" };
+  const normalized = normalizeTags(tags);
+  if (normalized.some((tag) => tag.length > 40)) {
+    return { ok: false, error: "Tags must be 40 characters or fewer" };
   }
 
   try {
     await db
       .update(transactions)
-      .set({ category: trimmed || null })
+      .set({ tags: normalized })
       .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)));
     revalidatePath("/", "layout");
     return { ok: true };
@@ -225,8 +225,13 @@ export async function mergeTransactions(
     if (removed.note && (preferRemovedDetails || !keep.note)) {
       patch.note = removed.note;
     }
-    if (removed.category && (preferRemovedDetails || !keep.category)) {
-      patch.category = removed.category;
+    const mergedTags = normalizeTags(
+      preferRemovedDetails
+        ? [...removed.tags, ...keep.tags]
+        : [...keep.tags, ...removed.tags],
+    );
+    if (mergedTags.length !== keep.tags.length) {
+      patch.tags = mergedTags;
     }
     if (!keep.comment && removed.comment) patch.comment = removed.comment;
     if (Object.keys(patch).length > 0) {

@@ -11,7 +11,7 @@ export const createTransactionSchema = z.object({
   currency: z
     .string()
     .refine(isSupportedCurrency, { message: "Unsupported currency" }),
-  category: z.string().trim().max(60).nullable().optional(),
+  tags: z.array(z.string().trim().min(1).max(40)).max(10).optional(),
   note: z.string().trim().max(280).nullable().optional(),
   occurredOn: z
     .string()

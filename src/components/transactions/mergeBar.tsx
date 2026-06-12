@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/drawer";
 
 function txLabel(tx: Transaction): string {
-  const detail = tx.note || tx.category || "";
+  const detail = tx.note || tx.tags[0] || "";
   return detail
     ? `${labelForSource(tx.source)} · ${detail}`
     : labelForSource(tx.source);

@@ -1,7 +1,7 @@
 import { generateObject } from "ai";
 import { z } from "zod";
 
-import { CATEGORIES } from "@/lib/constants/categories";
+import { SUGGESTED_TAGS } from "@/lib/constants/tags";
 
 import { chatModel } from "./provider";
 
@@ -10,7 +10,7 @@ const SCHEMA = z.object({
     z.object({
       merchant: z.string().describe("The merchant name, exactly as given"),
       category: z
-        .enum([...CATEGORIES, "unknown"])
+        .enum([...SUGGESTED_TAGS, "unknown"])
         .describe('One category, or "unknown" when it cannot be inferred'),
     }),
   ),
@@ -18,7 +18,7 @@ const SCHEMA = z.object({
 
 const SYSTEM = `You classify merchant names from bank statements and wallet histories into one generic spending category.
 
-Categories: ${CATEGORIES.join(", ")}.
+Categories: ${SUGGESTED_TAGS.join(", ")}.
 
 Rules:
 - Merchants can be from any country (Vietnam, Japan, Italy, Colombia, anywhere) and any language.

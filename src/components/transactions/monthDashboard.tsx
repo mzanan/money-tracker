@@ -166,10 +166,12 @@ export function MonthDashboard({
         <SpendingBreakdown
           transactions={breakdownTransactions}
           places={places}
-          selectedCategory={c.selectedCategory}
-          onSelectCategory={c.setSelectedCategory}
+          selectedTag={c.selectedTag}
+          onSelectTag={c.setSelectedTag}
           selectedPlace={c.selectedPlace}
           onSelectPlace={c.setSelectedPlace}
+          limit={4}
+          moreHref="/dashboard"
         />
         <MonthView
           transactions={feedTransactions}

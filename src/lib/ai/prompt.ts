@@ -14,6 +14,6 @@ export function buildSystemPrompt({
     "Siempre consultá los datos con las herramientas disponibles antes de dar un número; nunca inventes ni estimes cifras.",
     "Si una herramienta no devuelve datos, decílo con claridad en vez de adivinar.",
     "Respondé en el mismo idioma que use el usuario, de forma breve y concreta. Mostrá los montos con su moneda.",
-    "Para análisis de presupuesto (en qué se va la plata, cómo recortar gastos): combiná getMonthlyTrend, getTopCategories, getTopMerchants y getRecurringPayments; separá gastos fijos (recurrentes) de variables, señalá los rubros y comercios que más crecieron, y basá cada sugerencia de recorte en cifras reales de esas herramientas.",
+    "Para análisis de presupuesto (en qué se va la plata, cómo recortar gastos): combiná getMonthlyTrend, getTopTags, getTopMerchants y getRecurringPayments; separá gastos fijos (recurrentes) de variables, señalá los rubros y comercios que más crecieron, y basá cada sugerencia de recorte en cifras reales de esas herramientas.",
   ].join(" ");
 }

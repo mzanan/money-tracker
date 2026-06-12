@@ -11,7 +11,7 @@ export interface HomePageData {
   yearMonth: string;
   lifetimeTxs: Transaction[];
   sources: string[];
-  recentCategories: string[];
+  recentTags: string[];
   recentMerchants: string[];
   places: Location[];
 }
@@ -39,9 +39,10 @@ export async function getHomePageData(): Promise<HomePageData> {
     .slice()
     .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
 
-  const recentCategories = uniqueStrings(
-    byRecency.map((tx) => tx.category),
-  ).slice(0, 12);
+  const recentTags = uniqueStrings(byRecency.flatMap((tx) => tx.tags)).slice(
+    0,
+    12,
+  );
 
   const recentMerchants = uniqueStrings(
     byRecency.map((tx) => tx.note?.trim() ?? null),
@@ -53,7 +54,7 @@ export async function getHomePageData(): Promise<HomePageData> {
     yearMonth,
     lifetimeTxs,
     sources,
-    recentCategories,
+    recentTags,
     recentMerchants,
     places,
   };

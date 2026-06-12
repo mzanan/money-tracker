@@ -7,7 +7,7 @@ import {
   getMonthlyTrend,
   getPeriodSummary,
   getRecurringPayments,
-  getTopCategories,
+  getTopTags,
   getTopMerchants,
   searchTransactions,
 } from "@/lib/data/assistant";
@@ -50,9 +50,9 @@ export function buildAssistantTools({ userId, baseCurrency }: AssistantContext) 
       }),
       execute: ({ from, to }) => getDailySpend(userId, baseCurrency, from, to),
     }),
-    getTopCategories: tool({
+    getTopTags: tool({
       description:
-        "Top spending or income categories, ranked by total in the base currency.",
+        "Top spending or income tags, ranked by total in the base currency.",
       inputSchema: z.object({
         from: isoDate.describe("Start date, inclusive").optional(),
         to: isoDate.describe("End date, inclusive").optional(),
@@ -60,11 +60,11 @@ export function buildAssistantTools({ userId, baseCurrency }: AssistantContext) 
         limit: z.number().int().min(1).max(20).default(5),
       }),
       execute: ({ from, to, kind, limit }) =>
-        getTopCategories(userId, baseCurrency, { from, to, kind, limit }),
+        getTopTags(userId, baseCurrency, { from, to, kind, limit }),
     }),
     getTopMerchants: tool({
       description:
-        "Top expense merchants/payees (grouped by transaction note), ranked by total in the base currency. Use to answer where the money goes beyond categories.",
+        "Top expense merchants/payees (grouped by transaction note), ranked by total in the base currency. Use to answer where the money goes beyond tags.",
       inputSchema: z.object({
         from: isoDate.describe("Start date, inclusive").optional(),
         to: isoDate.describe("End date, inclusive").optional(),
@@ -89,13 +89,13 @@ export function buildAssistantTools({ userId, baseCurrency }: AssistantContext) 
     }),
     searchTransactions: tool({
       description:
-        "List individual transactions, optionally filtered by date range, kind, or a text query against note and category.",
+        "List individual transactions, optionally filtered by date range, kind, or a text query against note and tags.",
       inputSchema: z.object({
         from: isoDate.describe("Start date, inclusive").optional(),
         to: isoDate.describe("End date, inclusive").optional(),
         query: z
           .string()
-          .describe("Text to match in note or category")
+          .describe("Text to match in note or tags")
           .optional(),
         kind: kind.optional(),
         limit: z.number().int().min(1).max(50).default(10),

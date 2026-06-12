@@ -8,7 +8,7 @@ export interface BuildTransactionRowInput {
   currency: string;
   occurredOn: string;
   occurredAt?: string;
-  category?: string | null;
+  tags?: string[] | null;
   note?: string | null;
   source?: string;
   externalId?: string | null;
@@ -17,6 +17,20 @@ export interface BuildTransactionRowInput {
 export interface BuildContext {
   rates: FxRates;
   userCurrencies: string[];
+}
+
+export function normalizeTags(tags: string[] | null | undefined): string[] {
+  if (!tags) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const tag of tags) {
+    const trimmed = tag.trim();
+    const key = trimmed.toLowerCase();
+    if (!trimmed || seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+  }
+  return out;
 }
 
 export function buildTransactionRow(
@@ -35,7 +49,7 @@ export function buildTransactionRow(
     amount_original: input.amount,
     currency_original: input.currency,
     fx_rates_snapshot: snapshot,
-    category: input.category?.trim() || null,
+    tags: normalizeTags(input.tags),
     note: input.note?.trim() || null,
     occurred_on: input.occurredOn,
     ...(input.occurredAt && { occurred_at: input.occurredAt }),

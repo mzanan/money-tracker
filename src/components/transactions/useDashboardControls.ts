@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { useSettings, useTimezone } from "@/hooks/useSettings";
-import { UNCATEGORIZED_LABEL } from "@/lib/constants/categories";
+import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import { kindOfSource } from "@/lib/constants/sources";
 import { todayInTz } from "@/lib/dates";
 import { filterByAmount } from "@/lib/filters";
@@ -45,7 +45,7 @@ export function useDashboardControls({
   const [panel, setPanel] = useState<PanelMode>("none");
   const [selectedSource, setSelectedSource] = useState("all");
   const [selectedKind, setSelectedKind] = useState<KindFilter>("all");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<string | null>(null);
   const [minInput, setMinInput] = useState("");
   const [maxInput, setMaxInput] = useState("");
@@ -84,9 +84,11 @@ export function useDashboardControls({
     if (selectedKind !== "all") {
       list = list.filter((tx) => tx.kind === selectedKind);
     }
-    if (selectedCategory !== null) {
-      list = list.filter(
-        (tx) => (tx.category ?? UNCATEGORIZED_LABEL) === selectedCategory,
+    if (selectedTag !== null) {
+      list = list.filter((tx) =>
+        tx.tags.length === 0
+          ? selectedTag === UNTAGGED_LABEL
+          : tx.tags.includes(selectedTag),
       );
     }
     if (selectedPlace !== null) {
@@ -95,7 +97,7 @@ export function useDashboardControls({
       );
     }
     return list;
-  }, [sourceFilteredMonth, selectedKind, selectedCategory, selectedPlace, places]);
+  }, [sourceFilteredMonth, selectedKind, selectedTag, selectedPlace, places]);
 
   const filterResults = useMemo(() => {
     const base = scope === "all" ? sourceFilteredLifetime : sourceFilteredMonth;
@@ -149,8 +151,8 @@ export function useDashboardControls({
     setSelectedSource,
     selectedKind,
     setSelectedKind,
-    selectedCategory,
-    setSelectedCategory,
+    selectedTag,
+    setSelectedTag,
     selectedPlace,
     setSelectedPlace,
     minInput,

@@ -1,4 +1,4 @@
-export const CATEGORIES = [
+export const SUGGESTED_TAGS = [
   "Food",
   "Coffee",
   "Groceries",
@@ -11,6 +11,6 @@ export const CATEGORIES = [
   "Other",
 ] as const;
 
-export type Category = (typeof CATEGORIES)[number];
+export type SuggestedTag = (typeof SUGGESTED_TAGS)[number];
 
-export const UNCATEGORIZED_LABEL = "Uncategorized";
+export const UNTAGGED_LABEL = "Untagged";

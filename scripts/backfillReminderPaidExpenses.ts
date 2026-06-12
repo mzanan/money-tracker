@@ -85,7 +85,7 @@ async function main() {
         amount: reminder.amount,
         currency: reminder.currency,
         occurredOn: day,
-        category: reminder.category,
+        tags: reminder.category ? [reminder.category] : [],
         note: reminder.label,
         externalId: `reminder:${reminder.id}:${day}`,
       },

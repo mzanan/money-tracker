@@ -15,8 +15,8 @@ export interface DaySpend {
   net: number;
 }
 
-export interface CategoryTotal {
-  category: string;
+export interface TagTotal {
+  tag: string;
   total: number;
   count: number;
 }
@@ -27,7 +27,7 @@ export interface TransactionSummary {
   amount: number;
   amountOriginal: number;
   currencyOriginal: string;
-  category: string | null;
+  tags: string[];
   note: string | null;
   source: string;
 }
@@ -94,7 +94,7 @@ export async function getDailySpend(
   );
 }
 
-export async function getTopCategories(
+export async function getTopTags(
   userId: string,
   baseCurrency: string,
   options: {
@@ -103,22 +103,24 @@ export async function getTopCategories(
     kind?: TransactionKind;
     limit?: number;
   } = {},
-): Promise<CategoryTotal[]> {
+): Promise<TagTotal[]> {
   const { from, to, kind = "expense", limit = 5 } = options;
   const txs = await fetchRange(userId, from, to);
-  const byCategory = new Map<string, { total: number; count: number }>();
+  const byTag = new Map<string, { total: number; count: number }>();
   for (const tx of txs) {
     if (tx.kind !== kind) continue;
     const value = baseValue(tx, baseCurrency);
     if (value === null) continue;
-    const label = tx.category?.trim() || "Uncategorized";
-    const entry = byCategory.get(label) ?? { total: 0, count: 0 };
-    entry.total += value;
-    entry.count += 1;
-    byCategory.set(label, entry);
+    const labels = tx.tags.length > 0 ? tx.tags : ["Untagged"];
+    for (const label of labels) {
+      const entry = byTag.get(label) ?? { total: 0, count: 0 };
+      entry.total += value;
+      entry.count += 1;
+      byTag.set(label, entry);
+    }
   }
-  return Array.from(byCategory.entries())
-    .map(([category, { total, count }]) => ({ category, total, count }))
+  return Array.from(byTag.entries())
+    .map(([tag, { total, count }]) => ({ tag, total, count }))
     .sort((a, b) => b.total - a.total)
     .slice(0, limit);
 }
@@ -277,7 +279,7 @@ export async function searchTransactions(
   for (const tx of txs) {
     if (kind && tx.kind !== kind) continue;
     if (needle) {
-      const haystack = `${tx.note ?? ""} ${tx.category ?? ""}`.toLowerCase();
+      const haystack = `${tx.note ?? ""} ${tx.tags.join(" ")}`.toLowerCase();
       if (!haystack.includes(needle)) continue;
     }
     matches.push({
@@ -286,7 +288,7 @@ export async function searchTransactions(
       amount: baseValue(tx, baseCurrency) ?? tx.amount_original,
       amountOriginal: tx.amount_original,
       currencyOriginal: tx.currency_original,
-      category: tx.category,
+      tags: tx.tags,
       note: tx.note,
       source: tx.source,
     });

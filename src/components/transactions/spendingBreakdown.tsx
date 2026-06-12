@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { MapPinIcon } from "lucide-react";
 
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useSettings } from "@/hooks/useSettings";
 import { excludeCanceledPairs } from "@/lib/cancellations";
-import { UNCATEGORIZED_LABEL } from "@/lib/constants/categories";
+import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import { formatMoney } from "@/lib/currency";
 import { placeOf } from "@/lib/places";
 import { transactionInDisplay } from "@/lib/totals";
@@ -21,35 +22,39 @@ import { PlacesDialog } from "./placesDialog";
 
 import type { Location, Transaction } from "@/types/db";
 
-type Mode = "category" | "place";
+type Mode = "tag" | "place";
 
 interface Props {
   transactions: Transaction[];
   places: Location[];
-  selectedCategory: string | null;
-  onSelectCategory: (category: string | null) => void;
+  selectedTag: string | null;
+  onSelectTag: (tag: string | null) => void;
   selectedPlace: string | null;
   onSelectPlace: (place: string | null) => void;
+  limit?: number;
+  moreHref?: string;
 }
 
 export function SpendingBreakdown({
   transactions,
   places,
-  selectedCategory,
-  onSelectCategory,
+  selectedTag,
+  onSelectTag,
   selectedPlace,
   onSelectPlace,
+  limit,
+  moreHref,
 }: Props) {
   const settings = useSettings();
   const { hideAmounts } = useHideAmounts();
-  const [mode, setMode] = useState<Mode>("category");
+  const [mode, setMode] = useState<Mode>("tag");
 
-  const selected = mode === "category" ? selectedCategory : selectedPlace;
-  const onSelect = mode === "category" ? onSelectCategory : onSelectPlace;
+  const selected = mode === "tag" ? selectedTag : selectedPlace;
+  const onSelect = mode === "tag" ? onSelectTag : onSelectPlace;
 
   function changeMode(next: Mode) {
     setMode(next);
-    onSelectCategory(null);
+    onSelectTag(null);
     onSelectPlace(null);
   }
 
@@ -57,18 +62,22 @@ export function SpendingBreakdown({
     const totals = new Map<string, number>();
     let total = 0;
     for (const tx of excludeCanceledPairs(transactions)) {
-      if (tx.kind !== "expense") continue;
+      if (tx.kind !== "expense" || tx.transfer_group) continue;
       let value: number;
       try {
         value = transactionInDisplay(tx, settings.base_currency);
       } catch {
         continue;
       }
-      const key =
-        mode === "category"
-          ? (tx.category ?? UNCATEGORIZED_LABEL)
-          : placeOf(tx.occurred_on, places);
-      totals.set(key, (totals.get(key) ?? 0) + value);
+      const keys =
+        mode === "tag"
+          ? tx.tags.length > 0
+            ? tx.tags
+            : [UNTAGGED_LABEL]
+          : [placeOf(tx.occurred_on, places)];
+      for (const key of keys) {
+        totals.set(key, (totals.get(key) ?? 0) + value);
+      }
       total += value;
     }
     const list = Array.from(totals.entries())
@@ -78,8 +87,9 @@ export function SpendingBreakdown({
         pct: total > 0 ? (amount / total) * 100 : 0,
       }))
       .sort((a, b) => b.amount - a.amount);
-    return { list, max: list[0]?.amount ?? 0 };
-  }, [transactions, settings.base_currency, mode, places]);
+    const visible = limit ? list.slice(0, limit) : list;
+    return { list: visible, hidden: list.length - visible.length, max: list[0]?.amount ?? 0 };
+  }, [transactions, settings.base_currency, mode, places, limit]);
 
   if (breakdown.list.length === 0) return null;
 
@@ -90,7 +100,7 @@ export function SpendingBreakdown({
         <div className="flex items-center gap-1">
           <Tabs value={mode} onValueChange={(v) => changeMode(v as Mode)}>
             <TabsList>
-              <TabsTrigger value="category">Category</TabsTrigger>
+              <TabsTrigger value="tag">Tag</TabsTrigger>
               <TabsTrigger value="place">Place</TabsTrigger>
             </TabsList>
           </Tabs>
@@ -142,7 +152,7 @@ export function SpendingBreakdown({
                 <span
                   className={cn(
                     "truncate text-sm font-medium",
-                    item.label === UNCATEGORIZED_LABEL &&
+                    item.label === UNTAGGED_LABEL &&
                       "text-muted-foreground",
                   )}
                 >
@@ -167,6 +177,14 @@ export function SpendingBreakdown({
               </span>
             </button>
           ))}
+          {moreHref && breakdown.hidden > 0 && (
+            <Link
+              href={moreHref}
+              className="text-muted-foreground hover:text-foreground pt-1 text-xs font-medium transition-colors"
+            >
+              View all in Dashboard →
+            </Link>
+          )}
         </div>
       )}
     </Surface>

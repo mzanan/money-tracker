@@ -71,6 +71,20 @@
       "when": 1781088393940,
       "tag": "0009_lowly_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1781276091884,
+      "tag": "0010_tags_over_categories",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1781276863835,
+      "tag": "0011_transfer_group",
+      "breakpoints": true
     }
   ]
 }

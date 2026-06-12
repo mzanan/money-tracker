@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { aiCategorizeMerchants } from "@/lib/ai/categorizeMerchants";
 import { db } from "@/lib/db";
@@ -14,7 +14,10 @@ export async function applyAutoCategories(userId: string): Promise<number> {
     .select({ id: transactions.id, note: transactions.note })
     .from(transactions)
     .where(
-      and(eq(transactions.user_id, userId), isNull(transactions.category)),
+      and(
+        eq(transactions.user_id, userId),
+        sql`json_array_length(${transactions.tags}) = 0`,
+      ),
     );
 
   const txsByMerchant = new Map<string, string[]>();
@@ -75,7 +78,7 @@ export async function applyAutoCategories(userId: string): Promise<number> {
     if (!category) continue;
     await db
       .update(transactions)
-      .set({ category })
+      .set({ tags: [category] })
       .where(
         and(
           eq(transactions.user_id, userId),

@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Surface } from "@/components/ui/surface";
 
 interface Props {
-  recentCategories: string[];
+  recentTags: string[];
   recentMerchants: string[];
 }
 
@@ -34,12 +34,12 @@ function parseAmount(value: string): number | null {
   return Number.isFinite(num) && num > 0 ? num : null;
 }
 
-export function QuickAddForm({ recentCategories, recentMerchants }: Props) {
+export function QuickAddForm({ recentTags, recentMerchants }: Props) {
   const settings = useSettings();
   const timezone = useTimezone();
   const ratesQuery = useRates();
   const { run, pending } = useServerAction();
-  const categoriesId = useId();
+  const tagsId = useId();
   const merchantsId = useId();
 
   const lastCurrency = useUiStore((state) => state.lastCurrency);
@@ -53,7 +53,7 @@ export function QuickAddForm({ recentCategories, recentMerchants }: Props) {
   const [kind, setKind] = useState<Kind>("expense");
   const [amount, setAmount] = useState("");
   const [currencyState, setCurrency] = useState(initialCurrency);
-  const [category, setCategory] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
   const [note, setNote] = useState("");
   const [date, setDate] = useState(() => todayInTz(timezone));
   const [showExtras, setShowExtras] = useState(false);
@@ -98,7 +98,10 @@ export function QuickAddForm({ recentCategories, recentMerchants }: Props) {
           kind,
           amount: rounded,
           currency,
-          category: category.trim() || null,
+          tags: tagsInput
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean),
           note: note.trim() || null,
           occurredOn: date,
         }),
@@ -106,7 +109,7 @@ export function QuickAddForm({ recentCategories, recentMerchants }: Props) {
         success: `${kind === "income" ? "Income" : "Expense"} · ${formatMoney(rounded, currency)}`,
         onSuccess: () => {
           setAmount("");
-          setCategory("");
+          setTagsInput("");
           setNote("");
           setLastCurrency(currency);
         },
@@ -118,7 +121,7 @@ export function QuickAddForm({ recentCategories, recentMerchants }: Props) {
 
   return (
     <Surface asChild radius="lg" padding="sm" className="grid gap-3">
-      <form onSubmit={handleSubmit}>
+      <form id="quick-add" onSubmit={handleSubmit} className="scroll-mt-20">
         <div className="flex items-center gap-2">
           <KindToggle kind={kind} onChange={setKind} />
           <div className="bg-surface-2 relative flex flex-1 items-center rounded-xl pr-1.5">
@@ -187,28 +190,28 @@ export function QuickAddForm({ recentCategories, recentMerchants }: Props) {
               showExtras && "rotate-180",
             )}
           />
-          {showExtras ? "Hide details" : "Add category, note, date"}
+          {showExtras ? "Hide details" : "Add tags, note, date"}
         </button>
 
         {showExtras && (
           <div className="grid gap-2 px-1">
             <div className="grid gap-1.5">
-              <Label htmlFor="category" className="text-eyebrow">
-                Category
+              <Label htmlFor="tags" className="text-eyebrow">
+                Tags
               </Label>
               <Input
-                id="category"
-                list={categoriesId}
+                id="tags"
+                list={tagsId}
                 placeholder="food, transport, rent…"
-                value={category}
-                onChange={(event) => setCategory(event.target.value)}
-                maxLength={60}
+                value={tagsInput}
+                onChange={(event) => setTagsInput(event.target.value)}
+                maxLength={120}
                 className="bg-surface-2 h-9 border-none"
               />
-              {recentCategories.length > 0 && (
-                <datalist id={categoriesId}>
-                  {recentCategories.map((cat) => (
-                    <option key={cat} value={cat} />
+              {recentTags.length > 0 && (
+                <datalist id={tagsId}>
+                  {recentTags.map((tag) => (
+                    <option key={tag} value={tag} />
                   ))}
                 </datalist>
               )}

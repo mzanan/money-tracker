@@ -8,7 +8,7 @@ export interface NormalizedTx {
   currency: string;
   occurredOn: string;
   occurredAt: string;
-  category: string | null;
+  tags: string[];
   note: string | null;
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BanknoteIcon,
   CheckIcon,
   ChevronDownIcon,
   Loader2Icon,
@@ -11,10 +12,14 @@ import {
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import {
+  markAsCashWithdrawal,
+  unmarkCashWithdrawal,
+} from "@/lib/actions/cash";
+import {
   deleteTransaction,
-  updateTransactionCategory,
+  updateTransactionTags,
 } from "@/lib/actions/transactions";
-import { CATEGORIES } from "@/lib/constants/categories";
+import { SUGGESTED_TAGS } from "@/lib/constants/tags";
 import { labelForSource } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
 import { transactionInDisplay } from "@/lib/totals";
@@ -37,11 +42,22 @@ import { useCommentEdit } from "./useCommentEdit";
 import type { Transaction } from "@/types/db";
 
 export function TransactionRow({ tx }: { tx: Transaction }) {
+  const allTags = [
+    ...SUGGESTED_TAGS,
+    ...tx.tags.filter(
+      (tag) => !SUGGESTED_TAGS.includes(tag as (typeof SUGGESTED_TAGS)[number]),
+    ),
+  ];
   const settings = useSettings();
   const comment = useCommentEdit(tx.id, tx.comment);
   const remove = useServerAction();
-  const setCategory = useServerAction();
+  const setTags = useServerAction();
+  const transfer = useServerAction();
   const canDelete = tx.source === "manual";
+  const isTransfer = Boolean(tx.transfer_group);
+  const canMarkWithdrawal =
+    tx.kind === "expense" && tx.source !== "manual" && !isTransfer;
+  const canUnmarkWithdrawal = isTransfer && tx.transfer_group === tx.id;
   const txSelectMode = useUiStore((s) => s.txSelectMode);
   const selectedTxs = useUiStore((s) => s.selectedTxs);
   const toggleTxSelected = useUiStore((s) => s.toggleTxSelected);
@@ -59,12 +75,10 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const showConverted = !sameAsBase && inDisplay !== null;
   const sourceLabel = labelForSource(tx.source);
 
-  const identifierSegments: string[] = [sourceLabel];
-  if (tx.category) identifierSegments.push(tx.category);
-  const identifier = identifierSegments.join(" · ");
+  const identifier = [sourceLabel, ...tx.tags].join(" · ");
 
   const description = tx.note?.trim();
-  const avatarSeed = tx.category || sourceLabel;
+  const avatarSeed = tx.tags[0] || sourceLabel;
   const reminderTitle = description || identifier;
 
   return (
@@ -78,8 +92,8 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
     >
       <DropdownMenu>
         <DropdownMenuTrigger
-          aria-label="Set category"
-          disabled={txSelectMode || setCategory.pending}
+          aria-label="Set tags"
+          disabled={txSelectMode || setTags.pending}
           className={cn(
             "focus-visible:ring-ring relative shrink-0 cursor-pointer rounded-full focus-visible:ring-2 focus-visible:outline-none",
             txSelectMode && "pointer-events-none",
@@ -99,31 +113,40 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
-          {CATEGORIES.map((category) => (
+          {allTags.map((tag) => {
+            const active = tx.tags.includes(tag);
+            return (
+              <DropdownMenuItem
+                key={tag}
+                onClick={() =>
+                  setTags.run(
+                    () =>
+                      updateTransactionTags(
+                        tx.id,
+                        active
+                          ? tx.tags.filter((t) => t !== tag)
+                          : [...tx.tags, tag],
+                      ),
+                    { success: active ? `Removed ${tag}` : `Tagged ${tag}` },
+                  )
+                }
+                className={cn(active && "font-semibold")}
+              >
+                {active && <CheckIcon className="size-3.5" />}
+                {tag}
+              </DropdownMenuItem>
+            );
+          })}
+          {tx.tags.length > 0 && (
             <DropdownMenuItem
-              key={category}
               onClick={() =>
-                setCategory.run(
-                  () => updateTransactionCategory(tx.id, category),
-                  { success: `Categorized as ${category}` },
-                )
-              }
-              className={cn(tx.category === category && "font-semibold")}
-            >
-              {category}
-            </DropdownMenuItem>
-          ))}
-          {tx.category && (
-            <DropdownMenuItem
-              onClick={() =>
-                setCategory.run(
-                  () => updateTransactionCategory(tx.id, null),
-                  { success: "Category cleared" },
-                )
+                setTags.run(() => updateTransactionTags(tx.id, []), {
+                  success: "Tags cleared",
+                })
               }
               className="text-muted-foreground"
             >
-              Clear category
+              Clear tags
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
@@ -131,6 +154,11 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
       <div className="min-w-0 flex-1">
         <span className="text-foreground block truncate text-sm leading-tight font-medium">
           {identifier}
+          {isTransfer && (
+            <Badge variant="secondary" className="ml-1.5 align-middle">
+              Transfer
+            </Badge>
+          )}
         </span>
         {description && (
           <span className="text-muted-foreground mt-0.5 block truncate text-meta">
@@ -203,6 +231,44 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           <StickyNoteIcon />
         )}
       </Button>
+      {(canMarkWithdrawal || canUnmarkWithdrawal) && (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={() =>
+            transfer.run(
+              () =>
+                canUnmarkWithdrawal
+                  ? unmarkCashWithdrawal(tx.id)
+                  : markAsCashWithdrawal(tx.id),
+              canUnmarkWithdrawal
+                ? {
+                    confirm: "Undo the cash withdrawal?",
+                    success: "Withdrawal undone",
+                  }
+                : {
+                    confirm:
+                      "Mark as a cash withdrawal? It moves the amount to your cash balance and leaves it out of spending totals.",
+                    success: "Moved to cash",
+                  },
+            )
+          }
+          disabled={transfer.pending}
+          aria-label={
+            canUnmarkWithdrawal ? "Undo cash withdrawal" : "Mark as cash withdrawal"
+          }
+          className={cn(
+            "hover:text-foreground -mr-0.5",
+            canUnmarkWithdrawal ? "text-foreground" : "text-muted-foreground",
+          )}
+        >
+          {transfer.pending ? (
+            <Loader2Icon className="animate-spin" />
+          ) : (
+            <BanknoteIcon />
+          )}
+        </Button>
+      )}
       <ReminderButton tx={tx} defaultTitle={reminderTitle} />
       {canDelete && (
         <Button
