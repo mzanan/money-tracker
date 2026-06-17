@@ -13,8 +13,8 @@ import {
 import { useServerAction } from "@/hooks/useServerAction";
 import {
   deleteReminder,
+  getReminderPayOptions,
   markReminderPaid,
-  previewReminderPaymentCandidates,
   type ReminderPaymentCandidate,
 } from "@/lib/actions/reminders";
 import { formatMoney } from "@/lib/currency";
@@ -43,9 +43,10 @@ export function ReminderRow({
   today: string;
 }) {
   const [editOpen, setEditOpen] = useState(false);
-  const [candidates, setCandidates] = useState<
-    ReminderPaymentCandidate[] | null
-  >(null);
+  const [payOptions, setPayOptions] = useState<{
+    suggested: ReminderPaymentCandidate[];
+    recent: ReminderPaymentCandidate[];
+  } | null>(null);
   const [checking, setChecking] = useState(false);
   const { run, pending } = useServerAction();
   const busy = pending || checking;
@@ -65,15 +66,13 @@ export function ReminderRow({
 
   async function handleMarkPaid() {
     setChecking(true);
-    const preview = await previewReminderPaymentCandidates(reminder.id);
+    const res = await getReminderPayOptions(reminder.id);
     setChecking(false);
-    const matches = preview.ok ? (preview.data?.matches ?? []) : [];
-    if (matches.length > 0) setCandidates(matches);
-    else confirmPaid();
+    setPayOptions(res.ok ? res.data! : { suggested: [], recent: [] });
   }
 
   function confirmPaid(linkTransactionId?: string) {
-    setCandidates(null);
+    setPayOptions(null);
     run(
       () =>
         markReminderPaid(
@@ -90,6 +89,13 @@ export function ReminderRow({
               : "Marked paid, next due updated",
       },
     );
+  }
+
+  function markPaidOnly() {
+    setPayOptions(null);
+    run(() => markReminderPaid(reminder.id, undefined, { skipExpense: true }), {
+      success: "Marked paid, next due updated",
+    });
   }
 
   function handleDelete() {
@@ -184,10 +190,14 @@ export function ReminderRow({
       />
 
       <PayCandidatesDrawer
-        candidates={candidates}
+        open={payOptions !== null}
+        label={reminder.label}
+        suggested={payOptions?.suggested ?? []}
+        recent={payOptions?.recent ?? []}
         onLink={(transactionId) => confirmPaid(transactionId)}
         onCreate={() => confirmPaid()}
-        onClose={() => setCandidates(null)}
+        onSkip={markPaidOnly}
+        onClose={() => setPayOptions(null)}
       />
     </li>
   );

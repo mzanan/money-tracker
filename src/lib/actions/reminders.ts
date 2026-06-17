@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, notLike, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
@@ -160,9 +160,25 @@ export interface ReminderPaymentCandidate {
   note: string | null;
 }
 
-export async function previewReminderPaymentCandidates(
-  id: string,
-): Promise<ActionResult<{ matches: ReminderPaymentCandidate[] }>> {
+function toCandidate(
+  tx: typeof transactions.$inferSelect,
+): ReminderPaymentCandidate {
+  return {
+    id: tx.id,
+    source: tx.source,
+    occurredOn: tx.occurred_on,
+    amount: tx.amount_original,
+    currency: tx.currency_original,
+    note: tx.note,
+  };
+}
+
+export async function getReminderPayOptions(id: string): Promise<
+  ActionResult<{
+    suggested: ReminderPaymentCandidate[];
+    recent: ReminderPaymentCandidate[];
+  }>
+> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
@@ -178,9 +194,6 @@ export async function previewReminderPaymentCandidates(
     .limit(1)
     .then((rows) => rows[0]);
   if (!reminder) return { ok: false, error: "Reminder not found" };
-  if (reminder.amount == null || !reminder.currency) {
-    return { ok: true, data: { matches: [] } };
-  }
 
   const settings = await db
     .select({ timezone: user_settings.timezone })
@@ -190,44 +203,58 @@ export async function previewReminderPaymentCandidates(
     .then((rows) => rows[0]);
   const today = todayInTz(settings?.timezone ?? "UTC");
 
-  const rates = await getRates()
-    .then((r) => r.rates)
-    .catch(() => null);
-  const { findCrossSourceCandidates } = await import("@/lib/data/duplicates");
-  const [result] = await findCrossSourceCandidates(
-    [
-      {
-        userId: user.id,
-        occurredOn: today,
-        amount: reminder.amount,
-        currency: reminder.currency,
-        kind: "expense",
-      },
-    ],
-    rates,
-  );
+  const recentRows = await db
+    .select()
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.user_id, user.id),
+        eq(transactions.kind, "expense"),
+        or(
+          isNull(transactions.external_id),
+          notLike(transactions.external_id, "reminder:%"),
+        ),
+      ),
+    )
+    .orderBy(desc(transactions.occurred_on), desc(transactions.occurred_at))
+    .limit(25);
 
-  return {
-    ok: true,
-    data: {
-      matches: result.matches
-        .filter((m) => m.source !== "manual")
-        .map((m) => ({
-          id: m.id,
-          source: m.source,
-          occurredOn: m.occurred_on,
-          amount: m.amount_original,
-          currency: m.currency_original,
-          note: m.note,
-        })),
-    },
-  };
+  let suggested: ReminderPaymentCandidate[] = [];
+  if (reminder.amount != null && reminder.currency) {
+    const rates = await getRates()
+      .then((r) => r.rates)
+      .catch(() => null);
+    const { findCrossSourceCandidates } = await import("@/lib/data/duplicates");
+    const [result] = await findCrossSourceCandidates(
+      [
+        {
+          userId: user.id,
+          occurredOn: today,
+          amount: reminder.amount,
+          currency: reminder.currency,
+          kind: "expense",
+        },
+      ],
+      rates,
+    );
+    suggested = result.matches
+      .filter((m) => !m.external_id?.startsWith("reminder:"))
+      .map(toCandidate);
+  }
+
+  const suggestedIds = new Set(suggested.map((s) => s.id));
+  const recent = recentRows
+    .filter((tx) => !suggestedIds.has(tx.id))
+    .slice(0, 12)
+    .map(toCandidate);
+
+  return { ok: true, data: { suggested, recent } };
 }
 
 export async function markReminderPaid(
   id: string,
   paidOn?: string,
-  options?: { linkTransactionId?: string },
+  options?: { linkTransactionId?: string; skipExpense?: boolean },
 ): Promise<ActionResult<{ expenseAdded: boolean; linked: boolean }>> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
@@ -308,14 +335,15 @@ export async function markReminderPaid(
           eq(recurring_payments.user_id, user.id),
         ),
       );
-    const expenseAdded = linkId
-      ? false
-      : await insertReminderExpense(
-          user.id,
-          reminder,
-          day,
-          settings?.currencies ?? [],
-        );
+    const expenseAdded =
+      linkId || options?.skipExpense
+        ? false
+        : await insertReminderExpense(
+            user.id,
+            reminder,
+            day,
+            settings?.currencies ?? [],
+          );
     revalidatePath("/", "layout");
     return { ok: true, data: { expenseAdded, linked: Boolean(linkId) } };
   } catch (error) {
