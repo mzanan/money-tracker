@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { AutoSync } from "@/components/providers/autoSync";
 import { ConfirmProvider } from "@/components/providers/confirmProvider";
 import { InstallHint } from "@/components/pwa/installHint";
+import { MergeBar } from "@/components/transactions/mergeBar";
 import { HideAmountsProvider } from "@/hooks/useHideAmounts";
 import { SettingsProvider } from "@/hooks/useSettings";
 import { getUserSettings } from "@/lib/data/userSettings";
@@ -40,6 +41,7 @@ export default async function AppLayout({
         </div>
         <BottomNav />
         <InstallHint />
+        <MergeBar />
         </ConfirmProvider>
         <AutoSync />
       </HideAmountsProvider>

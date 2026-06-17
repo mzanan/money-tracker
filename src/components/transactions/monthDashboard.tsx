@@ -22,7 +22,6 @@ import { SpendingBreakdown } from "./spendingBreakdown";
 import { DashboardPanel } from "./dashboardPanel";
 import { DashboardToolbar } from "./dashboardToolbar";
 import { FiltersPanel } from "./filtersPanel";
-import { MergeBar } from "./mergeBar";
 import { MonthView } from "./monthView";
 import { SourceFilter } from "./sourceFilter";
 import { useDashboardControls } from "./useDashboardControls";
@@ -225,7 +224,6 @@ export function MonthDashboard({
           )}
         </DashboardPanel>
       )}
-      <MergeBar />
     </div>
   );
 }
