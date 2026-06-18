@@ -249,6 +249,8 @@ export const recurring_payments = sqliteTable(
       enum: ["WEEKLY", "MONTHLY", "YEARLY", "CUSTOM_MONTHS"],
     }).notNull(),
     interval_months: integer("interval_months"),
+    installments_total: integer("installments_total"),
+    installments_paid: integer("installments_paid").notNull().default(0),
     last_paid_on: text("last_paid_on"),
     next_due_on: text("next_due_on").notNull(),
     source: text("source"),

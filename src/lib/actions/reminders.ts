@@ -49,6 +49,7 @@ export async function createReminder(
         category: d.category?.trim() || null,
         frequency: d.frequency,
         interval_months: normalizeInterval(d.frequency, d.intervalMonths),
+        installments_total: d.installmentsTotal ?? null,
         last_paid_on: d.lastPaidOn ?? null,
         next_due_on: d.nextDueOn,
         source: d.source?.trim() || null,
@@ -87,6 +88,7 @@ export async function updateReminder(
         category: d.category?.trim() || null,
         frequency: d.frequency,
         interval_months: normalizeInterval(d.frequency, d.intervalMonths),
+        installments_total: d.installmentsTotal ?? null,
         last_paid_on: d.lastPaidOn ?? null,
         next_due_on: d.nextDueOn,
         note: d.note?.trim() || null,
@@ -255,7 +257,9 @@ export async function markReminderPaid(
   id: string,
   paidOn?: string,
   options?: { linkTransactionId?: string; skipExpense?: boolean },
-): Promise<ActionResult<{ expenseAdded: boolean; linked: boolean }>> {
+): Promise<
+  ActionResult<{ expenseAdded: boolean; linked: boolean; completed: boolean }>
+> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
@@ -319,6 +323,11 @@ export async function markReminderPaid(
       day = tx.occurred_on;
     }
 
+    const installmentsPaid = reminder.installments_paid + 1;
+    const completed =
+      reminder.installments_total != null &&
+      installmentsPaid >= reminder.installments_total;
+
     await db
       .update(recurring_payments)
       .set({
@@ -328,6 +337,8 @@ export async function markReminderPaid(
           reminder.frequency,
           reminder.interval_months,
         ),
+        installments_paid: installmentsPaid,
+        active: completed ? false : reminder.active,
       })
       .where(
         and(
@@ -345,7 +356,10 @@ export async function markReminderPaid(
             settings?.currencies ?? [],
           );
     revalidatePath("/", "layout");
-    return { ok: true, data: { expenseAdded, linked: Boolean(linkId) } };
+    return {
+      ok: true,
+      data: { expenseAdded, linked: Boolean(linkId), completed },
+    };
   } catch (error) {
     return {
       ok: false,

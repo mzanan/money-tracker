@@ -40,6 +40,7 @@ type Seed = {
   source?: string | null;
   frequency?: RecurringFrequency;
   intervalMonths?: number | null;
+  installmentsTotal?: number | null;
   lastPaidOn?: string | null;
   nextDueOn?: string;
   note?: string | null;
@@ -83,6 +84,7 @@ export function ReminderForm({
         source: reminder.source,
         frequency: reminder.frequency,
         intervalMonths: reminder.interval_months,
+        installmentsTotal: reminder.installments_total,
         lastPaidOn: reminder.last_paid_on,
         nextDueOn: reminder.next_due_on,
         note: reminder.note,
@@ -102,6 +104,9 @@ export function ReminderForm({
   );
   const [intervalMonths, setIntervalMonths] = useState(
     base.intervalMonths != null ? String(base.intervalMonths) : "6",
+  );
+  const [installments, setInstallments] = useState(
+    base.installmentsTotal != null ? String(base.installmentsTotal) : "",
   );
   const [lastPaidOn, setLastPaidOn] = useState(base.lastPaidOn ?? "");
   const [nextDueOn, setNextDueOn] = useState(base.nextDueOn ?? "");
@@ -137,6 +142,7 @@ export function ReminderForm({
     setCategory(base.category ?? "");
     setFrequency(base.frequency ?? "MONTHLY");
     setIntervalMonths(base.intervalMonths != null ? String(base.intervalMonths) : "6");
+    setInstallments(base.installmentsTotal != null ? String(base.installmentsTotal) : "");
     setLastPaidOn(base.lastPaidOn ?? "");
     setNextDueOn(base.nextDueOn ?? "");
     setNote(base.note ?? "");
@@ -152,6 +158,10 @@ export function ReminderForm({
       frequency,
       intervalMonths:
         frequency === "CUSTOM_MONTHS" ? Number(intervalMonths) || 1 : null,
+      installmentsTotal:
+        installments.trim() && Number(installments) > 0
+          ? Math.floor(Number(installments))
+          : null,
       lastPaidOn: lastPaidOn || null,
       nextDueOn,
       source: base.source ?? null,
@@ -279,6 +289,19 @@ export function ReminderForm({
                 />
               </div>
             )}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="reminder-installments">Ends after (optional)</Label>
+            <Input
+              id="reminder-installments"
+              inputMode="numeric"
+              value={installments}
+              onChange={(e) =>
+                setInstallments(e.target.value.replace(/[^\d]/g, ""))
+              }
+              placeholder="number of payments, blank = forever"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">

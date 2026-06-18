@@ -63,6 +63,11 @@ export function ReminderRow({
     frequencyLabel(reminder.frequency, reminder.interval_months),
   ];
   if (reminder.category) metaSegments.push(reminder.category);
+  if (reminder.installments_total != null) {
+    metaSegments.push(
+      `${reminder.installments_paid}/${reminder.installments_total} paid`,
+    );
+  }
 
   async function handleMarkPaid() {
     setChecking(true);
@@ -82,11 +87,13 @@ export function ReminderRow({
         ),
       {
         success: (data) =>
-          data?.linked
-            ? "Marked paid, linked to the existing payment"
-            : data?.expenseAdded
-              ? "Marked paid, expense added"
-              : "Marked paid, next due updated",
+          data?.completed
+            ? "Last payment, reminder completed"
+            : data?.linked
+              ? "Marked paid, linked to the existing payment"
+              : data?.expenseAdded
+                ? "Marked paid, expense added"
+                : "Marked paid, next due updated",
       },
     );
   }
@@ -94,7 +101,10 @@ export function ReminderRow({
   function markPaidOnly() {
     setPayOptions(null);
     run(() => markReminderPaid(reminder.id, undefined, { skipExpense: true }), {
-      success: "Marked paid, next due updated",
+      success: (data) =>
+        data?.completed
+          ? "Last payment, reminder completed"
+          : "Marked paid, next due updated",
     });
   }
 

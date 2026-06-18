@@ -9,6 +9,7 @@ const reminderFields = {
   category: z.string().trim().max(60).nullable().optional(),
   frequency: z.enum(["WEEKLY", "MONTHLY", "YEARLY", "CUSTOM_MONTHS"]),
   intervalMonths: z.number().int().min(1).max(120).nullable().optional(),
+  installmentsTotal: z.number().int().min(1).max(600).nullable().optional(),
   lastPaidOn: z.string().regex(DATE_RE).nullable().optional(),
   nextDueOn: z.string().regex(DATE_RE, "Invalid date (yyyy-MM-dd)"),
   source: z.string().trim().max(40).nullable().optional(),
