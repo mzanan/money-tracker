@@ -14,11 +14,7 @@ import {
   markAsCashWithdrawal,
   unmarkCashWithdrawal,
 } from "@/lib/actions/cash";
-import {
-  deleteTransaction,
-  updateTransactionTags,
-} from "@/lib/actions/transactions";
-import { SUGGESTED_TAGS } from "@/lib/constants/tags";
+import { deleteTransaction } from "@/lib/actions/transactions";
 import { labelForSource } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
 import { transactionInDisplay } from "@/lib/totals";
@@ -27,30 +23,18 @@ import { useUiStore } from "@/stores/uiStore";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { IconCircle } from "@/components/ui/iconCircle";
 
 import { ReminderButton } from "./reminderButton";
+import { TagEditor } from "./tagEditor";
 import { useCommentEdit } from "./useCommentEdit";
 
 import type { Transaction } from "@/types/db";
 
 export function TransactionRow({ tx }: { tx: Transaction }) {
-  const allTags = [
-    ...SUGGESTED_TAGS,
-    ...tx.tags.filter(
-      (tag) => !SUGGESTED_TAGS.includes(tag as (typeof SUGGESTED_TAGS)[number]),
-    ),
-  ];
   const settings = useSettings();
   const comment = useCommentEdit(tx.id, tx.comment);
   const remove = useServerAction();
-  const setTags = useServerAction();
   const transfer = useServerAction();
   const canDelete = tx.source === "manual";
   const isTransfer = Boolean(tx.transfer_group);
@@ -89,61 +73,14 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
         isSelected && "bg-primary/10 hover:bg-primary/15",
       )}
     >
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          aria-label="Set tags"
-          disabled={txSelectMode || setTags.pending}
-          className={cn(
-            "focus-visible:ring-ring relative shrink-0 cursor-pointer rounded-full focus-visible:ring-2 focus-visible:outline-none",
-            txSelectMode && "pointer-events-none",
-          )}
-        >
-          <Avatar seed={avatarSeed} />
-          {txSelectMode && isSelected && (
-            <span className="bg-primary text-primary-foreground absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full">
-              <CheckIcon className="size-3" />
-            </span>
-          )}
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          {allTags.map((tag) => {
-            const active = tx.tags.includes(tag);
-            return (
-              <DropdownMenuItem
-                key={tag}
-                onClick={() =>
-                  setTags.run(
-                    () =>
-                      updateTransactionTags(
-                        tx.id,
-                        active
-                          ? tx.tags.filter((t) => t !== tag)
-                          : [...tx.tags, tag],
-                      ),
-                    { success: active ? `Removed ${tag}` : `Tagged ${tag}` },
-                  )
-                }
-                className={cn(active && "font-semibold")}
-              >
-                {active && <CheckIcon className="size-3.5" />}
-                {tag}
-              </DropdownMenuItem>
-            );
-          })}
-          {tx.tags.length > 0 && (
-            <DropdownMenuItem
-              onClick={() =>
-                setTags.run(() => updateTransactionTags(tx.id, []), {
-                  success: "Tags cleared",
-                })
-              }
-              className="text-muted-foreground"
-            >
-              Clear tags
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="relative shrink-0">
+        <Avatar seed={avatarSeed} />
+        {txSelectMode && isSelected && (
+          <span className="bg-primary text-primary-foreground absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full">
+            <CheckIcon className="size-3" />
+          </span>
+        )}
+      </div>
       <div className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
           <span className="text-foreground min-w-0 truncate text-sm leading-tight font-medium">
@@ -209,6 +146,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           txSelectMode && "pointer-events-none opacity-30",
         )}
       >
+      <TagEditor txId={tx.id} tags={tx.tags} disabled={txSelectMode} />
       <Button
         variant="ghost"
         size="icon-xs"
