@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { autoSyncIntegrations } from "@/lib/actions/integrations";
 
@@ -21,6 +22,10 @@ export function AutoSync() {
       try {
         const result = await autoSyncIntegrations();
         if (result.ok && result.data && result.data.imported > 0) {
+          const { imported } = result.data;
+          toast.success(
+            `Auto-synced ${imported} ${imported === 1 ? "transaction" : "transactions"}`,
+          );
           router.refresh();
         }
       } finally {
