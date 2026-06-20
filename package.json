@@ -14,7 +14,8 @@
     "backfill:reminderNotes": "tsx scripts/backfillReminderNotes.ts",
     "backfill:reminderDueDates": "tsx scripts/backfillReminderDueDates.ts",
     "dedup:transactions": "tsx scripts/dedupTransactions.ts",
-    "backfill:reminderPaidExpenses": "tsx scripts/backfillReminderPaidExpenses.ts"
+    "backfill:reminderPaidExpenses": "tsx scripts/backfillReminderPaidExpenses.ts",
+    "revert:tagsUnify": "tsx scripts/revertTagsUnify.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.80",
