@@ -1,6 +1,5 @@
 "use server";
 
-import { createHash } from "node:crypto";
 import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -12,7 +11,10 @@ import { isSyncable } from "@/lib/integrations";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
 import { applyAutoCategories } from "@/lib/categorization";
-import { buildTransactionRow } from "@/lib/transactions";
+import {
+  buildTransactionRow,
+  transactionContentHash,
+} from "@/lib/transactions";
 
 import type { ActionResult } from "./transactions";
 
@@ -55,17 +57,6 @@ export async function getLastImportDate(
     .then((rows) => rows[0]);
 
   return { ok: true, data: { date: row?.occurred_on ?? null } };
-}
-
-function hashRow(row: CsvRow): string {
-  const key = [
-    row.occurredOn,
-    row.amount.toString(),
-    row.currency,
-    row.description ?? "",
-    row.kind,
-  ].join("|");
-  return createHash("sha256").update(key).digest("hex").slice(0, 32);
 }
 
 export async function importCsvRows(
@@ -133,7 +124,7 @@ export async function importCsvRows(
     const providedId = row.externalId?.trim();
     const externalId = providedId
       ? `csv:${providedId.toLowerCase().slice(0, 64)}`
-      : hashRow({ ...row, amount });
+      : transactionContentHash({ ...row, amount }).slice(0, 32);
     const built = buildTransactionRow(
       {
         userId: user.id,

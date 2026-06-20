@@ -1,6 +1,25 @@
+import { createHash } from "node:crypto";
+
 import { snapshotRatesFor } from "@/lib/currency";
 import { dedupeTags } from "@/lib/tags";
 import type { FxRates, TransactionInsert } from "@/types/db";
+
+export function transactionContentHash(row: {
+  occurredOn: string;
+  amount: number;
+  currency: string;
+  description: string | null;
+  kind: string;
+}): string {
+  const key = [
+    row.occurredOn,
+    row.amount.toString(),
+    row.currency,
+    row.description ?? "",
+    row.kind,
+  ].join("|");
+  return createHash("sha256").update(key).digest("hex");
+}
 
 export interface BuildTransactionRowInput {
   userId: string;

@@ -1,6 +1,5 @@
 "use server";
 
-import { createHash } from "node:crypto";
 import { and, eq, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
@@ -14,7 +13,10 @@ import { sourceForApp } from "@/lib/ingest/notification";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
 import { applyAutoCategories } from "@/lib/categorization";
-import { buildTransactionRow } from "@/lib/transactions";
+import {
+  buildTransactionRow,
+  transactionContentHash,
+} from "@/lib/transactions";
 
 import type { ActionResult } from "./transactions";
 
@@ -34,23 +36,6 @@ export interface ScreenshotRow {
   category: string | null;
   app: string | null;
   replaceId: string | null;
-}
-
-function hashRow(row: {
-  occurredOn: string;
-  amount: number;
-  currency: string;
-  description: string | null;
-  kind: string;
-}): string {
-  const key = [
-    row.occurredOn,
-    row.amount.toString(),
-    row.currency,
-    row.description ?? "",
-    row.kind,
-  ].join("|");
-  return createHash("sha256").update(key).digest("hex").slice(0, 24);
 }
 
 async function nextExternalId(
@@ -138,13 +123,13 @@ export async function importScreenshotRows(input: {
     if (occurredOn > today) occurredOn = today;
 
     const source = sourceForApp(row.app);
-    const baseHash = hashRow({
+    const baseHash = transactionContentHash({
       occurredOn,
       amount,
       currency: row.currency,
       description: row.description,
       kind: row.kind,
-    });
+    }).slice(0, 24);
     const externalId = await nextExternalId(user.id, source, baseHash);
 
     const built = buildTransactionRow(
