@@ -6,6 +6,7 @@ import {
   BellPlusIcon,
   CheckIcon,
   EllipsisIcon,
+  TagIcon,
   Trash2Icon,
 } from "lucide-react";
 
@@ -52,6 +53,7 @@ export function TransactionRow({
   const remove = useServerAction();
   const transfer = useServerAction();
   const [reminderOpen, setReminderOpen] = useState(false);
+  const [tagsOpen, setTagsOpen] = useState(false);
   const canDelete = kindOfSource(tx.source) !== "api";
   const isTransfer = Boolean(tx.transfer_group);
   const canMarkWithdrawal =
@@ -136,12 +138,6 @@ export function TransactionRow({
           txSelectMode && "pointer-events-none opacity-30",
         )}
       >
-        <TagEditor
-          txId={tx.id}
-          tags={tx.tags}
-          disabled={txSelectMode}
-          knownTags={knownTags}
-        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -154,6 +150,10 @@ export function TransactionRow({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => setTagsOpen(true)}>
+              <TagIcon />
+              Edit tags
+            </DropdownMenuItem>
             {(canMarkWithdrawal || canUnmarkWithdrawal) && (
               <DropdownMenuItem
                 onSelect={() =>
@@ -200,6 +200,13 @@ export function TransactionRow({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <TagEditor
+        txId={tx.id}
+        tags={tx.tags}
+        knownTags={knownTags}
+        open={tagsOpen}
+        onOpenChange={setTagsOpen}
+      />
       <ReminderForm
         open={reminderOpen}
         onOpenChange={setReminderOpen}

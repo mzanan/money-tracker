@@ -1,37 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2Icon, TagIcon, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 
 import { useServerAction } from "@/hooks/useServerAction";
 import { updateTransactionTags } from "@/lib/actions/transactions";
 import { canonicalTag, tagHue, tagKey } from "@/lib/tags";
-import { cn } from "@/lib/utils";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 import type { CSSProperties } from "react";
 
 export function TagEditor({
   txId,
   tags,
-  disabled,
   knownTags = [],
+  open,
+  onOpenChange,
 }: {
   txId: string;
   tags: string[];
-  disabled?: boolean;
   knownTags?: string[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const setTags = useServerAction();
   const [input, setInput] = useState("");
-  const hasTags = tags.length > 0;
 
   function commit(next: string[]) {
     setTags.run(() => updateTransactionTags(txId, next));
@@ -52,30 +53,18 @@ export function TagEditor({
 
   const suggestions = knownTags
     .filter((t) => !tags.some((x) => tagKey(x) === tagKey(t)))
-    .slice(0, 10);
+    .slice(0, 12);
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          disabled={disabled || setTags.pending}
-          aria-label={hasTags ? "Edit tags" : "Add tags"}
-          className={cn(
-            "hover:text-foreground -mr-0.5",
-            hasTags ? "text-foreground" : "text-muted-foreground",
-          )}
-        >
-          {setTags.pending ? (
-            <Loader2Icon className="animate-spin" />
-          ) : (
-            <TagIcon />
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-64">
-        {hasTags && (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Tags</DialogTitle>
+          <DialogDescription className="sr-only">
+            Add or remove tags for this transaction.
+          </DialogDescription>
+        </DialogHeader>
+        {tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {tags.map((tag) => (
               <button
@@ -103,7 +92,6 @@ export function TagEditor({
           }}
           placeholder="Add a tag…"
           maxLength={40}
-          className="h-9"
         />
         {suggestions.length > 0 && (
           <div className="flex flex-wrap gap-1">
@@ -120,7 +108,7 @@ export function TagEditor({
             ))}
           </div>
         )}
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   );
 }
