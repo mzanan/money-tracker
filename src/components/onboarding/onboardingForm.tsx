@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowLeftIcon, Loader2Icon, WalletIcon } from "lucide-react";
 
-import { getDeviceTimezone } from "@/hooks/useTimezone";
 import { saveOnboarding } from "@/lib/actions/settings";
+import { getDeviceTimezone } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";

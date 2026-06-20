@@ -6,8 +6,8 @@ import { Loader2Icon } from "lucide-react";
 
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
-import { getDeviceTimezone } from "@/hooks/useTimezone";
 import { updateSettings } from "@/lib/actions/settings";
+import { getDeviceTimezone } from "@/lib/dates";
 
 import { Button } from "@/components/ui/button";
 import {

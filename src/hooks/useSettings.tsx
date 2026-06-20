@@ -2,9 +2,9 @@
 
 import { createContext, useContext } from "react";
 
-import type { UserSettings } from "@/types/db";
+import { getDeviceTimezone } from "@/lib/dates";
 
-import { getDeviceTimezone } from "./useTimezone";
+import type { UserSettings } from "@/types/db";
 
 const SettingsContext = createContext<UserSettings | null>(null);
 
