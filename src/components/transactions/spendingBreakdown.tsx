@@ -10,6 +10,7 @@ import { excludeCanceledPairs } from "@/lib/cancellations";
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import { formatMoney } from "@/lib/currency";
 import { placeOf } from "@/lib/places";
+import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { transactionInDisplay } from "@/lib/totals";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { HIDDEN_AMOUNT } from "./amountsToggle";
 import { PlacesDialog } from "./placesDialog";
 
 import type { Location, Transaction } from "@/types/db";

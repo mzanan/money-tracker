@@ -7,13 +7,13 @@ import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useSettings } from "@/hooks/useSettings";
 import { formatMoney } from "@/lib/currency";
 import { formatYearMonthLong } from "@/lib/dates";
+import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
 import { SpendingBreakdown } from "@/components/transactions/spendingBreakdown";
 import { MonthView } from "@/components/transactions/monthView";
-import { HIDDEN_AMOUNT } from "@/components/transactions/amountsToggle";
 
 import { useDashboardView } from "./useDashboardView";
 

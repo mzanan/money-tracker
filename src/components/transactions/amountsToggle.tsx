@@ -5,8 +5,6 @@ import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 
-export const HIDDEN_AMOUNT = "••••";
-
 export function AmountsToggle() {
   const { hideAmounts, toggleHideAmounts } = useHideAmounts();
 

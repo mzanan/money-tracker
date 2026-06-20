@@ -5,9 +5,10 @@ import { format, parseISO } from "date-fns";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useSettings } from "@/hooks/useSettings";
 import { formatMoney } from "@/lib/currency";
+import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 
-import { AmountsToggle, HIDDEN_AMOUNT } from "./amountsToggle";
+import { AmountsToggle } from "./amountsToggle";
 
 import type { useDaySpend } from "./useDaySpend";
 

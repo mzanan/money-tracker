@@ -21,12 +21,13 @@ import { useSettings } from "@/hooks/useSettings";
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { formatMoney } from "@/lib/currency";
 import { formatYearMonthShort } from "@/lib/dates";
+import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { periodTotals } from "@/lib/totals";
 import { cn } from "@/lib/utils";
 
 import type { Transaction } from "@/types/db";
 
-import { AmountsToggle, HIDDEN_AMOUNT } from "./amountsToggle";
+import { AmountsToggle } from "./amountsToggle";
 import { DaySpendView } from "./daySpendView";
 
 import type { useDaySpend } from "./useDaySpend";
