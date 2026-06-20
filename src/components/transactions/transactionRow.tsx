@@ -47,7 +47,9 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const remove = useServerAction();
   const transfer = useServerAction();
   const [reminderOpen, setReminderOpen] = useState(false);
+  const [reminderMounted, setReminderMounted] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
+  const [tagsMounted, setTagsMounted] = useState(false);
   const canDelete = kindOfSource(tx.source) !== "api";
   const isTransfer = Boolean(tx.transfer_group);
   const canMarkWithdrawal =
@@ -69,6 +71,17 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const sign = tx.kind === "income" ? "+" : "-";
   const showConverted = !sameAsBase && inDisplay !== null;
   const sourceLabel = labelForSource(tx.source);
+
+  function openTags() {
+    setTagsMounted(true);
+    setTagsOpen(true);
+  }
+
+  function openReminder() {
+    setReminderMounted(true);
+    setReminderOpen(true);
+  }
+
   const avatarSeed = tx.tags[0] || sourceLabel;
   const reminderTitle = tx.tags[0] || sourceLabel;
   const description = tx.note?.trim();
@@ -144,7 +157,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => setTagsOpen(true)}>
+            <DropdownMenuItem onSelect={openTags}>
               <TagIcon />
               Edit tags
             </DropdownMenuItem>
@@ -173,7 +186,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
                 {canUnmarkWithdrawal ? "Undo cash withdrawal" : "Mark as cash"}
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onSelect={() => setReminderOpen(true)}>
+            <DropdownMenuItem onSelect={openReminder}>
               <BellPlusIcon />
               Set reminder
             </DropdownMenuItem>
@@ -194,28 +207,32 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <TagEditor
-        txId={tx.id}
-        tags={tx.tags}
-        open={tagsOpen}
-        onOpenChange={setTagsOpen}
-      />
-      <ReminderForm
-        open={reminderOpen}
-        onOpenChange={setReminderOpen}
-        title="Set a reminder"
-        seed={{
-          label: reminderTitle,
-          amount: tx.amount_original,
-          currency: tx.currency_original,
-          category: tx.tags[0] ?? null,
-          source: tx.source,
-          frequency: "MONTHLY",
-          lastPaidOn: tx.occurred_on,
-          nextDueOn: computeNextDue(tx.occurred_on, "MONTHLY"),
-          note: null,
-        }}
-      />
+      {tagsMounted && (
+        <TagEditor
+          txId={tx.id}
+          tags={tx.tags}
+          open={tagsOpen}
+          onOpenChange={setTagsOpen}
+        />
+      )}
+      {reminderMounted && (
+        <ReminderForm
+          open={reminderOpen}
+          onOpenChange={setReminderOpen}
+          title="Set a reminder"
+          seed={{
+            label: reminderTitle,
+            amount: tx.amount_original,
+            currency: tx.currency_original,
+            category: tx.tags[0] ?? null,
+            source: tx.source,
+            frequency: "MONTHLY",
+            lastPaidOn: tx.occurred_on,
+            nextDueOn: computeNextDue(tx.occurred_on, "MONTHLY"),
+            note: null,
+          }}
+        />
+      )}
     </div>
   );
 }
