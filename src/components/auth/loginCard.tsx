@@ -9,7 +9,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,10 +44,9 @@ export function LoginCard() {
     <div className="flex flex-1 items-center justify-center p-4">
       <Card className="w-full max-w-sm gap-6 p-6">
         <CardHeader className="items-center gap-2 p-0 text-center">
-          <div className="bg-primary text-primary-foreground mb-1 flex size-12 items-center justify-center rounded-2xl">
+          <div className="bg-primary text-primary-foreground mx-auto mb-1 flex size-12 items-center justify-center rounded-2xl">
             <WalletIcon className="size-6" />
           </div>
-          <CardTitle className="text-xl">Money</CardTitle>
           <CardDescription className="text-sm">
             Track every coin across cash, exchange and bank exports.
           </CardDescription>
