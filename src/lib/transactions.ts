@@ -1,4 +1,5 @@
 import { snapshotRatesFor } from "@/lib/currency";
+import { dedupeTags } from "@/lib/tags";
 import type { FxRates, TransactionInsert } from "@/types/db";
 
 export interface BuildTransactionRowInput {
@@ -20,17 +21,7 @@ export interface BuildContext {
 }
 
 export function normalizeTags(tags: string[] | null | undefined): string[] {
-  if (!tags) return [];
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const tag of tags) {
-    const trimmed = tag.trim();
-    const key = trimmed.toLowerCase();
-    if (!trimmed || seen.has(key)) continue;
-    seen.add(key);
-    out.push(trimmed);
-  }
-  return out;
+  return dedupeTags(tags);
 }
 
 export function buildTransactionRow(

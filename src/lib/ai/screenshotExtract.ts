@@ -2,7 +2,6 @@ import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
 
-import { SUGGESTED_TAGS } from "@/lib/constants/tags";
 
 const visionModel = google(
   process.env.AI_VISION_MODEL ?? "gemini-2.5-flash",
@@ -38,10 +37,10 @@ const DetectedTransactionSchema = z.object({
     .nullable()
     .describe("Merchant / payee / payer / category. null if not shown."),
   category: z
-    .enum(SUGGESTED_TAGS)
+    .string()
     .nullable()
     .describe(
-      "Best matching spending category given the merchant and items (a coffee shop receipt = Coffee, a restaurant = Food, a supermarket = Groceries, a taxi = Transport). null if unclear.",
+      "One short, general spending category, one or two words in Title Case (e.g. Coffee, Food, Groceries, Transport). Reuse common categories so the same kind of spend stays consistent. null if unclear.",
     ),
   confidence: z
     .enum(["high", "medium", "low"])
@@ -124,6 +123,11 @@ export async function extractFromImage(
     model: visionModel,
     schema: SCHEMA,
     system: prompt.system,
+    providerOptions: {
+      google: {
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    },
     messages: [
       {
         role: "user",

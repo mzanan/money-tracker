@@ -1,7 +1,7 @@
 import { generateObject } from "ai";
 import { z } from "zod";
 
-import { SUGGESTED_TAGS } from "@/lib/constants/tags";
+import { canonicalTag } from "@/lib/tags";
 
 import { chatModel } from "./provider";
 
@@ -10,22 +10,21 @@ const SCHEMA = z.object({
     z.object({
       merchant: z.string().describe("The merchant name, exactly as given"),
       category: z
-        .enum([...SUGGESTED_TAGS, "unknown"])
-        .describe('One category, or "unknown" when it cannot be inferred'),
+        .string()
+        .nullable()
+        .describe(
+          "One short, general spending category (one or two words, Title Case), or null when it cannot be inferred",
+        ),
     }),
   ),
 });
 
-const SYSTEM = `You classify merchant names from bank statements and wallet histories into one generic spending category.
-
-Categories: ${SUGGESTED_TAGS.join(", ")}.
+const SYSTEM = `You classify a merchant name into one short, general spending category.
 
 Rules:
-- Merchants can be from any country (Vietnam, Japan, Italy, Colombia, anywhere) and any language.
-- Convenience stores, supermarkets and minimarts are Groceries. Restaurants, fast food and bars are Food. Coffee shops are Coffee.
-- Ride hailing, public transit and tolls are Transport. Airlines are Flights. Hotels, hostels and booking platforms are Stay.
-- ATM and cash withdrawals are Cash. Subscriptions and digital services are Software. Pharmacies and clinics are Health.
-- Use "unknown" for payment processors, generic wallet labels (e.g. a wallet's own pay feature), person names, or anything ambiguous. Never guess.
+- Merchants can be from any country or language.
+- Pick a short, general category in English, Title Case, one or two words. Reuse the same category for the same kind of merchant so they stay consistent across the list.
+- Return null for payment processors, generic wallet labels, person names, or anything you cannot confidently classify. Never guess.
 - Return one assignment per input merchant, with the merchant string unchanged.`;
 
 export async function aiCategorizeMerchants(
@@ -42,7 +41,7 @@ export async function aiCategorizeMerchants(
   for (const merchant of merchants) out.set(merchant, null);
   for (const a of result.object.assignments) {
     if (!out.has(a.merchant)) continue;
-    out.set(a.merchant, a.category === "unknown" ? null : a.category);
+    out.set(a.merchant, a.category ? canonicalTag(a.category) : null);
   }
   return out;
 }

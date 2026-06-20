@@ -1,4 +1,4 @@
-const MAX_DIMENSION = 2000;
+const MAX_DIMENSION = 1500;
 const OUTPUT_TYPE = "image/jpeg";
 const OUTPUT_QUALITY = 0.85;
 
