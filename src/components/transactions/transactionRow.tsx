@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import {
   BanknoteIcon,
+  BellPlusIcon,
   CheckIcon,
-  Loader2Icon,
+  EllipsisIcon,
   Trash2Icon,
 } from "lucide-react";
 
@@ -16,6 +18,7 @@ import {
 import { deleteTransaction } from "@/lib/actions/transactions";
 import { kindOfSource, labelForSource } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
+import { computeNextDue } from "@/lib/reminders";
 import { tagHue } from "@/lib/tags";
 import { transactionInDisplay } from "@/lib/totals";
 import { cn } from "@/lib/utils";
@@ -23,9 +26,15 @@ import { useUiStore } from "@/stores/uiStore";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { IconCircle } from "@/components/ui/iconCircle";
+import { ReminderForm } from "@/components/reminders/reminderForm";
 
-import { ReminderButton } from "./reminderButton";
 import { TagChips } from "./tagChips";
 import { TagEditor } from "./tagEditor";
 
@@ -42,6 +51,7 @@ export function TransactionRow({
   const settings = useSettings();
   const remove = useServerAction();
   const transfer = useServerAction();
+  const [reminderOpen, setReminderOpen] = useState(false);
   const canDelete = kindOfSource(tx.source) !== "api";
   const isTransfer = Boolean(tx.transfer_group);
   const canMarkWithdrawal =
@@ -122,7 +132,7 @@ export function TransactionRow({
       </div>
       <div
         className={cn(
-          "flex items-center gap-3",
+          "flex items-center gap-1",
           txSelectMode && "pointer-events-none opacity-30",
         )}
       >
@@ -132,69 +142,80 @@ export function TransactionRow({
           disabled={txSelectMode}
           knownTags={knownTags}
         />
-        {(canMarkWithdrawal || canUnmarkWithdrawal) && (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={() =>
-              transfer.run(
-                () =>
-                  canUnmarkWithdrawal
-                    ? unmarkCashWithdrawal(tx.id)
-                    : markAsCashWithdrawal(tx.id),
-                canUnmarkWithdrawal
-                  ? {
-                      confirm: "Undo the cash withdrawal?",
-                      success: "Withdrawal undone",
-                    }
-                  : {
-                      confirm:
-                        "Mark as a cash withdrawal? It moves the amount to your cash balance and leaves it out of spending totals.",
-                      success: "Moved to cash",
-                    },
-              )
-            }
-            disabled={transfer.pending}
-            aria-label={
-              canUnmarkWithdrawal
-                ? "Undo cash withdrawal"
-                : "Mark as cash withdrawal"
-            }
-            className={cn(
-              "hover:text-foreground -mr-0.5",
-              canUnmarkWithdrawal ? "text-foreground" : "text-muted-foreground",
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label="More actions"
+              className="text-muted-foreground hover:text-foreground -mr-0.5"
+            >
+              <EllipsisIcon />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {(canMarkWithdrawal || canUnmarkWithdrawal) && (
+              <DropdownMenuItem
+                onSelect={() =>
+                  transfer.run(
+                    () =>
+                      canUnmarkWithdrawal
+                        ? unmarkCashWithdrawal(tx.id)
+                        : markAsCashWithdrawal(tx.id),
+                    canUnmarkWithdrawal
+                      ? {
+                          confirm: "Undo the cash withdrawal?",
+                          success: "Withdrawal undone",
+                        }
+                      : {
+                          confirm:
+                            "Mark as a cash withdrawal? It moves the amount to your cash balance and leaves it out of spending totals.",
+                          success: "Moved to cash",
+                        },
+                  )
+                }
+              >
+                <BanknoteIcon />
+                {canUnmarkWithdrawal ? "Undo cash withdrawal" : "Mark as cash"}
+              </DropdownMenuItem>
             )}
-          >
-            {transfer.pending ? (
-              <Loader2Icon className="animate-spin" />
-            ) : (
-              <BanknoteIcon />
+            <DropdownMenuItem onSelect={() => setReminderOpen(true)}>
+              <BellPlusIcon />
+              Set reminder
+            </DropdownMenuItem>
+            {canDelete && (
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onSelect={() =>
+                  remove.run(() => deleteTransaction(tx.id), {
+                    confirm: "Delete this transaction?",
+                    success: "Deleted",
+                  })
+                }
+              >
+                <Trash2Icon />
+                Delete
+              </DropdownMenuItem>
             )}
-          </Button>
-        )}
-        <ReminderButton tx={tx} defaultTitle={reminderTitle} />
-        {canDelete && (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={() =>
-              remove.run(() => deleteTransaction(tx.id), {
-                confirm: "Delete this transaction?",
-                success: "Deleted",
-              })
-            }
-            disabled={remove.pending}
-            aria-label="Delete transaction"
-            className="text-muted-foreground hover:text-destructive -mr-0.5"
-          >
-            {remove.pending ? (
-              <Loader2Icon className="animate-spin" />
-            ) : (
-              <Trash2Icon />
-            )}
-          </Button>
-        )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+      <ReminderForm
+        open={reminderOpen}
+        onOpenChange={setReminderOpen}
+        title="Set a reminder"
+        seed={{
+          label: reminderTitle,
+          amount: tx.amount_original,
+          currency: tx.currency_original,
+          category: tx.tags[0] ?? null,
+          source: tx.source,
+          frequency: "MONTHLY",
+          lastPaidOn: tx.occurred_on,
+          nextDueOn: computeNextDue(tx.occurred_on, "MONTHLY"),
+          note: null,
+        }}
+      />
     </div>
   );
 }
