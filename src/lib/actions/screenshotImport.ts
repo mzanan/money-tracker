@@ -3,6 +3,7 @@
 import { createHash } from "node:crypto";
 import { and, eq, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 
 import { isSupportedCurrency } from "@/config/currencies";
 import { roundForCurrency } from "@/lib/currency";
@@ -16,6 +17,13 @@ import { applyAutoCategories } from "@/lib/categorization";
 import { buildTransactionRow } from "@/lib/transactions";
 
 import type { ActionResult } from "./transactions";
+
+const SHARE_COOKIE = "mt_share_payload";
+
+export async function clearSharePayload(): Promise<void> {
+  const jar = await cookies();
+  jar.delete(SHARE_COOKIE);
+}
 
 export interface ScreenshotRow {
   kind: "income" | "expense";

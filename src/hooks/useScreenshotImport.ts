@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import type { DetectedTransaction } from "@/lib/ai/screenshotExtract";
 import {
+  clearSharePayload,
   importScreenshotRows,
   previewCandidatesAction,
 } from "@/lib/actions/screenshotImport";
@@ -15,6 +16,7 @@ import {
 } from "@/lib/imageExtract";
 
 export interface EditableItem {
+  id: string;
   selected: boolean;
   kind: "income" | "expense";
   amount: string;
@@ -39,6 +41,7 @@ export interface CandidateMatch {
 
 function detectedToEditable(detected: DetectedTransaction): EditableItem {
   return {
+    id: crypto.randomUUID(),
     selected: true,
     kind: detected.kind,
     amount: detected.amount.toString(),
@@ -58,16 +61,22 @@ export function useScreenshotImport({
   initialCandidates,
   mode = "screenshot",
   onDone,
+  consumeShareCookie = false,
 }: {
   initialItems: DetectedTransaction[] | null;
   initialIgnored: number;
   initialCandidates: Record<number, CandidateMatch[]>;
   mode?: ImageImportMode;
   onDone?: () => void;
+  consumeShareCookie?: boolean;
 }) {
   const router = useRouter();
   const [extracting, startExtract] = useTransition();
   const [pending, startCommit] = useTransition();
+
+  useEffect(() => {
+    if (consumeShareCookie) void clearSharePayload();
+  }, [consumeShareCookie]);
 
   const [items, setItems] = useState<EditableItem[]>(
     initialItems?.map(detectedToEditable) ?? [],

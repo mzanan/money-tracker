@@ -19,6 +19,7 @@ interface Props {
   initialCandidates: Record<number, CandidateMatch[]>;
   mode?: ImageImportMode;
   onDone?: () => void;
+  consumeShareCookie?: boolean;
 }
 
 export function ScreenshotImporter({
@@ -27,6 +28,7 @@ export function ScreenshotImporter({
   initialCandidates,
   mode = "screenshot",
   onDone,
+  consumeShareCookie = false,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {
@@ -48,6 +50,7 @@ export function ScreenshotImporter({
     initialCandidates,
     mode,
     onDone,
+    consumeShareCookie,
   });
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -116,7 +119,7 @@ export function ScreenshotImporter({
           <ul className="grid gap-3">
             {items.map((item, index) => (
               <DetectedItemCard
-                key={index}
+                key={item.id}
                 index={index}
                 item={item}
                 candidates={candidatesByIndex[index] ?? []}

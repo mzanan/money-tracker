@@ -54,6 +54,7 @@ export default async function ScreenshotImportPage() {
   const user = await requireUser();
   const jar = await cookies();
   const raw = jar.get(SHARE_COOKIE);
+  const fromShare = raw?.value != null;
 
   let initial: SharePayload | null = null;
   if (raw?.value) {
@@ -62,7 +63,6 @@ export default async function ScreenshotImportPage() {
     } catch {
       initial = null;
     }
-    jar.delete(SHARE_COOKIE);
   }
 
   let initialCandidates: Record<number, CandidateMatch[]> = {};
@@ -104,6 +104,7 @@ export default async function ScreenshotImportPage() {
         initialItems={initial?.items ?? null}
         initialIgnored={initial?.ignored ?? 0}
         initialCandidates={initialCandidates}
+        consumeShareCookie={fromShare}
       />
     </div>
   );
