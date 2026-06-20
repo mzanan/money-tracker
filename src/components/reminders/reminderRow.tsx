@@ -56,7 +56,7 @@ export function ReminderRow({
     diff < 0
       ? "text-destructive"
       : diff <= 7
-        ? "text-amber-600 dark:text-amber-400"
+        ? "text-warning"
         : "text-muted-foreground";
 
   const metaSegments = [

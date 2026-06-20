@@ -274,8 +274,8 @@ function Mini({
         className={cn(
           "flex size-8 items-center justify-center rounded-full",
           tone === "income"
-            ? "bg-emerald-500/15 text-income"
-            : "bg-rose-500/15 text-expense",
+            ? "bg-income text-income"
+            : "bg-expense text-expense",
         )}
       >
         {icon}
