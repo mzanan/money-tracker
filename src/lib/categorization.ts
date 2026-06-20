@@ -76,10 +76,17 @@ export async function applyAutoCategories(userId: string): Promise<number> {
     }
   }
 
-  let updated = 0;
+  const idsByCategory = new Map<string, string[]>();
   for (const [merchant, txIds] of txsByMerchant) {
     const category = mapping.get(merchant);
     if (!category) continue;
+    const list = idsByCategory.get(category);
+    if (list) list.push(...txIds);
+    else idsByCategory.set(category, [...txIds]);
+  }
+
+  let updated = 0;
+  for (const [category, txIds] of idsByCategory) {
     await db
       .update(transactions)
       .set({ tags: [category] })
