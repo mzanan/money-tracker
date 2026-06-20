@@ -34,6 +34,11 @@ export async function aiCategorizeMerchants(
     model: chatModel,
     schema: SCHEMA,
     system: SYSTEM,
+    providerOptions: {
+      google: {
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    },
     prompt: `Classify these merchants:\n${merchants.map((m) => `- ${m}`).join("\n")}`,
   });
 

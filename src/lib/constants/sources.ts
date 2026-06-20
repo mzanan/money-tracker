@@ -10,7 +10,9 @@ export const SOURCE_LABELS: Record<string, string> = {
   receipt: "Receipt",
 };
 
-const API_SOURCES: ReadonlySet<string> = new Set<IntegrationProvider>(["bybit"]);
+export const API_SOURCES: ReadonlySet<string> = new Set<IntegrationProvider>([
+  "bybit",
+]);
 
 export function labelForSource(source: string): string {
   return (

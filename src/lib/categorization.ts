@@ -1,6 +1,7 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
 
 import { aiCategorizeMerchants } from "@/lib/ai/categorizeMerchants";
+import { API_SOURCES } from "@/lib/constants/sources";
 import { db } from "@/lib/db";
 import { merchant_categories, transactions } from "@/lib/db/schema";
 
@@ -17,6 +18,7 @@ export async function applyAutoCategories(userId: string): Promise<number> {
       and(
         eq(transactions.user_id, userId),
         sql`json_array_length(${transactions.tags}) = 0`,
+        notInArray(transactions.source, Array.from(API_SOURCES)),
       ),
     );
 
@@ -65,7 +67,9 @@ export async function applyAutoCategories(userId: string): Promise<number> {
             source: "ai" as const,
           })),
         )
-        .onConflictDoNothing();
+        .onConflictDoNothing({
+          target: [merchant_categories.user_id, merchant_categories.merchant],
+        });
       for (const [merchant, category] of fresh) {
         mapping.set(merchant, category);
       }
