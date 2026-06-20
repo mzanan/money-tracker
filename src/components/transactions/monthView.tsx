@@ -102,7 +102,7 @@ export function MonthView({
           className="text-muted-foreground hover:text-foreground"
         >
           <ListChecksIcon />
-          {txSelectMode ? "Done" : "Select"}
+          {txSelectMode ? "Done" : "Merge duplicates"}
         </Button>
       </div>
       {shown.map((day) => (

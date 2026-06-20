@@ -22,7 +22,6 @@ import { Surface } from "@/components/ui/surface";
 
 interface Props {
   recentTags: string[];
-  recentMerchants: string[];
 }
 
 type Kind = "expense" | "income";
@@ -34,13 +33,12 @@ function parseAmount(value: string): number | null {
   return Number.isFinite(num) && num > 0 ? num : null;
 }
 
-export function QuickAddForm({ recentTags, recentMerchants }: Props) {
+export function QuickAddForm({ recentTags }: Props) {
   const settings = useSettings();
   const timezone = useTimezone();
   const ratesQuery = useRates();
   const { run, pending } = useServerAction();
   const tagsId = useId();
-  const merchantsId = useId();
 
   const lastCurrency = useUiStore((state) => state.lastCurrency);
   const setLastCurrency = useUiStore((state) => state.setLastCurrency);
@@ -54,7 +52,6 @@ export function QuickAddForm({ recentTags, recentMerchants }: Props) {
   const [amount, setAmount] = useState("");
   const [currencyState, setCurrency] = useState(initialCurrency);
   const [tagsInput, setTagsInput] = useState("");
-  const [note, setNote] = useState("");
   const [date, setDate] = useState(() => todayInTz(timezone));
   const [showExtras, setShowExtras] = useState(false);
 
@@ -102,7 +99,7 @@ export function QuickAddForm({ recentTags, recentMerchants }: Props) {
             .split(",")
             .map((tag) => tag.trim())
             .filter(Boolean),
-          note: note.trim() || null,
+          note: null,
           occurredOn: date,
         }),
       {
@@ -110,7 +107,6 @@ export function QuickAddForm({ recentTags, recentMerchants }: Props) {
         onSuccess: () => {
           setAmount("");
           setTagsInput("");
-          setNote("");
           setLastCurrency(currency);
         },
       },
@@ -190,7 +186,7 @@ export function QuickAddForm({ recentTags, recentMerchants }: Props) {
               showExtras && "rotate-180",
             )}
           />
-          {showExtras ? "Hide details" : "Add tags, note, date"}
+          {showExtras ? "Hide details" : "Add tags, date"}
         </button>
 
         {showExtras && (
@@ -212,28 +208,6 @@ export function QuickAddForm({ recentTags, recentMerchants }: Props) {
                 <datalist id={tagsId}>
                   {recentTags.map((tag) => (
                     <option key={tag} value={tag} />
-                  ))}
-                </datalist>
-              )}
-            </div>
-
-            <div className="grid gap-1.5">
-              <Label htmlFor="note" className="text-eyebrow">
-                Note
-              </Label>
-              <Input
-                id="note"
-                list={merchantsId}
-                placeholder="merchant or details"
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                maxLength={280}
-                className="bg-surface-2 h-9 border-none"
-              />
-              {recentMerchants.length > 0 && (
-                <datalist id={merchantsId}>
-                  {recentMerchants.map((merchant) => (
-                    <option key={merchant} value={merchant} />
                   ))}
                 </datalist>
               )}

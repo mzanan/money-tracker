@@ -27,7 +27,7 @@ export function ReminderButton({ tx, defaultTitle }: Props) {
         frequency: "MONTHLY",
         lastPaidOn: tx.occurred_on,
         nextDueOn: computeNextDue(tx.occurred_on, "MONTHLY"),
-        note: tx.comment,
+        note: null,
       }}
       trigger={
         <Button

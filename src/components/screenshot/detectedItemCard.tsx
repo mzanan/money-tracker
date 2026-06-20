@@ -75,7 +75,7 @@ export function DetectedItemCard({
               )}
             </div>
             {item.description && (
-              <p className="text-foreground mt-1 text-sm font-medium">
+              <p className="text-foreground mt-1 text-sm font-medium break-words">
                 {item.description}
               </p>
             )}
@@ -141,14 +141,6 @@ export function DetectedItemCard({
             />
           </Field>
         </div>
-
-        <Field label="Your note (optional)">
-          <Input
-            value={item.comment}
-            onChange={(e) => onChange({ comment: e.target.value })}
-            placeholder="Add a personal comment"
-          />
-        </Field>
 
         {candidates.length > 0 && (
           <CandidateBlock

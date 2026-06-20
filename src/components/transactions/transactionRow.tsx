@@ -4,7 +4,6 @@ import {
   BanknoteIcon,
   CheckIcon,
   Loader2Icon,
-  StickyNoteIcon,
   Trash2Icon,
 } from "lucide-react";
 
@@ -15,8 +14,9 @@ import {
   unmarkCashWithdrawal,
 } from "@/lib/actions/cash";
 import { deleteTransaction } from "@/lib/actions/transactions";
-import { labelForSource } from "@/lib/constants/sources";
+import { kindOfSource, labelForSource } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
+import { tagHue } from "@/lib/tags";
 import { transactionInDisplay } from "@/lib/totals";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/uiStore";
@@ -26,17 +26,23 @@ import { Button } from "@/components/ui/button";
 import { IconCircle } from "@/components/ui/iconCircle";
 
 import { ReminderButton } from "./reminderButton";
+import { TagChips } from "./tagChips";
 import { TagEditor } from "./tagEditor";
-import { useCommentEdit } from "./useCommentEdit";
 
 import type { Transaction } from "@/types/db";
+import type { CSSProperties } from "react";
 
-export function TransactionRow({ tx }: { tx: Transaction }) {
+export function TransactionRow({
+  tx,
+  knownTags = [],
+}: {
+  tx: Transaction;
+  knownTags?: string[];
+}) {
   const settings = useSettings();
-  const comment = useCommentEdit(tx.id, tx.comment);
   const remove = useServerAction();
   const transfer = useServerAction();
-  const canDelete = tx.source === "manual";
+  const canDelete = kindOfSource(tx.source) !== "api";
   const isTransfer = Boolean(tx.transfer_group);
   const canMarkWithdrawal =
     tx.kind === "expense" && tx.source !== "manual" && !isTransfer;
@@ -57,12 +63,9 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const sign = tx.kind === "income" ? "+" : "-";
   const showConverted = !sameAsBase && inDisplay !== null;
   const sourceLabel = labelForSource(tx.source);
-
-  const identifier = [sourceLabel, ...tx.tags].join(" · ");
-
-  const description = tx.note?.trim();
   const avatarSeed = tx.tags[0] || sourceLabel;
-  const reminderTitle = description || identifier;
+  const reminderTitle = tx.tags[0] || sourceLabel;
+  const description = tx.note?.trim();
 
   return (
     <div
@@ -82,44 +85,21 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5">
-          <span className="text-foreground min-w-0 truncate text-sm leading-tight font-medium">
-            {identifier}
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="text-foreground shrink-0 text-sm leading-tight font-medium">
+            {sourceLabel}
           </span>
           {isTransfer && (
             <Badge variant="secondary" className="shrink-0">
               Transfer
             </Badge>
           )}
+          <TagChips tags={tx.tags} />
         </span>
         {description && (
           <span className="text-muted-foreground mt-0.5 block truncate text-meta">
             {description}
           </span>
-        )}
-        {comment.editing ? (
-          <input
-            {...comment.inputProps}
-            onBlur={comment.submit}
-            placeholder="What was this for?"
-            disabled={comment.pending}
-            maxLength={280}
-            className="border-primary/50 focus:border-primary mt-1 block w-full max-w-[14rem] border-b bg-transparent text-sm leading-tight outline-none disabled:opacity-60"
-          />
-        ) : (
-          comment.current && (
-            <Badge asChild variant="secondary" className="mt-1 max-w-full">
-              <button
-                type="button"
-                onClick={comment.start}
-                aria-label="Edit note"
-                className="min-w-0"
-              >
-                <StickyNoteIcon />
-                <span className="truncate">{comment.current}</span>
-              </button>
-            </Badge>
-          )
         )}
       </div>
       <div className="flex shrink-0 flex-col items-end">
@@ -146,110 +126,86 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           txSelectMode && "pointer-events-none opacity-30",
         )}
       >
-      <TagEditor txId={tx.id} tags={tx.tags} disabled={txSelectMode} />
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        onClick={comment.start}
-        disabled={comment.pending}
-        aria-label={comment.current ? "Edit note" : "Add note"}
-        className={cn(
-          "hover:text-foreground -mr-0.5",
-          comment.current ? "text-foreground" : "text-muted-foreground",
-        )}
-      >
-        {comment.pending ? (
-          <Loader2Icon className="animate-spin" />
-        ) : (
-          <StickyNoteIcon />
-        )}
-      </Button>
-      {(canMarkWithdrawal || canUnmarkWithdrawal) && (
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          onClick={() =>
-            transfer.run(
-              () =>
+        <TagEditor
+          txId={tx.id}
+          tags={tx.tags}
+          disabled={txSelectMode}
+          knownTags={knownTags}
+        />
+        {(canMarkWithdrawal || canUnmarkWithdrawal) && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={() =>
+              transfer.run(
+                () =>
+                  canUnmarkWithdrawal
+                    ? unmarkCashWithdrawal(tx.id)
+                    : markAsCashWithdrawal(tx.id),
                 canUnmarkWithdrawal
-                  ? unmarkCashWithdrawal(tx.id)
-                  : markAsCashWithdrawal(tx.id),
+                  ? {
+                      confirm: "Undo the cash withdrawal?",
+                      success: "Withdrawal undone",
+                    }
+                  : {
+                      confirm:
+                        "Mark as a cash withdrawal? It moves the amount to your cash balance and leaves it out of spending totals.",
+                      success: "Moved to cash",
+                    },
+              )
+            }
+            disabled={transfer.pending}
+            aria-label={
               canUnmarkWithdrawal
-                ? {
-                    confirm: "Undo the cash withdrawal?",
-                    success: "Withdrawal undone",
-                  }
-                : {
-                    confirm:
-                      "Mark as a cash withdrawal? It moves the amount to your cash balance and leaves it out of spending totals.",
-                    success: "Moved to cash",
-                  },
-            )
-          }
-          disabled={transfer.pending}
-          aria-label={
-            canUnmarkWithdrawal ? "Undo cash withdrawal" : "Mark as cash withdrawal"
-          }
-          className={cn(
-            "hover:text-foreground -mr-0.5",
-            canUnmarkWithdrawal ? "text-foreground" : "text-muted-foreground",
-          )}
-        >
-          {transfer.pending ? (
-            <Loader2Icon className="animate-spin" />
-          ) : (
-            <BanknoteIcon />
-          )}
-        </Button>
-      )}
-      <ReminderButton tx={tx} defaultTitle={reminderTitle} />
-      {canDelete && (
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          onClick={() =>
-            remove.run(() => deleteTransaction(tx.id), {
-              confirm: "Delete this transaction?",
-              success: "Deleted",
-            })
-          }
-          disabled={remove.pending}
-          aria-label="Delete transaction"
-          className="text-muted-foreground hover:text-destructive -mr-0.5"
-        >
-          {remove.pending ? (
-            <Loader2Icon className="animate-spin" />
-          ) : (
-            <Trash2Icon />
-          )}
-        </Button>
-      )}
+                ? "Undo cash withdrawal"
+                : "Mark as cash withdrawal"
+            }
+            className={cn(
+              "hover:text-foreground -mr-0.5",
+              canUnmarkWithdrawal ? "text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {transfer.pending ? (
+              <Loader2Icon className="animate-spin" />
+            ) : (
+              <BanknoteIcon />
+            )}
+          </Button>
+        )}
+        <ReminderButton tx={tx} defaultTitle={reminderTitle} />
+        {canDelete && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={() =>
+              remove.run(() => deleteTransaction(tx.id), {
+                confirm: "Delete this transaction?",
+                success: "Deleted",
+              })
+            }
+            disabled={remove.pending}
+            aria-label="Delete transaction"
+            className="text-muted-foreground hover:text-destructive -mr-0.5"
+          >
+            {remove.pending ? (
+              <Loader2Icon className="animate-spin" />
+            ) : (
+              <Trash2Icon />
+            )}
+          </Button>
+        )}
       </div>
     </div>
   );
 }
 
-const AVATAR_TONES = [
-  "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  "bg-sky-500/15 text-sky-700 dark:text-sky-300",
-  "bg-violet-500/15 text-violet-700 dark:text-violet-300",
-  "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  "bg-rose-500/15 text-rose-700 dark:text-rose-300",
-  "bg-teal-500/15 text-teal-700 dark:text-teal-300",
-  "bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300",
-  "bg-orange-500/15 text-orange-700 dark:text-orange-300",
-];
-
 function Avatar({ seed }: { seed: string }) {
   const letter = (seed.trim()[0] ?? "?").toUpperCase();
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  const tone = AVATAR_TONES[hash % AVATAR_TONES.length];
-
   return (
-    <IconCircle className={cn("text-sm font-semibold", tone)}>
+    <IconCircle
+      style={{ "--tag-h": tagHue(seed) } as CSSProperties}
+      className="tag-chip text-sm font-semibold"
+    >
       {letter}
     </IconCircle>
   );

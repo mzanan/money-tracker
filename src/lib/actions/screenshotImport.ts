@@ -25,7 +25,6 @@ export interface ScreenshotRow {
   description: string | null;
   category: string | null;
   app: string | null;
-  comment: string | null;
   replaceId: string | null;
 }
 
@@ -158,14 +157,10 @@ export async function importScreenshotRows(input: {
       continue;
     }
 
-    const insertValues = row.comment?.trim()
-      ? { ...built, comment: row.comment.trim() }
-      : built;
-
     try {
       const inserted = await db
         .insert(transactions)
-        .values(insertValues)
+        .values(built)
         .onConflictDoNothing({
           target: [
             transactions.user_id,

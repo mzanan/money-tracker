@@ -167,33 +167,6 @@ export async function updateTransactionTags(
   }
 }
 
-export async function updateTransactionComment(
-  id: string,
-  comment: string | null,
-): Promise<ActionResult> {
-  const user = await getUser();
-  if (!user) return { ok: false, error: "Not authenticated" };
-
-  const trimmed = comment?.trim() ?? "";
-  if (trimmed.length > 280) {
-    return { ok: false, error: "Note must be 280 characters or fewer" };
-  }
-
-  try {
-    await db
-      .update(transactions)
-      .set({ comment: trimmed || null })
-      .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)));
-    revalidatePath("/", "layout");
-    return { ok: true };
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
-    };
-  }
-}
-
 export async function mergeTransactions(
   keepId: string,
   removeId: string,

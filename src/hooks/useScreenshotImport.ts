@@ -23,7 +23,6 @@ export interface EditableItem {
   description: string;
   category: string | null;
   app: string | null;
-  comment: string;
   confidence: "high" | "medium" | "low";
   replaceId: string | null;
 }
@@ -48,7 +47,6 @@ function detectedToEditable(detected: DetectedTransaction): EditableItem {
     description: detected.description ?? "",
     category: detected.category,
     app: detected.app,
-    comment: "",
     confidence: detected.confidence,
     replaceId: null,
   };
@@ -164,7 +162,6 @@ export function useScreenshotImport({
       description: item.description.trim() || null,
       category: item.category,
       app: item.app ?? (mode === "receipt" ? "receipt" : null),
-      comment: item.comment.trim() || null,
       replaceId: item.replaceId,
     }));
 

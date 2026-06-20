@@ -18,11 +18,7 @@ export default async function DashboardPage() {
       reminders={remindersData.reminders}
       today={remindersData.today}
       quickAdd={
-        <QuickAddForm
-          key="quick-add"
-          recentTags={data.recentTags}
-          recentMerchants={data.recentMerchants}
-        />
+        <QuickAddForm key="quick-add" recentTags={data.recentTags} />
       }
     />
   );
