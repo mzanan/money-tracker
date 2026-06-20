@@ -122,11 +122,12 @@ export async function importScreenshotRows(input: {
       errors += 1;
       continue;
     }
-    const occurredOn = row.occurredOn ?? today;
+    let occurredOn = row.occurredOn ?? today;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn)) {
       errors += 1;
       continue;
     }
+    if (occurredOn > today) occurredOn = today;
 
     const source = sourceForApp(row.app);
     const baseHash = hashRow({
