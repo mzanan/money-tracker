@@ -11,6 +11,7 @@ import { AssistantWidget } from "@/components/assistant/assistantWidget";
 import { Button } from "@/components/ui/button";
 
 import { BaseCurrencyPicker } from "./baseCurrencyPicker";
+import { Brand } from "./brand";
 import { ThemeToggle } from "./themeToggle";
 
 export function Header() {
@@ -24,15 +25,7 @@ export function Header() {
 
   return (
     <header className="bg-background/80 sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 backdrop-blur">
-      <Link href="/" className="flex items-center gap-2 tracking-tight">
-        <span
-          aria-hidden
-          className="bg-primary text-primary-foreground flex size-7 items-center justify-center rounded-full text-[12px] font-bold"
-        >
-          m
-        </span>
-        <span className="text-base font-semibold">Money</span>
-      </Link>
+      <Brand />
       <div className="flex items-center gap-0.5">
         <BaseCurrencyPicker />
         {ASSISTANT_ENABLED && <AssistantWidget />}
