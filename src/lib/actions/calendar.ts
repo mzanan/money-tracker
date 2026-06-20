@@ -1,18 +1,14 @@
 "use server";
 
-import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
 import { getUser } from "@/lib/session";
+import { newToken } from "@/lib/token";
 
 import type { ActionResult } from "./transactions";
-
-function newToken(): string {
-  return randomBytes(24).toString("base64url");
-}
 
 export async function generateCalendarToken(): Promise<
   ActionResult<{ token: string }>
