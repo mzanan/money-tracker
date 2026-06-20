@@ -156,12 +156,12 @@ export function MonthDashboard({
           onViewChange={setView}
           daySpend={daySpend}
         />
-        {c.showQuickAdd && quickAdd}
         <SourceFilter
           sources={sources}
           selected={c.selectedSource}
           onChange={c.setSelectedSource}
         />
+        {c.showQuickAdd && quickAdd}
         <SpendingBreakdown
           transactions={breakdownTransactions}
           places={places}
@@ -172,12 +172,14 @@ export function MonthDashboard({
           limit={4}
           moreHref="/dashboard"
         />
-        <MonthView
-          transactions={feedTransactions}
-          emptyLabel={
-            isDaily ? "No transactions this day." : "No transactions this month."
-          }
-        />
+        <div className="min-h-[100svh]">
+          <MonthView
+            transactions={feedTransactions}
+            emptyLabel={
+              isDaily ? "No transactions this day." : "No transactions this month."
+            }
+          />
+        </div>
       </div>
 
       {panel.rendered && (
