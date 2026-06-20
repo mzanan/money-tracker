@@ -13,12 +13,14 @@ import type { ImageImportMode } from "@/lib/imageExtract";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Drawer,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
@@ -90,6 +92,9 @@ export function ImportFromImage() {
           <DrawerContent>
             <DrawerHeader>
               <DrawerTitle>Import from image</DrawerTitle>
+              <DrawerDescription className="sr-only">
+                Choose how to import a transaction from an image.
+              </DrawerDescription>
             </DrawerHeader>
             <div className="grid gap-1 px-4 pb-8">
               {OPTIONS.map((option) => (
@@ -153,6 +158,9 @@ export function ImportFromImage() {
                 ? "Import from receipt"
                 : "Import from screenshot"}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Review the extracted amounts before saving.
+            </DialogDescription>
           </DialogHeader>
           {payload && (
             <ScreenshotImporter

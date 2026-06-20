@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import {
   Drawer,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
@@ -78,6 +79,10 @@ export function MergeBar() {
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>Which one do you keep?</DrawerTitle>
+            <DrawerDescription className="sr-only">
+              Keep one transaction; the other is removed and its details are
+              preserved.
+            </DrawerDescription>
           </DrawerHeader>
           <div className="grid gap-2 px-4 pb-8">
             {canResolve &&

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   Drawer,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
@@ -70,6 +71,9 @@ export function PayCandidatesDrawer({
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>Mark {label} paid</DrawerTitle>
+          <DrawerDescription className="sr-only">
+            Link an existing expense or create one for this payment.
+          </DrawerDescription>
         </DrawerHeader>
         <div className="grid max-h-[60vh] gap-4 overflow-y-auto px-4 pb-8">
           {suggested.length > 0 && (

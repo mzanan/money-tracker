@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -62,6 +63,9 @@ export function PlacesDialog({
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Places</DialogTitle>
+          <DialogDescription className="sr-only">
+            Add or remove the places you track.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="grid gap-2">
           <Input

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   Drawer,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
@@ -40,6 +41,9 @@ export function DashboardPanel({
             <DrawerTitle className="text-eyebrow font-sans">
               {title}
             </DrawerTitle>
+            <DrawerDescription className="sr-only">
+              {title} options
+            </DrawerDescription>
           </DrawerHeader>
           <div className="grid gap-5 overflow-y-auto px-4 pb-8">{children}</div>
         </DrawerContent>
