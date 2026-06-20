@@ -31,7 +31,7 @@ export function MessageBubble({ message }: { message: UIMessage }) {
         )}
       >
         {working ? (
-          <span className="text-muted-foreground">Consultando tus datos…</span>
+          <span className="text-muted-foreground">Checking your data…</span>
         ) : (
           text
         )}

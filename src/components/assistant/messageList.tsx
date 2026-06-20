@@ -8,17 +8,17 @@ import { Button } from "@/components/ui/button";
 import { MessageBubble } from "./messageBubble";
 
 const DEFAULT_SUGGESTIONS = [
-  "¿Cuál es mi balance?",
-  "¿Cuánto gasté este mes?",
-  "¿En qué categoría gasto más?",
-  "Mostrame mi gasto diario de la última semana",
+  "What's my balance?",
+  "How much did I spend this month?",
+  "Which category do I spend most on?",
+  "Show my daily spend for the last week",
 ];
 
 export function MessageList({
   messages,
   onSuggest,
   suggestions = DEFAULT_SUGGESTIONS,
-  emptyHint = "Preguntame sobre tus finanzas.",
+  emptyHint = "Ask me about your finances.",
 }: {
   messages: UIMessage[];
   onSuggest: (text: string) => void;

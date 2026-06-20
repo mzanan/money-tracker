@@ -28,7 +28,7 @@ export function ChatComposer({
         value={input}
         autoFocus
         rows={1}
-        placeholder="Escribí tu pregunta…"
+        placeholder="Ask a question…"
         className="max-h-32 min-h-9 flex-1 resize-none"
         onChange={(event) => setInput(event.target.value)}
         onKeyDown={(event) => {
@@ -42,7 +42,7 @@ export function ChatComposer({
         type="submit"
         size="icon"
         disabled={busy || !input.trim()}
-        aria-label="Enviar"
+        aria-label="Send"
       >
         <ArrowUpIcon />
       </Button>

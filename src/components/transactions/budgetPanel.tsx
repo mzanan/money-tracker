@@ -5,10 +5,10 @@ import { MessageList } from "@/components/assistant/messageList";
 import { useAssistant } from "@/components/assistant/useAssistant";
 
 const BUDGET_SUGGESTIONS = [
-  "¿En qué se me está yendo la plata este mes?",
-  "¿Cómo puedo recortar gastos?",
-  "¿Cuáles son mis gastos fijos mensuales?",
-  "Compará mis últimos 6 meses de gasto",
+  "Where is my money going this month?",
+  "How can I cut spending?",
+  "What are my fixed monthly costs?",
+  "Compare my last 6 months of spending",
 ];
 
 export function BudgetPanel() {
@@ -21,11 +21,11 @@ export function BudgetPanel() {
         messages={messages}
         onSuggest={ask}
         suggestions={BUDGET_SUGGESTIONS}
-        emptyHint="Analizá tu gasto con datos reales: fijos vs variables, rubros, comercios y tendencia."
+        emptyHint="Analyze your spending with real data: fixed vs variable, categories, merchants and trend."
       />
       {error && (
         <p className="text-destructive px-3 pb-1 text-xs">
-          No pude responder. Probá de nuevo en un momento.
+          Could not respond. Try again in a moment.
         </p>
       )}
       <ChatComposer
