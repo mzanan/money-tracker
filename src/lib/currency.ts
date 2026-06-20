@@ -16,16 +16,6 @@ export function convert(
   return (amount / fromRate) * toRate;
 }
 
-export function getRate(from: string, to: string, rates: FxRates): number {
-  if (from === to) return 1;
-  const fromRate = rates[from];
-  const toRate = rates[to];
-  if (!fromRate || !toRate) {
-    throw new Error(`Missing rate for ${!fromRate ? from : to}`);
-  }
-  return toRate / fromRate;
-}
-
 export function roundForCurrency(amount: number, code: string): number {
   const { decimals } = getCurrency(code);
   const factor = 10 ** decimals;

@@ -12,7 +12,6 @@ export interface HomePageData {
   lifetimeTxs: Transaction[];
   sources: string[];
   recentTags: string[];
-  recentMerchants: string[];
   places: Location[];
 }
 
@@ -44,10 +43,6 @@ export async function getHomePageData(): Promise<HomePageData> {
     12,
   );
 
-  const recentMerchants = uniqueStrings(
-    byRecency.map((tx) => tx.note?.trim() ?? null),
-  ).slice(0, 30);
-
   const sources = collectSources(lifetimeTxs, connectedProviderIds);
 
   return {
@@ -55,7 +50,6 @@ export async function getHomePageData(): Promise<HomePageData> {
     lifetimeTxs,
     sources,
     recentTags,
-    recentMerchants,
     places,
   };
 }

@@ -42,13 +42,7 @@ import { TagEditor } from "./tagEditor";
 import type { Transaction } from "@/types/db";
 import type { CSSProperties } from "react";
 
-export function TransactionRow({
-  tx,
-  knownTags = [],
-}: {
-  tx: Transaction;
-  knownTags?: string[];
-}) {
+export function TransactionRow({ tx }: { tx: Transaction }) {
   const settings = useSettings();
   const remove = useServerAction();
   const transfer = useServerAction();
@@ -203,7 +197,6 @@ export function TransactionRow({
       <TagEditor
         txId={tx.id}
         tags={tx.tags}
-        knownTags={knownTags}
         open={tagsOpen}
         onOpenChange={setTagsOpen}
       />

@@ -21,13 +21,11 @@ import type { CSSProperties } from "react";
 export function TagEditor({
   txId,
   tags,
-  knownTags = [],
   open,
   onOpenChange,
 }: {
   txId: string;
   tags: string[];
-  knownTags?: string[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -50,10 +48,6 @@ export function TagEditor({
   function removeTag(tag: string) {
     commit(tags.filter((t) => t !== tag));
   }
-
-  const suggestions = knownTags
-    .filter((t) => !tags.some((x) => tagKey(x) === tagKey(t)))
-    .slice(0, 12);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -93,21 +87,6 @@ export function TagEditor({
           placeholder="Add a tag…"
           maxLength={40}
         />
-        {suggestions.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {suggestions.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => addTag(tag)}
-                style={{ "--tag-h": tagHue(tag) } as CSSProperties}
-                className="tag-chip inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium opacity-60 hover:opacity-100"
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );

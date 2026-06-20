@@ -6,10 +6,6 @@ export interface AmountRange {
   max?: number;
 }
 
-export function isAmountRangeActive(range: AmountRange): boolean {
-  return range.min != null || range.max != null;
-}
-
 export function filterByAmount(
   txs: Transaction[],
   range: AmountRange,

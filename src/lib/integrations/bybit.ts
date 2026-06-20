@@ -155,7 +155,6 @@ async function fetchWindow(
   creds: IntegrationCreds,
   fromSec: number,
   toSec: number,
-  windowIdx: number,
 ): Promise<FundingHistoryRow[]> {
   const collected: FundingHistoryRow[] = [];
   let cursor: string | undefined;
@@ -175,10 +174,6 @@ async function fetchWindow(
     );
 
     const pageRows = data.result.list ?? [];
-    console.log(
-      `[bybit] window=${windowIdx} page=${pages} from=${new Date(fromSec * 1000).toISOString()} to=${new Date(toSec * 1000).toISOString()} returned=${pageRows.length}`,
-    );
-
     collected.push(...pageRows);
 
     cursor = data.result.nextPageCursor || undefined;
@@ -258,26 +253,13 @@ export async function fetchTransactions(
   const windowMs = WINDOW_DAYS * 24 * 60 * 60 * 1000;
   const now = Date.now();
 
-  console.log(
-    `[bybit] fetchTransactions since=${since.toISOString()} now=${new Date(now).toISOString()} windowDays=${WINDOW_DAYS}`,
-  );
-
-  let windowIdx = 0;
-  let totalRaw = 0;
-  let droppedInternal = 0;
-  let droppedZero = 0;
-  let deposits = 0;
-  const typePairs = new Map<string, string>();
-
   for (let from = since.getTime(); from < now; from += windowMs) {
     const to = Math.min(from + windowMs, now);
     const rows = await fetchWindow(
       creds,
       Math.floor(from / 1000),
       Math.floor(to / 1000),
-      windowIdx,
     );
-    totalRaw += rows.length;
 
     const onChain = await fetchPagedRows<DepositRow>(
       "/v5/asset/deposit/query-record",
@@ -295,29 +277,21 @@ export async function fetchTransactions(
       const tx = depositToNormalized(row);
       if (tx) {
         out.push(tx);
-        deposits += 1;
       }
     }
     for (const row of internal) {
       const tx = internalDepositToNormalized(row);
       if (tx) {
         out.push(tx);
-        deposits += 1;
       }
     }
 
     for (const row of rows) {
-      const busi = row.showBusiTypeEn?.trim() || "";
-      const detail = row.descriptionEn?.trim() || "";
-      if (!typePairs.has(busi)) typePairs.set(busi, detail);
-
       if (isInternalMove(row)) {
-        droppedInternal += 1;
         continue;
       }
       const amount = Number(row.txnAmt);
       if (!Number.isFinite(amount) || amount === 0) {
-        droppedZero += 1;
         continue;
       }
 
@@ -333,17 +307,6 @@ export async function fetchTransactions(
         note: describe(row),
       });
     }
-    windowIdx += 1;
-  }
-
-  console.log(
-    `[bybit] fetchTransactions done windows=${windowIdx} rawRows=${totalRaw} droppedInternal=${droppedInternal} droppedZero=${droppedZero} deposits=${deposits} normalized=${out.length}`,
-  );
-  if (typePairs.size > 0) {
-    const pairs = Array.from(typePairs.entries())
-      .map(([b, d]) => `${b} → ${d || "<empty>"}`)
-      .join(" | ");
-    console.log(`[bybit] type pairs (showBusiTypeEn → descriptionEn): ${pairs}`);
   }
 
   return out;
