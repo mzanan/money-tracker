@@ -192,9 +192,7 @@ export function QuickAddForm({ recentTags }: Props) {
         {showExtras && (
           <div className="grid gap-2 px-1">
             <div className="grid gap-1.5">
-              <Label htmlFor="tags" className="text-eyebrow">
-                Tags
-              </Label>
+              <Label htmlFor="tags">Tags</Label>
               <Input
                 id="tags"
                 list={tagsId}
@@ -214,9 +212,7 @@ export function QuickAddForm({ recentTags }: Props) {
             </div>
 
             <div className="grid gap-1.5">
-              <Label htmlFor="date" className="text-eyebrow">
-                Date
-              </Label>
+              <Label htmlFor="date">Date</Label>
               <Input
                 id="date"
                 type="date"
