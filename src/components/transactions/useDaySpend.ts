@@ -101,7 +101,6 @@ export function useDaySpend({ yearMonth, transactions, today }: Args) {
     canPrev,
     canNext,
     shift,
-    isToday,
     dayLabel,
   };
 }
