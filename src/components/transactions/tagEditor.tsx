@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { XIcon } from "lucide-react";
 
 import { useServerAction } from "@/hooks/useServerAction";
 import { updateTransactionTags } from "@/lib/actions/transactions";
-import { canonicalTag, tagHue, tagKey } from "@/lib/tags";
+import { canonicalTag, tagKey } from "@/lib/tags";
 
 import {
   Dialog,
@@ -15,8 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-
-import type { CSSProperties } from "react";
+import { TagChip } from "@/components/ui/tagChip";
 
 export function TagEditor({
   txId,
@@ -61,16 +59,7 @@ export function TagEditor({
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {tags.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => removeTag(tag)}
-                style={{ "--tag-h": tagHue(tag) } as CSSProperties}
-                className="tag-chip inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-              >
-                {tag}
-                <XIcon className="size-3 opacity-60" />
-              </button>
+              <TagChip key={tag} tag={tag} onRemove={() => removeTag(tag)} />
             ))}
           </div>
         )}

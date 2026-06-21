@@ -1,11 +1,11 @@
 "use server";
 
-import { addDays, format, subDays } from "date-fns";
 import { and, between, eq, inArray, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { isSupportedCurrency } from "@/config/currencies";
 import { roundForCurrency } from "@/lib/currency";
+import { dayWindow } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { api_integrations, transactions, user_settings } from "@/lib/db/schema";
 import { ADAPTERS } from "@/lib/integrations";
@@ -43,14 +43,7 @@ async function absorbMatching(
 
   let absorbed = 0;
   for (const row of inserted) {
-    const start = format(
-      subDays(new Date(`${row.occurred_on}T00:00:00Z`), ABSORB_WINDOW_DAYS),
-      "yyyy-MM-dd",
-    );
-    const end = format(
-      addDays(new Date(`${row.occurred_on}T00:00:00Z`), ABSORB_WINDOW_DAYS),
-      "yyyy-MM-dd",
-    );
+    const { start, end } = dayWindow(row.occurred_on, ABSORB_WINDOW_DAYS);
 
     const baseConditions = and(
       eq(transactions.user_id, userId),

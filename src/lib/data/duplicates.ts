@@ -1,6 +1,6 @@
-import { addDays, format, subDays } from "date-fns";
 import { and, between, eq } from "drizzle-orm";
 
+import { dayWindow } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 
@@ -53,14 +53,7 @@ export async function findCrossSourceCandidates(
 
   return Promise.all(
     queries.map(async (query) => {
-      const start = format(
-        subDays(new Date(`${query.occurredOn}T00:00:00Z`), windowDays),
-        "yyyy-MM-dd",
-      );
-      const end = format(
-        addDays(new Date(`${query.occurredOn}T00:00:00Z`), windowDays),
-        "yyyy-MM-dd",
-      );
+      const { start, end } = dayWindow(query.occurredOn, windowDays);
 
       const rows = await db
         .select()

@@ -53,6 +53,21 @@ export function frequencyLabel(
   }
 }
 
+const MONTHS_PER_CYCLE: Record<RecurringFrequency, number> = {
+  WEEKLY: 12 / 52,
+  MONTHLY: 1,
+  YEARLY: 12,
+  CUSTOM_MONTHS: 1,
+};
+
+export function monthsPerCycle(
+  frequency: RecurringFrequency,
+  intervalMonths?: number | null,
+): number {
+  if (frequency === "CUSTOM_MONTHS") return Math.max(1, intervalMonths ?? 1);
+  return MONTHS_PER_CYCLE[frequency];
+}
+
 export function daysBetween(fromIso: string, toIso: string): number {
   const from = parseISO(fromIso).getTime();
   const to = parseISO(toIso).getTime();

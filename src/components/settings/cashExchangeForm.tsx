@@ -73,9 +73,7 @@ export function CashExchangeForm() {
           </div>
           <div className="flex items-end gap-2">
             <div className="grid flex-1 gap-1.5">
-              <Label htmlFor="exchange-out" className="text-eyebrow">
-                You give
-              </Label>
+              <Label htmlFor="exchange-out">You give</Label>
               <div className="flex gap-1">
                 <Input
                   id="exchange-out"
@@ -96,9 +94,7 @@ export function CashExchangeForm() {
             </div>
             <ArrowRightIcon className="text-muted-foreground mb-2.5 size-4 shrink-0" />
             <div className="grid flex-1 gap-1.5">
-              <Label htmlFor="exchange-in" className="text-eyebrow">
-                You get
-              </Label>
+              <Label htmlFor="exchange-in">You get</Label>
               <div className="flex gap-1">
                 <Input
                   id="exchange-in"
@@ -120,9 +116,7 @@ export function CashExchangeForm() {
           </div>
           <div className="flex items-end gap-2">
             <div className="grid flex-1 gap-1.5">
-              <Label htmlFor="exchange-date" className="text-eyebrow">
-                Date
-              </Label>
+              <Label htmlFor="exchange-date">Date</Label>
               <Input
                 id="exchange-date"
                 type="date"

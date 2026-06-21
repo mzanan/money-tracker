@@ -163,7 +163,7 @@ function Field({
 }) {
   return (
     <div className="grid gap-1">
-      <Label className="text-xs">{label}</Label>
+      <Label>{label}</Label>
       {children}
     </div>
   );
