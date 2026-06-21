@@ -20,7 +20,6 @@ import { deleteTransaction } from "@/lib/actions/transactions";
 import { kindOfSource, labelForSource } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
 import { computeNextDue } from "@/lib/reminders";
-import { tagHue } from "@/lib/tags";
 import { transactionInDisplay } from "@/lib/totals";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/uiStore";
@@ -33,14 +32,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { IconCircle } from "@/components/ui/iconCircle";
 import { ReminderForm } from "@/components/reminders/reminderForm";
 
+import { Avatar } from "./avatar";
 import { TagChips } from "./tagChips";
 import { TagEditor } from "./tagEditor";
 
 import type { Transaction } from "@/types/db";
-import type { CSSProperties } from "react";
 
 export function TransactionRow({ tx }: { tx: Transaction }) {
   const settings = useSettings();
@@ -237,14 +235,3 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   );
 }
 
-function Avatar({ seed }: { seed: string }) {
-  const letter = (seed.trim()[0] ?? "?").toUpperCase();
-  return (
-    <IconCircle
-      style={{ "--tag-h": tagHue(seed) } as CSSProperties}
-      className="tag-chip text-sm font-semibold"
-    >
-      {letter}
-    </IconCircle>
-  );
-}
