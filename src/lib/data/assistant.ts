@@ -4,6 +4,7 @@ import { convert } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { recurring_payments, transactions } from "@/lib/db/schema";
 import { getRates } from "@/lib/rates";
+import { monthsPerCycle } from "@/lib/reminders";
 import { dayTotalsList, periodTotals } from "@/lib/totals";
 import type { TotalsBreakdown } from "@/lib/totals";
 import type { Transaction, TransactionKind } from "@/types/db";
@@ -172,12 +173,6 @@ export interface RecurringPaymentSummary {
   lastPaidOn: string | null;
 }
 
-const MONTHS_PER_FREQUENCY: Record<string, number> = {
-  WEEKLY: 12 / 52,
-  MONTHLY: 1,
-  YEARLY: 12,
-};
-
 export async function getRecurringPayments(
   userId: string,
   baseCurrency: string,
@@ -207,14 +202,11 @@ export async function getRecurringPayments(
         amountBase = null;
       }
     }
-    const monthsPerCycle =
-      reminder.frequency === "CUSTOM_MONTHS"
-        ? (reminder.interval_months ?? 1)
-        : MONTHS_PER_FREQUENCY[reminder.frequency];
-    const monthlyBase =
-      amountBase != null && monthsPerCycle
-        ? amountBase / monthsPerCycle
-        : null;
+    const cycleMonths = monthsPerCycle(
+      reminder.frequency,
+      reminder.interval_months,
+    );
+    const monthlyBase = amountBase != null ? amountBase / cycleMonths : null;
 
     return {
       label: reminder.label,
