@@ -1,21 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2Icon, ListChecksIcon } from "lucide-react";
 
-import { useSettings } from "@/hooks/useSettings";
-import {
-  MONTH_INITIAL_DAYS,
-  MONTH_STEP_DAYS,
-} from "@/lib/constants/pagination";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
-import { dayTotalsList } from "@/lib/totals";
-import { useUiStore } from "@/stores/uiStore";
 
 import type { Transaction } from "@/types/db";
 
 import { DayGroup } from "./dayGroup";
+import { useMonthView } from "./useMonthView";
 
 export function MonthView({
   transactions,
@@ -24,55 +17,17 @@ export function MonthView({
   transactions: Transaction[];
   emptyLabel?: string;
 }) {
-  const settings = useSettings();
-  const txSelectMode = useUiStore((s) => s.txSelectMode);
-  const setTxSelectMode = useUiStore((s) => s.setTxSelectMode);
-  const [visibleDays, setVisibleDays] = useState(MONTH_INITIAL_DAYS);
-  const [openState, setOpenState] = useState<{
-    key: string | undefined;
-    dates: string[] | null;
-  }>({ key: undefined, dates: null });
-  const sentinelRef = useRef<HTMLDivElement>(null);
-
-  const days = useMemo(
-    () => dayTotalsList(transactions, settings.base_currency),
-    [transactions, settings.base_currency],
-  );
-
-  const shown = days.slice(0, visibleDays);
-  const hasMore = shown.length < days.length;
-
-  const firstDate = days[0]?.date;
-  if (openState.key !== firstDate) {
-    setOpenState({ key: firstDate, dates: null });
-  }
-
-  const effectiveOpen = openState.dates ?? (firstDate ? [firstDate] : []);
-
-  function toggleDay(date: string) {
-    setOpenState({
-      key: firstDate,
-      dates: effectiveOpen.includes(date)
-        ? effectiveOpen.filter((d) => d !== date)
-        : [...effectiveOpen, date],
-    });
-  }
-
-  useEffect(() => {
-    if (!hasMore) return;
-    const el = sentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleDays((v) => Math.min(v + MONTH_STEP_DAYS, days.length));
-        }
-      },
-      { rootMargin: "200px" },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasMore, days.length]);
+  const {
+    days,
+    shown,
+    hasMore,
+    sentinelRef,
+    effectiveOpen,
+    firstDate,
+    toggleDay,
+    txSelectMode,
+    setTxSelectMode,
+  } = useMonthView(transactions);
 
   if (days.length === 0) {
     return (
