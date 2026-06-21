@@ -1,4 +1,4 @@
-import { DashboardView } from "@/components/dashboard/DashboardView";
+import { DashboardView } from "@/components/dashboard/dashboardView";
 import { getHomePageData } from "@/lib/data/homeData";
 
 export default async function DashboardPage() {
