@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   BellPlusIcon,
   CheckIcon,
@@ -10,15 +9,8 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
-import { useServerAction } from "@/hooks/useServerAction";
-import {
-  deleteReminder,
-  getReminderPayOptions,
-  markReminderPaid,
-  type ReminderPaymentCandidate,
-} from "@/lib/actions/reminders";
 import { formatMoney } from "@/lib/currency";
-import { daysBetween, dueLabel, frequencyLabel } from "@/lib/reminders";
+import { dueLabel } from "@/lib/reminders";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -32,6 +24,7 @@ import { IconCircle } from "@/components/ui/iconCircle";
 
 import { PayCandidatesDrawer } from "./payCandidatesDrawer";
 import { ReminderForm } from "./reminderForm";
+import { useReminderRow } from "./useReminderRow";
 
 import type { RecurringPayment } from "@/types/db";
 
@@ -42,78 +35,21 @@ export function ReminderRow({
   reminder: RecurringPayment;
   today: string;
 }) {
-  const [editOpen, setEditOpen] = useState(false);
-  const [payOptions, setPayOptions] = useState<{
-    suggested: ReminderPaymentCandidate[];
-    recent: ReminderPaymentCandidate[];
-  } | null>(null);
-  const [checking, setChecking] = useState(false);
-  const { run, pending } = useServerAction();
-  const busy = pending || checking;
-
-  const diff = daysBetween(today, reminder.next_due_on);
-  const tone =
-    diff < 0
-      ? "text-destructive"
-      : diff <= 7
-        ? "text-warning"
-        : "text-muted-foreground";
-
-  const metaSegments = [
-    frequencyLabel(reminder.frequency, reminder.interval_months),
-  ];
-  if (reminder.category) metaSegments.push(reminder.category);
-  if (reminder.installments_total != null) {
-    metaSegments.push(
-      `${reminder.installments_paid}/${reminder.installments_total} paid`,
-    );
-  }
-
-  async function handleMarkPaid() {
-    setChecking(true);
-    const res = await getReminderPayOptions(reminder.id);
-    setChecking(false);
-    setPayOptions(res.ok ? res.data! : { suggested: [], recent: [] });
-  }
-
-  function confirmPaid(linkTransactionId?: string) {
-    setPayOptions(null);
-    run(
-      () =>
-        markReminderPaid(
-          reminder.id,
-          undefined,
-          linkTransactionId ? { linkTransactionId } : undefined,
-        ),
-      {
-        success: (data) =>
-          data?.completed
-            ? "Last payment, reminder completed"
-            : data?.linked
-              ? "Marked paid, linked to the existing payment"
-              : data?.expenseAdded
-                ? "Marked paid, expense added"
-                : "Marked paid, next due updated",
-      },
-    );
-  }
-
-  function markPaidOnly() {
-    setPayOptions(null);
-    run(() => markReminderPaid(reminder.id, undefined, { skipExpense: true }), {
-      success: (data) =>
-        data?.completed
-          ? "Last payment, reminder completed"
-          : "Marked paid, next due updated",
-    });
-  }
-
-  function handleDelete() {
-    run(() => deleteReminder(reminder.id), {
-      confirm: `Delete reminder "${reminder.label}"?`,
-      success: "Deleted",
-    });
-  }
+  const {
+    editOpen,
+    setEditOpen,
+    payOptions,
+    setPayOptions,
+    busy,
+    pending,
+    diff,
+    tone,
+    metaSegments,
+    handleMarkPaid,
+    confirmPaid,
+    markPaidOnly,
+    handleDelete,
+  } = useReminderRow(reminder, today);
 
   return (
     <li className="hover:bg-surface-2/60 group flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors">
