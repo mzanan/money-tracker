@@ -1,4 +1,4 @@
-import { format, parse } from "date-fns";
+import { addDays, format, parse, subDays } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
 
@@ -20,6 +20,17 @@ export function monthBounds(yearMonth: string): [string, string] {
   ).getDate();
   const end = `${yearMonth}-${String(lastDay).padStart(2, "0")}`;
   return [start, end];
+}
+
+export function dayWindow(
+  occurredOn: string,
+  windowDays: number,
+): { start: string; end: string } {
+  const center = new Date(`${occurredOn}T00:00:00Z`);
+  return {
+    start: format(subDays(center, windowDays), "yyyy-MM-dd"),
+    end: format(addDays(center, windowDays), "yyyy-MM-dd"),
+  };
 }
 
 export function shiftYearMonth(yearMonth: string, delta: number): string {
