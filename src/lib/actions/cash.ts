@@ -90,7 +90,9 @@ export async function markAsCashWithdrawal(
       await dbTx
         .update(transactions)
         .set({ transfer_group: tx.id })
-        .where(eq(transactions.id, tx.id));
+        .where(
+          and(eq(transactions.id, tx.id), eq(transactions.user_id, user.id)),
+        );
     });
     revalidatePath("/", "layout");
     return { ok: true };
