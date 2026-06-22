@@ -28,12 +28,30 @@ export type UserSettings = typeof user_settings.$inferSelect;
 export type UserSettingsInsert = typeof user_settings.$inferInsert;
 export type UserSettingsUpdate = Partial<UserSettingsInsert>;
 
+/**
+ * Settings shape safe to serialize to the client. Omits the capability tokens
+ * (ingest/calendar) — those are read server-side only, never sent to the browser.
+ */
+export type ClientSettings = Omit<
+  UserSettings,
+  "ingest_token" | "calendar_token"
+>;
+
 export type FxRatesCache = typeof fx_rates_cache.$inferSelect;
 
 export type ApiIntegration = typeof api_integrations.$inferSelect;
 export type ApiIntegrationInsert = typeof api_integrations.$inferInsert;
 export type ApiIntegrationUpdate = Partial<ApiIntegrationInsert>;
 export type IntegrationProvider = ApiIntegration["provider"];
+
+/**
+ * Integration shape safe to serialize to the client. Excludes api_key/api_secret
+ * — credentials live server-side only and are never echoed back to the browser.
+ */
+export interface IntegrationSummary {
+  importIncome: boolean;
+  lastSyncedAt: string | null;
+}
 
 export type Location = typeof locations.$inferSelect;
 export type LocationInsert = typeof locations.$inferInsert;

@@ -9,7 +9,7 @@ import {
   syncIntegration,
 } from "@/lib/actions/integrations";
 import { cn } from "@/lib/utils";
-import type { ApiIntegration, IntegrationProvider } from "@/types/db";
+import type { IntegrationProvider, IntegrationSummary } from "@/types/db";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ import { IntegrationDialog } from "./integrationDialog";
 interface Props {
   provider: IntegrationProvider;
   label: string;
-  integration: ApiIntegration | null;
+  integration: IntegrationSummary | null;
 }
 
 function timeAgo(iso: string | null): string {
@@ -77,7 +77,7 @@ export function IntegrationRow({ provider, label, integration }: Props) {
       }
       meta={
         connected
-          ? `Last sync · ${timeAgo(integration.last_synced_at)}`
+          ? `Last sync · ${timeAgo(integration.lastSyncedAt)}`
           : "Connect to start syncing"
       }
     >

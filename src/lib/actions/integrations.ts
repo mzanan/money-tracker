@@ -9,11 +9,12 @@ import { dayWindow } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { api_integrations, transactions, user_settings } from "@/lib/db/schema";
 import { ADAPTERS } from "@/lib/integrations";
+import { decryptSecret, encryptSecret } from "@/lib/integrations/crypto";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
 import { applyAutoCategories } from "@/lib/categorization";
 import { buildTransactionRow } from "@/lib/transactions";
-import type { IntegrationProvider } from "@/types/db";
+import type { ApiIntegrationUpdate, IntegrationProvider } from "@/types/db";
 
 import type { ActionResult } from "./transactions";
 
@@ -114,19 +115,12 @@ const DEFAULT_SINCE_DAYS = 30;
 
 export async function saveIntegration(input: {
   provider: IntegrationProvider;
-  apiKey: string;
+  apiKey?: string | null;
   apiSecret?: string | null;
   importIncome: boolean;
   extra?: Record<string, unknown>;
   initialSinceDays?: number;
 }): Promise<ActionResult> {
-  if (!input.apiKey?.trim()) {
-    return { ok: false, error: "API key is required" };
-  }
-  if (input.provider === "bybit" && !input.apiSecret?.trim()) {
-    return { ok: false, error: "API secret is required for Bybit" };
-  }
-
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
@@ -142,38 +136,52 @@ export async function saveIntegration(input: {
     .limit(1)
     .then((rows) => rows[0]);
 
-  // On first connect, seed last_synced_at to (now - initialSinceDays) so the
-  // first sync naturally picks up that window. On edit, leave the cursor alone.
-  const seedLastSyncedAt =
-    !existing && input.initialSinceDays
-      ? new Date(
-          Date.now() - input.initialSinceDays * 24 * 60 * 60 * 1000,
-        ).toISOString()
-      : undefined;
+  const apiKey = input.apiKey?.trim() || null;
+  const apiSecret = input.apiSecret?.trim() || null;
+  const aad = `${user.id}:${input.provider}`;
 
-  const values = {
-    user_id: user.id,
-    provider: input.provider,
-    api_key: input.apiKey.trim(),
-    api_secret: input.apiSecret?.trim() || null,
-    import_income: input.importIncome,
-    extra: input.extra ?? {},
-    ...(seedLastSyncedAt ? { last_synced_at: seedLastSyncedAt } : {}),
-  };
+  // First connect requires both credentials. On edit, blank fields keep the
+  // stored values — the secret is never sent to the client to be echoed back.
+  if (!existing) {
+    if (!apiKey) return { ok: false, error: "API key is required" };
+    if (input.provider === "bybit" && !apiSecret) {
+      return { ok: false, error: "API secret is required for Bybit" };
+    }
+  }
 
   try {
-    await db
-      .insert(api_integrations)
-      .values(values)
-      .onConflictDoUpdate({
-        target: [api_integrations.user_id, api_integrations.provider],
-        set: {
-          api_key: values.api_key,
-          api_secret: values.api_secret,
-          import_income: values.import_income,
-          extra: values.extra,
-        },
+    if (!existing) {
+      // Seed last_synced_at to (now - initialSinceDays) so the first sync picks
+      // up that window.
+      const seedLastSyncedAt = input.initialSinceDays
+        ? new Date(
+            Date.now() - input.initialSinceDays * 24 * 60 * 60 * 1000,
+          ).toISOString()
+        : undefined;
+      await db.insert(api_integrations).values({
+        user_id: user.id,
+        provider: input.provider,
+        api_key: encryptSecret(apiKey!, aad),
+        api_secret: apiSecret ? encryptSecret(apiSecret, aad) : null,
+        import_income: input.importIncome,
+        extra: input.extra ?? {},
+        ...(seedLastSyncedAt ? { last_synced_at: seedLastSyncedAt } : {}),
       });
+    } else {
+      const set: ApiIntegrationUpdate = { import_income: input.importIncome };
+      if (apiKey) set.api_key = encryptSecret(apiKey, aad);
+      if (apiSecret) set.api_secret = encryptSecret(apiSecret, aad);
+      if (input.extra) set.extra = input.extra;
+      await db
+        .update(api_integrations)
+        .set(set)
+        .where(
+          and(
+            eq(api_integrations.user_id, user.id),
+            eq(api_integrations.provider, input.provider),
+          ),
+        );
+    }
     revalidatePath("/settings");
     return { ok: true };
   } catch (error) {
@@ -254,12 +262,15 @@ export async function syncIntegration(
     : new Date(Date.now() - DEFAULT_SINCE_DAYS * 24 * 60 * 60 * 1000);
 
   const adapter = ADAPTERS[provider];
+  const aad = `${user.id}:${provider}`;
   let normalized;
   try {
     normalized = await adapter.fetchTransactions(
       {
-        apiKey: integration.api_key,
-        apiSecret: integration.api_secret,
+        apiKey: decryptSecret(integration.api_key, aad),
+        apiSecret: integration.api_secret
+          ? decryptSecret(integration.api_secret, aad)
+          : null,
         extra: integration.extra,
       },
       since,
