@@ -1,13 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { toast } from "sonner";
 import { ArrowRightIcon, Loader2Icon } from "lucide-react";
-
-import { useServerAction } from "@/hooks/useServerAction";
-import { useSettings, useTimezone } from "@/hooks/useSettings";
-import { recordCashExchange } from "@/lib/actions/cash";
-import { todayInTz } from "@/lib/dates";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,50 +8,24 @@ import { CurrencySelect } from "@/components/ui/currencySelect";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-function parseAmount(value: string): number | null {
-  const num = Number(value.replace(/\s/g, "").replace(",", "."));
-  return Number.isFinite(num) && num > 0 ? num : null;
-}
+import { useCashExchangeForm } from "./useCashExchangeForm";
 
 export function CashExchangeForm() {
-  const settings = useSettings();
-  const timezone = useTimezone();
-  const { run, pending } = useServerAction();
-
-  const [outAmount, setOutAmount] = useState("");
-  const [outCurrency, setOutCurrency] = useState(settings.currencies[0]);
-  const [inAmount, setInAmount] = useState("");
-  const [inCurrency, setInCurrency] = useState(
-    settings.currencies[1] ?? settings.currencies[0],
-  );
-  const [date, setDate] = useState(() => todayInTz(timezone));
-
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    const out = parseAmount(outAmount);
-    const incoming = parseAmount(inAmount);
-    if (out === null || incoming === null) {
-      toast.error("Enter both amounts");
-      return;
-    }
-    run(
-      () =>
-        recordCashExchange({
-          outAmount: out,
-          outCurrency,
-          inAmount: incoming,
-          inCurrency,
-          occurredOn: date,
-        }),
-      {
-        success: `Exchanged ${outCurrency} → ${inCurrency}`,
-        onSuccess: () => {
-          setOutAmount("");
-          setInAmount("");
-        },
-      },
-    );
-  }
+  const {
+    currencies,
+    outAmount,
+    setOutAmount,
+    outCurrency,
+    setOutCurrency,
+    inAmount,
+    setInAmount,
+    inCurrency,
+    setInCurrency,
+    date,
+    setDate,
+    pending,
+    handleSubmit,
+  } = useCashExchangeForm();
 
   return (
     <Card>
@@ -86,7 +53,7 @@ export function CashExchangeForm() {
                 <CurrencySelect
                   value={outCurrency}
                   onValueChange={setOutCurrency}
-                  currencies={settings.currencies}
+                  currencies={currencies}
                   ariaLabel="Currency you give"
                   className="bg-surface-2 h-9 w-[4.5rem] border-none text-xs"
                 />
@@ -107,7 +74,7 @@ export function CashExchangeForm() {
                 <CurrencySelect
                   value={inCurrency}
                   onValueChange={setInCurrency}
-                  currencies={settings.currencies}
+                  currencies={currencies}
                   ariaLabel="Currency you get"
                   className="bg-surface-2 h-9 w-[4.5rem] border-none text-xs"
                 />

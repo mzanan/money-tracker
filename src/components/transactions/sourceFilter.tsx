@@ -13,12 +13,12 @@ import { useSettings } from "@/hooks/useSettings";
 import { syncIntegration } from "@/lib/actions/integrations";
 import { setCashEnabled } from "@/lib/actions/settings";
 import { kindOfSource, labelForSource } from "@/lib/constants/sources";
-import { cn } from "@/lib/utils";
 import type { IntegrationProvider } from "@/types/db";
 
 import { Button } from "@/components/ui/button";
 
 import { ImportFromImage } from "./importFromImage";
+import { SourceTab } from "./sourceTab";
 
 interface Props {
   sources: string[];
@@ -58,17 +58,20 @@ export function SourceFilter({ sources, selected, onChange }: Props) {
         role="tablist"
         className="scrollbar-none border-border/60 -mx-4 flex flex-1 gap-5 overflow-x-auto overflow-y-hidden border-b px-4"
       >
-        <Tab selected={selected === "all"} onClick={() => onChange("all")}>
+        <SourceTab
+          selected={selected === "all"}
+          onClick={() => onChange("all")}
+        >
           All
-        </Tab>
+        </SourceTab>
         {tabSources.map((src) => (
-          <Tab
+          <SourceTab
             key={src}
             selected={selected === src}
             onClick={() => onChange(src)}
           >
             {labelForSource(src)}
-          </Tab>
+          </SourceTab>
         ))}
         {!showCashTab && (
           <button
@@ -116,35 +119,3 @@ export function SourceFilter({ sources, selected, onChange }: Props) {
   );
 }
 
-function Tab({
-  selected,
-  onClick,
-  children,
-}: {
-  selected: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      onClick={onClick}
-      aria-selected={selected}
-      className={cn(
-        "relative shrink-0 py-3 text-sm transition-colors",
-        selected
-          ? "text-foreground font-semibold"
-          : "text-muted-foreground hover:text-foreground font-medium",
-      )}
-    >
-      {children}
-      {selected && (
-        <span
-          aria-hidden
-          className="bg-foreground absolute bottom-0 left-0 right-0 h-0.5"
-        />
-      )}
-    </button>
-  );
-}

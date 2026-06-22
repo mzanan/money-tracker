@@ -1,14 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  ArrowDownRightIcon,
-  ArrowUpRightIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-} from "lucide-react";
+import { ArrowDownRightIcon, ArrowUpRightIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
 import {
   Tabs,
@@ -29,6 +23,8 @@ import type { Transaction } from "@/types/db";
 
 import { AmountsToggle } from "./amountsToggle";
 import { DaySpendView } from "./daySpendView";
+import { MiniStat } from "./miniStat";
+import { PeriodNav } from "./periodNav";
 
 import type { useDaySpend } from "./useDaySpend";
 
@@ -136,7 +132,7 @@ export function BalanceHero({
 
           <div className="border-border mt-9 border-t pt-6">
             <div className="grid grid-cols-2 gap-3">
-              <Mini
+              <MiniStat
                 label="In"
                 value={
                   hideAmounts
@@ -149,7 +145,7 @@ export function BalanceHero({
                 dimmed={selectedKind === "expense"}
                 onClick={() => toggle("income")}
               />
-              <Mini
+              <MiniStat
                 label="Out"
                 value={
                   hideAmounts
@@ -185,107 +181,5 @@ export function BalanceHero({
         </TabsContent>
       </Tabs>
     </Surface>
-  );
-}
-
-function PeriodNav({
-  label,
-  canPrev,
-  canNext,
-  onShift,
-  prevLabel,
-  nextLabel,
-  tabular,
-}: {
-  label: string;
-  canPrev: boolean;
-  canNext: boolean;
-  onShift: (delta: number) => void;
-  prevLabel: string;
-  nextLabel: string;
-  tabular?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-0.5">
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={() => onShift(-1)}
-        disabled={!canPrev}
-        aria-label={prevLabel}
-      >
-        <ChevronLeftIcon />
-      </Button>
-      <span
-        className={cn(
-          "text-foreground min-w-[5.5rem] truncate text-center text-sm font-medium",
-          tabular && "tabular-nums",
-        )}
-      >
-        {label}
-      </span>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={() => onShift(1)}
-        disabled={!canNext}
-        aria-label={nextLabel}
-      >
-        <ChevronRightIcon />
-      </Button>
-    </div>
-  );
-}
-
-function Mini({
-  label,
-  value,
-  icon,
-  tone,
-  active,
-  dimmed,
-  onClick,
-}: {
-  label: string;
-  value: string;
-  icon: React.ReactNode;
-  tone: "income" | "expense";
-  active: boolean;
-  dimmed: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "bg-background/60 dark:bg-surface-2 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-all",
-        "hover:bg-background/80 dark:hover:bg-surface-2/80 cursor-pointer",
-        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
-        active &&
-          (tone === "income"
-            ? "ring-income/40 ring-2"
-            : "ring-expense/40 ring-2"),
-        dimmed && "opacity-50",
-      )}
-    >
-      <span
-        className={cn(
-          "flex size-8 items-center justify-center rounded-full",
-          tone === "income"
-            ? "bg-income text-income"
-            : "bg-expense text-expense",
-        )}
-      >
-        {icon}
-      </span>
-      <div className="grid">
-        <span className="text-muted-foreground text-[10px] tracking-wide uppercase">
-          {label}
-        </span>
-        <span className="text-sm font-semibold tabular-nums">{value}</span>
-      </div>
-    </button>
   );
 }

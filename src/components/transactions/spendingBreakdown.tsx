@@ -1,17 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MapPinIcon } from "lucide-react";
 
-import { useHideAmounts } from "@/hooks/useHideAmounts";
-import { useSettings } from "@/hooks/useSettings";
-import { excludeCanceledPairs } from "@/lib/cancellations";
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import { formatMoney } from "@/lib/currency";
-import { placeOf } from "@/lib/places";
 import { HIDDEN_AMOUNT } from "@/lib/preferences";
-import { transactionInDisplay } from "@/lib/totals";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -19,10 +13,9 @@ import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { PlacesDialog } from "./placesDialog";
+import { useSpendingBreakdown, type Mode } from "./useSpendingBreakdown";
 
 import type { Location, Transaction } from "@/types/db";
-
-type Mode = "tag" | "place";
 
 interface Props {
   transactions: Transaction[];
@@ -35,61 +28,17 @@ interface Props {
   moreHref?: string;
 }
 
-export function SpendingBreakdown({
-  transactions,
-  places,
-  selectedTag,
-  onSelectTag,
-  selectedPlace,
-  onSelectPlace,
-  limit,
-  moreHref,
-}: Props) {
-  const settings = useSettings();
-  const { hideAmounts } = useHideAmounts();
-  const [mode, setMode] = useState<Mode>("tag");
-
-  const selected = mode === "tag" ? selectedTag : selectedPlace;
-  const onSelect = mode === "tag" ? onSelectTag : onSelectPlace;
-
-  function changeMode(next: Mode) {
-    setMode(next);
-    onSelectTag(null);
-    onSelectPlace(null);
-  }
-
-  const breakdown = useMemo(() => {
-    const totals = new Map<string, number>();
-    let total = 0;
-    for (const tx of excludeCanceledPairs(transactions)) {
-      if (tx.kind !== "expense" || tx.transfer_group) continue;
-      let value: number;
-      try {
-        value = transactionInDisplay(tx, settings.base_currency);
-      } catch {
-        continue;
-      }
-      const keys =
-        mode === "tag"
-          ? tx.tags.length > 0
-            ? tx.tags
-            : [UNTAGGED_LABEL]
-          : [placeOf(tx.occurred_on, places)];
-      for (const key of keys) {
-        totals.set(key, (totals.get(key) ?? 0) + value);
-      }
-      total += value;
-    }
-    const list = Array.from(totals.entries())
-      .map(([label, amount]) => ({
-        label,
-        amount,
-        pct: total > 0 ? (amount / total) * 100 : 0,
-      }))
-      .sort((a, b) => b.amount - a.amount);
-    const visible = limit ? list.slice(0, limit) : list;
-    return { list: visible, hidden: list.length - visible.length, max: list[0]?.amount ?? 0 };
-  }, [transactions, settings.base_currency, mode, places, limit]);
+export function SpendingBreakdown(props: Props) {
+  const { places, moreHref } = props;
+  const {
+    mode,
+    changeMode,
+    selected,
+    onSelect,
+    breakdown,
+    hideAmounts,
+    baseCurrency,
+  } = useSpendingBreakdown(props);
 
   if (breakdown.list.length === 0) return null;
 
@@ -152,8 +101,7 @@ export function SpendingBreakdown({
                 <span
                   className={cn(
                     "truncate text-sm font-medium",
-                    item.label === UNTAGGED_LABEL &&
-                      "text-muted-foreground",
+                    item.label === UNTAGGED_LABEL && "text-muted-foreground",
                   )}
                 >
                   {item.label}
@@ -161,7 +109,7 @@ export function SpendingBreakdown({
                 <span className="shrink-0 text-sm font-semibold tabular-nums">
                   {hideAmounts
                     ? HIDDEN_AMOUNT
-                    : formatMoney(item.amount, settings.base_currency)}
+                    : formatMoney(item.amount, baseCurrency)}
                   <span className="text-muted-foreground ml-1.5 text-[11px] font-normal">
                     {Math.round(item.pct)}%
                   </span>
