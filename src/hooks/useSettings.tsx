@@ -4,15 +4,15 @@ import { createContext, useContext } from "react";
 
 import { getDeviceTimezone } from "@/lib/dates";
 
-import type { UserSettings } from "@/types/db";
+import type { ClientSettings } from "@/types/db";
 
-const SettingsContext = createContext<UserSettings | null>(null);
+const SettingsContext = createContext<ClientSettings | null>(null);
 
 export function SettingsProvider({
   value,
   children,
 }: {
-  value: UserSettings;
+  value: ClientSettings;
   children: React.ReactNode;
 }) {
   return (
@@ -22,7 +22,7 @@ export function SettingsProvider({
   );
 }
 
-export function useSettings(): UserSettings {
+export function useSettings(): ClientSettings {
   const settings = useContext(SettingsContext);
   if (!settings) {
     throw new Error("useSettings must be used inside <SettingsProvider>");

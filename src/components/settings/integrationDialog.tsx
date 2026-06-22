@@ -5,7 +5,7 @@ import { Loader2Icon } from "lucide-react";
 
 import { useServerAction } from "@/hooks/useServerAction";
 import { saveIntegration } from "@/lib/actions/integrations";
-import type { ApiIntegration, IntegrationProvider } from "@/types/db";
+import type { IntegrationProvider, IntegrationSummary } from "@/types/db";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +37,7 @@ const LOOKBACK_OPTIONS = [
 interface Props {
   provider: IntegrationProvider;
   label: string;
-  integration: ApiIntegration | null;
+  integration: IntegrationSummary | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -50,19 +50,21 @@ export function IntegrationDialog({
   onOpenChange,
 }: Props) {
   const isFirstConnect = !integration;
-  const [apiKey, setApiKey] = useState(integration?.api_key ?? "");
-  const [apiSecret, setApiSecret] = useState(integration?.api_secret ?? "");
+  // Credentials are never sent to the client. The form starts empty; on edit a
+  // blank field keeps the stored value.
+  const [apiKey, setApiKey] = useState("");
+  const [apiSecret, setApiSecret] = useState("");
   const [importIncome, setImportIncome] = useState(
-    integration?.import_income ?? false,
+    integration?.importIncome ?? false,
   );
   const [lookbackDays, setLookbackDays] = useState("30");
   const { run, pending } = useServerAction();
 
   function handleOpenChange(next: boolean) {
     if (next && !open) {
-      setApiKey(integration?.api_key ?? "");
-      setApiSecret(integration?.api_secret ?? "");
-      setImportIncome(integration?.import_income ?? false);
+      setApiKey("");
+      setApiSecret("");
+      setImportIncome(integration?.importIncome ?? false);
       setLookbackDays("30");
     }
     onOpenChange(next);
@@ -106,7 +108,8 @@ export function IntegrationDialog({
               id="api-key"
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
-              required
+              required={isFirstConnect}
+              placeholder={isFirstConnect ? undefined : "Leave blank to keep current"}
               autoComplete="off"
             />
           </div>
@@ -118,7 +121,8 @@ export function IntegrationDialog({
               type="password"
               value={apiSecret}
               onChange={(event) => setApiSecret(event.target.value)}
-              required
+              required={isFirstConnect}
+              placeholder={isFirstConnect ? undefined : "Leave blank to keep current"}
               autoComplete="off"
             />
           </div>
@@ -168,7 +172,10 @@ export function IntegrationDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={pending || !apiKey.trim()}>
+            <Button
+              type="submit"
+              disabled={pending || (isFirstConnect && !apiKey.trim())}
+            >
               {pending && <Loader2Icon className="animate-spin" />}
               Save
             </Button>

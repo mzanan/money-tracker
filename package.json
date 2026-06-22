@@ -15,7 +15,8 @@
     "backfill:reminderDueDates": "tsx scripts/backfillReminderDueDates.ts",
     "dedup:transactions": "tsx scripts/dedupTransactions.ts",
     "backfill:reminderPaidExpenses": "tsx scripts/backfillReminderPaidExpenses.ts",
-    "revert:tagsUnify": "tsx scripts/revertTagsUnify.ts"
+    "revert:tagsUnify": "tsx scripts/revertTagsUnify.ts",
+    "migrate:encryptIntegrations": "tsx scripts/encryptIntegrations.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.80",
@@ -42,6 +43,7 @@
     "react-day-picker": "^10.0.0",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.75.0",
+    "server-only": "^0.0.1",
     "shadcn": "^4.7.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
