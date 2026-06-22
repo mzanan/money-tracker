@@ -109,22 +109,22 @@ export async function updateReminder(
   }
 }
 
-async function insertReminderExpense(
+async function buildReminderExpenseRow(
   userId: string,
   reminder: typeof recurring_payments.$inferSelect,
   day: string,
   userCurrencies: string[],
-): Promise<boolean> {
-  if (reminder.amount == null || !reminder.currency) return false;
+) {
+  if (reminder.amount == null || !reminder.currency) return null;
 
   let rates;
   try {
     rates = (await getRates()).rates;
   } catch {
-    return false;
+    return null;
   }
 
-  const row = buildTransactionRow(
+  return buildTransactionRow(
     {
       userId,
       kind: "expense",
@@ -137,20 +137,6 @@ async function insertReminderExpense(
     },
     { rates, userCurrencies },
   );
-  if (!row) return false;
-
-  const inserted = await db
-    .insert(transactions)
-    .values(row)
-    .onConflictDoNothing({
-      target: [
-        transactions.user_id,
-        transactions.source,
-        transactions.external_id,
-      ],
-    })
-    .returning({ id: transactions.id });
-  return inserted.length > 0;
 }
 
 export interface ReminderPaymentCandidate {
@@ -293,6 +279,10 @@ export async function markReminderPaid(
 
   try {
     const linkId = options?.linkTransactionId;
+    let linkUpdate: {
+      id: string;
+      patch: Partial<typeof transactions.$inferSelect>;
+    } | null = null;
     if (linkId) {
       const tx = await db
         .select()
@@ -314,47 +304,74 @@ export async function markReminderPaid(
       ) {
         patch.tags = [...tx.tags, reminder.category];
       }
-      if (Object.keys(patch).length > 0) {
-        await db
-          .update(transactions)
-          .set(patch)
-          .where(eq(transactions.id, linkId));
-      }
+      if (Object.keys(patch).length > 0) linkUpdate = { id: linkId, patch };
       day = tx.occurred_on;
     }
+    const resolvedDay = day;
 
     const installmentsPaid = reminder.installments_paid + 1;
     const completed =
       reminder.installments_total != null &&
       installmentsPaid >= reminder.installments_total;
 
-    await db
-      .update(recurring_payments)
-      .set({
-        last_paid_on: day,
-        next_due_on: computeNextDue(
-          day,
-          reminder.frequency,
-          reminder.interval_months,
-        ),
-        installments_paid: installmentsPaid,
-        active: completed ? false : reminder.active,
-      })
-      .where(
-        and(
-          eq(recurring_payments.id, id),
-          eq(recurring_payments.user_id, user.id),
-        ),
-      );
-    const expenseAdded =
+    // getRates() runs network I/O, so build the expense row before opening the
+    // transaction — keep only DB writes inside it.
+    const expenseRow =
       linkId || options?.skipExpense
-        ? false
-        : await insertReminderExpense(
+        ? null
+        : await buildReminderExpenseRow(
             user.id,
             reminder,
-            day,
+            resolvedDay,
             settings?.currencies ?? [],
           );
+
+    let expenseAdded = false;
+    await db.transaction(async (dbTx) => {
+      if (linkUpdate) {
+        await dbTx
+          .update(transactions)
+          .set(linkUpdate.patch)
+          .where(
+            and(
+              eq(transactions.id, linkUpdate.id),
+              eq(transactions.user_id, user.id),
+            ),
+          );
+      }
+      await dbTx
+        .update(recurring_payments)
+        .set({
+          last_paid_on: resolvedDay,
+          next_due_on: computeNextDue(
+            resolvedDay,
+            reminder.frequency,
+            reminder.interval_months,
+          ),
+          installments_paid: installmentsPaid,
+          active: completed ? false : reminder.active,
+        })
+        .where(
+          and(
+            eq(recurring_payments.id, id),
+            eq(recurring_payments.user_id, user.id),
+          ),
+        );
+      if (expenseRow) {
+        const inserted = await dbTx
+          .insert(transactions)
+          .values(expenseRow)
+          .onConflictDoNothing({
+            target: [
+              transactions.user_id,
+              transactions.source,
+              transactions.external_id,
+            ],
+          })
+          .returning({ id: transactions.id });
+        expenseAdded = inserted.length > 0;
+      }
+    });
     revalidatePath("/", "layout");
     return {
       ok: true,

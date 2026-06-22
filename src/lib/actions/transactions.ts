@@ -207,18 +207,22 @@ export async function mergeTransactions(
       patch.tags = mergedTags;
     }
     if (!keep.comment && removed.comment) patch.comment = removed.comment;
-    if (Object.keys(patch).length > 0) {
-      await db
-        .update(transactions)
-        .set(patch)
-        .where(eq(transactions.id, keepId));
-    }
 
-    await db
-      .delete(transactions)
-      .where(
-        and(eq(transactions.user_id, user.id), eq(transactions.id, removeId)),
-      );
+    await db.transaction(async (dbTx) => {
+      if (Object.keys(patch).length > 0) {
+        await dbTx
+          .update(transactions)
+          .set(patch)
+          .where(
+            and(eq(transactions.id, keepId), eq(transactions.user_id, user.id)),
+          );
+      }
+      await dbTx
+        .delete(transactions)
+        .where(
+          and(eq(transactions.user_id, user.id), eq(transactions.id, removeId)),
+        );
+    });
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
