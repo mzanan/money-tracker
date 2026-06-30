@@ -192,6 +192,7 @@ function CalendarDayButton({
   day,
   modifiers,
   locale,
+  children,
   ...props
 }: React.ComponentProps<typeof DayButton> & { locale?: Partial<Locale> }) {
   const defaultClassNames = getDefaultClassNames();
@@ -222,7 +223,19 @@ function CalendarDayButton({
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+      {(modifiers.hasTx || modifiers.due) && (
+        <span className="pointer-events-none absolute bottom-1 left-1/2 flex -translate-x-1/2 gap-0.5 opacity-100!">
+          {modifiers.hasTx && (
+            <span className="bg-muted-foreground size-1 rounded-full" />
+          )}
+          {modifiers.due && (
+            <span className="bg-amber-500 size-1 rounded-full" />
+          )}
+        </span>
+      )}
+    </Button>
   );
 }
 
