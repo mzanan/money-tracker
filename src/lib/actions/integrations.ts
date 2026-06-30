@@ -12,7 +12,6 @@ import { ADAPTERS } from "@/lib/integrations";
 import { decryptSecret, encryptSecret } from "@/lib/integrations/crypto";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
-import { applyAutoCategories } from "@/lib/categorization";
 import { buildTransactionRow } from "@/lib/transactions";
 import type { ApiIntegrationUpdate, IntegrationProvider } from "@/types/db";
 
@@ -359,9 +358,6 @@ export async function syncIntegration(
       );
   }
 
-  if (imported > 0) {
-    await applyAutoCategories(user.id).catch(() => {});
-  }
   revalidatePath("/", "layout");
 
   const skipped = normalized.length - imported;
