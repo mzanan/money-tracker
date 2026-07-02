@@ -71,11 +71,6 @@ export function CalendarPanel({
               hasTx: (date) => activityDates.has(ymd(date)),
               due: (date) => reminderDates.has(ymd(date)),
             }}
-            modifiersClassNames={{
-              hasTx:
-                "after:bg-muted-foreground after:absolute after:bottom-1 after:left-1/2 after:size-1 after:-translate-x-[calc(100%+1px)] after:rounded-full",
-              due: "before:bg-amber-500 before:absolute before:bottom-1 before:left-1/2 before:size-1 before:translate-x-[1px] before:rounded-full",
-            }}
           />
         </div>
 
