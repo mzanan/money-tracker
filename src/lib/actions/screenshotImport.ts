@@ -12,7 +12,6 @@ import { transactions, user_settings } from "@/lib/db/schema";
 import { sourceForApp } from "@/lib/ingest/notification";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
-import { applyAutoCategories } from "@/lib/categorization";
 import {
   buildTransactionRow,
   transactionContentHash,
@@ -184,7 +183,6 @@ export async function importScreenshotRows(input: {
   }
 
   if (imported > 0) {
-    await applyAutoCategories(user.id).catch(() => {});
     revalidatePath("/", "layout");
   }
 

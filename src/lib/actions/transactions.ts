@@ -13,7 +13,6 @@ import {
   type UpdateTransactionInput,
 } from "@/lib/schemas/transaction";
 import { getUser } from "@/lib/session";
-import { applyAutoCategories } from "@/lib/categorization";
 import { kindOfSource } from "@/lib/constants/sources";
 import { buildTransactionRow, normalizeTags } from "@/lib/transactions";
 
@@ -81,9 +80,6 @@ export async function createTransaction(
       .insert(transactions)
       .values(row)
       .returning({ id: transactions.id });
-    if ((row.tags ?? []).length === 0) {
-      await applyAutoCategories(user.id).catch(() => {});
-    }
     revalidatePath("/", "layout");
     return { ok: true, data: { id: inserted.id } };
   } catch (error) {
