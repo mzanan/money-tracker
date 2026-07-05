@@ -6,6 +6,7 @@ import { format, parse } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Reveal } from "@/components/ui/reveal";
 import { Surface } from "@/components/ui/surface";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReminderRow } from "@/components/reminders/reminderRow";
 import { formatYearMonthLong, monthBounds } from "@/lib/dates";
 
@@ -16,6 +17,8 @@ import { DaySection } from "./daySection";
 
 const ymd = (date: Date) => format(date, "yyyy-MM-dd");
 const ym = (date: Date) => format(date, "yyyy-MM");
+
+type ReminderScope = "month" | "all";
 
 export function CalendarPanel({
   yearMonth,
@@ -42,6 +45,7 @@ export function CalendarPanel({
     : undefined;
 
   const [visibleMonth, setVisibleMonth] = useState<Date>(defaultMonth);
+  const [reminderScope, setReminderScope] = useState<ReminderScope>("month");
   const visibleYearMonth = ym(visibleMonth);
 
   const [shownDay, setShownDay] = useState<DayTotals | null>(selectedDayGroup);
@@ -49,12 +53,14 @@ export function CalendarPanel({
     setShownDay(selectedDayGroup);
   }
 
-  const visibleReminders = useMemo(() => {
+  const shownReminders = useMemo(() => {
+    const sorted = [...reminders].sort((a, b) =>
+      a.next_due_on.localeCompare(b.next_due_on),
+    );
+    if (reminderScope === "all") return sorted;
     const [start, end] = monthBounds(visibleYearMonth);
-    return reminders
-      .filter((r) => r.next_due_on >= start && r.next_due_on <= end)
-      .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on));
-  }, [reminders, visibleYearMonth]);
+    return sorted.filter((r) => r.next_due_on >= start && r.next_due_on <= end);
+  }, [reminders, reminderScope, visibleYearMonth]);
 
   return (
     <>
@@ -93,18 +99,33 @@ export function CalendarPanel({
       </Reveal>
 
       <Surface className="grid gap-2">
-        <span className="text-eyebrow">
-          Due · {formatYearMonthLong(visibleYearMonth)}
-        </span>
-        {visibleReminders.length > 0 ? (
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-eyebrow">
+            {reminderScope === "month"
+              ? `Due · ${formatYearMonthLong(visibleYearMonth)}`
+              : "Upcoming"}
+          </span>
+          <Tabs
+            value={reminderScope}
+            onValueChange={(v) => setReminderScope(v as ReminderScope)}
+          >
+            <TabsList>
+              <TabsTrigger value="month">Month</TabsTrigger>
+              <TabsTrigger value="all">All</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        {shownReminders.length > 0 ? (
           <ul className="grid gap-1">
-            {visibleReminders.map((reminder) => (
+            {shownReminders.map((reminder) => (
               <ReminderRow key={reminder.id} reminder={reminder} today={today} />
             ))}
           </ul>
         ) : (
           <p className="text-muted-foreground text-sm">
-            Nothing due this month.
+            {reminderScope === "month"
+              ? "Nothing due this month."
+              : "No reminders yet."}
           </p>
         )}
       </Surface>
