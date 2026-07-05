@@ -9,7 +9,6 @@ import { roundForCurrency } from "@/lib/currency";
 import { todayInTz } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
-import { sourceForApp } from "@/lib/ingest/notification";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
 import {
@@ -27,14 +26,29 @@ export async function clearSharePayload(): Promise<void> {
 }
 
 export interface ScreenshotRow {
+  id: string;
   kind: "income" | "expense";
   amount: number;
   currency: string;
   occurredOn: string | null;
   description: string | null;
   category: string | null;
-  app: string | null;
+  source: string;
   replaceId: string | null;
+}
+
+export type ScreenshotRowStatus =
+  | "imported"
+  | "duplicate"
+  | "invalid_currency"
+  | "invalid_amount"
+  | "invalid_date"
+  | "invalid_source"
+  | "failed";
+
+export interface ScreenshotRowResult {
+  id: string;
+  status: ScreenshotRowStatus;
 }
 
 async function nextExternalId(
@@ -62,10 +76,19 @@ async function nextExternalId(
   return `${prefix}:${i}`;
 }
 
+const SOURCE_RE = /^[a-z0-9][a-z0-9 &_-]{0,31}$/;
+const RESERVED_SOURCES = new Set(["all"]);
+
+function normalizeSource(raw: string): string | null {
+  const source = raw.trim().toLowerCase();
+  if (!SOURCE_RE.test(source) || RESERVED_SOURCES.has(source)) return null;
+  return source;
+}
+
 export async function importScreenshotRows(input: {
   rows: ScreenshotRow[];
 }): Promise<
-  ActionResult<{ imported: number; errors: number; bySource: Record<string, number> }>
+  ActionResult<{ imported: number; results: ScreenshotRowResult[] }>
 > {
   if (input.rows.length === 0) {
     return { ok: false, error: "Nothing selected" };
@@ -100,28 +123,31 @@ export async function importScreenshotRows(input: {
 
   const today = todayInTz(settings.timezone ?? "UTC");
 
-  let errors = 0;
   let imported = 0;
-  const bySource: Record<string, number> = {};
+  const results: ScreenshotRowResult[] = [];
 
   for (const row of input.rows) {
+    const source = normalizeSource(row.source);
+    if (!source) {
+      results.push({ id: row.id, status: "invalid_source" });
+      continue;
+    }
     if (!isSupportedCurrency(row.currency) && !rates[row.currency]) {
-      errors += 1;
+      results.push({ id: row.id, status: "invalid_currency" });
       continue;
     }
     const amount = roundForCurrency(row.amount, row.currency);
     if (!Number.isFinite(amount) || amount <= 0) {
-      errors += 1;
+      results.push({ id: row.id, status: "invalid_amount" });
       continue;
     }
     let occurredOn = row.occurredOn ?? today;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn)) {
-      errors += 1;
+      results.push({ id: row.id, status: "invalid_date" });
       continue;
     }
     if (occurredOn > today) occurredOn = today;
 
-    const source = sourceForApp(row.app);
     const baseHash = transactionContentHash({
       occurredOn,
       amount,
@@ -146,7 +172,7 @@ export async function importScreenshotRows(input: {
       { rates, userCurrencies: settings.currencies },
     );
     if (!built) {
-      errors += 1;
+      results.push({ id: row.id, status: "invalid_currency" });
       continue;
     }
 
@@ -163,22 +189,25 @@ export async function importScreenshotRows(input: {
         })
         .returning({ id: transactions.id });
 
-      if (inserted.length > 0) {
-        imported += 1;
-        bySource[source] = (bySource[source] ?? 0) + 1;
-        if (row.replaceId) {
-          await db
-            .delete(transactions)
-            .where(
-              and(
-                eq(transactions.user_id, user.id),
-                eq(transactions.id, row.replaceId),
-              ),
-            );
-        }
+      if (inserted.length === 0) {
+        results.push({ id: row.id, status: "duplicate" });
+        continue;
+      }
+
+      imported += 1;
+      results.push({ id: row.id, status: "imported" });
+      if (row.replaceId) {
+        await db
+          .delete(transactions)
+          .where(
+            and(
+              eq(transactions.user_id, user.id),
+              eq(transactions.id, row.replaceId),
+            ),
+          );
       }
     } catch {
-      errors += 1;
+      results.push({ id: row.id, status: "failed" });
     }
   }
 
@@ -186,7 +215,7 @@ export async function importScreenshotRows(input: {
     revalidatePath("/", "layout");
   }
 
-  return { ok: true, data: { imported, errors, bySource } };
+  return { ok: true, data: { imported, results } };
 }
 
 export async function previewCandidatesAction(
