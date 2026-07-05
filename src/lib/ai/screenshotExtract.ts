@@ -65,6 +65,7 @@ const SYSTEM = `You parse screenshots of phone notifications and bank/wallet ale
 Rules:
 - Read every notification visible in the image.
 - For each that reports a money movement (purchase, charge, transfer, refund, salary, deposit, withdrawal, refund), emit ONE item.
+- A single payment often shows a second, converted amount in another currency (in parentheses, on a second line, or as "about X USD"). That is ONE movement: emit exactly ONE item with the amount and currency the merchant actually charged (the primary amount in the notification). Never emit a separate item for the converted amount.
 - Ignore non-financial notifications (chat, social, calendar, weather). Count them in "ignored".
 - amount must be positive, no sign. Use kind=expense for outgoing money, kind=income for incoming.
 - currency must be an ISO 4217 code. If only a symbol is shown, infer (e.g. $ in a Wise notif = USD unless context says otherwise, € = EUR, ₫ = VND, ₮ = USDT, ¥ = JPY).

@@ -1,12 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { Trash2Icon } from "lucide-react";
 
 import { CURRENCIES } from "@/config/currencies";
+import { SOURCE_LABELS } from "@/lib/constants/sources";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CurrencySelect } from "@/components/ui/currencySelect";
+import { ErrorText } from "@/components/ui/errorText";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -125,7 +128,14 @@ export function DetectedItemCard({
           </Field>
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-3">
+          <Field label="Source">
+            <SourcePicker
+              source={item.source}
+              onChange={(source) => onChange({ source })}
+            />
+          </Field>
+
           <Field label="Date (empty = today)">
             <Input
               type="date"
@@ -141,6 +151,8 @@ export function DetectedItemCard({
             />
           </Field>
         </div>
+
+        {item.error && <ErrorText>{item.error}</ErrorText>}
 
         {candidates.length > 0 && (
           <CandidateBlock
@@ -165,6 +177,58 @@ function Field({
     <div className="grid gap-1">
       <Label>{label}</Label>
       {children}
+    </div>
+  );
+}
+
+const NEW_SOURCE = "__new__";
+
+function SourcePicker({
+  source,
+  onChange,
+}: {
+  source: string;
+  onChange: (source: string) => void;
+}) {
+  const known = source in SOURCE_LABELS;
+  const [creating, setCreating] = useState(source !== "" && !known);
+
+  function handleSelect(value: string) {
+    if (value === NEW_SOURCE) {
+      setCreating(true);
+      onChange("");
+      return;
+    }
+    setCreating(false);
+    onChange(value);
+  }
+
+  return (
+    <div className="grid gap-1">
+      <Select
+        value={creating ? NEW_SOURCE : source || undefined}
+        onValueChange={handleSelect}
+      >
+        <SelectTrigger aria-invalid={(!creating && source === "") || undefined}>
+          <SelectValue placeholder="Select source" />
+        </SelectTrigger>
+        <SelectContent>
+          {Object.entries(SOURCE_LABELS).map(([value, label]) => (
+            <SelectItem key={value} value={value}>
+              {label}
+            </SelectItem>
+          ))}
+          <SelectItem value={NEW_SOURCE}>New source...</SelectItem>
+        </SelectContent>
+      </Select>
+      {creating && (
+        <Input
+          placeholder="Source name"
+          value={source}
+          onChange={(e) => onChange(e.target.value)}
+          aria-invalid={source.trim() === "" || undefined}
+        />
+      )}
     </div>
   );
 }

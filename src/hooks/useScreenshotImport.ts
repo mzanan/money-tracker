@@ -9,11 +9,14 @@ import {
   clearSharePayload,
   importScreenshotRows,
   previewCandidatesAction,
+  type ScreenshotRowStatus,
 } from "@/lib/actions/screenshotImport";
 import {
   requestImageExtraction,
   type ImageImportMode,
 } from "@/lib/imageExtract";
+import { SOURCE_LABELS } from "@/lib/constants/sources";
+import { sourceForApp } from "@/lib/ingest/notification";
 
 export interface EditableItem {
   id: string;
@@ -25,8 +28,25 @@ export interface EditableItem {
   description: string;
   category: string | null;
   app: string | null;
+  source: string;
   confidence: "high" | "medium" | "low";
   replaceId: string | null;
+  error: string | null;
+}
+
+const ROW_ERRORS: Record<Exclude<ScreenshotRowStatus, "imported">, string> = {
+  duplicate: "Already imported before (duplicate).",
+  invalid_currency: "Currency not supported and no exchange rate for it.",
+  invalid_amount: "Amount must be a positive number.",
+  invalid_date: "Date must be YYYY-MM-DD.",
+  invalid_source:
+    "Source must be letters, numbers, spaces or dashes (max 32).",
+  failed: "Could not save this row. Try again.",
+};
+
+function sourceFor(app: string | null, mode: ImageImportMode): string {
+  const source = sourceForApp(mode === "receipt" ? "receipt" : app);
+  return source in SOURCE_LABELS ? source : "";
 }
 
 export interface CandidateMatch {
@@ -39,7 +59,10 @@ export interface CandidateMatch {
   note: string | null;
 }
 
-function detectedToEditable(detected: DetectedTransaction): EditableItem {
+function detectedToEditable(
+  detected: DetectedTransaction,
+  mode: ImageImportMode,
+): EditableItem {
   return {
     id: crypto.randomUUID(),
     selected: true,
@@ -50,8 +73,10 @@ function detectedToEditable(detected: DetectedTransaction): EditableItem {
     description: detected.description ?? "",
     category: detected.category,
     app: detected.app,
+    source: sourceFor(detected.app, mode),
     confidence: detected.confidence,
     replaceId: null,
+    error: null,
   };
 }
 
@@ -79,7 +104,7 @@ export function useScreenshotImport({
   }, [consumeShareCookie]);
 
   const [items, setItems] = useState<EditableItem[]>(
-    initialItems?.map(detectedToEditable) ?? [],
+    initialItems?.map((detected) => detectedToEditable(detected, mode)) ?? [],
   );
   const [ignored, setIgnored] = useState(initialIgnored);
   const [candidatesByIndex, setCandidatesByIndex] =
@@ -113,7 +138,9 @@ export function useScreenshotImport({
         return;
       }
 
-      const editable = extract.items.map(detectedToEditable);
+      const editable = extract.items.map((detected) =>
+        detectedToEditable(detected, mode),
+      );
       setItems(editable);
       setIgnored(extract.ignored);
       setCandidatesByIndex({});
@@ -159,18 +186,21 @@ export function useScreenshotImport({
     selectedItems.length > 0 &&
     selectedItems.every(
       (item) =>
-        item.currency.trim().length >= 3 && parseFloat(item.amount) > 0,
+        item.currency.trim().length >= 3 &&
+        parseFloat(item.amount) > 0 &&
+        item.source.trim().length > 0,
     );
 
   function submit() {
     const rows = selectedItems.map((item) => ({
+      id: item.id,
       kind: item.kind,
       amount: parseFloat(item.amount),
       currency: item.currency.trim().toUpperCase(),
       occurredOn: item.occurredOn,
       description: item.description.trim() || null,
       category: item.category,
-      app: item.app ?? (mode === "receipt" ? "receipt" : null),
+      source: item.source,
       replaceId: item.replaceId,
     }));
 
@@ -180,14 +210,38 @@ export function useScreenshotImport({
         toast.error(result.error);
         return;
       }
-      const { imported, errors } = result.data!;
-      toast.success(
-        `Imported ${imported}${errors > 0 ? `, ${errors} errors` : ""}`,
+      const { imported, results } = result.data!;
+      const failedById = new Map(
+        results
+          .filter((r) => r.status !== "imported")
+          .map((r) => [r.id, ROW_ERRORS[r.status as keyof typeof ROW_ERRORS]]),
       );
-      reset();
-      router.refresh();
-      if (onDone) onDone();
-      else router.push("/");
+
+      if (failedById.size === 0) {
+        toast.success(`Imported ${imported}`);
+        reset();
+        router.refresh();
+        if (onDone) onDone();
+        else router.push("/");
+        return;
+      }
+
+      if (imported > 0) {
+        toast.success(`Imported ${imported}`);
+        router.refresh();
+      }
+      toast.error(
+        `${failedById.size} item(s) not imported. Check the reasons below.`,
+      );
+      setItems((prev) =>
+        prev
+          .filter((item) => !item.selected || failedById.has(item.id))
+          .map((item) => ({
+            ...item,
+            error: failedById.get(item.id) ?? item.error,
+          })),
+      );
+      setCandidatesByIndex({});
     });
   }
 
