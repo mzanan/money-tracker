@@ -3,6 +3,7 @@
 import { ChatComposer } from "@/components/assistant/chatComposer";
 import { MessageList } from "@/components/assistant/messageList";
 import { useAssistant } from "@/components/assistant/useAssistant";
+import { ErrorText } from "@/components/ui/errorText";
 
 const BUDGET_SUGGESTIONS = [
   "Where is my money going this month?",
@@ -24,9 +25,9 @@ export function BudgetPanel() {
         emptyHint="Analyze your spending with real data: fixed vs variable, categories, merchants and trend."
       />
       {error && (
-        <p className="text-destructive px-3 pb-1 text-xs">
+        <ErrorText className="px-3 pb-1">
           Could not respond. Try again in a moment.
-        </p>
+        </ErrorText>
       )}
       <ChatComposer
         input={input}

@@ -4,6 +4,7 @@ import type { UIMessage } from "ai";
 import { XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ErrorText } from "@/components/ui/errorText";
 
 import { ChatComposer } from "./chatComposer";
 import { MessageList } from "./messageList";
@@ -44,9 +45,9 @@ export function ChatPanel({
       <MessageList messages={messages} onSuggest={ask} />
 
       {hasError && (
-        <p className="text-destructive px-3 pb-1 text-xs">
+        <ErrorText className="px-3 pb-1">
           Could not respond. Try again in a moment.
-        </p>
+        </ErrorText>
       )}
 
       <ChatComposer
