@@ -10,13 +10,7 @@
     "format": "prettier --write .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio",
-    "backfill:reminderNotes": "tsx scripts/backfillReminderNotes.ts",
-    "backfill:reminderDueDates": "tsx scripts/backfillReminderDueDates.ts",
-    "dedup:transactions": "tsx scripts/dedupTransactions.ts",
-    "backfill:reminderPaidExpenses": "tsx scripts/backfillReminderPaidExpenses.ts",
-    "revert:tagsUnify": "tsx scripts/revertTagsUnify.ts",
-    "migrate:encryptIntegrations": "tsx scripts/encryptIntegrations.ts"
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.80",
