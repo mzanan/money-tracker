@@ -6,7 +6,6 @@ import { CashCard } from "@/components/settings/cashCard";
 import { CashExchangeForm } from "@/components/settings/cashExchangeForm";
 import { CsvImportCard } from "@/components/settings/csvImportCard";
 import { ImportedAccountsCard } from "@/components/settings/importedAccountsCard";
-import { IngestCard } from "@/components/settings/ingestCard";
 import { IntegrationsCard } from "@/components/settings/integrationsCard";
 import { SettingsForm } from "@/components/settings/settingsForm";
 import { Button } from "@/components/ui/button";
@@ -68,13 +67,6 @@ export default async function SettingsPage() {
         hint="Show your reminders inside Google / iOS / Outlook calendar."
       >
         <CalendarFeedCard />
-      </CollapsedSection>
-
-      <CollapsedSection
-        title="Phone auto-import"
-        hint="Capture Wise / Google Wallet notifications from your Android phone."
-      >
-        <IngestCard />
       </CollapsedSection>
     </div>
   );

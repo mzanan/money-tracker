@@ -177,7 +177,6 @@ export const user_settings = sqliteTable(
     cash_enabled: integer("cash_enabled", { mode: "boolean" })
       .notNull()
       .default(false),
-    ingest_token: text("ingest_token"),
     calendar_token: text("calendar_token"),
     onboarded_at: text("onboarded_at"),
     created_at: text("created_at")
@@ -189,7 +188,6 @@ export const user_settings = sqliteTable(
       .$onUpdate(() => new Date().toISOString()),
   },
   (t) => [
-    uniqueIndex("user_settings_ingest_token_uniq").on(t.ingest_token),
     uniqueIndex("user_settings_calendar_token_uniq").on(t.calendar_token),
   ],
 );

@@ -24,3 +24,18 @@ export function kindOfSource(source: string): SourceKind {
   if (API_SOURCES.has(source)) return "api";
   return "csv";
 }
+
+export function sourceForApp(app?: string | null): string {
+  const a = (app ?? "").toLowerCase();
+  if (a.includes("wise")) return "wise";
+  if (a.includes("bybit")) return "bybit";
+  if (
+    a.includes("wallet") ||
+    a.includes("gpay") ||
+    a.includes("google pay") ||
+    a.includes("nfc")
+  ) {
+    return "google wallet";
+  }
+  return "notification";
+}

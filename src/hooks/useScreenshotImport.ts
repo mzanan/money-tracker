@@ -15,8 +15,7 @@ import {
   requestImageExtraction,
   type ImageImportMode,
 } from "@/lib/imageExtract";
-import { SOURCE_LABELS } from "@/lib/constants/sources";
-import { sourceForApp } from "@/lib/ingest/notification";
+import { SOURCE_LABELS, sourceForApp } from "@/lib/constants/sources";
 
 export interface EditableItem {
   id: string;
