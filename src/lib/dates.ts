@@ -22,6 +22,10 @@ export function monthBounds(yearMonth: string): [string, string] {
   return [start, end];
 }
 
+export function daysBefore(dateStr: string, days: number): string {
+  return format(subDays(new Date(`${dateStr}T00:00:00Z`), days), "yyyy-MM-dd");
+}
+
 export function dayWindow(
   occurredOn: string,
   windowDays: number,

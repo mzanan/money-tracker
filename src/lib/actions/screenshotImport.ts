@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 
 import { isSupportedCurrency } from "@/config/currencies";
 import { roundForCurrency } from "@/lib/currency";
-import { todayInTz } from "@/lib/dates";
+import { daysBefore, todayInTz } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
@@ -122,6 +122,7 @@ export async function importScreenshotRows(input: {
   }
 
   const today = todayInTz(settings.timezone ?? "UTC");
+  const oldestPlausible = daysBefore(today, 365);
 
   let imported = 0;
   const results: ScreenshotRowResult[] = [];
@@ -146,7 +147,7 @@ export async function importScreenshotRows(input: {
       results.push({ id: row.id, status: "invalid_date" });
       continue;
     }
-    if (occurredOn > today) occurredOn = today;
+    if (occurredOn > today || occurredOn < oldestPlausible) occurredOn = today;
 
     const baseHash = transactionContentHash({
       occurredOn,

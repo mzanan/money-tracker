@@ -69,7 +69,7 @@ Rules:
 - Ignore non-financial notifications (chat, social, calendar, weather). Count them in "ignored".
 - amount must be positive, no sign. Use kind=expense for outgoing money, kind=income for incoming.
 - currency must be an ISO 4217 code. If only a symbol is shown, infer (e.g. $ in a Wise notif = USD unless context says otherwise, € = EUR, ₫ = VND, ₮ = USDT, ¥ = JPY).
-- occurredOn: only set if the notification shows a specific date. Otherwise null (the user will default to today).
+- occurredOn: only set if an explicit calendar date (day and month, e.g. "Jul 6" or "06/07") is printed in the notification text. Never infer it from a clock time, a relative phrase ("2h ago", "yesterday", "just now"), or the screenshot's status bar. If in doubt, use null (the user will default to today).
 - description: short merchant or payee name. Strip prefixes like "at", "to", "from".
 - confidence:
   - high: every field came directly from the image text.
@@ -86,7 +86,7 @@ Rules:
 - kind is "expense", unless the document is clearly a refund or credit note (then "income").
 - amount must be the total, positive, no sign, no thousand separators.
 - currency must be an ISO 4217 code. Infer from the symbol or the receipt's country/language when not printed (₫ or "đ" = VND, $ = USD unless context says otherwise, € = EUR).
-- occurredOn: the printed receipt date in YYYY-MM-DD if visible, else null (the user will default to today).
+- occurredOn: only set if an explicit calendar date is printed on the receipt itself. Never guess a date from anything else in the photo. If in doubt, use null (the user will default to today).
 - description: the merchant or store name as printed.
 - app: always null.
 - confidence:
