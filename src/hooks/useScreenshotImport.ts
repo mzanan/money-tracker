@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -109,6 +109,18 @@ export function useScreenshotImport({
   const [ignored, setIgnored] = useState(initialIgnored);
   const [candidatesByIndex, setCandidatesByIndex] =
     useState<Record<number, CandidateMatch[]>>(initialCandidates);
+
+  const customSources = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          items
+            .map((item) => item.source.trim().toLowerCase())
+            .filter((source) => source && !(source in SOURCE_LABELS)),
+        ),
+      ),
+    [items],
+  );
 
   const refreshCandidates = useCallback(async (current: EditableItem[]) => {
     if (current.length === 0) {
@@ -249,6 +261,7 @@ export function useScreenshotImport({
     items,
     ignored,
     candidatesByIndex,
+    customSources,
     extracting,
     pending,
     canSubmit,
