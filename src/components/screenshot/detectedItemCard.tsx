@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Trash2Icon } from "lucide-react";
 
 import { CURRENCIES } from "@/config/currencies";
-import { SOURCE_LABELS } from "@/lib/constants/sources";
+import { labelForSource, SOURCE_LABELS } from "@/lib/constants/sources";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,12 +34,14 @@ export function DetectedItemCard({
   index,
   item,
   candidates,
+  customSources,
   onChange,
   onRemove,
 }: {
   index: number;
   item: EditableItem;
   candidates: CandidateMatch[];
+  customSources: string[];
   onChange: (patch: Partial<EditableItem>) => void;
   onRemove: () => void;
 }) {
@@ -132,6 +134,7 @@ export function DetectedItemCard({
           <Field label="Source">
             <SourcePicker
               source={item.source}
+              customSources={customSources}
               onChange={(source) => onChange({ source })}
             />
           </Field>
@@ -185,12 +188,14 @@ const NEW_SOURCE = "__new__";
 
 function SourcePicker({
   source,
+  customSources,
   onChange,
 }: {
   source: string;
+  customSources: string[];
   onChange: (source: string) => void;
 }) {
-  const known = source in SOURCE_LABELS;
+  const known = source in SOURCE_LABELS || customSources.includes(source);
   const [creating, setCreating] = useState(source !== "" && !known);
 
   function handleSelect(value: string) {
@@ -216,6 +221,11 @@ function SourcePicker({
           {Object.entries(SOURCE_LABELS).map(([value, label]) => (
             <SelectItem key={value} value={value}>
               {label}
+            </SelectItem>
+          ))}
+          {customSources.map((value) => (
+            <SelectItem key={value} value={value}>
+              {labelForSource(value)}
             </SelectItem>
           ))}
           <SelectItem value={NEW_SOURCE}>New source...</SelectItem>

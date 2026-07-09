@@ -35,6 +35,7 @@ export function ScreenshotImporter({
     items,
     ignored,
     candidatesByIndex,
+    customSources,
     extracting,
     pending,
     canSubmit,
@@ -123,6 +124,7 @@ export function ScreenshotImporter({
                 index={index}
                 item={item}
                 candidates={candidatesByIndex[index] ?? []}
+                customSources={customSources}
                 onChange={(patch) => updateItem(index, patch)}
                 onRemove={() => removeItem(index)}
               />
