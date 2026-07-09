@@ -30,11 +30,11 @@ export function CandidateBlock({
       {candidates.map((match) => (
         <div key={match.id} className="grid gap-1">
           <div className="text-foreground flex justify-between gap-2">
-            <span>
+            <span className="min-w-0 truncate">
               {labelForSource(match.source)} · {match.occurredOn}
               {match.note ? ` · ${match.note}` : ""}
             </span>
-            <span className="font-mono">
+            <span className="shrink-0 font-mono">
               {match.kind === "expense" ? "-" : "+"}
               {match.amount} {match.currency}
             </span>
