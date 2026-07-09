@@ -5,6 +5,7 @@ import { Loader2Icon } from "lucide-react";
 
 import { useServerAction } from "@/hooks/useServerAction";
 import { mergeTransactions } from "@/lib/actions/transactions";
+import { markPairAsTransfer } from "@/lib/actions/transfers";
 import { labelForSource } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
 import { useUiStore } from "@/stores/uiStore";
@@ -46,6 +47,16 @@ export function MergeBar() {
     setTxSelectMode(false);
   }
 
+  function markTransfer() {
+    if (!canResolve) return;
+    run(() => markPairAsTransfer(first.id, second.id), {
+      confirm:
+        "Mark both as one transfer between your accounts? They'll be linked and left out of your totals.",
+      success: "Marked as a transfer",
+      onSuccess: () => setTxSelectMode(false),
+    });
+  }
+
   return (
     <>
       <div className="bg-background/95 border-border fixed inset-x-0 bottom-0 z-40 border-t px-4 py-3 backdrop-blur">
@@ -62,6 +73,15 @@ export function MergeBar() {
               onClick={() => setTxSelectMode(false)}
             >
               Cancel
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!canResolve || pending}
+              onClick={markTransfer}
+            >
+              {pending && <Loader2Icon className="animate-spin" />}
+              Mark as transfer
             </Button>
             <Button
               size="sm"

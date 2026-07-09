@@ -12,11 +12,8 @@ import {
 
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
-import {
-  markAsCashWithdrawal,
-  unmarkCashWithdrawal,
-} from "@/lib/actions/cash";
 import { deleteTransaction } from "@/lib/actions/transactions";
+import { unmarkTransfer } from "@/lib/actions/transfers";
 import { kindOfSource, labelForSource } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
 import { computeNextDue } from "@/lib/reminders";
@@ -35,6 +32,7 @@ import {
 import { ReminderForm } from "@/components/reminders/reminderForm";
 
 import { Avatar } from "./avatar";
+import { MarkTransferDialog } from "./markTransferDialog";
 import { TagChips } from "./tagChips";
 import { TagEditor } from "./tagEditor";
 
@@ -48,11 +46,10 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const [reminderMounted, setReminderMounted] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
   const [tagsMounted, setTagsMounted] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferMounted, setTransferMounted] = useState(false);
   const canDelete = kindOfSource(tx.source) !== "api";
   const isTransfer = Boolean(tx.transfer_group);
-  const canMarkWithdrawal =
-    tx.kind === "expense" && tx.source !== "manual" && !isTransfer;
-  const canUnmarkWithdrawal = isTransfer && tx.transfer_group === tx.id;
   const txSelectMode = useUiStore((s) => s.txSelectMode);
   const selectedTxs = useUiStore((s) => s.selectedTxs);
   const toggleTxSelected = useUiStore((s) => s.toggleTxSelected);
@@ -78,6 +75,11 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   function openReminder() {
     setReminderMounted(true);
     setReminderOpen(true);
+  }
+
+  function openTransfer() {
+    setTransferMounted(true);
+    setTransferOpen(true);
   }
 
   const avatarSeed = tx.tags[0] || sourceLabel;
@@ -159,29 +161,22 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
               <TagIcon />
               Edit tags
             </DropdownMenuItem>
-            {(canMarkWithdrawal || canUnmarkWithdrawal) && (
+            {isTransfer ? (
               <DropdownMenuItem
                 onSelect={() =>
-                  transfer.run(
-                    () =>
-                      canUnmarkWithdrawal
-                        ? unmarkCashWithdrawal(tx.id)
-                        : markAsCashWithdrawal(tx.id),
-                    canUnmarkWithdrawal
-                      ? {
-                          confirm: "Undo the cash withdrawal?",
-                          success: "Withdrawal undone",
-                        }
-                      : {
-                          confirm:
-                            "Mark as a cash withdrawal? It moves the amount to your cash balance and leaves it out of spending totals.",
-                          success: "Moved to cash",
-                        },
-                  )
+                  transfer.run(() => unmarkTransfer(tx.id), {
+                    confirm: "Undo this transfer?",
+                    success: "Transfer undone",
+                  })
                 }
               >
                 <BanknoteIcon />
-                {canUnmarkWithdrawal ? "Undo cash withdrawal" : "Mark as cash"}
+                Undo transfer
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onSelect={openTransfer}>
+                <BanknoteIcon />
+                Mark as transfer
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onSelect={openReminder}>
@@ -228,6 +223,14 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             nextDueOn: computeNextDue(tx.occurred_on, "MONTHLY"),
             note: null,
           }}
+        />
+      )}
+      {transferMounted && (
+        <MarkTransferDialog
+          txId={tx.id}
+          txSource={tx.source}
+          open={transferOpen}
+          onOpenChange={setTransferOpen}
         />
       )}
     </div>

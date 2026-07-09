@@ -20,6 +20,18 @@ export type ActionResult<T = void> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
 
+export async function buildCurrencyContext(userId: string) {
+  const settings = await db
+    .select({ currencies: user_settings.currencies })
+    .from(user_settings)
+    .where(eq(user_settings.user_id, userId))
+    .limit(1)
+    .then((rows) => rows[0]);
+  if (!settings) return null;
+  const rates = (await getRates()).rates;
+  return { rates, userCurrencies: settings.currencies };
+}
+
 export async function createTransaction(
   input: CreateTransactionInput,
 ): Promise<ActionResult<{ id: string }>> {
