@@ -44,8 +44,8 @@ const ROW_ERRORS: Record<Exclude<ScreenshotRowStatus, "imported">, string> = {
   failed: "Could not save this row. Try again.",
 };
 
-function sourceFor(app: string | null, mode: ImageImportMode): string {
-  const source = sourceForApp(mode === "receipt" ? "receipt" : app);
+function sourceFor(app: string | null): string {
+  const source = sourceForApp(app);
   return source in SOURCE_LABELS ? source : "";
 }
 
@@ -73,7 +73,7 @@ function detectedToEditable(
     description: detected.description ?? "",
     category: detected.category,
     app: detected.app,
-    source: sourceFor(detected.app, mode),
+    source: mode === "receipt" ? "" : sourceFor(detected.app),
     confidence: detected.confidence,
     replaceId: null,
     error: null,

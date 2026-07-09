@@ -120,7 +120,6 @@ export function parseNotification(
 
 export function sourceForApp(app?: string | null): string {
   const a = (app ?? "").toLowerCase();
-  if (a === "receipt") return "receipt";
   if (a.includes("wise")) return "wise";
   if (a.includes("bybit")) return "bybit";
   if (
