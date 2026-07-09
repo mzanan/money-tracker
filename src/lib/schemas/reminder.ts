@@ -6,7 +6,6 @@ const reminderFields = {
   label: z.string().trim().min(1, "Name is required").max(80),
   amount: z.number().finite().positive().nullable().optional(),
   currency: z.string().trim().max(10).nullable().optional(),
-  category: z.string().trim().max(60).nullable().optional(),
   frequency: z.enum(["WEEKLY", "MONTHLY", "YEARLY", "CUSTOM_MONTHS"]),
   intervalMonths: z.number().int().min(1).max(120).nullable().optional(),
   installmentsTotal: z.number().int().min(1).max(600).nullable().optional(),

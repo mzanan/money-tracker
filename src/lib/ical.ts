@@ -58,7 +58,6 @@ function describe(reminder: RecurringPayment): string {
   }
   if (reminder.note) parts.push(reminder.note);
   if (reminder.source) parts.push(`Source: ${reminder.source}`);
-  if (reminder.category) parts.push(`Category: ${reminder.category}`);
   return parts.join("\n");
 }
 

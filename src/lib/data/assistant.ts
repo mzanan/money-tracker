@@ -166,7 +166,6 @@ export interface RecurringPaymentSummary {
   currency: string | null;
   amountBase: number | null;
   monthlyBase: number | null;
-  category: string | null;
   frequency: string;
   intervalMonths: number | null;
   nextDueOn: string;
@@ -214,7 +213,6 @@ export async function getRecurringPayments(
       currency: reminder.currency,
       amountBase,
       monthlyBase,
-      category: reminder.category,
       frequency: reminder.frequency,
       intervalMonths: reminder.interval_months,
       nextDueOn: reminder.next_due_on,

@@ -36,12 +36,6 @@ const DetectedTransactionSchema = z.object({
     .string()
     .nullable()
     .describe("Merchant / payee / payer / category. null if not shown."),
-  category: z
-    .string()
-    .nullable()
-    .describe(
-      "One short, general spending category, one or two words in Title Case (e.g. Coffee, Food, Groceries, Transport). Reuse common categories so the same kind of spend stays consistent. null if unclear.",
-    ),
   confidence: z
     .enum(["high", "medium", "low"])
     .describe(

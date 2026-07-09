@@ -32,7 +32,6 @@ export interface ScreenshotRow {
   currency: string;
   occurredOn: string | null;
   description: string | null;
-  category: string | null;
   source: string;
   replaceId: string | null;
 }
@@ -166,7 +165,6 @@ export async function importScreenshotRows(input: {
         currency: row.currency,
         occurredOn,
         note: row.description,
-        tags: row.category ? [row.category] : [],
         source,
         externalId,
       },

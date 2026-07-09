@@ -34,7 +34,6 @@ export function useReminderRow(reminder: RecurringPayment, today: string) {
   const metaSegments = [
     frequencyLabel(reminder.frequency, reminder.interval_months),
   ];
-  if (reminder.category) metaSegments.push(reminder.category);
   if (reminder.installments_total != null) {
     metaSegments.push(
       `${reminder.installments_paid}/${reminder.installments_total} paid`,

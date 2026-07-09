@@ -25,7 +25,6 @@ export interface EditableItem {
   currency: string;
   occurredOn: string | null;
   description: string;
-  category: string | null;
   app: string | null;
   source: string;
   confidence: "high" | "medium" | "low";
@@ -70,7 +69,6 @@ function detectedToEditable(
     currency: detected.currency.toUpperCase(),
     occurredOn: detected.occurredOn,
     description: detected.description ?? "",
-    category: detected.category,
     app: detected.app,
     source: mode === "receipt" ? "" : sourceFor(detected.app),
     confidence: detected.confidence,
@@ -210,7 +208,6 @@ export function useScreenshotImport({
       currency: item.currency.trim().toUpperCase(),
       occurredOn: item.occurredOn,
       description: item.description.trim() || null,
-      category: item.category,
       source: item.source,
       replaceId: item.replaceId,
     }));

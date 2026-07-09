@@ -222,7 +222,6 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             label: reminderTitle,
             amount: tx.amount_original,
             currency: tx.currency_original,
-            category: tx.tags[0] ?? null,
             source: tx.source,
             frequency: "MONTHLY",
             lastPaidOn: tx.occurred_on,

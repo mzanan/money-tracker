@@ -46,7 +46,6 @@ export async function createReminder(
         label: d.label,
         amount: d.amount ?? null,
         currency: d.currency?.trim() || null,
-        category: d.category?.trim() || null,
         frequency: d.frequency,
         interval_months: normalizeInterval(d.frequency, d.intervalMonths),
         installments_total: d.installmentsTotal ?? null,
@@ -85,7 +84,6 @@ export async function updateReminder(
         label: d.label,
         amount: d.amount ?? null,
         currency: d.currency?.trim() || null,
-        category: d.category?.trim() || null,
         frequency: d.frequency,
         interval_months: normalizeInterval(d.frequency, d.intervalMonths),
         installments_total: d.installmentsTotal ?? null,
@@ -131,7 +129,6 @@ async function buildReminderExpenseRow(
       amount: reminder.amount,
       currency: reminder.currency,
       occurredOn: day,
-      tags: reminder.category ? [reminder.category] : [],
       note: reminder.label,
       externalId: `reminder:${reminder.id}:${day}`,
     },
@@ -296,14 +293,6 @@ export async function markReminderPaid(
 
       const patch: Partial<typeof tx> = {};
       if (!tx.comment) patch.comment = reminder.label;
-      if (
-        reminder.category &&
-        !tx.tags.some(
-          (tag) => tag.toLowerCase() === reminder.category?.toLowerCase(),
-        )
-      ) {
-        patch.tags = [...tx.tags, reminder.category];
-      }
       if (Object.keys(patch).length > 0) linkUpdate = { id: linkId, patch };
       day = tx.occurred_on;
     }

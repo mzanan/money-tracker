@@ -13,7 +13,6 @@ export type ReminderSeed = {
   label?: string;
   amount?: number | null;
   currency?: string | null;
-  category?: string | null;
   source?: string | null;
   frequency?: RecurringFrequency;
   intervalMonths?: number | null;
@@ -53,7 +52,6 @@ export function useReminderForm({
         label: reminder.label,
         amount: reminder.amount,
         currency: reminder.currency,
-        category: reminder.category,
         source: reminder.source,
         frequency: reminder.frequency,
         intervalMonths: reminder.interval_months,
@@ -71,7 +69,6 @@ export function useReminderForm({
   const [currency, setCurrency] = useState(
     base.currency ?? settings.base_currency,
   );
-  const [category, setCategory] = useState(base.category ?? "");
   const [frequency, setFrequency] = useState<RecurringFrequency>(
     base.frequency ?? "MONTHLY",
   );
@@ -106,7 +103,6 @@ export function useReminderForm({
     setLabel(base.label ?? "");
     setAmount(base.amount != null ? String(base.amount) : "");
     setCurrency(base.currency ?? settings.base_currency);
-    setCategory(base.category ?? "");
     setFrequency(base.frequency ?? "MONTHLY");
     setIntervalMonths(
       base.intervalMonths != null ? String(base.intervalMonths) : "6",
@@ -125,7 +121,6 @@ export function useReminderForm({
       label: label.trim(),
       amount: parsedAmount && parsedAmount > 0 ? parsedAmount : null,
       currency: currency || null,
-      category: category.trim() || null,
       frequency,
       intervalMonths:
         frequency === "CUSTOM_MONTHS" ? Number(intervalMonths) || 1 : null,

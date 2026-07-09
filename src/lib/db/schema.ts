@@ -242,7 +242,6 @@ export const recurring_payments = sqliteTable(
     label: text("label").notNull(),
     amount: real("amount"),
     currency: text("currency"),
-    category: text("category"),
     frequency: text("frequency", {
       enum: ["WEEKLY", "MONTHLY", "YEARLY", "CUSTOM_MONTHS"],
     }).notNull(),
