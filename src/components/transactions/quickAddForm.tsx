@@ -2,6 +2,7 @@
 
 import { ChevronDownIcon, Loader2Icon, PlusIcon } from "lucide-react";
 
+import { labelForSource } from "@/lib/constants/sources";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -15,9 +16,11 @@ import { useQuickAddForm } from "./useQuickAddForm";
 
 interface Props {
   recentTags: string[];
+  source: string;
 }
 
-export function QuickAddForm({ recentTags }: Props) {
+export function QuickAddForm({ recentTags, source }: Props) {
+  const resolvedSource = source === "all" ? "manual" : source;
   const {
     kind,
     setKind,
@@ -40,11 +43,17 @@ export function QuickAddForm({ recentTags }: Props) {
     setDate,
     pending,
     handleSubmit,
-  } = useQuickAddForm();
+  } = useQuickAddForm(resolvedSource);
 
   return (
     <Surface asChild radius="lg" padding="sm" className="grid gap-3">
       <form id="quick-add" onSubmit={handleSubmit} className="scroll-mt-20">
+        <p className="text-muted-foreground px-1 text-xs">
+          Adding to{" "}
+          <span className="text-foreground font-medium">
+            {labelForSource(resolvedSource)}
+          </span>
+        </p>
         <div className="flex items-center gap-2">
           <KindToggle kind={kind} onChange={setKind} />
           <div className="bg-surface-2 relative flex flex-1 items-center rounded-xl pr-1.5">

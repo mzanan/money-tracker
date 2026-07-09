@@ -13,7 +13,7 @@ import {
   type UpdateTransactionInput,
 } from "@/lib/schemas/transaction";
 import { getUser } from "@/lib/session";
-import { kindOfSource } from "@/lib/constants/sources";
+import { kindOfSource, normalizeSource } from "@/lib/constants/sources";
 import { buildTransactionRow, normalizeTags } from "@/lib/transactions";
 
 export type ActionResult<T = void> =
@@ -41,6 +41,14 @@ export async function createTransaction(
       ok: false,
       error: parsed.error.issues[0]?.message ?? "Invalid data",
     };
+  }
+
+  let source: string | undefined;
+  if (parsed.data.source) {
+    source = normalizeSource(parsed.data.source) ?? undefined;
+    if (!source || kindOfSource(source) === "api") {
+      return { ok: false, error: "Invalid source" };
+    }
   }
 
   const user = await getUser();
@@ -76,6 +84,7 @@ export async function createTransaction(
       occurredOn: parsed.data.occurredOn,
       tags: parsed.data.tags,
       note: parsed.data.note,
+      source,
     },
     { rates, userCurrencies: settings.currencies },
   );

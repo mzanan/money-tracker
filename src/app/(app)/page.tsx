@@ -1,5 +1,4 @@
 import { MonthDashboard } from "@/components/transactions/monthDashboard";
-import { QuickAddForm } from "@/components/transactions/quickAddForm";
 import { getHomePageData } from "@/lib/data/homeData";
 import { getRemindersData } from "@/lib/data/reminders";
 
@@ -17,9 +16,7 @@ export default async function DashboardPage() {
       places={data.places}
       reminders={remindersData.reminders}
       today={remindersData.today}
-      quickAdd={
-        <QuickAddForm key="quick-add" recentTags={data.recentTags} />
-      }
+      recentTags={data.recentTags}
     />
   );
 }

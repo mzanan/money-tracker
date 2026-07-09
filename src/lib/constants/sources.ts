@@ -39,3 +39,12 @@ export function sourceForApp(app?: string | null): string {
   }
   return "notification";
 }
+
+const SOURCE_RE = /^[a-z0-9][a-z0-9 &_-]{0,31}$/;
+const RESERVED_SOURCES = new Set(["all"]);
+
+export function normalizeSource(raw: string): string | null {
+  const source = raw.trim().toLowerCase();
+  if (!SOURCE_RE.test(source) || RESERVED_SOURCES.has(source)) return null;
+  return source;
+}

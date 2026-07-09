@@ -23,6 +23,7 @@ import { DashboardPanel } from "./dashboardPanel";
 import { DashboardToolbar } from "./dashboardToolbar";
 import { FiltersPanel } from "./filtersPanel";
 import { MonthView } from "./monthView";
+import { QuickAddForm } from "./quickAddForm";
 import { SourceFilter } from "./sourceFilter";
 import { useDashboardControls } from "./useDashboardControls";
 import type { PanelMode } from "./useDashboardControls";
@@ -37,7 +38,7 @@ interface Props {
   places: Location[];
   reminders?: RecurringPayment[];
   today: string;
-  quickAdd?: React.ReactNode;
+  recentTags?: string[] | null;
 }
 
 export function MonthDashboard({
@@ -47,7 +48,7 @@ export function MonthDashboard({
   places,
   reminders = [],
   today,
-  quickAdd,
+  recentTags = null,
 }: Props) {
   const settings = useSettings();
   const [visibleYearMonth, setVisibleYearMonth] = useState(initialYearMonth);
@@ -161,7 +162,9 @@ export function MonthDashboard({
           selected={c.selectedSource}
           onChange={c.setSelectedSource}
         />
-        {c.showQuickAdd && quickAdd}
+        {c.showQuickAdd && recentTags && (
+          <QuickAddForm recentTags={recentTags} source={c.selectedSource} />
+        )}
         <SpendingBreakdown
           transactions={breakdownTransactions}
           places={places}

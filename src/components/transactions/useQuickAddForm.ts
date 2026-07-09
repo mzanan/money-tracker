@@ -21,7 +21,7 @@ function parseAmount(value: string): number | null {
   return Number.isFinite(num) && num > 0 ? num : null;
 }
 
-export function useQuickAddForm() {
+export function useQuickAddForm(source?: string) {
   const settings = useSettings();
   const timezone = useTimezone();
   const ratesQuery = useRates();
@@ -89,6 +89,7 @@ export function useQuickAddForm() {
             .filter(Boolean),
           note: null,
           occurredOn: date,
+          source,
         }),
       {
         success: `${kind === "income" ? "Income" : "Expense"} · ${formatMoney(rounded, currency)}`,

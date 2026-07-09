@@ -16,6 +16,7 @@ export const createTransactionSchema = z.object({
   occurredOn: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date (yyyy-MM-dd)"),
+  source: z.string().trim().min(1).max(32).optional(),
 });
 
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;

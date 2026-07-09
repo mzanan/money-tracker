@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
 import { isSupportedCurrency } from "@/config/currencies";
+import { normalizeSource } from "@/lib/constants/sources";
 import { roundForCurrency } from "@/lib/currency";
 import { daysBefore, todayInTz } from "@/lib/dates";
 import { db } from "@/lib/db";
@@ -73,15 +74,6 @@ async function nextExternalId(
   let i = 1;
   while (taken.has(`${prefix}:${i}`)) i++;
   return `${prefix}:${i}`;
-}
-
-const SOURCE_RE = /^[a-z0-9][a-z0-9 &_-]{0,31}$/;
-const RESERVED_SOURCES = new Set(["all"]);
-
-function normalizeSource(raw: string): string | null {
-  const source = raw.trim().toLowerCase();
-  if (!SOURCE_RE.test(source) || RESERVED_SOURCES.has(source)) return null;
-  return source;
 }
 
 export async function importScreenshotRows(input: {
