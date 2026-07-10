@@ -4,7 +4,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { isSupportedCurrency } from "@/config/currencies";
-import { roundForCurrency } from "@/lib/currency";
+import { isValidAmountForCurrency, roundForCurrency } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
 import { isSyncable } from "@/lib/integrations";
@@ -106,6 +106,10 @@ export async function importCsvRows(
   const insertRows = [];
   for (const row of input.rows) {
     if (!isSupportedCurrency(row.currency) && !rates[row.currency]) {
+      errors += 1;
+      continue;
+    }
+    if (!isValidAmountForCurrency(row.amount, row.currency)) {
       errors += 1;
       continue;
     }

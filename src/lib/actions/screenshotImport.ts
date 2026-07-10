@@ -4,9 +4,9 @@ import { and, eq, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
-import { getCurrency, isSupportedCurrency } from "@/config/currencies";
+import { isSupportedCurrency } from "@/config/currencies";
 import { normalizeSource } from "@/lib/constants/sources";
-import { roundForCurrency } from "@/lib/currency";
+import { isValidAmountForCurrency, roundForCurrency } from "@/lib/currency";
 import { daysBefore, todayInTz } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
@@ -128,10 +128,7 @@ export async function importScreenshotRows(input: {
       results.push({ id: row.id, status: "invalid_currency" });
       continue;
     }
-    if (
-      getCurrency(row.currency).decimals === 0 &&
-      !Number.isInteger(row.amount)
-    ) {
+    if (!isValidAmountForCurrency(row.amount, row.currency)) {
       results.push({ id: row.id, status: "invalid_amount" });
       continue;
     }
