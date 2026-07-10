@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 
 import { isSupportedCurrency } from "@/config/currencies";
 import { normalizeSource } from "@/lib/constants/sources";
-import { roundForCurrency } from "@/lib/currency";
+import { isValidAmountForCurrency, roundForCurrency } from "@/lib/currency";
 import { daysBefore, todayInTz } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
@@ -42,6 +42,7 @@ export type ScreenshotRowStatus =
   | "duplicate"
   | "invalid_currency"
   | "invalid_amount"
+  | "fractional_amount"
   | "invalid_date"
   | "invalid_source"
   | "failed";
@@ -126,6 +127,10 @@ export async function importScreenshotRows(input: {
     }
     if (!isSupportedCurrency(row.currency) && !rates[row.currency]) {
       results.push({ id: row.id, status: "invalid_currency" });
+      continue;
+    }
+    if (!isValidAmountForCurrency(row.amount, row.currency)) {
+      results.push({ id: row.id, status: "fractional_amount" });
       continue;
     }
     const amount = roundForCurrency(row.amount, row.currency);
@@ -274,4 +279,3 @@ export async function previewCandidatesAction(
     },
   };
 }
-

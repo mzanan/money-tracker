@@ -22,6 +22,14 @@ export function roundForCurrency(amount: number, code: string): number {
   return Math.round((amount + Number.EPSILON) * factor) / factor;
 }
 
+export function isValidAmountForCurrency(
+  amount: number,
+  code: string,
+): boolean {
+  const { decimals } = getCurrency(code);
+  return decimals > 0 || Number.isInteger(amount);
+}
+
 interface FormatOptions {
   showCode?: boolean;
   signed?: boolean;

@@ -8,7 +8,12 @@ import { useRates } from "@/hooks/useRates";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
 import { createTransaction } from "@/lib/actions/transactions";
-import { convert, formatMoney, roundForCurrency } from "@/lib/currency";
+import {
+  convert,
+  formatMoney,
+  isValidAmountForCurrency,
+  roundForCurrency,
+} from "@/lib/currency";
 import { todayInTz } from "@/lib/dates";
 import { useUiStore } from "@/stores/uiStore";
 
@@ -72,6 +77,10 @@ export function useQuickAddForm(source?: string) {
     event.preventDefault();
     if (numericAmount === null) {
       toast.error("Enter an amount");
+      return;
+    }
+    if (!isValidAmountForCurrency(numericAmount, currency)) {
+      toast.error(`${currency} has no decimals. Enter a whole number.`);
       return;
     }
 
