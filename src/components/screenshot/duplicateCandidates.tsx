@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 import type { CandidateMatch, EditableItem } from "@/hooks/useScreenshotImport";
 
-export function CandidateBlock({
+export function DuplicateCandidates({
   candidates,
   item,
   onChange,

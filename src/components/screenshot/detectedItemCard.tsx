@@ -26,7 +26,7 @@ import type {
   EditableItem,
 } from "@/hooks/useScreenshotImport";
 
-import { CandidateBlock } from "./candidateBlock";
+import { DuplicateCandidates } from "./duplicateCandidates";
 
 const CURRENCY_CODES = CURRENCIES.map((currency) => currency.code);
 
@@ -158,7 +158,7 @@ export function DetectedItemCard({
         {item.error && <ErrorText>{item.error}</ErrorText>}
 
         {candidates.length > 0 && (
-          <CandidateBlock
+          <DuplicateCandidates
             candidates={candidates}
             item={item}
             onChange={onChange}
