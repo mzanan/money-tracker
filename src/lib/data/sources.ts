@@ -1,7 +1,7 @@
 import { asc, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { transactions } from "@/lib/db/schema";
+import { transactions, user_settings } from "@/lib/db/schema";
 import { isSyncable } from "@/lib/integrations";
 
 export interface ImportedSource {
@@ -23,6 +23,25 @@ export async function getImportedSources(
     .orderBy(desc(sql`count(*)`));
 
   return rows.map((r) => ({ source: r.source, count: Number(r.count) }));
+}
+
+export async function getUserSources(userId: string): Promise<string[]> {
+  const [rows, settings] = await Promise.all([
+    db
+      .selectDistinct({ source: transactions.source })
+      .from(transactions)
+      .where(eq(transactions.user_id, userId)),
+    db
+      .select({ cash_enabled: user_settings.cash_enabled })
+      .from(user_settings)
+      .where(eq(user_settings.user_id, userId))
+      .limit(1)
+      .then((r) => r[0]),
+  ]);
+
+  const set = new Set(rows.map((r) => r.source).filter(Boolean));
+  if (settings?.cash_enabled) set.add("manual");
+  return Array.from(set).sort();
 }
 
 export async function getCsvSources(userId: string): Promise<string[]> {

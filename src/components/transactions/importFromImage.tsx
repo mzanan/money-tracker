@@ -56,7 +56,11 @@ const OPTIONS: Array<{
   },
 ];
 
-export function ImportFromImage() {
+export function ImportFromImage({
+  existingSources,
+}: {
+  existingSources: string[];
+}) {
   const isMobile = useMediaQuery("(max-width: 639px)");
   const {
     fileInputRef,
@@ -168,6 +172,7 @@ export function ImportFromImage() {
               initialItems={payload.items}
               initialIgnored={payload.ignored}
               initialCandidates={payload.candidates}
+              existingSources={existingSources}
               onDone={() => setPayload(null)}
             />
           )}

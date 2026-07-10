@@ -17,6 +17,7 @@ interface Props {
   initialItems: DetectedTransaction[] | null;
   initialIgnored: number;
   initialCandidates: Record<number, CandidateMatch[]>;
+  existingSources?: string[];
   mode?: ImageImportMode;
   onDone?: () => void;
   consumeShareCookie?: boolean;
@@ -26,6 +27,7 @@ export function ScreenshotImporter({
   initialItems,
   initialIgnored,
   initialCandidates,
+  existingSources = [],
   mode = "screenshot",
   onDone,
   consumeShareCookie = false,
@@ -35,7 +37,7 @@ export function ScreenshotImporter({
     items,
     ignored,
     candidatesByIndex,
-    customSources,
+    sourceOptions,
     extracting,
     pending,
     canSubmit,
@@ -49,6 +51,7 @@ export function ScreenshotImporter({
     initialItems,
     initialIgnored,
     initialCandidates,
+    existingSources,
     mode,
     onDone,
     consumeShareCookie,
@@ -124,7 +127,7 @@ export function ScreenshotImporter({
                 index={index}
                 item={item}
                 candidates={candidatesByIndex[index] ?? []}
-                customSources={customSources}
+                sourceOptions={sourceOptions}
                 onChange={(patch) => updateItem(index, patch)}
                 onRemove={() => removeItem(index)}
               />

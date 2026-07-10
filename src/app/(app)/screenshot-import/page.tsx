@@ -6,6 +6,7 @@ import { ScreenshotImporter } from "@/components/screenshot/screenshotImporter";
 import { Button } from "@/components/ui/button";
 import type { DetectedTransaction } from "@/lib/ai/screenshotExtract";
 import { findCrossSourceCandidates } from "@/lib/data/duplicates";
+import { getUserSources } from "@/lib/data/sources";
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
 import { todayInTz } from "@/lib/dates";
@@ -80,6 +81,7 @@ export default async function ScreenshotImportPage() {
       today,
     );
   }
+  const existingSources = await getUserSources(user.id);
 
   return (
     <div className="mx-auto grid w-full max-w-xl gap-5">
@@ -104,6 +106,7 @@ export default async function ScreenshotImportPage() {
         initialItems={initial?.items ?? null}
         initialIgnored={initial?.ignored ?? 0}
         initialCandidates={initialCandidates}
+        existingSources={existingSources}
         consumeShareCookie={fromShare}
       />
     </div>

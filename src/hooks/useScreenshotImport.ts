@@ -15,7 +15,7 @@ import {
   requestImageExtraction,
   type ImageImportMode,
 } from "@/lib/imageExtract";
-import { SOURCE_LABELS, sourceForApp } from "@/lib/constants/sources";
+import { sourceForApp } from "@/lib/constants/sources";
 
 export interface EditableItem {
   id: string;
@@ -44,9 +44,9 @@ const ROW_ERRORS: Record<Exclude<ScreenshotRowStatus, "imported">, string> = {
   failed: "Could not save this row. Try again.",
 };
 
-function sourceFor(app: string | null): string {
+function sourceFor(app: string | null, existingSources: string[]): string {
   const source = sourceForApp(app);
-  return source in SOURCE_LABELS ? source : "";
+  return existingSources.includes(source) ? source : "";
 }
 
 export interface CandidateMatch {
@@ -62,6 +62,7 @@ export interface CandidateMatch {
 function detectedToEditable(
   detected: DetectedTransaction,
   mode: ImageImportMode,
+  existingSources: string[],
 ): EditableItem {
   return {
     id: crypto.randomUUID(),
@@ -72,7 +73,7 @@ function detectedToEditable(
     occurredOn: detected.occurredOn,
     description: detected.description ?? "",
     app: detected.app,
-    source: mode === "receipt" ? "" : sourceFor(detected.app),
+    source: mode === "receipt" ? "" : sourceFor(detected.app, existingSources),
     confidence: detected.confidence,
     replaceId: null,
     error: null,
@@ -83,6 +84,7 @@ export function useScreenshotImport({
   initialItems,
   initialIgnored,
   initialCandidates,
+  existingSources = [],
   mode = "screenshot",
   onDone,
   consumeShareCookie = false,
@@ -90,6 +92,7 @@ export function useScreenshotImport({
   initialItems: DetectedTransaction[] | null;
   initialIgnored: number;
   initialCandidates: Record<number, CandidateMatch[]>;
+  existingSources?: string[];
   mode?: ImageImportMode;
   onDone?: () => void;
   consumeShareCookie?: boolean;
@@ -103,22 +106,24 @@ export function useScreenshotImport({
   }, [consumeShareCookie]);
 
   const [items, setItems] = useState<EditableItem[]>(
-    initialItems?.map((detected) => detectedToEditable(detected, mode)) ?? [],
+    initialItems?.map((detected) =>
+      detectedToEditable(detected, mode, existingSources),
+    ) ?? [],
   );
   const [ignored, setIgnored] = useState(initialIgnored);
   const [candidatesByIndex, setCandidatesByIndex] =
     useState<Record<number, CandidateMatch[]>>(initialCandidates);
 
-  const customSources = useMemo(
+  const sourceOptions = useMemo(
     () =>
       Array.from(
         new Set(
-          items
-            .map((item) => item.source.trim().toLowerCase())
-            .filter((source) => source && !(source in SOURCE_LABELS)),
+          [...existingSources, ...items.map((item) => item.source)]
+            .map((source) => source.trim().toLowerCase())
+            .filter(Boolean),
         ),
-      ),
-    [items],
+      ).sort(),
+    [items, existingSources],
   );
 
   const refreshCandidates = useCallback(async (current: EditableItem[]) => {
@@ -150,7 +155,7 @@ export function useScreenshotImport({
       }
 
       const editable = extract.items.map((detected) =>
-        detectedToEditable(detected, mode),
+        detectedToEditable(detected, mode, existingSources),
       );
       setItems(editable);
       setIgnored(extract.ignored);
@@ -259,7 +264,7 @@ export function useScreenshotImport({
     items,
     ignored,
     candidatesByIndex,
-    customSources,
+    sourceOptions,
     extracting,
     pending,
     canSubmit,

@@ -90,7 +90,7 @@ export function SourceFilter({
             Cash
           </button>
         )}
-        <ImportFromImage />
+        <ImportFromImage existingSources={tabSources} />
       </div>
       {kind === "api" && (
         <Button
