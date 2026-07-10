@@ -42,8 +42,17 @@ const DetectedTransactionSchema = z.object({
 
 export type DetectedTransaction = z.infer<typeof DetectedTransactionSchema>;
 
+const RawDetectedTransactionSchema = DetectedTransactionSchema.extend({
+  dateText: z
+    .string()
+    .nullable()
+    .describe(
+      "Exact date text copied verbatim from the notification or receipt (e.g. 'Jul 6', '06/07/2026'). null if no calendar date is printed.",
+    ),
+});
+
 const SCHEMA = z.object({
-  items: z.array(DetectedTransactionSchema),
+  items: z.array(RawDetectedTransactionSchema),
   ignored: z
     .number()
     .int()
@@ -62,7 +71,7 @@ Rules:
 - Ignore non-financial notifications (chat, social, calendar, weather). Count them in "ignored".
 - amount must be positive, no sign. Use kind=expense for outgoing money, kind=income for incoming.
 - currency must be an ISO 4217 code. If only a symbol is shown, infer (e.g. $ in a Wise notif = USD unless context says otherwise, € = EUR, ₫ = VND, ₮ = USDT, ¥ = JPY).
-- occurredOn: only set if an explicit calendar date (day and month, e.g. "Jul 6" or "06/07") is printed in the notification text. Never infer it from a clock time, a relative phrase ("2h ago", "yesterday", "just now"), or the screenshot's status bar. If in doubt, use null (the user will default to today).
+- occurredOn and dateText: default is null for BOTH. Only set them when an explicit calendar date (day and month, e.g. "Jul 6" or "06/07") is printed inside the notification text itself. dateText must be the date copied verbatim from the image; occurredOn is that same date converted to YYYY-MM-DD. Never derive a date from a clock time, a relative phrase ("2h ago", "yesterday", "just now"), the screenshot's status bar, or your own knowledge. If you cannot quote the printed date in dateText, occurredOn must be null.
 - description: short merchant or payee name. Strip prefixes like "at", "to", "from".
 - confidence:
   - high: every field came directly from the image text.
@@ -79,7 +88,7 @@ Rules:
 - kind is "expense", unless the document is clearly a refund or credit note (then "income").
 - amount must be the total, positive, no sign, no thousand separators.
 - currency must be an ISO 4217 code. Infer from the symbol or the receipt's country/language when not printed (₫ or "đ" = VND, $ = USD unless context says otherwise, € = EUR).
-- occurredOn: only set if an explicit calendar date is printed on the receipt itself. Never guess a date from anything else in the photo. If in doubt, use null (the user will default to today).
+- occurredOn and dateText: default is null for BOTH. Only set them when an explicit calendar date is printed on the receipt itself. dateText must be the date copied verbatim from the print; occurredOn is that same date converted to YYYY-MM-DD. Never guess a date from anything else in the photo. If you cannot quote the printed date in dateText, occurredOn must be null.
 - description: the merchant or store name as printed.
 - app: always null.
 - confidence:
@@ -90,6 +99,24 @@ Rules:
 Return strict JSON matching the schema. "ignored" is 0 unless the image contains clearly non-receipt content. Empty items array is fine if no receipt is readable.`;
 
 export type ExtractMode = "screenshot" | "receipt";
+
+function sanitizeDate(
+  raw: z.infer<typeof RawDetectedTransactionSchema>,
+): DetectedTransaction {
+  const { dateText, ...item } = raw;
+  if (!item.occurredOn) return item;
+  if (!dateText || !/^\d{4}-\d{2}-\d{2}$/.test(item.occurredOn)) {
+    return { ...item, occurredOn: null };
+  }
+  const day = String(Number(item.occurredOn.slice(8, 10)));
+  const evidenceNumbers = (dateText.match(/\d+/g) ?? []).map((n) =>
+    String(Number(n)),
+  );
+  if (!evidenceNumbers.includes(day)) {
+    return { ...item, occurredOn: null };
+  }
+  return item;
+}
 
 const PROMPTS: Record<ExtractMode, { system: string; instruction: string }> = {
   screenshot: {
@@ -135,5 +162,8 @@ export async function extractFromImage(
     ],
   });
 
-  return result.object;
+  return {
+    items: result.object.items.map(sanitizeDate),
+    ignored: result.object.ignored,
+  };
 }
