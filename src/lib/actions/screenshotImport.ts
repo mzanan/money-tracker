@@ -42,6 +42,7 @@ export type ScreenshotRowStatus =
   | "duplicate"
   | "invalid_currency"
   | "invalid_amount"
+  | "fractional_amount"
   | "invalid_date"
   | "invalid_source"
   | "failed";
@@ -129,7 +130,7 @@ export async function importScreenshotRows(input: {
       continue;
     }
     if (!isValidAmountForCurrency(row.amount, row.currency)) {
-      results.push({ id: row.id, status: "invalid_amount" });
+      results.push({ id: row.id, status: "fractional_amount" });
       continue;
     }
     const amount = roundForCurrency(row.amount, row.currency);

@@ -36,6 +36,8 @@ const ROW_ERRORS: Record<Exclude<ScreenshotRowStatus, "imported">, string> = {
   duplicate: "Already imported before (duplicate).",
   invalid_currency: "Currency not supported and no exchange rate for it.",
   invalid_amount: "Amount must be a positive number.",
+  fractional_amount:
+    "This currency has no decimals. Check the amount against the image.",
   invalid_date: "Date must be YYYY-MM-DD.",
   invalid_source:
     "Source must be letters, numbers, spaces or dashes (max 32).",

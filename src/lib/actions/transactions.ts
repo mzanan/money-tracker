@@ -3,6 +3,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { isValidAmountForCurrency } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
@@ -40,6 +41,13 @@ export async function createTransaction(
     return {
       ok: false,
       error: parsed.error.issues[0]?.message ?? "Invalid data",
+    };
+  }
+
+  if (!isValidAmountForCurrency(parsed.data.amount, parsed.data.currency)) {
+    return {
+      ok: false,
+      error: `${parsed.data.currency} has no decimals. Enter a whole number.`,
     };
   }
 
@@ -124,6 +132,13 @@ export async function updateTransaction(
     return {
       ok: false,
       error: parsed.error.issues[0]?.message ?? "Invalid data",
+    };
+  }
+
+  if (!isValidAmountForCurrency(parsed.data.amount, parsed.data.currency)) {
+    return {
+      ok: false,
+      error: `${parsed.data.currency} has no decimals. Enter a whole number.`,
     };
   }
 
