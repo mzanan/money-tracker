@@ -4,7 +4,7 @@ import { and, eq, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
-import { isSupportedCurrency } from "@/config/currencies";
+import { getCurrency, isSupportedCurrency } from "@/config/currencies";
 import { normalizeSource } from "@/lib/constants/sources";
 import { roundForCurrency } from "@/lib/currency";
 import { daysBefore, todayInTz } from "@/lib/dates";
@@ -126,6 +126,13 @@ export async function importScreenshotRows(input: {
     }
     if (!isSupportedCurrency(row.currency) && !rates[row.currency]) {
       results.push({ id: row.id, status: "invalid_currency" });
+      continue;
+    }
+    if (
+      getCurrency(row.currency).decimals === 0 &&
+      !Number.isInteger(row.amount)
+    ) {
+      results.push({ id: row.id, status: "invalid_amount" });
       continue;
     }
     const amount = roundForCurrency(row.amount, row.currency);
@@ -274,4 +281,3 @@ export async function previewCandidatesAction(
     },
   };
 }
-
