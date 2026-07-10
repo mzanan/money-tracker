@@ -90,7 +90,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
     <div
       onClick={txSelectMode ? () => toggleTxSelected(tx) : undefined}
       className={cn(
-        "group hover:bg-surface-2/60 flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors",
+        "group hover:bg-surface-2/60 flex min-w-0 items-center gap-3 rounded-2xl px-3 py-3 transition-colors",
         txSelectMode && "cursor-pointer",
         isSelected && "bg-primary/10 hover:bg-primary/15",
       )}
