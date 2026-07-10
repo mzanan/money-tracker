@@ -22,11 +22,17 @@ import { SourceTab } from "./sourceTab";
 
 interface Props {
   sources: string[];
+  csvSources: string[];
   selected: string;
   onChange: (source: string) => void;
 }
 
-export function SourceFilter({ sources, selected, onChange }: Props) {
+export function SourceFilter({
+  sources,
+  csvSources,
+  selected,
+  onChange,
+}: Props) {
   const settings = useSettings();
   const { run, pending } = useServerAction();
   const kind = selected === "all" ? null : kindOfSource(selected);
@@ -102,7 +108,7 @@ export function SourceFilter({ sources, selected, onChange }: Props) {
           Sync
         </Button>
       )}
-      {kind === "csv" && (
+      {csvSources.includes(selected) && (
         <Button
           size="sm"
           variant="secondary"

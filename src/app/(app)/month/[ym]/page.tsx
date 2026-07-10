@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { MonthDashboard } from "@/components/transactions/monthDashboard";
 import { getMonthPageData } from "@/lib/data/monthData";
+import { csvSourcesFrom } from "@/lib/transactions";
 import { getRemindersData } from "@/lib/data/reminders";
 import { isValidYearMonth } from "@/lib/dates";
 
@@ -20,12 +21,14 @@ export default async function MonthPage({
     getRemindersData(),
   ]);
   const sources = collectSources(data.lifetimeTxs);
+  const csvSources = csvSourcesFrom(data.lifetimeTxs);
 
   return (
     <MonthDashboard
       yearMonth={data.yearMonth}
       lifetimeTransactions={data.lifetimeTxs}
       sources={sources}
+      csvSources={csvSources}
       places={data.places}
       reminders={remindersData.reminders}
       today={remindersData.today}
