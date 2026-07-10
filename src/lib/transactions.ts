@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 
+import { kindOfSource } from "@/lib/constants/sources";
 import { snapshotRatesFor } from "@/lib/currency";
 import { dedupeTags } from "@/lib/tags";
-import type { FxRates, TransactionInsert } from "@/types/db";
+import type { FxRates, Transaction, TransactionInsert } from "@/types/db";
 
 export function transactionContentHash(row: {
   occurredOn: string;
@@ -41,6 +42,23 @@ export interface BuildContext {
 
 export function normalizeTags(tags: string[] | null | undefined): string[] {
   return dedupeTags(tags);
+}
+
+export function csvSourcesFrom(
+  txs: ReadonlyArray<Pick<Transaction, "source" | "external_id">>,
+): string[] {
+  const set = new Set<string>();
+  for (const tx of txs) {
+    if (
+      tx.source &&
+      tx.external_id &&
+      !tx.external_id.startsWith("ss:") &&
+      kindOfSource(tx.source) === "csv"
+    ) {
+      set.add(tx.source);
+    }
+  }
+  return Array.from(set).sort();
 }
 
 export function buildTransactionRow(

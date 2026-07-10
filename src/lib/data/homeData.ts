@@ -5,12 +5,14 @@ import { api_integrations, locations, transactions } from "@/lib/db/schema";
 import { getUserSettings } from "@/lib/data/userSettings";
 import { thisYearMonth } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
+import { csvSourcesFrom } from "@/lib/transactions";
 import type { IntegrationProvider, Location, Transaction } from "@/types/db";
 
 export interface HomePageData {
   yearMonth: string;
   lifetimeTxs: Transaction[];
   sources: string[];
+  csvSources: string[];
   recentTags: string[];
   places: Location[];
 }
@@ -49,6 +51,7 @@ export async function getHomePageData(): Promise<HomePageData> {
     yearMonth,
     lifetimeTxs,
     sources,
+    csvSources: csvSourcesFrom(lifetimeTxs),
     recentTags,
     places,
   };

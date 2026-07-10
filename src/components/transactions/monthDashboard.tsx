@@ -35,6 +35,7 @@ interface Props {
   yearMonth: string;
   lifetimeTransactions: Transaction[];
   sources: string[];
+  csvSources: string[];
   places: Location[];
   reminders?: RecurringPayment[];
   today: string;
@@ -45,6 +46,7 @@ export function MonthDashboard({
   yearMonth: initialYearMonth,
   lifetimeTransactions,
   sources,
+  csvSources,
   places,
   reminders = [],
   today,
@@ -159,6 +161,7 @@ export function MonthDashboard({
         />
         <SourceFilter
           sources={sources}
+          csvSources={csvSources}
           selected={c.selectedSource}
           onChange={c.setSelectedSource}
         />

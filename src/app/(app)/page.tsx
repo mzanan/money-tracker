@@ -13,6 +13,7 @@ export default async function DashboardPage() {
       yearMonth={data.yearMonth}
       lifetimeTransactions={data.lifetimeTxs}
       sources={data.sources}
+      csvSources={data.csvSources}
       places={data.places}
       reminders={remindersData.reminders}
       today={remindersData.today}
