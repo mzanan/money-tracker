@@ -1,10 +1,9 @@
 import { generateObject } from "ai";
-import { google } from "@ai-sdk/google";
+import { groq } from "@ai-sdk/groq";
 import { z } from "zod";
 
-
-const visionModel = google(
-  process.env.AI_VISION_MODEL ?? "gemini-2.5-flash",
+const visionModel = groq(
+  process.env.AI_VISION_MODEL ?? "meta-llama/llama-4-scout-17b-16e-instruct",
 );
 
 const DetectedTransactionSchema = z.object({
@@ -38,9 +37,7 @@ const DetectedTransactionSchema = z.object({
     .describe("Merchant / payee / payer / category. null if not shown."),
   confidence: z
     .enum(["high", "medium", "low"])
-    .describe(
-      "Confidence in the parse. low if multiple fields were guessed.",
-    ),
+    .describe("Confidence in the parse. low if multiple fields were guessed."),
 });
 
 export type DetectedTransaction = z.infer<typeof DetectedTransactionSchema>;
@@ -51,7 +48,9 @@ const SCHEMA = z.object({
     .number()
     .int()
     .min(0)
-    .describe("Count of unrelated notifications in the image (chat, social, etc.)"),
+    .describe(
+      "Count of unrelated notifications in the image (chat, social, etc.)",
+    ),
 });
 
 const SYSTEM = `You parse screenshots of phone notifications and bank/wallet alerts.
@@ -118,11 +117,6 @@ export async function extractFromImage(
     model: visionModel,
     schema: SCHEMA,
     system: prompt.system,
-    providerOptions: {
-      google: {
-        thinkingConfig: { thinkingBudget: 0 },
-      },
-    },
     messages: [
       {
         role: "user",
