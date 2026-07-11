@@ -138,12 +138,20 @@ export function DashboardView({
         <Surface padding="md" className="grid gap-3">
           <div className="flex items-center justify-between gap-2">
             <span className="text-eyebrow">Cash on hand</span>
-            <Link
-              href="/settings"
-              className="text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
-            >
-              Exchange cash →
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/settings"
+                className="text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
+              >
+                Withdraw cash →
+              </Link>
+              <Link
+                href="/settings"
+                className="text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
+              >
+                Exchange cash →
+              </Link>
+            </div>
           </div>
           <ul className="grid gap-2">
             {v.cashBalances.map(({ currency, balance }) => (

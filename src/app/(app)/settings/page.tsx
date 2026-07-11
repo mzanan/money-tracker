@@ -4,17 +4,21 @@ import { ArrowLeftIcon, ChevronDownIcon } from "lucide-react";
 import { CalendarFeedCard } from "@/components/settings/calendarFeedCard";
 import { CashCard } from "@/components/settings/cashCard";
 import { CashExchangeForm } from "@/components/settings/cashExchangeForm";
+import { CashWithdrawalForm } from "@/components/settings/cashWithdrawalForm";
 import { CsvImportCard } from "@/components/settings/csvImportCard";
 import { ImportedAccountsCard } from "@/components/settings/importedAccountsCard";
 import { IntegrationsCard } from "@/components/settings/integrationsCard";
 import { SettingsForm } from "@/components/settings/settingsForm";
 import { Button } from "@/components/ui/button";
-import { getCsvSources } from "@/lib/data/sources";
+import { getCsvSources, getTransferSources } from "@/lib/data/sources";
 import { requireUser } from "@/lib/session";
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const existingSources = await getCsvSources(user.id);
+  const [existingSources, withdrawalSources] = await Promise.all([
+    getCsvSources(user.id),
+    getTransferSources(user.id, "manual"),
+  ]);
 
   return (
     <div className="mx-auto grid w-full max-w-xl gap-6">
@@ -37,6 +41,7 @@ export default async function SettingsPage() {
       >
         <div className="grid gap-3">
           <CashCard />
+          <CashWithdrawalForm sources={withdrawalSources} />
           <CashExchangeForm />
         </div>
       </Section>

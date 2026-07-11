@@ -13,6 +13,7 @@ export const EXTERNAL_ID_PREFIX = {
   screenshot: "ss:",
   transfer: "transfer:",
   exchange: "exchange:",
+  withdrawal: "withdrawal:",
   reminder: "reminder:",
 } as const;
 
