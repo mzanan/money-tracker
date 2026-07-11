@@ -122,6 +122,17 @@ export async function recordCashExchange(
   if (outCurrency === inCurrency) {
     return { ok: false, error: "Pick two different currencies" };
   }
+  for (const [amount, currency] of [
+    [outAmount, outCurrency],
+    [inAmount, inCurrency],
+  ] as const) {
+    if (!isValidAmountForCurrency(amount, currency)) {
+      return {
+        ok: false,
+        error: `${currency} has no decimals. Enter a whole number.`,
+      };
+    }
+  }
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
