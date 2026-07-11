@@ -12,19 +12,13 @@ import {
   convert,
   formatMoney,
   isValidAmountForCurrency,
+  parseAmountInput,
   roundForCurrency,
 } from "@/lib/currency";
 import { todayInTz } from "@/lib/dates";
 import { useUiStore } from "@/stores/uiStore";
 
 import type { Kind } from "./kindToggle";
-
-function parseAmount(value: string): number | null {
-  const cleaned = value.replace(/\s/g, "").replace(",", ".");
-  if (!cleaned) return null;
-  const num = Number(cleaned);
-  return Number.isFinite(num) && num > 0 ? num : null;
-}
 
 export function useQuickAddForm(source?: string) {
   const settings = useSettings();
@@ -52,7 +46,7 @@ export function useQuickAddForm(source?: string) {
     ? currencyState
     : settings.currencies[0];
 
-  const numericAmount = parseAmount(amount);
+  const numericAmount = parseAmountInput(amount);
 
   const preview = useMemo(() => {
     if (numericAmount === null) return null;
