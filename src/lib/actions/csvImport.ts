@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, isNotNull, like, notLike, or } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { isSupportedCurrency } from "@/config/currencies";
@@ -12,6 +12,8 @@ import { getRates, RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
 import {
   buildTransactionRow,
+  csvExternalIdCondition,
+  EXTERNAL_ID_PREFIX,
   transactionContentHash,
 } from "@/lib/transactions";
 
@@ -126,7 +128,7 @@ export async function importCsvRows(
 
     const providedId = row.externalId?.trim();
     const externalId = providedId
-      ? `csv:${providedId.toLowerCase().slice(0, 64)}`
+      ? `${EXTERNAL_ID_PREFIX.csv}${providedId.toLowerCase().slice(0, 64)}`
       : transactionContentHash({ ...row, amount }).slice(0, 32);
     const built = buildTransactionRow(
       {
@@ -156,11 +158,7 @@ export async function importCsvRows(
         and(
           eq(transactions.user_id, user.id),
           eq(transactions.source, source),
-          isNotNull(transactions.external_id),
-          or(
-            like(transactions.external_id, "csv:%"),
-            notLike(transactions.external_id, "%:%"),
-          ),
+          csvExternalIdCondition(),
         ),
       );
   }

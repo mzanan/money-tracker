@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { recurring_payments, transactions, user_settings } from "@/lib/db/schema";
 import { getRates } from "@/lib/rates";
 import { computeNextDue } from "@/lib/reminders";
-import { buildTransactionRow } from "@/lib/transactions";
+import { buildTransactionRow, EXTERNAL_ID_PREFIX } from "@/lib/transactions";
 import {
   createReminderSchema,
   updateReminderSchema,
@@ -130,7 +130,7 @@ async function buildReminderExpenseRow(
       currency: reminder.currency,
       occurredOn: day,
       note: reminder.label,
-      externalId: `reminder:${reminder.id}:${day}`,
+      externalId: `${EXTERNAL_ID_PREFIX.reminder}${reminder.id}:${day}`,
     },
     { rates, userCurrencies },
   );
@@ -197,7 +197,7 @@ export async function getReminderPayOptions(id: string): Promise<
         eq(transactions.kind, "expense"),
         or(
           isNull(transactions.external_id),
-          notLike(transactions.external_id, "reminder:%"),
+          notLike(transactions.external_id, `${EXTERNAL_ID_PREFIX.reminder}%`),
         ),
       ),
     )
@@ -223,7 +223,7 @@ export async function getReminderPayOptions(id: string): Promise<
       rates,
     );
     suggested = result.matches
-      .filter((m) => !m.external_id?.startsWith("reminder:"))
+      .filter((m) => !m.external_id?.startsWith(EXTERNAL_ID_PREFIX.reminder))
       .map(toCandidate);
   }
 
