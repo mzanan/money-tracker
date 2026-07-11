@@ -30,6 +30,11 @@ export function isValidAmountForCurrency(
   return decimals > 0 || Number.isInteger(amount);
 }
 
+export function parseAmountInput(value: string): number | null {
+  const num = Number(value.replace(/\s/g, "").replace(",", "."));
+  return Number.isFinite(num) && num > 0 ? num : null;
+}
+
 interface FormatOptions {
   showCode?: boolean;
   signed?: boolean;

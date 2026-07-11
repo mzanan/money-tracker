@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 import { kindOfSource } from "@/lib/constants/sources";
-import { getImportedSources } from "@/lib/data/sources";
+import { getTransferSources } from "@/lib/data/sources";
 import { RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
 import { buildTransactionRow, EXTERNAL_ID_PREFIX } from "@/lib/transactions";
@@ -19,10 +19,7 @@ export async function getTransferAccountOptions(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const rows = await getImportedSources(user.id);
-  const sources = rows
-    .map((r) => r.source)
-    .filter((s) => s !== excludeSource && kindOfSource(s) !== "api");
+  const sources = await getTransferSources(user.id, excludeSource);
   return { ok: true, data: { sources } };
 }
 

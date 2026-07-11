@@ -1,5 +1,6 @@
 import { asc, desc, eq, sql } from "drizzle-orm";
 
+import { kindOfSource } from "@/lib/constants/sources";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
 import { isSyncable } from "@/lib/integrations";
@@ -23,6 +24,16 @@ export async function getImportedSources(
     .orderBy(desc(sql`count(*)`));
 
   return rows.map((r) => ({ source: r.source, count: Number(r.count) }));
+}
+
+export async function getTransferSources(
+  userId: string,
+  excludeSource: string,
+): Promise<string[]> {
+  const rows = await getImportedSources(userId);
+  return rows
+    .map((r) => r.source)
+    .filter((s) => s !== excludeSource && kindOfSource(s) !== "api");
 }
 
 export async function getUserSources(userId: string): Promise<string[]> {

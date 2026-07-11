@@ -6,12 +6,8 @@ import { toast } from "sonner";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
 import { recordCashExchange } from "@/lib/actions/cash";
+import { parseAmountInput } from "@/lib/currency";
 import { todayInTz } from "@/lib/dates";
-
-function parseAmount(value: string): number | null {
-  const num = Number(value.replace(/\s/g, "").replace(",", "."));
-  return Number.isFinite(num) && num > 0 ? num : null;
-}
 
 export function useCashExchangeForm() {
   const settings = useSettings();
@@ -28,8 +24,8 @@ export function useCashExchangeForm() {
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const out = parseAmount(outAmount);
-    const incoming = parseAmount(inAmount);
+    const out = parseAmountInput(outAmount);
+    const incoming = parseAmountInput(inAmount);
     if (out === null || incoming === null) {
       toast.error("Enter both amounts");
       return;
