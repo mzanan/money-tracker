@@ -9,7 +9,7 @@ import { kindOfSource } from "@/lib/constants/sources";
 import { getImportedSources } from "@/lib/data/sources";
 import { RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
-import { buildTransactionRow } from "@/lib/transactions";
+import { buildTransactionRow, EXTERNAL_ID_PREFIX } from "@/lib/transactions";
 
 import { buildCurrencyContext, type ActionResult } from "./transactions";
 
@@ -70,7 +70,7 @@ export async function markAsTransfer(
       occurredOn: tx.occurred_on,
       note: tx.note,
       source: mirrorSource,
-      externalId: `transfer:${tx.id}`,
+      externalId: `${EXTERNAL_ID_PREFIX.transfer}${tx.id}`,
     },
     ctx,
   );
@@ -176,7 +176,7 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
   try {
     await db.transaction(async (dbTx) => {
       for (const row of linked) {
-        if (row.external_id?.startsWith("transfer:")) {
+        if (row.external_id?.startsWith(EXTERNAL_ID_PREFIX.transfer)) {
           await dbTx
             .delete(transactions)
             .where(

@@ -1,9 +1,36 @@
 import { createHash } from "node:crypto";
 
+import { and, isNotNull, like, notLike, or } from "drizzle-orm";
+
 import { kindOfSource } from "@/lib/constants/sources";
 import { snapshotRatesFor } from "@/lib/currency";
+import { transactions } from "@/lib/db/schema";
 import { dedupeTags } from "@/lib/tags";
 import type { FxRates, Transaction, TransactionInsert } from "@/types/db";
+
+export const EXTERNAL_ID_PREFIX = {
+  csv: "csv:",
+  screenshot: "ss:",
+  transfer: "transfer:",
+  exchange: "exchange:",
+  reminder: "reminder:",
+} as const;
+
+export function isCsvExternalId(id: string | null | undefined): boolean {
+  return (
+    id != null && (id.startsWith(EXTERNAL_ID_PREFIX.csv) || !id.includes(":"))
+  );
+}
+
+export function csvExternalIdCondition() {
+  return and(
+    isNotNull(transactions.external_id),
+    or(
+      like(transactions.external_id, `${EXTERNAL_ID_PREFIX.csv}%`),
+      notLike(transactions.external_id, "%:%"),
+    ),
+  );
+}
 
 export function transactionContentHash(row: {
   occurredOn: string;
@@ -51,8 +78,7 @@ export function csvSourcesFrom(
   for (const tx of txs) {
     if (
       tx.source &&
-      tx.external_id &&
-      !tx.external_id.startsWith("ss:") &&
+      isCsvExternalId(tx.external_id) &&
       kindOfSource(tx.source) === "csv"
     ) {
       set.add(tx.source);

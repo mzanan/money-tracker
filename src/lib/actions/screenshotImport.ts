@@ -14,6 +14,7 @@ import { getRates, RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
 import {
   buildTransactionRow,
+  EXTERNAL_ID_PREFIX,
   transactionContentHash,
 } from "@/lib/transactions";
 
@@ -57,7 +58,7 @@ async function nextExternalId(
   source: string,
   baseHash: string,
 ): Promise<string> {
-  const prefix = `ss:${baseHash}`;
+  const prefix = `${EXTERNAL_ID_PREFIX.screenshot}${baseHash}`;
   const rows = await db
     .select({ external_id: transactions.external_id })
     .from(transactions)

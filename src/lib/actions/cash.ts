@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 import { RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
-import { buildTransactionRow } from "@/lib/transactions";
+import { buildTransactionRow, EXTERNAL_ID_PREFIX } from "@/lib/transactions";
 
 import { buildCurrencyContext, type ActionResult } from "./transactions";
 
@@ -57,7 +57,7 @@ export async function recordCashExchange(
       currency: outCurrency,
       occurredOn,
       note,
-      externalId: `exchange:${group}:out`,
+      externalId: `${EXTERNAL_ID_PREFIX.exchange}${group}:out`,
     },
     ctx,
   );
@@ -69,7 +69,7 @@ export async function recordCashExchange(
       currency: inCurrency,
       occurredOn,
       note,
-      externalId: `exchange:${group}:in`,
+      externalId: `${EXTERNAL_ID_PREFIX.exchange}${group}:in`,
     },
     ctx,
   );
