@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull, like, notLike, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { isSupportedCurrency } from "@/config/currencies";
@@ -156,6 +156,11 @@ export async function importCsvRows(
         and(
           eq(transactions.user_id, user.id),
           eq(transactions.source, source),
+          isNotNull(transactions.external_id),
+          or(
+            like(transactions.external_id, "csv:%"),
+            notLike(transactions.external_id, "%:%"),
+          ),
         ),
       );
   }
