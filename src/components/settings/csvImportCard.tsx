@@ -118,12 +118,12 @@ export function CsvImportCard({
               />
               <div className="grid gap-0.5">
                 <span className="text-sm font-medium">
-                  Replace existing transactions in this source
+                  Replace previously imported rows in this source
                 </span>
                 <span className="text-muted-foreground text-[11px]">
-                  Deletes every transaction under &quot;
-                  {csv.source || "this source"}&quot; before importing. Use it if
-                  a previous import duplicated rows.
+                  Deletes only CSV-imported transactions under &quot;
+                  {csv.source || "this source"}&quot; before importing. Manual
+                  entries and screenshot imports are kept.
                 </span>
               </div>
             </label>
