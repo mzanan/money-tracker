@@ -6,6 +6,7 @@ import {
   BellPlusIcon,
   CheckIcon,
   EllipsisIcon,
+  PencilLineIcon,
   TagIcon,
   Trash2Icon,
 } from "lucide-react";
@@ -33,6 +34,7 @@ import { ReminderForm } from "@/components/reminders/reminderForm";
 
 import { Avatar } from "./avatar";
 import { MarkTransferDialog } from "./markTransferDialog";
+import { NoteEditor } from "./noteEditor";
 import { TagChips } from "./tagChips";
 import { TagEditor } from "./tagEditor";
 
@@ -46,6 +48,8 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const [reminderMounted, setReminderMounted] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
   const [tagsMounted, setTagsMounted] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteMounted, setNoteMounted] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferMounted, setTransferMounted] = useState(false);
   const canDelete = kindOfSource(tx.source) !== "api";
@@ -70,6 +74,11 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   function openTags() {
     setTagsMounted(true);
     setTagsOpen(true);
+  }
+
+  function openNote() {
+    setNoteMounted(true);
+    setNoteOpen(true);
   }
 
   function openReminder() {
@@ -157,6 +166,10 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={openNote}>
+              <PencilLineIcon />
+              Edit description
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={openTags}>
               <TagIcon />
               Edit tags
@@ -206,6 +219,14 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           tags={tx.tags}
           open={tagsOpen}
           onOpenChange={setTagsOpen}
+        />
+      )}
+      {noteMounted && (
+        <NoteEditor
+          txId={tx.id}
+          note={tx.note}
+          open={noteOpen}
+          onOpenChange={setNoteOpen}
         />
       )}
       {reminderMounted && (
