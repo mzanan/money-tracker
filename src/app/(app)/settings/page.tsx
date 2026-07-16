@@ -9,6 +9,7 @@ import { CsvImportCard } from "@/components/settings/csvImportCard";
 import { ImportedAccountsCard } from "@/components/settings/importedAccountsCard";
 import { IntegrationsCard } from "@/components/settings/integrationsCard";
 import { SettingsForm } from "@/components/settings/settingsForm";
+import { SettingsTabs } from "@/components/settings/settingsTabs";
 import { Button } from "@/components/ui/button";
 import { getCsvSources, getTransferSources } from "@/lib/data/sources";
 import { requireUser } from "@/lib/session";
@@ -31,48 +32,60 @@ export default async function SettingsPage() {
         <h1 className="text-lg font-semibold tracking-tight">Settings</h1>
       </header>
 
-      <Section title="Profile" hint="Currencies and timezone for new entries.">
-        <SettingsForm />
-      </Section>
-
-      <Section
-        title="Cash"
-        hint="A manual account for cash you spend or receive in hand."
-      >
-        <div className="grid gap-3">
-          <CashCard />
-          <CashWithdrawalForm sources={withdrawalSources} />
-          <CashExchangeForm />
-        </div>
-      </Section>
-
-      <Section
-        title="Integrations"
-        hint="Sync transactions automatically from connected accounts."
-      >
-        <IntegrationsCard />
-      </Section>
-
-      <Section
-        title="Data import"
-        hint="One-off CSV import from any bank or wallet."
-      >
-        <CsvImportCard existingSources={existingSources} />
-      </Section>
-
-      <Section
-        title="Imported accounts"
-        hint="Rename or wipe everything under an account."
-      >
-        <ImportedAccountsCard />
-      </Section>
-
-      <CollapsedSection
-        title="Calendar feed"
-        hint="Show your reminders inside Google / iOS / Outlook calendar."
-      >
-        <CalendarFeedCard />
-      </CollapsedSection>
+      <SettingsTabs
+        general={
+          <Section
+            title="Profile"
+            hint="Currencies and timezone for new entries."
+          >
+            <SettingsForm />
+          </Section>
+        }
+        cash={
+          <Section
+            title="Cash"
+            hint="A manual account for cash you spend or receive in hand."
+          >
+            <div className="grid gap-3">
+              <CashCard />
+              <CashWithdrawalForm sources={withdrawalSources} />
+              <CashExchangeForm />
+            </div>
+          </Section>
+        }
+        accounts={
+          <>
+            <Section
+              title="Integrations"
+              hint="Sync transactions automatically from connected accounts."
+            >
+              <IntegrationsCard />
+            </Section>
+            <Section
+              title="Imported accounts"
+              hint="Rename or wipe everything under an account."
+            >
+              <ImportedAccountsCard />
+            </Section>
+          </>
+        }
+        data={
+          <>
+            <Section
+              title="Data import"
+              hint="One-off CSV import from any bank or wallet."
+            >
+              <CsvImportCard existingSources={existingSources} />
+            </Section>
+            <CollapsedSection
+              title="Calendar feed"
+              hint="Show your reminders inside Google / iOS / Outlook calendar."
+            >
+              <CalendarFeedCard />
+            </CollapsedSection>
+          </>
+        }
+      />
     </div>
   );
 }
