@@ -155,7 +155,11 @@ export function ImportFromImage({
           if (!open) setPayload(null);
         }}
       >
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent
+          className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>
               {payload?.mode === "receipt"
