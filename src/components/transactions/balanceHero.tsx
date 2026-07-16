@@ -131,14 +131,7 @@ export function BalanceHero({
           </p>
 
           <div className="border-border mt-9 border-t pt-6">
-            <span className="text-eyebrow">Spent this month</span>
-            <p className="font-heading text-2xl leading-tight font-semibold tracking-tight tabular-nums">
-              {hideAmounts
-                ? HIDDEN_AMOUNT
-                : formatMoney(monthTotals.expense, settings.base_currency)}
-            </p>
-
-            <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <MiniStat
                 label="In"
                 value={
