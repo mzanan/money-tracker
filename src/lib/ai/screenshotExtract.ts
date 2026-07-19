@@ -1,10 +1,8 @@
-import { generateObject } from "ai";
+import { generateText } from "ai";
 import { groq } from "@ai-sdk/groq";
 import { z } from "zod";
 
-const visionModel = groq(
-  process.env.AI_VISION_MODEL ?? "meta-llama/llama-4-scout-17b-16e-instruct",
-);
+const visionModel = groq(process.env.AI_VISION_MODEL ?? "qwen/qwen3.6-27b");
 
 const DetectedTransactionSchema = z.object({
   app: z
@@ -16,7 +14,7 @@ const DetectedTransactionSchema = z.object({
     .describe(
       "expense if money leaves the user (spent, sent, paid, charge, fee). income otherwise (received, refund, deposit, salary).",
     ),
-  amount: z
+  amount: z.coerce
     .number()
     .positive()
     .describe("Absolute amount, no sign, no thousand separators"),
@@ -100,6 +98,18 @@ Return strict JSON matching the schema. "ignored" is 0 unless the image contains
 
 export type ExtractMode = "screenshot" | "receipt";
 
+const SCHEMA_JSON = JSON.stringify(z.toJSONSchema(SCHEMA));
+
+function parseModelJson(text: string): z.infer<typeof SCHEMA> {
+  const cleaned = text.replace(/<think>[\s\S]*?<\/think>/g, "");
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start === -1 || end <= start) {
+    throw new Error("Model returned no JSON object");
+  }
+  return SCHEMA.parse(JSON.parse(cleaned.slice(start, end + 1)));
+}
+
 function sanitizeDate(
   raw: z.infer<typeof RawDetectedTransactionSchema>,
 ): DetectedTransaction {
@@ -140,10 +150,9 @@ export async function extractFromImage(
     image.data instanceof Uint8Array ? image.data : new Uint8Array(image.data);
   const prompt = PROMPTS[mode];
 
-  const result = await generateObject({
+  const result = await generateText({
     model: visionModel,
-    schema: SCHEMA,
-    system: prompt.system,
+    system: `${prompt.system}\n\nJSON schema:\n${SCHEMA_JSON}\n\nReply with ONLY the JSON object, no prose, no code fences.`,
     messages: [
       {
         role: "user",
@@ -160,10 +169,15 @@ export async function extractFromImage(
         ],
       },
     ],
+    providerOptions: {
+      groq: { reasoningFormat: "hidden" },
+    },
   });
 
+  const object = parseModelJson(result.text);
+
   return {
-    items: result.object.items.map(sanitizeDate),
-    ignored: result.object.ignored,
+    items: object.items.map(sanitizeDate),
+    ignored: object.ignored,
   };
 }
