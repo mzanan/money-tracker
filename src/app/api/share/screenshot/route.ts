@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     );
   }
 
-  if (!process.env.GROQ_API_KEY) {
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     return NextResponse.redirect(
       new URL("/screenshot-import?error=config", req.url),
     );
