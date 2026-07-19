@@ -60,6 +60,11 @@ export function formatDayLong(yyyymmdd: string): string {
   return format(date, "EEEE, MMMM d", { locale: enUS });
 }
 
+export function formatDateShort(yyyymmdd: string): string {
+  const date = parse(yyyymmdd, "yyyy-MM-dd", new Date());
+  return format(date, "MMM d, yyyy", { locale: enUS });
+}
+
 export function formatYearMonthLong(yearMonth: string): string {
   const date = parse(`${yearMonth}-01`, "yyyy-MM-dd", new Date());
   return format(date, "MMMM yyyy", { locale: enUS });

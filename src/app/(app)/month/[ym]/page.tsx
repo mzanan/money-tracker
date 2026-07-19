@@ -31,14 +31,13 @@ export default async function MonthPage({
       csvSources={csvSources}
       places={data.places}
       reminders={remindersData.reminders}
+      completedReminders={remindersData.completedReminders}
       today={remindersData.today}
     />
   );
 }
 
-function collectSources(
-  txs: ReadonlyArray<{ source: string }>,
-): string[] {
+function collectSources(txs: ReadonlyArray<{ source: string }>): string[] {
   const set = new Set<string>();
   for (const tx of txs) {
     if (tx.source) set.add(tx.source);

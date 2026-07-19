@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { recurring_payments } from "@/lib/db/schema";
@@ -9,25 +9,30 @@ import type { RecurringPayment } from "@/types/db";
 
 export interface RemindersData {
   reminders: RecurringPayment[];
+  completedReminders: RecurringPayment[];
   today: string;
 }
 
 export async function getRemindersData(): Promise<RemindersData> {
   const user = await requireUser();
 
-  const [reminders, settings] = await Promise.all([
+  const [rows, settings] = await Promise.all([
     db
       .select()
       .from(recurring_payments)
-      .where(
-        and(
-          eq(recurring_payments.user_id, user.id),
-          eq(recurring_payments.active, true),
-        ),
-      )
+      .where(eq(recurring_payments.user_id, user.id))
       .orderBy(asc(recurring_payments.next_due_on)),
     getUserSettings(user.id),
   ]);
 
-  return { reminders, today: todayInTz(settings?.timezone ?? "UTC") };
+  const reminders = rows.filter((row) => row.active);
+  const completedReminders = rows
+    .filter((row) => !row.active)
+    .sort((a, b) => (b.last_paid_on ?? "").localeCompare(a.last_paid_on ?? ""));
+
+  return {
+    reminders,
+    completedReminders,
+    today: todayInTz(settings?.timezone ?? "UTC"),
+  };
 }

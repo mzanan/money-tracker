@@ -9,7 +9,7 @@ import {
   markReminderPaid,
   type ReminderPaymentCandidate,
 } from "@/lib/actions/reminders";
-import { daysBetween, frequencyLabel } from "@/lib/reminders";
+import { daysBetween, reminderMetaSegments } from "@/lib/reminders";
 
 import type { RecurringPayment } from "@/types/db";
 
@@ -31,14 +31,7 @@ export function useReminderRow(reminder: RecurringPayment, today: string) {
         ? "text-warning"
         : "text-muted-foreground";
 
-  const metaSegments = [
-    frequencyLabel(reminder.frequency, reminder.interval_months),
-  ];
-  if (reminder.installments_total != null) {
-    metaSegments.push(
-      `${reminder.installments_paid}/${reminder.installments_total} paid`,
-    );
-  }
+  const metaSegments = reminderMetaSegments(reminder);
 
   async function handleMarkPaid() {
     setChecking(true);

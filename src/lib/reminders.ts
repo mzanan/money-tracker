@@ -1,6 +1,6 @@
 import { addMonths, addWeeks, addYears, format, parseISO } from "date-fns";
 
-import type { RecurringFrequency } from "@/types/db";
+import type { RecurringFrequency, RecurringPayment } from "@/types/db";
 
 export const FREQUENCY_OPTIONS: {
   value: RecurringFrequency;
@@ -95,4 +95,16 @@ export function dueLabel(nextDueOn: string, todayIso: string): string {
   if (diff < 30) return `Due in ${diff} days`;
   const months = Math.round(diff / 30);
   return months <= 1 ? "Due in ~1 month" : `Due in ~${months} months`;
+}
+
+export function reminderMetaSegments(reminder: RecurringPayment): string[] {
+  const segments = [
+    frequencyLabel(reminder.frequency, reminder.interval_months),
+  ];
+  if (reminder.installments_total != null) {
+    segments.push(
+      `${reminder.installments_paid}/${reminder.installments_total} paid`,
+    );
+  }
+  return segments;
 }

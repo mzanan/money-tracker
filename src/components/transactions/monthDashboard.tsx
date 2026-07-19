@@ -4,11 +4,7 @@ import { useMemo, useState } from "react";
 
 import { usePresence } from "@/hooks/usePresence";
 import { useSettings } from "@/hooks/useSettings";
-import {
-  monthBounds,
-  oldestYearMonthFrom,
-  shiftYearMonth,
-} from "@/lib/dates";
+import { monthBounds, oldestYearMonthFrom, shiftYearMonth } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
 import type { Location, RecurringPayment, Transaction } from "@/types/db";
@@ -38,6 +34,7 @@ interface Props {
   csvSources: string[];
   places: Location[];
   reminders?: RecurringPayment[];
+  completedReminders?: RecurringPayment[];
   today: string;
   recentTags?: string[] | null;
 }
@@ -49,6 +46,7 @@ export function MonthDashboard({
   csvSources,
   places,
   reminders = [],
+  completedReminders = [],
   today,
   recentTags = null,
 }: Props) {
@@ -182,7 +180,9 @@ export function MonthDashboard({
           <MonthView
             transactions={feedTransactions}
             emptyLabel={
-              isDaily ? "No transactions this day." : "No transactions this month."
+              isDaily
+                ? "No transactions this day."
+                : "No transactions this month."
             }
           />
         </div>
@@ -225,6 +225,7 @@ export function MonthDashboard({
               selectedDayGroup={c.selectedDayGroup}
               onSelectDay={c.setSelectedDay}
               reminders={reminders}
+              completedReminders={completedReminders}
               today={c.today}
             />
           ) : (

@@ -7,6 +7,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Reveal } from "@/components/ui/reveal";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CompletedReminderRow } from "@/components/reminders/completedReminderRow";
 import { ReminderRow } from "@/components/reminders/reminderRow";
 import { formatYearMonthLong, monthBounds } from "@/lib/dates";
 
@@ -18,7 +19,7 @@ import { DaySection } from "./daySection";
 const ymd = (date: Date) => format(date, "yyyy-MM-dd");
 const ym = (date: Date) => format(date, "yyyy-MM");
 
-type ReminderScope = "month" | "all";
+type ReminderScope = "month" | "all" | "done";
 
 export function CalendarPanel({
   yearMonth,
@@ -28,6 +29,7 @@ export function CalendarPanel({
   selectedDayGroup,
   onSelectDay,
   reminders,
+  completedReminders,
   today,
 }: {
   yearMonth: string;
@@ -37,6 +39,7 @@ export function CalendarPanel({
   selectedDayGroup: DayTotalsWithPairs | null;
   onSelectDay: (day: string | null) => void;
   reminders: RecurringPayment[];
+  completedReminders: RecurringPayment[];
   today: string;
 }) {
   const defaultMonth = parse(`${yearMonth}-01`, "yyyy-MM-dd", new Date());
@@ -56,13 +59,14 @@ export function CalendarPanel({
   }
 
   const shownReminders = useMemo(() => {
+    if (reminderScope === "done") return completedReminders;
     const sorted = [...reminders].sort((a, b) =>
       a.next_due_on.localeCompare(b.next_due_on),
     );
     if (reminderScope === "all") return sorted;
     const [start, end] = monthBounds(visibleYearMonth);
     return sorted.filter((r) => r.next_due_on >= start && r.next_due_on <= end);
-  }, [reminders, reminderScope, visibleYearMonth]);
+  }, [reminders, completedReminders, reminderScope, visibleYearMonth]);
 
   return (
     <>
@@ -105,7 +109,9 @@ export function CalendarPanel({
           <span className="text-eyebrow">
             {reminderScope === "month"
               ? `Due · ${formatYearMonthLong(visibleYearMonth)}`
-              : "Upcoming"}
+              : reminderScope === "all"
+                ? "Upcoming"
+                : "Completed"}
           </span>
           <Tabs
             value={reminderScope}
@@ -114,24 +120,31 @@ export function CalendarPanel({
             <TabsList>
               <TabsTrigger value="month">Month</TabsTrigger>
               <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="done">Done</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
         {shownReminders.length > 0 ? (
           <ul className="grid gap-1">
-            {shownReminders.map((reminder) => (
-              <ReminderRow
-                key={reminder.id}
-                reminder={reminder}
-                today={today}
-              />
-            ))}
+            {shownReminders.map((reminder) =>
+              reminderScope === "done" ? (
+                <CompletedReminderRow key={reminder.id} reminder={reminder} />
+              ) : (
+                <ReminderRow
+                  key={reminder.id}
+                  reminder={reminder}
+                  today={today}
+                />
+              ),
+            )}
           </ul>
         ) : (
           <p className="text-muted-foreground text-sm">
             {reminderScope === "month"
               ? "Nothing due this month."
-              : "No reminders yet."}
+              : reminderScope === "all"
+                ? "No reminders yet."
+                : "No completed reminders yet."}
           </p>
         )}
       </Surface>

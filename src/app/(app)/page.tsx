@@ -16,6 +16,7 @@ export default async function DashboardPage() {
       csvSources={data.csvSources}
       places={data.places}
       reminders={remindersData.reminders}
+      completedReminders={remindersData.completedReminders}
       today={remindersData.today}
       recentTags={data.recentTags}
     />
