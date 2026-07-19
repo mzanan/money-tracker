@@ -3,14 +3,14 @@
 import { useMemo, useState } from "react";
 
 import { useSettings, useTimezone } from "@/hooks/useSettings";
+import { dayTotalsWithPairs } from "@/lib/cancellations";
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import { kindOfSource } from "@/lib/constants/sources";
 import { todayInTz } from "@/lib/dates";
 import { filterByAmount } from "@/lib/filters";
 import { placeOf } from "@/lib/places";
-import { dayTotalsList } from "@/lib/totals";
 
-import type { DayTotals } from "@/lib/totals";
+import type { DayTotalsWithPairs } from "@/lib/cancellations";
 import type { Location, RecurringPayment, Transaction } from "@/types/db";
 
 import type { KindFilter } from "./balanceHero";
@@ -125,12 +125,12 @@ export function useDashboardControls({
     [reminders],
   );
 
-  const selectedDayGroup = useMemo<DayTotals | null>(() => {
+  const selectedDayGroup = useMemo<DayTotalsWithPairs | null>(() => {
     if (!selectedDay) return null;
-    const dayTxs = lifetimeTransactions.filter(
-      (tx) => tx.occurred_on === selectedDay,
-    );
-    const [group] = dayTotalsList(dayTxs, settings.base_currency);
+    const group = dayTotalsWithPairs(
+      lifetimeTransactions,
+      settings.base_currency,
+    ).find((day) => day.date === selectedDay);
     return (
       group ?? {
         date: selectedDay,
@@ -138,6 +138,7 @@ export function useDashboardControls({
         income: 0,
         expense: 0,
         net: 0,
+        pairs: [],
       }
     );
   }, [selectedDay, lifetimeTransactions, settings.base_currency]);

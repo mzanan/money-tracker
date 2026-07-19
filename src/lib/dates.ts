@@ -26,6 +26,13 @@ export function daysBefore(dateStr: string, days: number): string {
   return format(subDays(new Date(`${dateStr}T00:00:00Z`), days), "yyyy-MM-dd");
 }
 
+export function dayDiff(a: string, b: string): number {
+  const msPerDay = 86_400_000;
+  return Math.round(
+    (Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / msPerDay,
+  );
+}
+
 export function dayWindow(
   occurredOn: string,
   windowDays: number,

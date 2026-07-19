@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReminderRow } from "@/components/reminders/reminderRow";
 import { formatYearMonthLong, monthBounds } from "@/lib/dates";
 
-import type { DayTotals } from "@/lib/totals";
+import type { DayTotalsWithPairs } from "@/lib/cancellations";
 import type { RecurringPayment } from "@/types/db";
 
 import { DaySection } from "./daySection";
@@ -34,7 +34,7 @@ export function CalendarPanel({
   activityDates: Set<string>;
   reminderDates: Set<string>;
   selectedDay: string | null;
-  selectedDayGroup: DayTotals | null;
+  selectedDayGroup: DayTotalsWithPairs | null;
   onSelectDay: (day: string | null) => void;
   reminders: RecurringPayment[];
   today: string;
@@ -48,7 +48,9 @@ export function CalendarPanel({
   const [reminderScope, setReminderScope] = useState<ReminderScope>("month");
   const visibleYearMonth = ym(visibleMonth);
 
-  const [shownDay, setShownDay] = useState<DayTotals | null>(selectedDayGroup);
+  const [shownDay, setShownDay] = useState<DayTotalsWithPairs | null>(
+    selectedDayGroup,
+  );
   if (selectedDayGroup && selectedDayGroup !== shownDay) {
     setShownDay(selectedDayGroup);
   }
@@ -86,7 +88,7 @@ export function CalendarPanel({
             Movements
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="bg-amber-500 size-1.5 rounded-full" />
+            <span className="size-1.5 rounded-full bg-amber-500" />
             Reminder
           </span>
         </div>
@@ -118,7 +120,11 @@ export function CalendarPanel({
         {shownReminders.length > 0 ? (
           <ul className="grid gap-1">
             {shownReminders.map((reminder) => (
-              <ReminderRow key={reminder.id} reminder={reminder} today={today} />
+              <ReminderRow
+                key={reminder.id}
+                reminder={reminder}
+                today={today}
+              />
             ))}
           </ul>
         ) : (

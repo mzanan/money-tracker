@@ -1,27 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ChevronRightIcon } from "lucide-react";
 
 import { useSettings } from "@/hooks/useSettings";
-import { splitCanceledPairs } from "@/lib/cancellations";
 import { formatMoney } from "@/lib/currency";
 import { formatDayLong } from "@/lib/dates";
-import { transactionInDisplay } from "@/lib/totals";
 import { cn } from "@/lib/utils";
-import type { DayTotals } from "@/lib/totals";
-import type { Transaction } from "@/types/db";
+import type { DayTotalsWithPairs } from "@/lib/cancellations";
 
 import { CanceledGroup } from "./canceledGroup";
 import { TransactionRow } from "./transactionRow";
-
-function inDisplayOrZero(tx: Transaction, baseCurrency: string): number {
-  try {
-    return transactionInDisplay(tx, baseCurrency);
-  } catch {
-    return 0;
-  }
-}
 
 export function DayGroup({
   day,
@@ -29,7 +18,7 @@ export function DayGroup({
   open: openProp,
   onToggle,
 }: {
-  day: DayTotals;
+  day: DayTotalsWithPairs;
   defaultOpen?: boolean;
   open?: boolean;
   onToggle?: () => void;
@@ -37,24 +26,11 @@ export function DayGroup({
   const settings = useSettings();
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const open = openProp ?? internalOpen;
-  const count = day.transactions.length;
-
-  const { pairs, rest } = useMemo(
-    () => splitCanceledPairs(day.transactions),
-    [day.transactions],
-  );
-  const totals = useMemo(() => {
-    let income = day.income;
-    let expense = day.expense;
-    for (const pair of pairs) {
-      income -= inDisplayOrZero(pair.income, settings.base_currency);
-      expense -= inDisplayOrZero(pair.expense, settings.base_currency);
-    }
-    return {
-      income: income < 0.005 ? 0 : income,
-      expense: expense < 0.005 ? 0 : expense,
-    };
-  }, [pairs, day.income, day.expense, settings.base_currency]);
+  const count = day.transactions.length + day.pairs.length * 2;
+  const totals = {
+    income: day.income < 0.005 ? 0 : day.income,
+    expense: day.expense < 0.005 ? 0 : day.expense,
+  };
 
   return (
     <section className="grid min-w-0">
@@ -95,10 +71,10 @@ export function DayGroup({
       </button>
       {open && (
         <div className="grid min-w-0 gap-px">
-          {rest.map((tx) => (
+          {day.transactions.map((tx) => (
             <TransactionRow key={tx.id} tx={tx} />
           ))}
-          {pairs.map((pair) => (
+          {day.pairs.map((pair) => (
             <CanceledGroup key={pair.expense.id} pair={pair} />
           ))}
         </div>

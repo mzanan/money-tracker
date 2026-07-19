@@ -5,7 +5,7 @@ import { XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
 
-import type { DayTotals } from "@/lib/totals";
+import type { DayTotalsWithPairs } from "@/lib/cancellations";
 
 import { DayGroup } from "./dayGroup";
 
@@ -13,7 +13,7 @@ export function DaySection({
   day,
   onClose,
 }: {
-  day: DayTotals;
+  day: DayTotalsWithPairs;
   onClose: () => void;
 }) {
   return (
@@ -29,7 +29,7 @@ export function DaySection({
           <XIcon />
         </Button>
       </div>
-      {day.transactions.length > 0 ? (
+      {day.transactions.length + day.pairs.length > 0 ? (
         <DayGroup day={day} />
       ) : (
         <p className="text-muted-foreground px-3 py-6 text-center text-sm">
