@@ -38,6 +38,7 @@ export function useQuickAddForm(source?: string) {
   const [kind, setKind] = useState<Kind>("expense");
   const [amount, setAmount] = useState("");
   const [currencyState, setCurrency] = useState(initialCurrency);
+  const [description, setDescription] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [date, setDate] = useState(() => todayInTz(timezone));
   const [showExtras, setShowExtras] = useState(false);
@@ -90,7 +91,7 @@ export function useQuickAddForm(source?: string) {
             .split(",")
             .map((tag) => tag.trim())
             .filter(Boolean),
-          note: null,
+          note: description.trim() || null,
           occurredOn: date,
           source,
         }),
@@ -98,6 +99,7 @@ export function useQuickAddForm(source?: string) {
         success: `${kind === "income" ? "Income" : "Expense"} · ${formatMoney(rounded, currency)}`,
         onSuccess: () => {
           setAmount("");
+          setDescription("");
           setTagsInput("");
           setLastCurrency(currency);
         },
@@ -122,6 +124,8 @@ export function useQuickAddForm(source?: string) {
     baseCurrency: settings.base_currency,
     showExtras,
     setShowExtras,
+    description,
+    setDescription,
     tagsId,
     tagsInput,
     setTagsInput,

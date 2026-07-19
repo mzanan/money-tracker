@@ -36,6 +36,8 @@ export function QuickAddForm({ recentTags, source }: Props) {
     baseCurrency,
     showExtras,
     setShowExtras,
+    description,
+    setDescription,
     tagsId,
     tagsInput,
     setTagsInput,
@@ -92,6 +94,17 @@ export function QuickAddForm({ recentTags, source }: Props) {
             Add
           </Button>
         </div>
+
+        <Input
+          id="description"
+          autoComplete="off"
+          placeholder="Description (coffee, rent, salary…)"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          maxLength={120}
+          aria-label="Description"
+          className="bg-surface-2 h-9 rounded-xl border-none"
+        />
 
         {(preview ||
           (currency !== baseCurrency &&
