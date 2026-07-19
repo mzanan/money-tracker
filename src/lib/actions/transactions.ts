@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { isValidAmountForCurrency } from "@/lib/currency";
@@ -15,6 +15,7 @@ import {
 } from "@/lib/schemas/transaction";
 import { getUser } from "@/lib/session";
 import { kindOfSource, normalizeSource } from "@/lib/constants/sources";
+import { dedupeTags } from "@/lib/tags";
 import { buildTransactionRow, normalizeTags } from "@/lib/transactions";
 
 export type ActionResult<T = void> =
@@ -308,4 +309,17 @@ export async function deleteTransaction(id: string): Promise<ActionResult> {
       error: error instanceof Error ? error.message : "Delete failed",
     };
   }
+}
+
+export async function getUsedTags(): Promise<ActionResult<string[]>> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const rows = await db
+    .select({ tags: transactions.tags })
+    .from(transactions)
+    .where(eq(transactions.user_id, user.id))
+    .orderBy(desc(transactions.occurred_on));
+
+  return { ok: true, data: dedupeTags(rows.flatMap((row) => row.tags)) };
 }

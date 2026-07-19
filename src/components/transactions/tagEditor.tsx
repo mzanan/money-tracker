@@ -1,11 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
-import { useServerAction } from "@/hooks/useServerAction";
-import { updateTransactionTags } from "@/lib/actions/transactions";
-import { canonicalTag, tagKey } from "@/lib/tags";
-
 import {
   Dialog,
   DialogContent,
@@ -15,6 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { TagChip } from "@/components/ui/tagChip";
+
+import { useTagEditor } from "./useTagEditor";
 
 export function TagEditor({
   txId,
@@ -27,25 +23,11 @@ export function TagEditor({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const setTags = useServerAction();
-  const [input, setInput] = useState("");
-
-  function commit(next: string[]) {
-    setTags.run(() => updateTransactionTags(txId, next));
-  }
-
-  function addTag(raw: string) {
-    const canonical = canonicalTag(raw);
-    setInput("");
-    if (!canonical) return;
-    const key = tagKey(canonical);
-    if (tags.some((t) => tagKey(t) === key)) return;
-    commit([...tags, canonical]);
-  }
-
-  function removeTag(tag: string) {
-    commit(tags.filter((t) => t !== tag));
-  }
+  const { input, setInput, suggestions, addTag, removeTag } = useTagEditor(
+    txId,
+    tags,
+    open,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -76,6 +58,13 @@ export function TagEditor({
           placeholder="Add a tag…"
           maxLength={40}
         />
+        {suggestions.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {suggestions.map((tag) => (
+              <TagChip key={tag} tag={tag} onSelect={() => addTag(tag)} />
+            ))}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
