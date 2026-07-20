@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { AI_PROVIDER_IDS } from "@/config/aiProviders";
 import { isSupportedCurrency } from "@/config/currencies";
 
 const currencyList = z
@@ -37,3 +38,11 @@ export const updateSettingsSchema = z
   });
 
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
+
+export const assistantKeySchema = z.object({
+  provider: z.enum(AI_PROVIDER_IDS),
+  model: z.string().trim().max(100).optional(),
+  apiKey: z.string().trim().min(1, "Enter an API key"),
+});
+
+export type AssistantKeyInput = z.infer<typeof assistantKeySchema>;

@@ -14,6 +14,8 @@ export const getUserSettings = cache(
         base_currency: user_settings.base_currency,
         timezone: user_settings.timezone,
         cash_enabled: user_settings.cash_enabled,
+        ai_provider: user_settings.ai_provider,
+        ai_model: user_settings.ai_model,
         onboarded_at: user_settings.onboarded_at,
         created_at: user_settings.created_at,
         updated_at: user_settings.updated_at,

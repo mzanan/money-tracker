@@ -178,6 +178,9 @@ export const user_settings = sqliteTable(
       .notNull()
       .default(false),
     calendar_token: text("calendar_token"),
+    ai_provider: text("ai_provider", { enum: ["google", "groq"] }),
+    ai_model: text("ai_model"),
+    ai_api_key: text("ai_api_key"),
     onboarded_at: text("onboarded_at"),
     created_at: text("created_at")
       .notNull()
