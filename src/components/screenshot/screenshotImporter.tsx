@@ -44,6 +44,7 @@ export function ScreenshotImporter({
     selectedCount,
     processFile,
     updateItem,
+    moveItem,
     removeItem,
     submit,
     reset,
@@ -128,7 +129,10 @@ export function ScreenshotImporter({
                 item={item}
                 candidates={candidatesByIndex[index] ?? []}
                 sourceOptions={sourceOptions}
+                isFirst={index === 0}
+                isLast={index === items.length - 1}
                 onChange={(patch) => updateItem(index, patch)}
+                onMove={(delta) => moveItem(index, delta)}
                 onRemove={() => removeItem(index)}
               />
             ))}

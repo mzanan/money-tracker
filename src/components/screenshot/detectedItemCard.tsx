@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2Icon } from "lucide-react";
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ChevronDownIcon,
+  Trash2Icon,
+} from "lucide-react";
 
 import { CURRENCIES } from "@/config/currencies";
 import { labelForSource } from "@/lib/constants/sources";
@@ -21,10 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Surface } from "@/components/ui/surface";
 
-import type {
-  CandidateMatch,
-  EditableItem,
-} from "@/hooks/useScreenshotImport";
+import type { CandidateMatch, EditableItem } from "@/hooks/useScreenshotImport";
 
 import { DuplicateCandidates } from "./duplicateCandidates";
 
@@ -35,14 +37,20 @@ export function DetectedItemCard({
   item,
   candidates,
   sourceOptions,
+  isFirst,
+  isLast,
   onChange,
+  onMove,
   onRemove,
 }: {
   index: number;
   item: EditableItem;
   candidates: CandidateMatch[];
   sourceOptions: string[];
+  isFirst: boolean;
+  isLast: boolean;
   onChange: (patch: Partial<EditableItem>) => void;
+  onMove: (delta: -1 | 1) => void;
   onRemove: () => void;
 }) {
   return (
@@ -84,80 +92,127 @@ export function DetectedItemCard({
                 {item.description}
               </p>
             )}
+            {item.collapsed && (
+              <p className="text-muted-foreground mt-1 text-xs">
+                {item.amount} {item.currency} ·{" "}
+                {item.source ? (
+                  labelForSource(item.source)
+                ) : (
+                  <span className="text-warning">no source</span>
+                )}{" "}
+                · {item.occurredOn ?? "today"}
+              </p>
+            )}
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onRemove}
-            aria-label="Remove item"
-          >
-            <Trash2Icon className="size-4" />
-          </Button>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-3">
-          <Field label="Type">
-            <Select
-              value={item.kind}
-              onValueChange={(v) =>
-                onChange({ kind: v as "income" | "expense" })
-              }
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onMove(-1)}
+              disabled={isFirst}
+              aria-label="Move item up"
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="expense">Expense</SelectItem>
-                <SelectItem value="income">Income</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-
-          <Field label="Amount">
-            <Input
-              inputMode="decimal"
-              value={item.amount}
-              onChange={(e) => onChange({ amount: e.target.value })}
-            />
-          </Field>
-
-          <Field label="Currency">
-            <CurrencySelect
-              value={item.currency}
-              onValueChange={(v) => onChange({ currency: v })}
-              currencies={CURRENCY_CODES}
-            />
-          </Field>
+              <ArrowUpIcon className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onMove(1)}
+              disabled={isLast}
+              aria-label="Move item down"
+            >
+              <ArrowDownIcon className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onChange({ collapsed: !item.collapsed })}
+              aria-label={item.collapsed ? "Expand item" : "Collapse item"}
+            >
+              <ChevronDownIcon
+                className={`size-4 transition-transform ${item.collapsed ? "" : "rotate-180"}`}
+              />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onRemove}
+              aria-label="Remove item"
+            >
+              <Trash2Icon className="size-4" />
+            </Button>
+          </div>
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-3">
-          <Field label="Source">
-            <SourcePicker
-              source={item.source}
-              sourceOptions={sourceOptions}
-              onChange={(source) => onChange({ source })}
-            />
-          </Field>
+        {!item.collapsed && (
+          <>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Field label="Type">
+                <Select
+                  value={item.kind}
+                  onValueChange={(v) =>
+                    onChange({ kind: v as "income" | "expense" })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="expense">Expense</SelectItem>
+                    <SelectItem value="income">Income</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
 
-          <Field label="Date (empty = today)">
-            <Input
-              type="date"
-              value={item.occurredOn ?? ""}
-              onChange={(e) => onChange({ occurredOn: e.target.value || null })}
-            />
-          </Field>
+              <Field label="Amount">
+                <Input
+                  inputMode="decimal"
+                  value={item.amount}
+                  onChange={(e) => onChange({ amount: e.target.value })}
+                />
+              </Field>
 
-          <Field label="Description">
-            <Input
-              value={item.description}
-              onChange={(e) => onChange({ description: e.target.value })}
-            />
-          </Field>
-        </div>
+              <Field label="Currency">
+                <CurrencySelect
+                  value={item.currency}
+                  onValueChange={(v) => onChange({ currency: v })}
+                  currencies={CURRENCY_CODES}
+                />
+              </Field>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Field label="Source">
+                <SourcePicker
+                  source={item.source}
+                  sourceOptions={sourceOptions}
+                  onChange={(source) => onChange({ source })}
+                />
+              </Field>
+
+              <Field label="Date (empty = today)">
+                <Input
+                  type="date"
+                  value={item.occurredOn ?? ""}
+                  onChange={(e) =>
+                    onChange({ occurredOn: e.target.value || null })
+                  }
+                />
+              </Field>
+
+              <Field label="Description">
+                <Input
+                  value={item.description}
+                  onChange={(e) => onChange({ description: e.target.value })}
+                />
+              </Field>
+            </div>
+          </>
+        )}
 
         {item.error && <ErrorText>{item.error}</ErrorText>}
 
-        {candidates.length > 0 && (
+        {!item.collapsed && candidates.length > 0 && (
           <DuplicateCandidates
             candidates={candidates}
             item={item}

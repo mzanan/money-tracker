@@ -161,7 +161,7 @@ export async function extractFromImage(
   });
 
   return {
-    items: result.object.items.map(sanitizeDate),
+    items: result.object.items.map(sanitizeDate).reverse(),
     ignored: result.object.ignored,
   };
 }

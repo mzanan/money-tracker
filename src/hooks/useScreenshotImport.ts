@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -20,6 +26,7 @@ import { sourceForApp } from "@/lib/constants/sources";
 export interface EditableItem {
   id: string;
   selected: boolean;
+  collapsed: boolean;
   kind: "income" | "expense";
   amount: string;
   currency: string;
@@ -39,8 +46,7 @@ const ROW_ERRORS: Record<Exclude<ScreenshotRowStatus, "imported">, string> = {
   fractional_amount:
     "This currency has no decimals. Check the amount against the image.",
   invalid_date: "Date must be YYYY-MM-DD.",
-  invalid_source:
-    "Source must be letters, numbers, spaces or dashes (max 32).",
+  invalid_source: "Source must be letters, numbers, spaces or dashes (max 32).",
   failed: "Could not save this row. Try again.",
 };
 
@@ -67,6 +73,7 @@ function detectedToEditable(
   return {
     id: crypto.randomUUID(),
     selected: true,
+    collapsed: true,
     kind: detected.kind,
     amount: detected.amount.toString(),
     currency: detected.currency.toUpperCase(),
@@ -178,6 +185,26 @@ export function useScreenshotImport({
     );
   }
 
+  function moveItem(index: number, delta: -1 | 1) {
+    const target = index + delta;
+    if (target < 0 || target >= items.length) return;
+    setItems((prev) => {
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+    setCandidatesByIndex((prev) => {
+      const next = { ...prev };
+      const a = next[index];
+      const b = next[target];
+      if (b !== undefined) next[index] = b;
+      else delete next[index];
+      if (a !== undefined) next[target] = a;
+      else delete next[target];
+      return next;
+    });
+  }
+
   function removeItem(index: number) {
     setItems((prev) => prev.filter((_, i) => i !== index));
     setCandidatesByIndex((prev) => {
@@ -254,6 +281,7 @@ export function useScreenshotImport({
           .map((item) => ({
             ...item,
             error: failedById.get(item.id) ?? item.error,
+            collapsed: failedById.has(item.id) ? false : item.collapsed,
           })),
       );
       setCandidatesByIndex({});
@@ -271,6 +299,7 @@ export function useScreenshotImport({
     selectedCount: selectedItems.length,
     processFile,
     updateItem,
+    moveItem,
     removeItem,
     submit,
     reset,
