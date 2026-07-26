@@ -17,6 +17,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { deleteTransaction } from "@/lib/actions/transactions";
 import { unmarkTransfer } from "@/lib/actions/transfers";
 import { kindOfSource, labelForSource } from "@/lib/constants/sources";
+import { isSyncedExternalId } from "@/lib/externalIds";
 import { formatMoney } from "@/lib/currency";
 import { computeNextDue } from "@/lib/reminders";
 import { transactionInDisplay } from "@/lib/totals";
@@ -58,6 +59,9 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const [sourceMounted, setSourceMounted] = useState(false);
   const canDelete = kindOfSource(tx.source) !== "api";
   const isTransfer = Boolean(tx.transfer_group);
+  const canChangeSource =
+    !isTransfer &&
+    (kindOfSource(tx.source) !== "api" || !isSyncedExternalId(tx.external_id));
   const txSelectMode = useUiStore((s) => s.txSelectMode);
   const selectedTxs = useUiStore((s) => s.selectedTxs);
   const toggleTxSelected = useUiStore((s) => s.toggleTxSelected);
@@ -183,7 +187,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
               <TagIcon />
               Edit tags
             </DropdownMenuItem>
-            {canDelete && !isTransfer && (
+            {canChangeSource && (
               <DropdownMenuItem onSelect={openSource}>
                 <LandmarkIcon />
                 Change account

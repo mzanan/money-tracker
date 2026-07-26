@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { isValidAmountForCurrency } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
+import { isSyncedExternalId } from "@/lib/externalIds";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 import {
   createTransactionSchema,
@@ -247,7 +248,7 @@ export async function updateTransactionSource(
     .limit(1)
     .then((rows) => rows[0]);
   if (!tx) return { ok: false, error: "Transaction not found" };
-  if (kindOfSource(tx.source) === "api") {
+  if (kindOfSource(tx.source) === "api" && isSyncedExternalId(tx.external_id)) {
     return { ok: false, error: "Synced transactions can't change account" };
   }
   if (tx.transfer_group) {
