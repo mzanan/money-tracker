@@ -12,7 +12,10 @@ import { useUiStore } from "@/stores/uiStore";
 
 import type { Transaction } from "@/types/db";
 
-export function useMonthView(transactions: Transaction[]) {
+export function useMonthView(
+  transactions: Transaction[],
+  includeTransfers = false,
+) {
   const settings = useSettings();
   const txSelectMode = useUiStore((s) => s.txSelectMode);
   const setTxSelectMode = useUiStore((s) => s.setTxSelectMode);
@@ -24,8 +27,9 @@ export function useMonthView(transactions: Transaction[]) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const days = useMemo(
-    () => dayTotalsWithPairs(transactions, settings.base_currency),
-    [transactions, settings.base_currency],
+    () =>
+      dayTotalsWithPairs(transactions, settings.base_currency, includeTransfers),
+    [transactions, settings.base_currency, includeTransfers],
   );
 
   const shown = days.slice(0, visibleDays);

@@ -65,11 +65,14 @@ export function excludeCanceledPairs(
 export function dayTotalsWithPairs(
   transactions: Transaction[],
   displayCurrency: string,
+  includeTransfers = false,
 ): DayTotalsWithPairs[] {
   const { pairs, rest } = splitCanceledPairs(transactions);
-  const days: DayTotalsWithPairs[] = dayTotalsList(rest, displayCurrency).map(
-    (day) => ({ ...day, pairs: [] }),
-  );
+  const days: DayTotalsWithPairs[] = dayTotalsList(
+    rest,
+    displayCurrency,
+    includeTransfers,
+  ).map((day) => ({ ...day, pairs: [] }));
   const byDate = new Map(days.map((day) => [day.date, day]));
   for (const pair of pairs) {
     const date = pair.expense.occurred_on;

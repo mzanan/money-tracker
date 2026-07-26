@@ -35,6 +35,7 @@ interface Props {
   yearMonth: string;
   transactions: Transaction[];
   lifetimeTransactions: Transaction[];
+  includeTransfers?: boolean;
   selectedKind: KindFilter;
   onKindChange: (next: KindFilter) => void;
   hasOlder: boolean;
@@ -49,6 +50,7 @@ export function BalanceHero({
   yearMonth,
   transactions,
   lifetimeTransactions,
+  includeTransfers = false,
   selectedKind,
   onKindChange,
   hasOlder,
@@ -63,13 +65,22 @@ export function BalanceHero({
 
   const monthTotals = useMemo(
     () =>
-      periodTotals(excludeCanceledPairs(transactions), settings.base_currency),
-    [transactions, settings.base_currency],
+      periodTotals(
+        excludeCanceledPairs(transactions),
+        settings.base_currency,
+        includeTransfers,
+      ),
+    [transactions, settings.base_currency, includeTransfers],
   );
 
   const lifetimeTotals = useMemo(
-    () => periodTotals(lifetimeTransactions, settings.base_currency),
-    [lifetimeTransactions, settings.base_currency],
+    () =>
+      periodTotals(
+        lifetimeTransactions,
+        settings.base_currency,
+        includeTransfers,
+      ),
+    [lifetimeTransactions, settings.base_currency, includeTransfers],
   );
 
   const totalPositive = lifetimeTotals.net >= 0;

@@ -150,6 +150,7 @@ export function useDashboardControls({
     closePanel,
     selectedSource,
     setSelectedSource,
+    includeTransfers: selectedSource !== "all",
     selectedKind,
     setSelectedKind,
     selectedTag,

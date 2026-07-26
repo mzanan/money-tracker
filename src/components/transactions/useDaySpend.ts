@@ -14,9 +14,15 @@ interface Args {
   yearMonth: string;
   transactions: Transaction[];
   today: string;
+  includeTransfers?: boolean;
 }
 
-export function useDaySpend({ yearMonth, transactions, today }: Args) {
+export function useDaySpend({
+  yearMonth,
+  transactions,
+  today,
+  includeTransfers = false,
+}: Args) {
   const settings = useSettings();
 
   const [monthStart, monthEnd] = monthBounds(yearMonth);
@@ -25,14 +31,18 @@ export function useDaySpend({ yearMonth, transactions, today }: Args) {
   const byDay = useMemo(() => {
     const map = new Map<string, { expense: number; count: number }>();
     const real = excludeCanceledPairs(transactions);
-    for (const day of dayTotalsList(real, settings.base_currency)) {
+    for (const day of dayTotalsList(
+      real,
+      settings.base_currency,
+      includeTransfers,
+    )) {
       const expenseCount = day.transactions.filter(
         (t) => t.kind === "expense",
       ).length;
       map.set(day.date, { expense: day.expense, count: expenseCount });
     }
     return map;
-  }, [transactions, settings.base_currency]);
+  }, [transactions, settings.base_currency, includeTransfers]);
 
   const daysInMonth = useMemo(() => {
     const out: string[] = [];
