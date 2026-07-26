@@ -6,6 +6,7 @@ import {
   BellPlusIcon,
   CheckIcon,
   EllipsisIcon,
+  LandmarkIcon,
   PencilLineIcon,
   TagIcon,
   Trash2Icon,
@@ -35,6 +36,7 @@ import { ReminderForm } from "@/components/reminders/reminderForm";
 import { Avatar } from "./avatar";
 import { MarkTransferDialog } from "./markTransferDialog";
 import { NoteEditor } from "./noteEditor";
+import { SourceEditor } from "./sourceEditor";
 import { TagChips } from "./tagChips";
 import { TagEditor } from "./tagEditor";
 
@@ -52,6 +54,8 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const [noteMounted, setNoteMounted] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferMounted, setTransferMounted] = useState(false);
+  const [sourceOpen, setSourceOpen] = useState(false);
+  const [sourceMounted, setSourceMounted] = useState(false);
   const canDelete = kindOfSource(tx.source) !== "api";
   const isTransfer = Boolean(tx.transfer_group);
   const txSelectMode = useUiStore((s) => s.txSelectMode);
@@ -84,6 +88,11 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   function openReminder() {
     setReminderMounted(true);
     setReminderOpen(true);
+  }
+
+  function openSource() {
+    setSourceMounted(true);
+    setSourceOpen(true);
   }
 
   function openTransfer() {
@@ -174,6 +183,12 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
               <TagIcon />
               Edit tags
             </DropdownMenuItem>
+            {canDelete && !isTransfer && (
+              <DropdownMenuItem onSelect={openSource}>
+                <LandmarkIcon />
+                Change account
+              </DropdownMenuItem>
+            )}
             {isTransfer ? (
               <DropdownMenuItem
                 onSelect={() =>
@@ -244,6 +259,14 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             nextDueOn: computeNextDue(tx.occurred_on, "MONTHLY"),
             note: null,
           }}
+        />
+      )}
+      {sourceMounted && (
+        <SourceEditor
+          txId={tx.id}
+          txSource={tx.source}
+          open={sourceOpen}
+          onOpenChange={setSourceOpen}
         />
       )}
       {transferMounted && (

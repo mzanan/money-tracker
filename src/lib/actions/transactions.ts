@@ -227,6 +227,51 @@ export async function updateTransactionNote(
   }
 }
 
+export async function updateTransactionSource(
+  id: string,
+  source: string,
+): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const normalized = normalizeSource(source);
+  if (!normalized) return { ok: false, error: "Invalid account name" };
+  if (kindOfSource(normalized) === "api") {
+    return { ok: false, error: "Can't move into a synced account" };
+  }
+
+  const tx = await db
+    .select()
+    .from(transactions)
+    .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)))
+    .limit(1)
+    .then((rows) => rows[0]);
+  if (!tx) return { ok: false, error: "Transaction not found" };
+  if (kindOfSource(tx.source) === "api") {
+    return { ok: false, error: "Synced transactions can't change account" };
+  }
+  if (tx.transfer_group) {
+    return { ok: false, error: "Undo the transfer before changing account" };
+  }
+  if (normalized === tx.source) {
+    return { ok: false, error: "Pick a different account" };
+  }
+
+  try {
+    await db
+      .update(transactions)
+      .set({ source: normalized })
+      .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)));
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Update failed",
+    };
+  }
+}
+
 export async function mergeTransactions(
   keepId: string,
   removeId: string,
