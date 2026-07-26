@@ -13,9 +13,11 @@ import { useMonthView } from "./useMonthView";
 export function MonthView({
   transactions,
   emptyLabel = "No transactions this month.",
+  includeTransfers = false,
 }: {
   transactions: Transaction[];
   emptyLabel?: string;
+  includeTransfers?: boolean;
 }) {
   const {
     days,
@@ -27,7 +29,7 @@ export function MonthView({
     toggleDay,
     txSelectMode,
     setTxSelectMode,
-  } = useMonthView(transactions);
+  } = useMonthView(transactions, includeTransfers);
 
   if (days.length === 0) {
     return (

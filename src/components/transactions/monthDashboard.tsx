@@ -99,6 +99,7 @@ export function MonthDashboard({
     yearMonth: visibleYearMonth,
     transactions: c.sourceFilteredMonth,
     today,
+    includeTransfers: c.includeTransfers,
   });
   const isDaily = view === "daily";
 
@@ -148,6 +149,7 @@ export function MonthDashboard({
           yearMonth={visibleYearMonth}
           transactions={c.sourceFilteredMonth}
           lifetimeTransactions={c.sourceFilteredLifetime}
+          includeTransfers={c.includeTransfers}
           selectedKind={c.selectedKind}
           onKindChange={c.setSelectedKind}
           hasOlder={hasOlder}
@@ -179,6 +181,7 @@ export function MonthDashboard({
         <div className="min-h-[100svh]">
           <MonthView
             transactions={feedTransactions}
+            includeTransfers={c.includeTransfers}
             emptyLabel={
               isDaily
                 ? "No transactions this day."
@@ -215,6 +218,7 @@ export function MonthDashboard({
               }}
               amountActive={c.amountActive}
               results={c.filterResults}
+              includeTransfers={c.includeTransfers}
             />
           ) : shownPanel === "calendar" ? (
             <CalendarPanel

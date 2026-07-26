@@ -23,6 +23,7 @@ export function FiltersPanel({
   onClear,
   amountActive,
   results,
+  includeTransfers = false,
 }: {
   baseCurrency: string;
   minInput: string;
@@ -34,6 +35,7 @@ export function FiltersPanel({
   onClear: () => void;
   amountActive: boolean;
   results: Transaction[];
+  includeTransfers?: boolean;
 }) {
   return (
     <>
@@ -91,6 +93,7 @@ export function FiltersPanel({
       <Reveal open={amountActive}>
         <MonthView
           transactions={results}
+          includeTransfers={includeTransfers}
           emptyLabel="No transactions match these filters."
         />
       </Reveal>
