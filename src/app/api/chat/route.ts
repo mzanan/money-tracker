@@ -4,10 +4,11 @@ import { eq } from "drizzle-orm";
 
 import { buildAssistantTools } from "@/lib/ai/assistantTools";
 import { buildSystemPrompt } from "@/lib/ai/prompt";
-import { chatModel } from "@/lib/ai/provider";
+import { hasServerKey, resolveChatModel } from "@/lib/ai/provider";
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
 import { todayInTz } from "@/lib/dates";
+import { decryptSecret } from "@/lib/integrations/crypto";
 import { getUser } from "@/lib/session";
 
 export async function POST(req: Request) {
@@ -16,17 +17,13 @@ export async function POST(req: Request) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    return Response.json(
-      { error: "The assistant is not configured yet." },
-      { status: 503 },
-    );
-  }
-
   const settings = await db
     .select({
       base_currency: user_settings.base_currency,
       timezone: user_settings.timezone,
+      ai_provider: user_settings.ai_provider,
+      ai_model: user_settings.ai_model,
+      ai_api_key: user_settings.ai_api_key,
     })
     .from(user_settings)
     .where(eq(user_settings.user_id, user.id))
@@ -37,11 +34,37 @@ export async function POST(req: Request) {
     return Response.json({ error: "Settings not found" }, { status: 400 });
   }
 
+  let userApiKey: string | null = null;
+  if (settings.ai_api_key) {
+    try {
+      userApiKey = decryptSecret(settings.ai_api_key, `${user.id}:ai`);
+    } catch {
+      return Response.json(
+        { error: "Your API key could not be read. Re-enter it in Settings." },
+        { status: 503 },
+      );
+    }
+  }
+
+  if (!userApiKey && !hasServerKey()) {
+    return Response.json(
+      {
+        error:
+          "The assistant is not configured. Add your own API key in Settings.",
+      },
+      { status: 503 },
+    );
+  }
+
   const { messages }: { messages: UIMessage[] } = await req.json();
   const timezone = settings.timezone ?? "UTC";
 
   const result = streamText({
-    model: chatModel,
+    model: resolveChatModel({
+      provider: settings.ai_provider,
+      model: settings.ai_model,
+      apiKey: userApiKey,
+    }),
     system: buildSystemPrompt({
       baseCurrency: settings.base_currency,
       today: todayInTz(timezone),

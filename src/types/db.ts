@@ -32,7 +32,10 @@ export type UserSettingsUpdate = Partial<UserSettingsInsert>;
  * Settings shape safe to serialize to the client. Omits the calendar
  * capability token, read server-side only, never sent to the browser.
  */
-export type ClientSettings = Omit<UserSettings, "calendar_token">;
+export type ClientSettings = Omit<
+  UserSettings,
+  "calendar_token" | "ai_api_key"
+>;
 
 export type FxRatesCache = typeof fx_rates_cache.$inferSelect;
 

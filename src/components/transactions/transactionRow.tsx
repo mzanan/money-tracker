@@ -6,6 +6,7 @@ import {
   BellPlusIcon,
   CheckIcon,
   EllipsisIcon,
+  LandmarkIcon,
   PencilLineIcon,
   TagIcon,
   Trash2Icon,
@@ -16,6 +17,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { deleteTransaction } from "@/lib/actions/transactions";
 import { unmarkTransfer } from "@/lib/actions/transfers";
 import { kindOfSource, labelForSource } from "@/lib/constants/sources";
+import { isSyncedExternalId } from "@/lib/externalIds";
 import { formatMoney } from "@/lib/currency";
 import { computeNextDue } from "@/lib/reminders";
 import { transactionInDisplay } from "@/lib/totals";
@@ -35,6 +37,7 @@ import { ReminderForm } from "@/components/reminders/reminderForm";
 import { Avatar } from "./avatar";
 import { MarkTransferDialog } from "./markTransferDialog";
 import { NoteEditor } from "./noteEditor";
+import { SourceEditor } from "./sourceEditor";
 import { TagChips } from "./tagChips";
 import { TagEditor } from "./tagEditor";
 
@@ -52,8 +55,13 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const [noteMounted, setNoteMounted] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferMounted, setTransferMounted] = useState(false);
+  const [sourceOpen, setSourceOpen] = useState(false);
+  const [sourceMounted, setSourceMounted] = useState(false);
   const canDelete = kindOfSource(tx.source) !== "api";
   const isTransfer = Boolean(tx.transfer_group);
+  const canChangeSource =
+    !isTransfer &&
+    (kindOfSource(tx.source) !== "api" || !isSyncedExternalId(tx.external_id));
   const txSelectMode = useUiStore((s) => s.txSelectMode);
   const selectedTxs = useUiStore((s) => s.selectedTxs);
   const toggleTxSelected = useUiStore((s) => s.toggleTxSelected);
@@ -84,6 +92,11 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   function openReminder() {
     setReminderMounted(true);
     setReminderOpen(true);
+  }
+
+  function openSource() {
+    setSourceMounted(true);
+    setSourceOpen(true);
   }
 
   function openTransfer() {
@@ -174,6 +187,12 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
               <TagIcon />
               Edit tags
             </DropdownMenuItem>
+            {canChangeSource && (
+              <DropdownMenuItem onSelect={openSource}>
+                <LandmarkIcon />
+                Change account
+              </DropdownMenuItem>
+            )}
             {isTransfer ? (
               <DropdownMenuItem
                 onSelect={() =>
@@ -244,6 +263,14 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             nextDueOn: computeNextDue(tx.occurred_on, "MONTHLY"),
             note: null,
           }}
+        />
+      )}
+      {sourceMounted && (
+        <SourceEditor
+          txId={tx.id}
+          txSource={tx.source}
+          open={sourceOpen}
+          onOpenChange={setSourceOpen}
         />
       )}
       {transferMounted && (

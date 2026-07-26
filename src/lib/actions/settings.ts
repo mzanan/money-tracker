@@ -5,9 +5,12 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
+import { encryptSecret } from "@/lib/integrations/crypto";
 import {
+  assistantKeySchema,
   onboardingSchema,
   updateSettingsSchema,
+  type AssistantKeyInput,
   type OnboardingInput,
   type UpdateSettingsInput,
 } from "@/lib/schemas/settings";
@@ -71,6 +74,58 @@ export async function setCashEnabled(enabled: boolean): Promise<ActionResult> {
       .set({ cash_enabled: enabled })
       .where(eq(user_settings.user_id, user.id));
     revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Save failed",
+    };
+  }
+}
+
+export async function saveAssistantKey(
+  input: AssistantKeyInput,
+): Promise<ActionResult> {
+  const parsed = assistantKeySchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid data",
+    };
+  }
+
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  try {
+    await db
+      .update(user_settings)
+      .set({
+        ai_provider: parsed.data.provider,
+        ai_model: parsed.data.model?.trim() || null,
+        ai_api_key: encryptSecret(parsed.data.apiKey, `${user.id}:ai`),
+      })
+      .where(eq(user_settings.user_id, user.id));
+    revalidatePath("/settings");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Save failed",
+    };
+  }
+}
+
+export async function removeAssistantKey(): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  try {
+    await db
+      .update(user_settings)
+      .set({ ai_provider: null, ai_model: null, ai_api_key: null })
+      .where(eq(user_settings.user_id, user.id));
+    revalidatePath("/settings");
     return { ok: true };
   } catch (error) {
     return {

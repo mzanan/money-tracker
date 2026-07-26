@@ -3,25 +3,13 @@ import { createHash } from "node:crypto";
 import { and, isNotNull, like, notLike, or } from "drizzle-orm";
 
 import { kindOfSource } from "@/lib/constants/sources";
+import { EXTERNAL_ID_PREFIX, isCsvExternalId } from "@/lib/externalIds";
 import { snapshotRatesFor } from "@/lib/currency";
 import { transactions } from "@/lib/db/schema";
 import { dedupeTags } from "@/lib/tags";
 import type { FxRates, Transaction, TransactionInsert } from "@/types/db";
 
-export const EXTERNAL_ID_PREFIX = {
-  csv: "csv:",
-  screenshot: "ss:",
-  transfer: "transfer:",
-  exchange: "exchange:",
-  withdrawal: "withdrawal:",
-  reminder: "reminder:",
-} as const;
-
-export function isCsvExternalId(id: string | null | undefined): boolean {
-  return (
-    id != null && (id.startsWith(EXTERNAL_ID_PREFIX.csv) || !id.includes(":"))
-  );
-}
+export { EXTERNAL_ID_PREFIX, isCsvExternalId } from "@/lib/externalIds";
 
 export function csvExternalIdCondition() {
   return and(

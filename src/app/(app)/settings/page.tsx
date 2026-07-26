@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeftIcon, ChevronDownIcon } from "lucide-react";
 
+import { AssistantKeyCard } from "@/components/settings/assistantKeyCard";
 import { CalendarFeedCard } from "@/components/settings/calendarFeedCard";
 import { CashCard } from "@/components/settings/cashCard";
 import { CashExchangeForm } from "@/components/settings/cashExchangeForm";
@@ -34,12 +35,20 @@ export default async function SettingsPage() {
 
       <SettingsTabs
         general={
-          <Section
-            title="Profile"
-            hint="Currencies and timezone for new entries."
-          >
-            <SettingsForm />
-          </Section>
+          <>
+            <Section
+              title="Profile"
+              hint="Currencies and timezone for new entries."
+            >
+              <SettingsForm />
+            </Section>
+            <Section
+              title="Assistant"
+              hint="Model and API key for the chat assistant."
+            >
+              <AssistantKeyCard />
+            </Section>
+          </>
         }
         cash={
           <Section
