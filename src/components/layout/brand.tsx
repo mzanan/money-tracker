@@ -10,6 +10,7 @@ export function Brand() {
         m
       </span>
       <span className="text-base font-semibold">Money</span>
+      <span className="text-muted-foreground text-xs font-medium">beta</span>
     </Link>
   );
 }
