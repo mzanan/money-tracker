@@ -1,14 +1,10 @@
 "use client";
 
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const TABS = [
   { value: "general", label: "General" },
+  { value: "assistant", label: "Assistant" },
   { value: "cash", label: "Cash" },
   { value: "accounts", label: "Accounts" },
   { value: "data", label: "Data" },
@@ -18,12 +14,14 @@ type TabValue = (typeof TABS)[number]["value"];
 
 export function SettingsTabs({
   general,
+  assistant,
   cash,
   accounts,
   data,
 }: Record<TabValue, React.ReactNode>) {
   const content: Record<TabValue, React.ReactNode> = {
     general,
+    assistant,
     cash,
     accounts,
     data,

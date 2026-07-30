@@ -35,20 +35,20 @@ export default async function SettingsPage() {
 
       <SettingsTabs
         general={
-          <>
-            <Section
-              title="Profile"
-              hint="Currencies and timezone for new entries."
-            >
-              <SettingsForm />
-            </Section>
-            <Section
-              title="Assistant"
-              hint="Model and API key for the chat assistant."
-            >
-              <AssistantKeyCard />
-            </Section>
-          </>
+          <Section
+            title="Profile"
+            hint="Currencies and timezone for new entries."
+          >
+            <SettingsForm />
+          </Section>
+        }
+        assistant={
+          <Section
+            title="Assistant"
+            hint="Model and API key for the chat assistant."
+          >
+            <AssistantKeyCard />
+          </Section>
         }
         cash={
           <Section
@@ -115,9 +115,7 @@ function CollapsedSection({
           {title}
           <ChevronDownIcon className="text-muted-foreground size-3.5 transition-transform group-open:rotate-180" />
         </h2>
-        {hint && (
-          <p className="text-muted-foreground mt-0.5 text-xs">{hint}</p>
-        )}
+        {hint && <p className="text-muted-foreground mt-0.5 text-xs">{hint}</p>}
       </summary>
       <div className="mt-3">{children}</div>
     </details>
@@ -139,9 +137,7 @@ function Section({
         <h2 className="text-xs font-semibold tracking-wider uppercase">
           {title}
         </h2>
-        {hint && (
-          <p className="text-muted-foreground mt-0.5 text-xs">{hint}</p>
-        )}
+        {hint && <p className="text-muted-foreground mt-0.5 text-xs">{hint}</p>}
       </div>
       {children}
     </section>
