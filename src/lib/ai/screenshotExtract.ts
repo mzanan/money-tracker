@@ -2,7 +2,34 @@ import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
 
-const visionModel = google(process.env.AI_VISION_MODEL ?? "gemini-2.5-flash");
+const DEFAULT_VISION_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.0-flash",
+];
+
+const DEFAULT_OPENROUTER_VISION_MODEL = "google/gemma-4-26b-a4b-it:free";
+
+function visionModelIds(): string[] {
+  const configured = process.env.AI_VISION_MODELS?.split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  if (configured?.length) return configured;
+  const single = process.env.AI_VISION_MODEL?.trim();
+  if (!single) return DEFAULT_VISION_MODELS;
+  return [single, ...DEFAULT_VISION_MODELS.filter((id) => id !== single)];
+}
+
+function openRouterConfig(): { apiKey: string; modelId: string } | null {
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+  if (!apiKey) return null;
+  return {
+    apiKey,
+    modelId:
+      process.env.OPENROUTER_VISION_MODEL?.trim() ||
+      DEFAULT_OPENROUTER_VISION_MODEL,
+  };
+}
 
 const DetectedTransactionSchema = z.object({
   app: z
@@ -127,6 +154,56 @@ const PROMPTS: Record<ExtractMode, { system: string; instruction: string }> = {
   },
 };
 
+async function extractWithOpenRouter(
+  config: { apiKey: string; modelId: string },
+  buffer: Uint8Array,
+  mimeType: string,
+  prompt: { system: string; instruction: string },
+): Promise<z.infer<typeof SCHEMA>> {
+  const dataUrl = `data:${mimeType};base64,${Buffer.from(buffer).toString("base64")}`;
+
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: config.modelId,
+      messages: [
+        { role: "system", content: prompt.system },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt.instruction },
+            { type: "image_url", image_url: { url: dataUrl } },
+          ],
+        },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "extracted_transactions",
+          strict: true,
+          schema: z.toJSONSchema(SCHEMA, { io: "output" }),
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`${response.status} ${(await response.text()).slice(0, 300)}`);
+  }
+
+  const payload = await response.json();
+  const content = payload?.choices?.[0]?.message?.content;
+  if (typeof content !== "string") {
+    throw new Error("empty response");
+  }
+
+  return SCHEMA.parse(JSON.parse(content));
+}
+
 export async function extractFromImage(
   image: {
     data: ArrayBuffer | Uint8Array;
@@ -138,30 +215,62 @@ export async function extractFromImage(
     image.data instanceof Uint8Array ? image.data : new Uint8Array(image.data);
   const prompt = PROMPTS[mode];
 
-  const result = await generateObject({
-    model: visionModel,
-    schema: SCHEMA,
-    system: prompt.system,
-    messages: [
-      {
-        role: "user",
-        content: [
+  const failures: string[] = [];
+
+  for (const modelId of visionModelIds()) {
+    try {
+      const result = await generateObject({
+        model: google(modelId),
+        schema: SCHEMA,
+        system: prompt.system,
+        messages: [
           {
-            type: "text",
-            text: prompt.instruction,
-          },
-          {
-            type: "image",
-            image: buffer,
-            mediaType: image.mimeType,
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: prompt.instruction,
+              },
+              {
+                type: "image",
+                image: buffer,
+                mediaType: image.mimeType,
+              },
+            ],
           },
         ],
-      },
-    ],
-  });
+      });
 
-  return {
-    items: result.object.items.map(sanitizeDate).reverse(),
-    ignored: result.object.ignored,
-  };
+      return {
+        items: result.object.items.map(sanitizeDate).reverse(),
+        ignored: result.object.ignored,
+      };
+    } catch (error) {
+      failures.push(
+        `${modelId}: ${error instanceof Error ? error.message : "unknown"}`,
+      );
+    }
+  }
+
+  const openRouter = openRouterConfig();
+  if (openRouter) {
+    try {
+      const object = await extractWithOpenRouter(
+        openRouter,
+        buffer,
+        image.mimeType,
+        prompt,
+      );
+      return {
+        items: object.items.map(sanitizeDate).reverse(),
+        ignored: object.ignored,
+      };
+    } catch (error) {
+      failures.push(
+        `openrouter/${openRouter.modelId}: ${error instanceof Error ? error.message : "unknown"}`,
+      );
+    }
+  }
+
+  throw new Error(failures.join(" | "));
 }

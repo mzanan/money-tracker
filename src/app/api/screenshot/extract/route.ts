@@ -54,12 +54,8 @@ export async function POST(req: Request) {
     );
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: "extract_failed",
-        detail: error instanceof Error ? error.message : "unknown",
-      },
-      { status: 502 },
-    );
+    const detail = error instanceof Error ? error.message : "unknown";
+    console.error("[screenshot/extract] failed:", detail);
+    return NextResponse.json({ error: "extract_failed", detail }, { status: 502 });
   }
 }
