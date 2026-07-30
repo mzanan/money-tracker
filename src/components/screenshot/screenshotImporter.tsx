@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { ImageUpIcon, Loader2Icon, TriangleAlertIcon } from "lucide-react";
+import { ImageUpIcon, Loader2Icon } from "lucide-react";
 
 import { useScreenshotImport } from "@/hooks/useScreenshotImport";
 import type { CandidateMatch } from "@/hooks/useScreenshotImport";
@@ -109,14 +109,6 @@ export function ScreenshotImporter({
             {mode === "receipt"
               ? "PNG / JPEG / WebP. Take the photo straight on, with the total readable."
               : "PNG / JPEG / WebP. On Android with the app installed, share any screenshot to Money Tracker from the share sheet: same flow."}
-          </p>
-          <p className="text-muted-foreground flex items-start gap-2 text-xs">
-            <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
-            <span>
-              Image import runs on free AI tiers, so it can be slow or
-              temporarily unavailable when the shared quota runs out. Adding
-              transactions manually always works.
-            </span>
           </p>
         </CardContent>
       </Card>

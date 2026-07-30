@@ -73,6 +73,14 @@ export function ImportFromImage({
     handleFileChange,
   } = useImportFromImage();
 
+  const freeAiNotice = (
+    <p className="text-muted-foreground rounded-xl border px-3 py-2 text-xs">
+      ⚠️ Image import runs on free AI tiers: it can be slow, or temporarily
+      unavailable when the shared quota runs out. Adding a transaction manually
+      always works.
+    </p>
+  );
+
   const trigger = (
     <button
       type="button"
@@ -101,6 +109,7 @@ export function ImportFromImage({
               </DrawerDescription>
             </DrawerHeader>
             <div className="grid gap-1 px-4 pb-8">
+              <div className="pb-2">{freeAiNotice}</div>
               {OPTIONS.map((option) => (
                 <button
                   key={option.mode}
@@ -127,7 +136,8 @@ export function ImportFromImage({
       ) : (
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="max-w-xs">
+            <div className="p-1">{freeAiNotice}</div>
             {OPTIONS.map((option) => (
               <DropdownMenuItem
                 key={option.mode}
