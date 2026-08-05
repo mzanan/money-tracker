@@ -7,6 +7,7 @@ import { getUser } from "@/lib/session";
 const MAX_BYTES = 6 * 1024 * 1024;
 const ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp"];
 const COOKIE_NAME = "mt_share_payload";
+const MAX_COOKIE_VALUE_BYTES = 3800;
 
 export async function POST(req: Request) {
   const user = await getUser();
@@ -53,10 +54,17 @@ export async function POST(req: Request) {
     );
   }
 
+  const serialized = JSON.stringify(payload);
+  if (encodeURIComponent(serialized).length > MAX_COOKIE_VALUE_BYTES) {
+    return NextResponse.redirect(
+      new URL("/screenshot-import?error=too_many_items", req.url),
+    );
+  }
+
   const jar = await cookies();
   jar.set({
     name: COOKIE_NAME,
-    value: JSON.stringify(payload),
+    value: serialized,
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
