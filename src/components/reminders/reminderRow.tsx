@@ -52,7 +52,10 @@ export function ReminderRow({
   } = useReminderRow(reminder, today);
 
   return (
-    <li className="hover:bg-surface-2/60 group flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors">
+    <li
+      onClick={() => setEditOpen(true)}
+      className="hover:bg-surface-2/60 group flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-3 transition-colors"
+    >
       <IconCircle
         className={cn(
           diff < 0
@@ -94,40 +97,45 @@ export function ReminderRow({
         )}
       </div>
 
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        onClick={handleMarkPaid}
-        disabled={busy}
-        aria-label="Mark paid"
-        className="text-muted-foreground hover:text-income"
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="flex items-center gap-3"
       >
-        {busy ? <Loader2Icon className="animate-spin" /> : <CheckIcon />}
-      </Button>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={handleMarkPaid}
+          disabled={busy}
+          aria-label="Mark paid"
+          className="text-muted-foreground hover:text-income"
+        >
+          {busy ? <Loader2Icon className="animate-spin" /> : <CheckIcon />}
+        </Button>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            disabled={pending}
-            className="text-muted-foreground hover:text-foreground -mr-1 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
-            aria-label="More actions"
-          >
-            <MoreVerticalIcon />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => setEditOpen(true)}>
-            <PencilIcon />
-            Edit
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={handleDelete} variant="destructive">
-            <Trash2Icon />
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              disabled={pending}
+              className="text-muted-foreground hover:text-foreground -mr-1 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
+              aria-label="More actions"
+            >
+              <MoreVerticalIcon />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+              <PencilIcon />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={handleDelete} variant="destructive">
+              <Trash2Icon />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       <ReminderForm
         reminder={reminder}
