@@ -11,8 +11,8 @@ import { createTransaction } from "@/lib/actions/transactions";
 import {
   convert,
   formatMoney,
-  isValidAmountForCurrency,
   parseAmountInput,
+  parseAndRoundAmount,
   roundForCurrency,
 } from "@/lib/currency";
 import { todayInTz } from "@/lib/dates";
@@ -70,16 +70,12 @@ export function useQuickAddForm(source?: string) {
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (numericAmount === null) {
-      toast.error("Enter an amount");
+    const parsed = parseAndRoundAmount(amount, currency);
+    if (!parsed.ok) {
+      toast.error(parsed.error);
       return;
     }
-    if (!isValidAmountForCurrency(numericAmount, currency)) {
-      toast.error(`${currency} has no decimals. Enter a whole number.`);
-      return;
-    }
-
-    const rounded = roundForCurrency(numericAmount, currency);
+    const rounded = parsed.amount;
 
     run(
       () =>

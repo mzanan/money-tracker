@@ -35,6 +35,23 @@ export function parseAmountInput(value: string): number | null {
   return Number.isFinite(num) && num > 0 ? num : null;
 }
 
+export function parseAndRoundAmount(
+  raw: string,
+  code: string,
+): { ok: true; amount: number } | { ok: false; error: string } {
+  const numericAmount = parseAmountInput(raw);
+  if (numericAmount === null) {
+    return { ok: false, error: "Enter an amount" };
+  }
+  if (!isValidAmountForCurrency(numericAmount, code)) {
+    return {
+      ok: false,
+      error: `${code} has no decimals. Enter a whole number.`,
+    };
+  }
+  return { ok: true, amount: roundForCurrency(numericAmount, code) };
+}
+
 interface FormatOptions {
   showCode?: boolean;
   signed?: boolean;
