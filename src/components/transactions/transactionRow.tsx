@@ -5,6 +5,7 @@ import {
   BanknoteIcon,
   BellPlusIcon,
   CheckIcon,
+  CopyIcon,
   EllipsisIcon,
   LandmarkIcon,
   PencilLineIcon,
@@ -34,6 +35,7 @@ import {
 import { ReminderForm } from "@/components/reminders/reminderForm";
 
 import { Avatar } from "./avatar";
+import { DuplicateTransactionDialog } from "./duplicateTransactionDialog";
 import { MarkTransferDialog } from "./markTransferDialog";
 import { NoteEditor } from "./noteEditor";
 import { SourceEditor } from "./sourceEditor";
@@ -57,6 +59,9 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const [transferMounted, setTransferMounted] = useState(false);
   const [sourceOpen, setSourceOpen] = useState(false);
   const [sourceMounted, setSourceMounted] = useState(false);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [duplicateMounted, setDuplicateMounted] = useState(false);
+  const [duplicateKey, setDuplicateKey] = useState(0);
   const isTransfer = Boolean(tx.transfer_group);
   const canDelete = kindOfSource(tx.source) !== "api" && !isTransfer;
   const canChangeSource =
@@ -102,6 +107,12 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   function openTransfer() {
     setTransferMounted(true);
     setTransferOpen(true);
+  }
+
+  function openDuplicate() {
+    setDuplicateMounted(true);
+    setDuplicateOpen(true);
+    setDuplicateKey((key) => key + 1);
   }
 
   const avatarSeed = tx.tags[0] || sourceLabel;
@@ -189,6 +200,10 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
                 Change account
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem onSelect={openDuplicate}>
+              <CopyIcon />
+              Duplicate
+            </DropdownMenuItem>
             {isTransfer ? (
               <DropdownMenuItem
                 onSelect={() =>
@@ -275,6 +290,14 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           txSource={tx.source}
           open={transferOpen}
           onOpenChange={setTransferOpen}
+        />
+      )}
+      {duplicateMounted && (
+        <DuplicateTransactionDialog
+          key={duplicateKey}
+          tx={tx}
+          open={duplicateOpen}
+          onOpenChange={setDuplicateOpen}
         />
       )}
     </div>
