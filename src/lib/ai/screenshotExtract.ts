@@ -2,6 +2,8 @@ import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
 
+import { isValidCalendarDate } from "@/lib/dates";
+
 const DEFAULT_VISION_MODELS = [
   "gemini-2.5-flash",
   "gemini-2.5-flash-lite",
@@ -130,7 +132,7 @@ function sanitizeDate(
 ): DetectedTransaction {
   const { dateText, ...item } = raw;
   if (!item.occurredOn) return item;
-  if (!dateText || !/^\d{4}-\d{2}-\d{2}$/.test(item.occurredOn)) {
+  if (!dateText || !isValidCalendarDate(item.occurredOn)) {
     return { ...item, occurredOn: null };
   }
   const day = String(Number(item.occurredOn.slice(8, 10)));
