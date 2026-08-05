@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { isSupportedCurrency } from "@/config/currencies";
 import { isValidAmountForCurrency, roundForCurrency } from "@/lib/currency";
+import { isValidCalendarDate } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { csv_import_locks, transactions, user_settings } from "@/lib/db/schema";
 import { isSyncable } from "@/lib/integrations";
@@ -161,7 +162,7 @@ export async function importCsvRows(
       continue;
     }
     const occurredOn = row.occurredOn.slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn)) {
+    if (!isValidCalendarDate(occurredOn)) {
       errors += 1;
       continue;
     }

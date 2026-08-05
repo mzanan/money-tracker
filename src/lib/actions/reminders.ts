@@ -15,7 +15,7 @@ import {
   type UpdateReminderInput,
 } from "@/lib/schemas/reminder";
 import { getUser } from "@/lib/session";
-import { todayInTz } from "@/lib/dates";
+import { isValidCalendarDate, todayInTz } from "@/lib/dates";
 
 import type { ActionResult } from "./transactions";
 
@@ -270,7 +270,7 @@ export async function markReminderPaid(
     .then((rows) => rows[0]);
 
   let day = paidOn;
-  if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+  if (!day || !isValidCalendarDate(day)) {
     day = todayInTz(settings?.timezone ?? "UTC");
   }
 

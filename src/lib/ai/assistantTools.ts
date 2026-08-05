@@ -17,9 +17,7 @@ export interface AssistantContext {
   baseCurrency: string;
 }
 
-const isoDate = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use the format YYYY-MM-DD");
+const isoDate = z.iso.date("Use the format YYYY-MM-DD");
 
 const kind = z.enum(["income", "expense"]);
 

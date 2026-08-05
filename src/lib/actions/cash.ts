@@ -18,7 +18,7 @@ const withdrawalSchema = z.object({
   amount: z.number().finite().positive(),
   currency: z.string().refine(isSupportedCurrency),
   source: z.string().min(1),
-  occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  occurredOn: z.iso.date("Invalid date (yyyy-MM-dd)"),
 });
 
 export type CashWithdrawalInput = z.infer<typeof withdrawalSchema>;
@@ -107,7 +107,7 @@ const exchangeSchema = z.object({
   outCurrency: z.string().refine(isSupportedCurrency),
   inAmount: z.number().finite().positive(),
   inCurrency: z.string().refine(isSupportedCurrency),
-  occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  occurredOn: z.iso.date("Invalid date (yyyy-MM-dd)"),
 });
 
 export type CashExchangeInput = z.infer<typeof exchangeSchema>;

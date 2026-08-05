@@ -13,9 +13,7 @@ export const createTransactionSchema = z.object({
     .refine(isSupportedCurrency, { message: "Unsupported currency" }),
   tags: z.array(z.string().trim().min(1).max(40)).max(10).optional(),
   note: z.string().trim().max(280).nullable().optional(),
-  occurredOn: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date (yyyy-MM-dd)"),
+  occurredOn: z.iso.date("Invalid date (yyyy-MM-dd)"),
   source: z.string().trim().min(1).max(32).optional(),
 });
 

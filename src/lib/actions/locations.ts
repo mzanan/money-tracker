@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
 import { locations } from "@/lib/db/schema";
+import { isValidCalendarDate } from "@/lib/dates";
 import { getUser } from "@/lib/session";
 
 import type { ActionResult } from "./transactions";
@@ -12,7 +13,7 @@ import type { ActionResult } from "./transactions";
 function cleanDate(value: string | null | undefined): string | null | undefined {
   const trimmed = value?.trim();
   if (!trimmed) return null;
-  return /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : undefined;
+  return isValidCalendarDate(trimmed) ? trimmed : undefined;
 }
 
 export async function createLocation(input: {

@@ -7,7 +7,7 @@ import { cookies } from "next/headers";
 import { isSupportedCurrency } from "@/config/currencies";
 import { normalizeSource } from "@/lib/constants/sources";
 import { isValidAmountForCurrency, roundForCurrency } from "@/lib/currency";
-import { daysBefore, todayInTz } from "@/lib/dates";
+import { daysBefore, isValidCalendarDate, todayInTz } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
@@ -140,7 +140,7 @@ export async function importScreenshotRows(input: {
       continue;
     }
     let occurredOn = row.occurredOn ?? today;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn)) {
+    if (!isValidCalendarDate(occurredOn)) {
       results.push({ id: row.id, status: "invalid_date" });
       continue;
     }
