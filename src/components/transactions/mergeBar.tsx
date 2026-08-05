@@ -20,6 +20,8 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 
+import { TransferBadge } from "./transferBadge";
+
 function txLabel(tx: Transaction): string {
   const detail = tx.note || tx.tags[0] || "";
   return detail
@@ -42,9 +44,11 @@ export function MergeBar() {
   function keep(keepTx: Transaction, removeTx: Transaction) {
     run(() => mergeTransactions(keepTx.id, removeTx.id), {
       success: "Unified into one transaction",
+      onSuccess: () => {
+        setChoosing(false);
+        setTxSelectMode(false);
+      },
     });
-    setChoosing(false);
-    setTxSelectMode(false);
   }
 
   function markTransfer() {
@@ -117,8 +121,11 @@ export function MergeBar() {
                   className="hover:bg-surface-2/60 border-border flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-colors"
                 >
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">
-                      {txLabel(keepTx)}
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="block truncate text-sm font-medium">
+                        {txLabel(keepTx)}
+                      </span>
+                      {keepTx.transfer_group && <TransferBadge />}
                     </span>
                     <span className="text-muted-foreground block text-xs">
                       {keepTx.occurred_on} · keeps this amount, the other one
