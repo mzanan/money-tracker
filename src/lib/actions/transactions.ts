@@ -35,6 +35,19 @@ export async function buildCurrencyContext(userId: string) {
   return { rates, userCurrencies: settings.currencies };
 }
 
+export async function withRatesErrorHandling<T>(
+  fn: () => Promise<T>,
+): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
+  try {
+    return { ok: true, data: await fn() };
+  } catch (error) {
+    if (error instanceof RatesUnavailableError) {
+      return { ok: false, error: "Exchange rates unavailable. Try again." };
+    }
+    return { ok: false, error: "Error fetching rates" };
+  }
+}
+
 export async function createTransaction(
   input: CreateTransactionInput,
 ): Promise<ActionResult<{ id: string }>> {
@@ -72,18 +85,9 @@ export async function createTransaction(
     .then((rows) => rows[0]);
   if (!settings) return { ok: false, error: "Settings not found" };
 
-  let rates;
-  try {
-    rates = (await getRates()).rates;
-  } catch (error) {
-    if (error instanceof RatesUnavailableError) {
-      return {
-        ok: false,
-        error: "Exchange rates unavailable. Try again in a bit.",
-      };
-    }
-    return { ok: false, error: "Error fetching rates" };
-  }
+  const ratesResult = await withRatesErrorHandling(() => getRates());
+  if (!ratesResult.ok) return ratesResult;
+  const rates = ratesResult.data.rates;
 
   const row = buildTransactionRow(
     {
@@ -146,6 +150,30 @@ export async function updateTransaction(
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+
+  const tx = await db
+    .select()
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.id, parsed.data.id),
+        eq(transactions.user_id, user.id),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0]);
+  if (!tx) return { ok: false, error: "Transaction not found" };
+  if (
+    tx.transfer_group &&
+    (tx.kind !== parsed.data.kind ||
+      tx.amount_original !== parsed.data.amount ||
+      tx.currency_original !== parsed.data.currency)
+  ) {
+    return {
+      ok: false,
+      error: "Undo the transfer before editing amount, currency, or kind",
+    };
+  }
 
   try {
     await db

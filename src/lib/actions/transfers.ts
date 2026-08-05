@@ -6,12 +6,30 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 import { kindOfSource } from "@/lib/constants/sources";
+import { relativeUsdDiff, toUsdPair } from "@/lib/currency";
 import { getTransferSources } from "@/lib/data/sources";
-import { RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
 import { buildTransactionRow, EXTERNAL_ID_PREFIX } from "@/lib/transactions";
+import type { FxRates } from "@/types/db";
 
-import { buildCurrencyContext, type ActionResult } from "./transactions";
+import {
+  buildCurrencyContext,
+  withRatesErrorHandling,
+  type ActionResult,
+} from "./transactions";
+
+const TRANSFER_AMOUNT_TOLERANCE = 0.05;
+
+function transferAmountsMatch(
+  a: { amount: number; currency: string },
+  b: { amount: number; currency: string },
+  rates: FxRates | null,
+): boolean {
+  const usd = toUsdPair(a, b, rates);
+  if (!usd) return false;
+  const diff = relativeUsdDiff(usd.usdA, usd.usdB);
+  return diff !== null && diff <= TRANSFER_AMOUNT_TOLERANCE;
+}
 
 export async function getTransferAccountOptions(
   excludeSource: string,
@@ -47,15 +65,11 @@ export async function markAsTransfer(
     return { ok: false, error: "Can't mirror into a synced account" };
   }
 
-  let ctx;
-  try {
-    ctx = await buildCurrencyContext(user.id);
-  } catch (error) {
-    if (error instanceof RatesUnavailableError) {
-      return { ok: false, error: "Exchange rates unavailable. Try again." };
-    }
-    return { ok: false, error: "Error fetching rates" };
-  }
+  const ctxResult = await withRatesErrorHandling(() =>
+    buildCurrencyContext(user.id),
+  );
+  if (!ctxResult.ok) return ctxResult;
+  const ctx = ctxResult.data;
   if (!ctx) return { ok: false, error: "Settings not found" };
 
   const mirror = buildTransactionRow(
@@ -126,6 +140,34 @@ export async function markPairAsTransfer(
   if (rows.length !== 2) return { ok: false, error: "Transaction not found" };
   if (rows.some((r) => r.transfer_group)) {
     return { ok: false, error: "Already marked as a transfer" };
+  }
+
+  const [txA, txB] = rows;
+  if (txA.source === txB.source) {
+    return { ok: false, error: "Pick transactions from two different accounts" };
+  }
+  if (txA.kind === txB.kind) {
+    return { ok: false, error: "Pick one income and one expense" };
+  }
+
+  let rates: FxRates | null = null;
+  if (txA.currency_original !== txB.currency_original) {
+    const ctxResult = await withRatesErrorHandling(() =>
+      buildCurrencyContext(user.id),
+    );
+    if (!ctxResult.ok) return ctxResult;
+    if (!ctxResult.data) return { ok: false, error: "Settings not found" };
+    rates = ctxResult.data.rates;
+  }
+
+  if (
+    !transferAmountsMatch(
+      { amount: txA.amount_original, currency: txA.currency_original },
+      { amount: txB.amount_original, currency: txB.currency_original },
+      rates,
+    )
+  ) {
+    return { ok: false, error: "Amounts don't match closely enough for a transfer" };
   }
 
   try {

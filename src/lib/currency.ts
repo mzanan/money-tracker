@@ -56,6 +56,24 @@ export function formatMoney(
   return options.showCode ? `${base} ${code}` : base;
 }
 
+export function toUsdPair(
+  a: { amount: number; currency: string },
+  b: { amount: number; currency: string },
+  rates: FxRates | null,
+): { usdA: number; usdB: number } | null {
+  if (a.currency === b.currency) return { usdA: a.amount, usdB: b.amount };
+  const rateA = rates?.[a.currency];
+  const rateB = rates?.[b.currency];
+  if (!rateA || !rateB) return null;
+  return { usdA: a.amount / rateA, usdB: b.amount / rateB };
+}
+
+export function relativeUsdDiff(usdA: number, usdB: number): number | null {
+  const reference = Math.max(usdA, usdB);
+  if (reference <= 0) return null;
+  return Math.abs(usdA - usdB) / reference;
+}
+
 export function snapshotRatesFor(
   rates: FxRates,
   codes: Iterable<string>,

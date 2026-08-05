@@ -3,6 +3,7 @@ import { and, between, eq } from "drizzle-orm";
 import { dayWindow } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
+import { relativeUsdDiff, toUsdPair } from "@/lib/currency";
 
 import type { FxRates, Transaction } from "@/types/db";
 
@@ -23,25 +24,18 @@ const DEFAULT_WINDOW_DAYS = 2;
 const AMOUNT_TOLERANCE = 0.01;
 const CROSS_CURRENCY_TOLERANCE = 0.05;
 
-function isAmountMatch(
-  query: CandidateQuery,
-  tx: Transaction,
+function amountsMatch(
+  a: { amount: number; currency: string },
+  b: { amount: number; currency: string },
   rates: FxRates | null,
 ): boolean {
-  if (tx.currency_original === query.currency) {
-    return Math.abs(tx.amount_original - query.amount) <= AMOUNT_TOLERANCE;
+  if (a.currency === b.currency) {
+    return Math.abs(a.amount - b.amount) <= AMOUNT_TOLERANCE;
   }
-  if (!rates) return false;
-  const queryRate = rates[query.currency];
-  const txRate = rates[tx.currency_original];
-  if (!queryRate || !txRate) return false;
-  const queryUsd = query.amount / queryRate;
-  const txUsd = tx.amount_original / txRate;
-  const reference = Math.max(queryUsd, txUsd);
-  return (
-    reference > 0 &&
-    Math.abs(queryUsd - txUsd) / reference <= CROSS_CURRENCY_TOLERANCE
-  );
+  const usd = toUsdPair(a, b, rates);
+  if (!usd) return false;
+  const diff = relativeUsdDiff(usd.usdA, usd.usdB);
+  return diff !== null && diff <= CROSS_CURRENCY_TOLERANCE;
 }
 
 export async function findCrossSourceCandidates(
@@ -68,7 +62,13 @@ export async function findCrossSourceCandidates(
 
       return {
         query,
-        matches: rows.filter((tx) => isAmountMatch(query, tx, rates)),
+        matches: rows.filter((tx) =>
+          amountsMatch(
+            { amount: query.amount, currency: query.currency },
+            { amount: tx.amount_original, currency: tx.currency_original },
+            rates,
+          ),
+        ),
       };
     }),
   );
