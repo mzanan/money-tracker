@@ -1,4 +1,4 @@
-import { addDays, format, parse, subDays } from "date-fns";
+import { addDays, format, isValid, parse, subDays } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
 
@@ -77,6 +77,12 @@ export function formatYearMonthShort(yearMonth: string): string {
 
 export function isValidYearMonth(value: string): boolean {
   return /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+}
+
+export function isValidCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = parse(value, "yyyy-MM-dd", new Date());
+  return isValid(parsed) && format(parsed, "yyyy-MM-dd") === value;
 }
 
 export function oldestYearMonthFrom(
