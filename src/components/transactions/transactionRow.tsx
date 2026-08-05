@@ -24,7 +24,6 @@ import { transactionInDisplay } from "@/lib/totals";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/uiStore";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -40,6 +39,7 @@ import { NoteEditor } from "./noteEditor";
 import { SourceEditor } from "./sourceEditor";
 import { TagChips } from "./tagChips";
 import { TagEditor } from "./tagEditor";
+import { TransferBadge } from "./transferBadge";
 
 import type { Transaction } from "@/types/db";
 
@@ -57,8 +57,8 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const [transferMounted, setTransferMounted] = useState(false);
   const [sourceOpen, setSourceOpen] = useState(false);
   const [sourceMounted, setSourceMounted] = useState(false);
-  const canDelete = kindOfSource(tx.source) !== "api";
   const isTransfer = Boolean(tx.transfer_group);
+  const canDelete = kindOfSource(tx.source) !== "api" && !isTransfer;
   const canChangeSource =
     !isTransfer &&
     (kindOfSource(tx.source) !== "api" || !isSyncedExternalId(tx.external_id));
@@ -130,11 +130,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           <span className="text-foreground shrink-0 text-sm leading-tight font-medium">
             {sourceLabel}
           </span>
-          {isTransfer && (
-            <Badge variant="secondary" className="shrink-0">
-              Transfer
-            </Badge>
-          )}
+          {isTransfer && <TransferBadge />}
           <TagChips tags={tx.tags} />
         </span>
         {description && (

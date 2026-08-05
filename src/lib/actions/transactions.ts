@@ -296,6 +296,12 @@ export async function mergeTransactions(
     const keep = rows.find((row) => row.id === keepId);
     const removed = rows.find((row) => row.id === removeId);
     if (!keep || !removed) return { ok: false, error: "Transaction not found" };
+    if (keep.transfer_group || removed.transfer_group) {
+      return {
+        ok: false,
+        error: "Undo the transfer before merging this transaction",
+      };
+    }
 
     const preferRemovedDetails =
       kindOfSource(keep.source) === "api" &&
@@ -342,6 +348,20 @@ export async function mergeTransactions(
 export async function deleteTransaction(id: string): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+
+  const tx = await db
+    .select()
+    .from(transactions)
+    .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)))
+    .limit(1)
+    .then((rows) => rows[0]);
+  if (!tx) return { ok: false, error: "Transaction not found" };
+  if (tx.transfer_group) {
+    return {
+      ok: false,
+      error: "Undo the transfer before deleting this transaction",
+    };
+  }
 
   try {
     await db
