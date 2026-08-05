@@ -11,6 +11,7 @@ import { getUserSources } from "@/lib/data/sources";
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
 import { todayInTz } from "@/lib/dates";
+import { SHARE_ERROR_CODES, type ShareErrorCode } from "@/lib/screenshotShare";
 import { requireUser } from "@/lib/session";
 import { eq } from "drizzle-orm";
 
@@ -23,7 +24,7 @@ interface SharePayload {
   ignored?: number;
 }
 
-const SHARE_ERRORS: Record<string, string> = {
+const SHARE_ERRORS: Record<ShareErrorCode, string> = {
   invalid: "Could not read the upload. Try again.",
   type: "Unsupported image type. Use PNG, JPEG or WebP.",
   size: "Image is too large (max 6 MB).",
@@ -32,6 +33,10 @@ const SHARE_ERRORS: Record<string, string> = {
   too_many_items:
     "Too many items detected to hand off automatically. Upload the screenshot again from this page.",
 };
+
+function isShareErrorCode(value: string): value is ShareErrorCode {
+  return (SHARE_ERROR_CODES as readonly string[]).includes(value);
+}
 
 async function buildInitialCandidates(
   userId: string,
@@ -69,7 +74,7 @@ export default async function ScreenshotImportPage({
 }) {
   const user = await requireUser();
   const { error } = await searchParams;
-  const errorMessage = error ? SHARE_ERRORS[error] : undefined;
+  const errorMessage = error && isShareErrorCode(error) ? SHARE_ERRORS[error] : undefined;
   const jar = await cookies();
   const raw = jar.get(SHARE_COOKIE);
   const fromShare = raw?.value != null;
