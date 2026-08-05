@@ -195,6 +195,20 @@ export const user_settings = sqliteTable(
   ],
 );
 
+export const csv_import_locks = sqliteTable(
+  "csv_import_locks",
+  {
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    source: text("source").notNull(),
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (t) => [primaryKey({ columns: [t.user_id, t.source] })],
+);
+
 export const fx_rates_cache = sqliteTable("fx_rates_cache", {
   base: text("base").primaryKey(),
   rates: text("rates", { mode: "json" }).$type<FxRates>().notNull(),

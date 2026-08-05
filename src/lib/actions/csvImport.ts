@@ -1,12 +1,12 @@
 "use server";
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { isSupportedCurrency } from "@/config/currencies";
 import { isValidAmountForCurrency, roundForCurrency } from "@/lib/currency";
 import { db } from "@/lib/db";
-import { transactions, user_settings } from "@/lib/db/schema";
+import { csv_import_locks, transactions, user_settings } from "@/lib/db/schema";
 import { isSyncable } from "@/lib/integrations";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
@@ -16,6 +16,7 @@ import {
   EXTERNAL_ID_PREFIX,
   transactionContentHash,
 } from "@/lib/transactions";
+import type { TransactionInsert } from "@/types/db";
 
 import type { ActionResult } from "./transactions";
 
@@ -33,6 +34,45 @@ export interface CsvImportInput {
   source: string;
   rows: CsvRow[];
   replace?: boolean;
+}
+
+const REPLACE_LOCK_STALE_MS = 10 * 60 * 1000;
+
+// Single atomic UPSERT: acquires a free lock, or steals one only if it's
+// stale, in one statement. Avoids a separate SELECT+DELETE+INSERT reclaim,
+// which is not atomic and lets two callers both believe they hold the lock.
+// Returns the lock's created_at as an ownership token for releaseReplaceLock.
+async function acquireReplaceLock(
+  userId: string,
+  source: string,
+): Promise<string | null> {
+  const staleBefore = new Date(Date.now() - REPLACE_LOCK_STALE_MS).toISOString();
+  const acquired = await db
+    .insert(csv_import_locks)
+    .values({ user_id: userId, source })
+    .onConflictDoUpdate({
+      target: [csv_import_locks.user_id, csv_import_locks.source],
+      set: { created_at: sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))` },
+      setWhere: lt(csv_import_locks.created_at, staleBefore),
+    })
+    .returning({ created_at: csv_import_locks.created_at });
+  return acquired[0]?.created_at ?? null;
+}
+
+async function releaseReplaceLock(
+  userId: string,
+  source: string,
+  token: string,
+): Promise<void> {
+  await db
+    .delete(csv_import_locks)
+    .where(
+      and(
+        eq(csv_import_locks.user_id, userId),
+        eq(csv_import_locks.source, source),
+        eq(csv_import_locks.created_at, token),
+      ),
+    );
 }
 
 export async function getLastImportDate(
@@ -105,7 +145,7 @@ export async function importCsvRows(
   }
 
   let errors = 0;
-  const insertRows = [];
+  const insertRows: TransactionInsert[] = [];
   for (const row of input.rows) {
     if (!isSupportedCurrency(row.currency) && !rates[row.currency]) {
       errors += 1;
@@ -151,42 +191,109 @@ export async function importCsvRows(
     insertRows.push(built);
   }
 
+  if (input.replace && insertRows.length === 0) {
+    return {
+      ok: false,
+      error: `All ${errors} rows failed validation. Nothing was imported, existing data was left untouched.`,
+    };
+  }
+
+  let lockToken: string | null = null;
   if (input.replace) {
-    await db
-      .delete(transactions)
-      .where(
-        and(
-          eq(transactions.user_id, user.id),
-          eq(transactions.source, source),
-          csvExternalIdCondition(),
-        ),
-      );
+    try {
+      lockToken = await acquireReplaceLock(user.id, source);
+    } catch (error) {
+      return {
+        ok: false,
+        error: `Could not start replace import: ${
+          error instanceof Error ? error.message : "unknown"
+        }`,
+      };
+    }
+    if (!lockToken) {
+      return {
+        ok: false,
+        error: `A replace import for '${source}' is already in progress. Wait for it to finish and try again.`,
+      };
+    }
   }
 
   const BATCH_SIZE = 500;
   let imported = 0;
-  for (let i = 0; i < insertRows.length; i += BATCH_SIZE) {
-    const batch = insertRows.slice(i, i + BATCH_SIZE);
-    try {
-      const inserted = await db
-        .insert(transactions)
-        .values(batch)
-        .onConflictDoNothing({
-          target: [
-            transactions.user_id,
-            transactions.source,
-            transactions.external_id,
-          ],
-        })
-        .returning({ id: transactions.id });
-      imported += inserted.length;
-    } catch (error) {
-      return {
-        ok: false,
-        error: `Batch starting at row ${i + 1} failed: ${
-          error instanceof Error ? error.message : "unknown"
-        } (${imported} rows already imported)`,
-      };
+  try {
+    for (let i = 0; i < insertRows.length; i += BATCH_SIZE) {
+      const batch = insertRows.slice(i, i + BATCH_SIZE);
+      try {
+        const inserted = await db
+          .insert(transactions)
+          .values(batch)
+          .onConflictDoNothing({
+            target: [
+              transactions.user_id,
+              transactions.source,
+              transactions.external_id,
+            ],
+          })
+          .returning({ id: transactions.id });
+        imported += inserted.length;
+      } catch (error) {
+        return {
+          ok: false,
+          error: `Batch starting at row ${i + 1} failed: ${
+            error instanceof Error ? error.message : "unknown"
+          } (${imported} rows already imported, existing data untouched)`,
+        };
+      }
+    }
+
+    if (input.replace) {
+      try {
+        await db.transaction(async (dbTx) => {
+          const staleRows = await dbTx
+            .select({
+              id: transactions.id,
+              external_id: transactions.external_id,
+            })
+            .from(transactions)
+            .where(
+              and(
+                eq(transactions.user_id, user.id),
+                eq(transactions.source, source),
+                csvExternalIdCondition(),
+              ),
+            );
+
+          const newExternalIds = new Set(
+            insertRows.map((row) => row.external_id),
+          );
+          const staleIds = staleRows
+            .filter((row) => !newExternalIds.has(row.external_id))
+            .map((row) => row.id);
+
+          for (let i = 0; i < staleIds.length; i += BATCH_SIZE) {
+            const chunk = staleIds.slice(i, i + BATCH_SIZE);
+            await dbTx
+              .delete(transactions)
+              .where(
+                and(
+                  eq(transactions.user_id, user.id),
+                  inArray(transactions.id, chunk),
+                ),
+              );
+          }
+        });
+      } catch (error) {
+        return {
+          ok: false,
+          error: `Import succeeded (${imported} rows) but removing old rows failed, nothing was removed: ${
+            error instanceof Error ? error.message : "unknown"
+          }. Re-run replace to finish cleanup.`,
+        };
+      }
+    }
+  } finally {
+    if (input.replace && lockToken) {
+      await releaseReplaceLock(user.id, source, lockToken);
     }
   }
 
