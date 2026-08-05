@@ -8,10 +8,15 @@ import { hasServerKey, resolveChatModel } from "@/lib/ai/provider";
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
 import { todayInTz } from "@/lib/dates";
+import { ASSISTANT_ENABLED, BUDGET_ENABLED } from "@/lib/featureFlags";
 import { decryptSecret } from "@/lib/integrations/crypto";
 import { getUser } from "@/lib/session";
 
 export async function POST(req: Request) {
+  if (!ASSISTANT_ENABLED && !BUDGET_ENABLED) {
+    return Response.json({ error: "Assistant is disabled" }, { status: 503 });
+  }
+
   const user = await getUser();
   if (!user) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
