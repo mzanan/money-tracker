@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
+import { useId, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { getCurrency } from "@/config/currencies";
@@ -33,11 +26,6 @@ export function useQuickAddForm(source?: string) {
   const ratesQuery = useRates();
   const { run, pending } = useServerAction();
   const tagsId = useId();
-  const submittingRef = useRef(false);
-
-  useEffect(() => {
-    if (!pending) submittingRef.current = false;
-  }, [pending]);
 
   const lastCurrency = useUiStore((state) => state.lastCurrency);
   const setLastCurrency = useUiStore((state) => state.setLastCurrency);
@@ -82,7 +70,6 @@ export function useQuickAddForm(source?: string) {
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (submittingRef.current) return;
     if (numericAmount === null) {
       toast.error("Enter an amount");
       return;
@@ -93,7 +80,6 @@ export function useQuickAddForm(source?: string) {
     }
 
     const rounded = roundForCurrency(numericAmount, currency);
-    submittingRef.current = true;
 
     run(
       () =>
