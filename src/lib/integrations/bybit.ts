@@ -62,6 +62,37 @@ function isInternalMove(row: FundingHistoryRow): boolean {
   return INTERNAL_TYPE_PATTERNS.some((p) => p.test(label));
 }
 
+function amountKey(raw: string): string {
+  return Number(raw).toString();
+}
+
+function depositRecordKeys(
+  onChain: DepositRow[],
+  internal: InternalDepositRow[],
+): Set<string> {
+  const keys = new Set<string>();
+  for (const row of onChain) {
+    if (row.status !== DEPOSIT_SUCCESS_STATUS) continue;
+    const at = Number(row.successAt);
+    if (Number.isFinite(at)) keys.add(`${row.coin}:${amountKey(row.amount)}:${at}`);
+  }
+  for (const row of internal) {
+    if (row.status !== INTERNAL_DEPOSIT_SUCCESS_STATUS) continue;
+    const at = Number(row.createdTime);
+    if (Number.isFinite(at)) keys.add(`${row.coin}:${amountKey(row.amount)}:${at}`);
+  }
+  return keys;
+}
+
+function isDuplicateOfDepositRecord(
+  row: FundingHistoryRow,
+  depositKeys: Set<string>,
+): boolean {
+  if (row.showBusiTypeEn !== "Deposit") return false;
+  const at = Number(row.createTime) * 1000;
+  return depositKeys.has(`${row.currency}:${amountKey(row.txnAmt)}:${at}`);
+}
+
 function sign(
   apiKey: string,
   apiSecret: string,
@@ -255,22 +286,23 @@ export async function fetchTransactions(
 
   for (let from = since.getTime(); from < now; from += windowMs) {
     const to = Math.min(from + windowMs, now);
-    const rows = await fetchWindow(
-      creds,
-      Math.floor(from / 1000),
-      Math.floor(to / 1000),
-    );
+    const fromSec = Math.floor(from / 1000);
+    const toSec = Math.floor(to / 1000);
+    const depositFromMs = fromSec * 1000;
+    const depositToMs = Math.ceil(to / 1000) * 1000;
+
+    const rows = await fetchWindow(creds, fromSec, toSec);
 
     const onChain = await fetchPagedRows<DepositRow>(
       "/v5/asset/deposit/query-record",
-      from,
-      to,
+      depositFromMs,
+      depositToMs,
       creds,
     );
     const internal = await fetchPagedRows<InternalDepositRow>(
       "/v5/asset/deposit/query-internal-record",
-      from,
-      to,
+      depositFromMs,
+      depositToMs,
       creds,
     );
     for (const row of onChain) {
@@ -286,8 +318,9 @@ export async function fetchTransactions(
       }
     }
 
+    const depositKeys = depositRecordKeys(onChain, internal);
     for (const row of rows) {
-      if (isInternalMove(row)) {
+      if (isInternalMove(row) || isDuplicateOfDepositRecord(row, depositKeys)) {
         continue;
       }
       const amount = Number(row.txnAmt);
