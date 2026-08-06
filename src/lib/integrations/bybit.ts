@@ -62,6 +62,12 @@ function isInternalMove(row: FundingHistoryRow): boolean {
   return INTERNAL_TYPE_PATTERNS.some((p) => p.test(label));
 }
 
+const DUPLICATE_OF_DEPOSIT_RECORD = new Set(["Deposit"]);
+
+function isDuplicateOfDepositRecord(row: FundingHistoryRow): boolean {
+  return DUPLICATE_OF_DEPOSIT_RECORD.has(row.showBusiTypeEn ?? "");
+}
+
 function sign(
   apiKey: string,
   apiSecret: string,
@@ -287,7 +293,7 @@ export async function fetchTransactions(
     }
 
     for (const row of rows) {
-      if (isInternalMove(row)) {
+      if (isInternalMove(row) || isDuplicateOfDepositRecord(row)) {
         continue;
       }
       const amount = Number(row.txnAmt);
