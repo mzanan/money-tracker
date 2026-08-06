@@ -23,7 +23,11 @@ export function monthBounds(yearMonth: string): [string, string] {
 }
 
 export function daysBefore(dateStr: string, days: number): string {
-  return format(subDays(new Date(`${dateStr}T00:00:00Z`), days), "yyyy-MM-dd");
+  return formatInTimeZone(
+    subDays(new Date(`${dateStr}T00:00:00Z`), days),
+    "UTC",
+    "yyyy-MM-dd",
+  );
 }
 
 export function dayDiff(a: string, b: string): number {

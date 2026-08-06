@@ -39,17 +39,21 @@ export function ReminderRow({
   const {
     editOpen,
     setEditOpen,
+    payOpen,
+    payDay,
     payOptions,
-    setPayOptions,
+    checking,
     busy,
     pending,
     diff,
     tone,
     metaSegments,
     handleMarkPaid,
+    choosePayDay,
     confirmPaid,
     markPaidOnly,
     handleDelete,
+    setPayOpen,
   } = useReminderRow(reminder, today);
   const runAfterMenuClose = useDeferredMenuAction();
 
@@ -154,14 +158,19 @@ export function ReminderRow({
       />
 
       <PayCandidatesDrawer
-        open={payOptions !== null}
+        open={payOpen}
         label={reminder.label}
+        today={today}
+        hasAmount={reminder.amount != null}
+        day={payDay}
+        loading={checking}
         suggested={payOptions?.suggested ?? []}
         recent={payOptions?.recent ?? []}
+        onChooseDay={choosePayDay}
         onLink={(transactionId) => confirmPaid(transactionId)}
         onCreate={() => confirmPaid()}
         onSkip={markPaidOnly}
-        onClose={() => setPayOptions(null)}
+        onClose={() => setPayOpen(false)}
       />
     </li>
   );

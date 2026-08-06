@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { useServerAction } from "@/hooks/useServerAction";
 import {
@@ -15,6 +15,8 @@ import type { RecurringPayment } from "@/types/db";
 
 export function useReminderRow(reminder: RecurringPayment, today: string) {
   const [editOpen, setEditOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
+  const [payDay, setPayDay] = useState(today);
   const [payOptions, setPayOptions] = useState<{
     suggested: ReminderPaymentCandidate[];
     recent: ReminderPaymentCandidate[];
@@ -22,6 +24,7 @@ export function useReminderRow(reminder: RecurringPayment, today: string) {
   const [checking, setChecking] = useState(false);
   const { run, pending } = useServerAction();
   const busy = pending || checking;
+  const payRequestRef = useRef(0);
 
   const diff = daysBetween(today, reminder.next_due_on);
   const tone =
@@ -33,20 +36,37 @@ export function useReminderRow(reminder: RecurringPayment, today: string) {
 
   const metaSegments = reminderMetaSegments(reminder);
 
-  async function handleMarkPaid() {
+  async function fetchPayOptions(day: string) {
+    if (reminder.amount == null) return;
+    const requestId = ++payRequestRef.current;
     setChecking(true);
-    const res = await getReminderPayOptions(reminder.id);
+    const res = await getReminderPayOptions(reminder.id, day);
+    if (requestId !== payRequestRef.current) return;
     setChecking(false);
     setPayOptions(res.ok ? res.data! : { suggested: [], recent: [] });
   }
 
-  function confirmPaid(linkTransactionId?: string) {
+  function handleMarkPaid() {
+    setPayDay(today);
     setPayOptions(null);
+    setPayOpen(true);
+    fetchPayOptions(today);
+  }
+
+  function choosePayDay(day: string) {
+    setPayDay(day);
+    setPayOptions(null);
+    fetchPayOptions(day);
+  }
+
+  function confirmPaid(linkTransactionId?: string) {
+    const day = payDay;
+    setPayOpen(false);
     run(
       () =>
         markReminderPaid(
           reminder.id,
-          undefined,
+          day,
           linkTransactionId ? { linkTransactionId } : undefined,
         ),
       {
@@ -63,8 +83,9 @@ export function useReminderRow(reminder: RecurringPayment, today: string) {
   }
 
   function markPaidOnly() {
-    setPayOptions(null);
-    run(() => markReminderPaid(reminder.id, undefined, { skipExpense: true }), {
+    const day = payDay;
+    setPayOpen(false);
+    run(() => markReminderPaid(reminder.id, day, { skipExpense: true }), {
       success: (data) =>
         data?.completed
           ? "Last payment, reminder completed"
@@ -82,16 +103,20 @@ export function useReminderRow(reminder: RecurringPayment, today: string) {
   return {
     editOpen,
     setEditOpen,
+    payOpen,
+    payDay,
     payOptions,
-    setPayOptions,
+    checking,
     busy,
     pending,
     diff,
     tone,
     metaSegments,
     handleMarkPaid,
+    choosePayDay,
     confirmPaid,
     markPaidOnly,
     handleDelete,
+    setPayOpen,
   };
 }
