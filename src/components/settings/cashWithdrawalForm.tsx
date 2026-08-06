@@ -2,8 +2,10 @@
 
 import { Loader2Icon } from "lucide-react";
 
+import { getCurrency } from "@/config/currencies";
 import { labelForSource } from "@/lib/constants/sources";
 
+import { AmountInput } from "@/components/ui/amountInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CurrencySelect } from "@/components/ui/currencySelect";
@@ -69,13 +71,13 @@ export function CashWithdrawalForm({ sources }: { sources: string[] }) {
             <div className="grid flex-1 gap-1.5">
               <Label htmlFor="withdrawal-amount">Amount</Label>
               <div className="flex gap-1">
-                <Input
+                <AmountInput
                   id="withdrawal-amount"
-                  inputMode="decimal"
                   placeholder="0"
                   value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
-                  className="bg-surface-2 h-9 border-none tabular-nums"
+                  onChange={setAmount}
+                  decimals={getCurrency(currency).decimals}
+                  className="bg-surface-2 h-9 border-none"
                 />
                 <CurrencySelect
                   value={currency}

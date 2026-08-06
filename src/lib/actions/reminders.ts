@@ -3,6 +3,7 @@
 import { and, desc, eq, isNull, notLike, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { isValidAmountForCurrency } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { recurring_payments, transactions, user_settings } from "@/lib/db/schema";
 import { getRates } from "@/lib/rates";
@@ -26,6 +27,16 @@ function normalizeInterval(
   return frequency === "CUSTOM_MONTHS" ? (intervalMonths ?? 1) : null;
 }
 
+function reminderAmountError(
+  amount: number | null | undefined,
+  currency: string | null | undefined,
+): string | null {
+  if (amount == null || !currency) return null;
+  return isValidAmountForCurrency(amount, currency)
+    ? null
+    : `${currency} has no decimals. Enter a whole number.`;
+}
+
 export async function createReminder(
   input: CreateReminderInput,
 ): Promise<ActionResult<{ id: string }>> {
@@ -33,6 +44,9 @@ export async function createReminder(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid data" };
   }
+
+  const amountError = reminderAmountError(parsed.data.amount, parsed.data.currency);
+  if (amountError) return { ok: false, error: amountError };
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
@@ -72,6 +86,9 @@ export async function updateReminder(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid data" };
   }
+
+  const amountError = reminderAmountError(parsed.data.amount, parsed.data.currency);
+  if (amountError) return { ok: false, error: amountError };
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };

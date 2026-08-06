@@ -5,6 +5,7 @@ import { ChevronDownIcon, Loader2Icon, PlusIcon } from "lucide-react";
 import { labelForSource } from "@/lib/constants/sources";
 import { cn } from "@/lib/utils";
 
+import { AmountInput } from "@/components/ui/amountInput";
 import { Button } from "@/components/ui/button";
 import { CurrencySelect } from "@/components/ui/currencySelect";
 import { Input } from "@/components/ui/input";
@@ -62,17 +63,15 @@ export function QuickAddForm({ recentTags, source }: Props) {
             <span className="text-muted-foreground pointer-events-none absolute left-3 text-sm tabular-nums">
               {currencyMeta.symbol}
             </span>
-            <Input
+            <AmountInput
               id="amount"
-              inputMode="decimal"
               autoComplete="off"
               placeholder="0"
               value={amount}
-              onChange={(event) =>
-                setAmount(event.target.value.replace(/[^\d.,]/g, ""))
-              }
+              onChange={setAmount}
+              decimals={currencyMeta.decimals}
               aria-label="Amount"
-              className="h-11 border-none bg-transparent pl-7 text-base tabular-nums focus-visible:ring-0"
+              className="h-11 border-none bg-transparent pl-7 text-base focus-visible:ring-0"
               required
             />
             {currencies.length > 1 && (

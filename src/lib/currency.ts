@@ -52,6 +52,63 @@ export function parseAndRoundAmount(
   return { ok: true, amount: roundForCurrency(numericAmount, code) };
 }
 
+function stripLeadingZeros(digits: string): string {
+  return digits.replace(/^0+(?=\d)/, "");
+}
+
+export function sanitizeAmountDigits(raw: string, decimals: number): string {
+  const cleaned = raw.replace(/[^\d.]/g, "");
+  if (decimals === 0) {
+    const firstDot = cleaned.indexOf(".");
+    const integerOnly = firstDot === -1 ? cleaned : cleaned.slice(0, firstDot);
+    return stripLeadingZeros(integerOnly);
+  }
+
+  const firstDot = cleaned.indexOf(".");
+  if (firstDot === -1) return stripLeadingZeros(cleaned);
+
+  const integerPart = stripLeadingZeros(cleaned.slice(0, firstDot));
+  const decimalPart = cleaned
+    .slice(firstDot + 1)
+    .replace(/\./g, "")
+    .slice(0, decimals);
+  return `${integerPart}.${decimalPart}`;
+}
+
+export function formatAmountDisplay(raw: string): string {
+  if (!raw) return "";
+  const [integerPart, decimalPart] = raw.split(".");
+  const formattedInteger = integerPart
+    ? Number(integerPart).toLocaleString("en-US")
+    : "";
+  return decimalPart !== undefined
+    ? `${formattedInteger}.${decimalPart}`
+    : formattedInteger;
+}
+
+export function countSignificantAmountChars(text: string, upTo: number): number {
+  let count = 0;
+  for (let i = 0; i < upTo && i < text.length; i++) {
+    if (/[\d.]/.test(text[i])) count++;
+  }
+  return count;
+}
+
+export function positionAfterSignificantAmountChars(
+  text: string,
+  target: number,
+): number {
+  if (target <= 0) return 0;
+  let count = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (/[\d.]/.test(text[i])) {
+      count++;
+      if (count === target) return i + 1;
+    }
+  }
+  return text.length;
+}
+
 interface FormatOptions {
   showCode?: boolean;
   signed?: boolean;

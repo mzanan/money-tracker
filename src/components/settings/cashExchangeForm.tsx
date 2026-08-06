@@ -2,6 +2,9 @@
 
 import { ArrowRightIcon, Loader2Icon } from "lucide-react";
 
+import { getCurrency } from "@/config/currencies";
+
+import { AmountInput } from "@/components/ui/amountInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CurrencySelect } from "@/components/ui/currencySelect";
@@ -42,13 +45,13 @@ export function CashExchangeForm() {
             <div className="grid flex-1 gap-1.5">
               <Label htmlFor="exchange-out">You give</Label>
               <div className="flex gap-1">
-                <Input
+                <AmountInput
                   id="exchange-out"
-                  inputMode="decimal"
                   placeholder="0"
                   value={outAmount}
-                  onChange={(event) => setOutAmount(event.target.value)}
-                  className="bg-surface-2 h-9 border-none tabular-nums"
+                  onChange={setOutAmount}
+                  decimals={getCurrency(outCurrency).decimals}
+                  className="bg-surface-2 h-9 border-none"
                 />
                 <CurrencySelect
                   value={outCurrency}
@@ -63,13 +66,13 @@ export function CashExchangeForm() {
             <div className="grid flex-1 gap-1.5">
               <Label htmlFor="exchange-in">You get</Label>
               <div className="flex gap-1">
-                <Input
+                <AmountInput
                   id="exchange-in"
-                  inputMode="decimal"
                   placeholder="0"
                   value={inAmount}
-                  onChange={(event) => setInAmount(event.target.value)}
-                  className="bg-surface-2 h-9 border-none tabular-nums"
+                  onChange={setInAmount}
+                  decimals={getCurrency(inCurrency).decimals}
+                  className="bg-surface-2 h-9 border-none"
                 />
                 <CurrencySelect
                   value={inCurrency}
