@@ -62,10 +62,35 @@ function isInternalMove(row: FundingHistoryRow): boolean {
   return INTERNAL_TYPE_PATTERNS.some((p) => p.test(label));
 }
 
-const DUPLICATE_OF_DEPOSIT_RECORD = new Set(["Deposit"]);
+function amountKey(raw: string): string {
+  return Number(raw).toString();
+}
 
-function isDuplicateOfDepositRecord(row: FundingHistoryRow): boolean {
-  return DUPLICATE_OF_DEPOSIT_RECORD.has(row.showBusiTypeEn ?? "");
+function depositRecordKeys(
+  onChain: DepositRow[],
+  internal: InternalDepositRow[],
+): Set<string> {
+  const keys = new Set<string>();
+  for (const row of onChain) {
+    if (row.status !== DEPOSIT_SUCCESS_STATUS) continue;
+    const at = Number(row.successAt);
+    if (Number.isFinite(at)) keys.add(`${row.coin}:${amountKey(row.amount)}:${at}`);
+  }
+  for (const row of internal) {
+    if (row.status !== INTERNAL_DEPOSIT_SUCCESS_STATUS) continue;
+    const at = Number(row.createdTime);
+    if (Number.isFinite(at)) keys.add(`${row.coin}:${amountKey(row.amount)}:${at}`);
+  }
+  return keys;
+}
+
+function isDuplicateOfDepositRecord(
+  row: FundingHistoryRow,
+  depositKeys: Set<string>,
+): boolean {
+  if (row.showBusiTypeEn !== "Deposit") return false;
+  const at = Number(row.createTime) * 1000;
+  return depositKeys.has(`${row.currency}:${amountKey(row.txnAmt)}:${at}`);
 }
 
 function sign(
@@ -292,8 +317,9 @@ export async function fetchTransactions(
       }
     }
 
+    const depositKeys = depositRecordKeys(onChain, internal);
     for (const row of rows) {
-      if (isInternalMove(row) || isDuplicateOfDepositRecord(row)) {
+      if (isInternalMove(row) || isDuplicateOfDepositRecord(row, depositKeys)) {
         continue;
       }
       const amount = Number(row.txnAmt);
