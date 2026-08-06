@@ -288,21 +288,21 @@ export async function fetchTransactions(
     const to = Math.min(from + windowMs, now);
     const fromSec = Math.floor(from / 1000);
     const toSec = Math.floor(to / 1000);
-    const fromAlignedMs = fromSec * 1000;
-    const toAlignedMs = toSec * 1000;
+    const depositFromMs = fromSec * 1000;
+    const depositToMs = Math.ceil(to / 1000) * 1000;
 
     const rows = await fetchWindow(creds, fromSec, toSec);
 
     const onChain = await fetchPagedRows<DepositRow>(
       "/v5/asset/deposit/query-record",
-      fromAlignedMs,
-      toAlignedMs,
+      depositFromMs,
+      depositToMs,
       creds,
     );
     const internal = await fetchPagedRows<InternalDepositRow>(
       "/v5/asset/deposit/query-internal-record",
-      fromAlignedMs,
-      toAlignedMs,
+      depositFromMs,
+      depositToMs,
       creds,
     );
     for (const row of onChain) {
