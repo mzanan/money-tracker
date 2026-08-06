@@ -2,8 +2,10 @@
 
 import { Loader2Icon } from "lucide-react";
 
+import { getCurrency } from "@/config/currencies";
 import { FREQUENCY_OPTIONS } from "@/lib/reminders";
 
+import { AmountInput } from "@/components/ui/amountInput";
 import { Button } from "@/components/ui/button";
 import { CurrencySelect } from "@/components/ui/currencySelect";
 import {
@@ -125,11 +127,11 @@ export function ReminderForm({
           <div className="grid grid-cols-[1fr_auto] gap-3">
             <div className="grid gap-2">
               <Label htmlFor="reminder-amount">Amount (optional)</Label>
-              <Input
+              <AmountInput
                 id="reminder-amount"
-                inputMode="decimal"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={setAmount}
+                decimals={getCurrency(currency).decimals}
                 placeholder="0.00"
               />
             </div>
