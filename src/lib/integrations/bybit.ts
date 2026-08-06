@@ -286,22 +286,23 @@ export async function fetchTransactions(
 
   for (let from = since.getTime(); from < now; from += windowMs) {
     const to = Math.min(from + windowMs, now);
-    const rows = await fetchWindow(
-      creds,
-      Math.floor(from / 1000),
-      Math.floor(to / 1000),
-    );
+    const fromSec = Math.floor(from / 1000);
+    const toSec = Math.floor(to / 1000);
+    const fromAlignedMs = fromSec * 1000;
+    const toAlignedMs = toSec * 1000;
+
+    const rows = await fetchWindow(creds, fromSec, toSec);
 
     const onChain = await fetchPagedRows<DepositRow>(
       "/v5/asset/deposit/query-record",
-      from,
-      to,
+      fromAlignedMs,
+      toAlignedMs,
       creds,
     );
     const internal = await fetchPagedRows<InternalDepositRow>(
       "/v5/asset/deposit/query-internal-record",
-      from,
-      to,
+      fromAlignedMs,
+      toAlignedMs,
       creds,
     );
     for (const row of onChain) {
