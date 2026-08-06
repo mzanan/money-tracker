@@ -9,6 +9,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
+import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { formatMoney } from "@/lib/currency";
 import { dueLabel } from "@/lib/reminders";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,7 @@ export function ReminderRow({
     markPaidOnly,
     handleDelete,
   } = useReminderRow(reminder, today);
+  const runAfterMenuClose = useDeferredMenuAction();
 
   return (
     <li
@@ -125,11 +127,16 @@ export function ReminderRow({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+            <DropdownMenuItem
+              onSelect={() => runAfterMenuClose(() => setEditOpen(true))}
+            >
               <PencilIcon />
               Edit
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={handleDelete} variant="destructive">
+            <DropdownMenuItem
+              onSelect={() => runAfterMenuClose(handleDelete)}
+              variant="destructive"
+            >
               <Trash2Icon />
               Delete
             </DropdownMenuItem>
