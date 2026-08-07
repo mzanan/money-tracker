@@ -7,7 +7,7 @@ import {
   SmartphoneIcon,
 } from "lucide-react";
 
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import type { ImageImportMode } from "@/lib/imageExtract";
 
 import {
@@ -61,7 +61,7 @@ export function ImportFromImage({
 }: {
   existingSources: string[];
 }) {
-  const isMobile = useMediaQuery("(max-width: 639px)");
+  const isMobile = useIsMobile();
   const {
     fileInputRef,
     menuOpen,
@@ -100,7 +100,7 @@ export function ImportFromImage({
     <>
       {isMobile ? (
         <Drawer open={menuOpen} onOpenChange={setMenuOpen}>
-          <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+          <DrawerTrigger render={trigger} />
           <DrawerContent>
             <DrawerHeader>
               <DrawerTitle>Import from image</DrawerTitle>
@@ -135,7 +135,7 @@ export function ImportFromImage({
         </Drawer>
       ) : (
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-          <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+          <DropdownMenuTrigger render={trigger} />
           <DropdownMenuContent align="end" className="max-w-xs">
             <div className="p-1">{freeAiNotice}</div>
             {OPTIONS.map((option) => (
@@ -161,15 +161,19 @@ export function ImportFromImage({
 
       <Dialog
         open={payload !== null}
-        onOpenChange={(open) => {
+        onOpenChange={(open, eventDetails) => {
+          if (
+            !open &&
+            (eventDetails.reason === "outside-press" ||
+              eventDetails.reason === "escape-key")
+          ) {
+            eventDetails.cancel();
+            return;
+          }
           if (!open) setPayload(null);
         }}
       >
-        <DialogContent
-          className="max-h-[90vh] sm:max-w-lg"
-          onInteractOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
+        <DialogContent className="max-h-[90vh] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {payload?.mode === "receipt"

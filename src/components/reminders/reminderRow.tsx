@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { IconCircle } from "@/components/ui/iconCircle";
 
+import { TransactionFormDialog } from "@/components/transactions/transactionFormDialog";
+
 import { PayCandidatesDrawer } from "./payCandidatesDrawer";
 import { ReminderForm } from "./reminderForm";
 import { useReminderRow } from "./useReminderRow";
@@ -39,70 +41,81 @@ export function ReminderRow({
   const {
     editOpen,
     setEditOpen,
+    payOpen,
+    payDay,
     payOptions,
-    setPayOptions,
+    checking,
     busy,
     pending,
     diff,
     tone,
     metaSegments,
     handleMarkPaid,
+    choosePayDay,
     confirmPaid,
     markPaidOnly,
     handleDelete,
+    setPayOpen,
+    addExpenseOpen,
+    setAddExpenseOpen,
+    addExpenseMounted,
+    addExpenseKey,
+    openAddExpense,
+    handleExpenseCreated,
   } = useReminderRow(reminder, today);
   const runAfterMenuClose = useDeferredMenuAction();
 
   return (
-    <li
-      onClick={() => setEditOpen(true)}
-      className="hover:bg-surface-2/60 group flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-3 transition-colors"
-    >
-      <IconCircle
-        className={cn(
-          diff < 0
-            ? "bg-destructive/10 text-destructive"
-            : "bg-primary/10 text-primary",
-        )}
+    <li className="hover:bg-surface-2/60 group flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors">
+      <button
+        type="button"
+        onClick={() => setEditOpen(true)}
+        aria-label={`Edit ${reminder.label}`}
+        className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
       >
-        <BellPlusIcon className="size-4" />
-      </IconCircle>
+        <IconCircle
+          className={cn(
+            diff < 0
+              ? "bg-destructive/10 text-destructive"
+              : "bg-primary/10 text-primary",
+          )}
+        >
+          <BellPlusIcon className="size-4" />
+        </IconCircle>
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="truncate text-sm font-semibold">
-            {reminder.label}
-          </span>
-          {reminder.amount != null && (
-            <span className="shrink-0 text-sm font-semibold tabular-nums">
-              {formatMoney(reminder.amount, reminder.currency ?? "USD")}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="truncate text-sm font-semibold">
+              {reminder.label}
             </span>
+            {reminder.amount != null && (
+              <span className="shrink-0 text-sm font-semibold tabular-nums">
+                {formatMoney(reminder.amount, reminder.currency ?? "USD")}
+              </span>
+            )}
+          </div>
+          <div className="mt-0.5 flex items-baseline justify-between gap-3">
+            <span className="text-muted-foreground text-meta truncate">
+              {metaSegments.join(" · ")}
+            </span>
+            <span
+              className={cn(
+                "shrink-0 text-[11px] font-medium tabular-nums",
+                tone,
+              )}
+            >
+              {dueLabel(reminder.next_due_on, today)}
+            </span>
+          </div>
+          {reminder.note && (
+            <p className="text-muted-foreground/90 text-meta mt-1 truncate italic">
+              {reminder.note}
+            </p>
           )}
         </div>
-        <div className="mt-0.5 flex items-baseline justify-between gap-3">
-          <span className="text-muted-foreground truncate text-meta">
-            {metaSegments.join(" · ")}
-          </span>
-          <span
-            className={cn(
-              "shrink-0 text-[11px] font-medium tabular-nums",
-              tone,
-            )}
-          >
-            {dueLabel(reminder.next_due_on, today)}
-          </span>
-        </div>
-        {reminder.note && (
-          <p className="text-muted-foreground/90 mt-1 truncate text-meta italic">
-            {reminder.note}
-          </p>
-        )}
-      </div>
+      </button>
 
-      <div
-        onClick={(event) => event.stopPropagation()}
-        className="flex items-center gap-3"
-      >
+      <div className="flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon-xs"
@@ -115,17 +128,19 @@ export function ReminderRow({
         </Button>
 
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              disabled={pending}
-              className="text-muted-foreground hover:text-foreground -mr-1 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
-              aria-label="More actions"
-            >
-              <MoreVerticalIcon />
-            </Button>
-          </DropdownMenuTrigger>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                disabled={pending}
+                className="text-muted-foreground hover:text-foreground -mr-1 opacity-0 transition-opacity group-hover:opacity-100 data-popup-open:opacity-100"
+                aria-label="More actions"
+              >
+                <MoreVerticalIcon />
+              </Button>
+            }
+          />
           <DropdownMenuContent align="end">
             <DropdownMenuItem
               onSelect={() => runAfterMenuClose(() => setEditOpen(true))}
@@ -151,15 +166,42 @@ export function ReminderRow({
       />
 
       <PayCandidatesDrawer
-        open={payOptions !== null}
+        open={payOpen}
         label={reminder.label}
+        today={today}
+        hasAmount={reminder.amount != null}
+        day={payDay}
+        loading={checking}
         suggested={payOptions?.suggested ?? []}
         recent={payOptions?.recent ?? []}
+        onChooseDay={choosePayDay}
         onLink={(transactionId) => confirmPaid(transactionId)}
-        onCreate={() => confirmPaid()}
+        onCreate={openAddExpense}
         onSkip={markPaidOnly}
-        onClose={() => setPayOptions(null)}
+        onClose={() => setPayOpen(false)}
       />
+
+      {addExpenseMounted && reminder.amount != null && (
+        <TransactionFormDialog
+          key={addExpenseKey}
+          seed={{
+            kind: "expense",
+            amount: reminder.amount,
+            currency: reminder.currency ?? "USD",
+            source: reminder.source ?? "manual",
+            note: reminder.label,
+            tags: [],
+            occurredOn: payDay,
+          }}
+          open={addExpenseOpen}
+          onOpenChange={setAddExpenseOpen}
+          title={`Pay ${reminder.label}`}
+          description="Review the expense before saving. It will be linked to this reminder."
+          submitLabel="Save and mark paid"
+          successMessage="Expense added"
+          onCreated={handleExpenseCreated}
+        />
+      )}
     </li>
   );
 }

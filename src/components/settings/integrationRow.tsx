@@ -100,15 +100,17 @@ export function IntegrationRow({ provider, label, integration }: Props) {
               Sync
             </Button>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`${label} options`}
-                >
-                  <MoreVerticalIcon />
-                </Button>
-              </DropdownMenuTrigger>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`${label} options`}
+                  >
+                    <MoreVerticalIcon />
+                  </Button>
+                }
+              />
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   onSelect={() => runAfterMenuClose(() => setOpen(true))}

@@ -175,12 +175,17 @@ function toCandidate(
   };
 }
 
-export async function getReminderPayOptions(id: string): Promise<
+export async function getReminderPayOptions(
+  id: string,
+  day: string,
+): Promise<
   ActionResult<{
     suggested: ReminderPaymentCandidate[];
     recent: ReminderPaymentCandidate[];
   }>
 > {
+  if (!isValidCalendarDate(day)) return { ok: false, error: "Invalid date" };
+
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
@@ -197,14 +202,6 @@ export async function getReminderPayOptions(id: string): Promise<
     .then((rows) => rows[0]);
   if (!reminder) return { ok: false, error: "Reminder not found" };
 
-  const settings = await db
-    .select({ timezone: user_settings.timezone })
-    .from(user_settings)
-    .where(eq(user_settings.user_id, user.id))
-    .limit(1)
-    .then((rows) => rows[0]);
-  const today = todayInTz(settings?.timezone ?? "UTC");
-
   const recentRows = await db
     .select()
     .from(transactions)
@@ -212,14 +209,14 @@ export async function getReminderPayOptions(id: string): Promise<
       and(
         eq(transactions.user_id, user.id),
         eq(transactions.kind, "expense"),
+        eq(transactions.occurred_on, day),
         or(
           isNull(transactions.external_id),
           notLike(transactions.external_id, `${EXTERNAL_ID_PREFIX.reminder}%`),
         ),
       ),
     )
-    .orderBy(desc(transactions.occurred_on), desc(transactions.occurred_at))
-    .limit(25);
+    .orderBy(desc(transactions.occurred_at));
 
   let suggested: ReminderPaymentCandidate[] = [];
   if (reminder.amount != null && reminder.currency) {
@@ -231,7 +228,7 @@ export async function getReminderPayOptions(id: string): Promise<
       [
         {
           userId: user.id,
-          occurredOn: today,
+          occurredOn: day,
           amount: reminder.amount,
           currency: reminder.currency,
           kind: "expense",
@@ -247,7 +244,6 @@ export async function getReminderPayOptions(id: string): Promise<
   const suggestedIds = new Set(suggested.map((s) => s.id));
   const recent = recentRows
     .filter((tx) => !suggestedIds.has(tx.id))
-    .slice(0, 12)
     .map(toCandidate);
 
   return { ok: true, data: { suggested, recent } };

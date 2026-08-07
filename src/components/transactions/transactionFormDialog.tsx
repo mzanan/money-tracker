@@ -25,18 +25,26 @@ import {
 } from "@/components/ui/select";
 
 import { KindToggle } from "./kindToggle";
-import { useDuplicateTransaction } from "./useDuplicateTransaction";
+import { useTransactionForm, type TransactionSeed } from "./useTransactionForm";
 
-import type { Transaction } from "@/types/db";
-
-export function DuplicateTransactionDialog({
-  tx,
+export function TransactionFormDialog({
+  seed,
   open,
   onOpenChange,
+  title,
+  description: dialogDescription,
+  submitLabel,
+  successMessage,
+  onCreated,
 }: {
-  tx: Transaction;
+  seed: TransactionSeed;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  title: string;
+  description: string;
+  submitLabel: string;
+  successMessage: string;
+  onCreated?: (id: string) => void;
 }) {
   const {
     sourceOptions,
@@ -57,16 +65,20 @@ export function DuplicateTransactionDialog({
     setDate,
     pending,
     submit,
-  } = useDuplicateTransaction({ tx, open, onOpenChange });
+  } = useTransactionForm({
+    seed,
+    open,
+    onOpenChange,
+    successMessage,
+    onCreated,
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Duplicate transaction</DialogTitle>
-          <DialogDescription>
-            Creates a new transaction prefilled from this one.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4">
@@ -159,7 +171,7 @@ export function DuplicateTransactionDialog({
             disabled={pending || !source || sourceOptions === null}
           >
             {pending && <Loader2Icon className="animate-spin" />}
-            Duplicate
+            {submitLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

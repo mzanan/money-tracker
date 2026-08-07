@@ -35,7 +35,11 @@ export function DashboardPanel({
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={(next) => !next && onClose()}>
+      <Drawer
+        open={open}
+        onOpenChange={(next) => !next && onClose()}
+        swipeDirection="down"
+      >
         <DrawerContent className="max-h-[85dvh]">
           <DrawerHeader className="pb-2">
             <DrawerTitle className="text-eyebrow font-sans">

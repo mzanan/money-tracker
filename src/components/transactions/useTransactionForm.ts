@@ -12,30 +12,42 @@ import { parseAndRoundAmount } from "@/lib/currency";
 
 import type { Kind } from "./kindToggle";
 
-import type { Transaction } from "@/types/db";
+export interface TransactionSeed {
+  kind: Kind;
+  amount: number;
+  currency: string;
+  source: string;
+  note: string | null;
+  tags: string[];
+  occurredOn: string;
+}
 
-export function useDuplicateTransaction({
-  tx,
+export function useTransactionForm({
+  seed,
   open,
   onOpenChange,
+  successMessage,
+  onCreated,
 }: {
-  tx: Transaction;
+  seed: TransactionSeed;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  successMessage: string;
+  onCreated?: (id: string) => void;
 }) {
   const settings = useSettings();
   const { run, pending } = useServerAction();
 
   const [sources, setSources] = useState<string[] | null>(null);
-  const [kind, setKind] = useState<Kind>(tx.kind);
-  const [amount, setAmount] = useState(tx.amount_original.toString());
-  const [currency, setCurrency] = useState(tx.currency_original);
+  const [kind, setKind] = useState<Kind>(seed.kind);
+  const [amount, setAmount] = useState(seed.amount.toString());
+  const [currency, setCurrency] = useState(seed.currency);
   const [source, setSource] = useState(
-    kindOfSource(tx.source) === "api" ? "manual" : tx.source,
+    kindOfSource(seed.source) === "api" ? "manual" : seed.source,
   );
-  const [description, setDescription] = useState(tx.note ?? "");
-  const [tagsInput, setTagsInput] = useState(tx.tags.join(", "));
-  const [date, setDate] = useState(tx.occurred_on);
+  const [description, setDescription] = useState(seed.note ?? "");
+  const [tagsInput, setTagsInput] = useState(seed.tags.join(", "));
+  const [date, setDate] = useState(seed.occurredOn);
 
   useEffect(() => {
     if (!open) return;
@@ -77,8 +89,11 @@ export function useDuplicateTransaction({
           source,
         }),
       {
-        success: "Duplicated",
-        onSuccess: () => onOpenChange(false),
+        success: successMessage,
+        onSuccess: (data) => {
+          onOpenChange(false);
+          if (data) onCreated?.(data.id);
+        },
       },
     );
   }
