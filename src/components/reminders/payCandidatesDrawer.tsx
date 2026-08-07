@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { Loader2Icon } from "lucide-react";
 
 import { labelForSource } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
@@ -18,9 +17,14 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function ymd(date: Date): string {
   return format(date, "yyyy-MM-dd");
+}
+
+function toDate(day: string): Date {
+  return new Date(`${day}T00:00:00`);
 }
 
 function CandidateButton({
@@ -53,6 +57,15 @@ function CandidateButton({
   );
 }
 
+function CandidateSkeleton() {
+  return (
+    <div className="border-border grid gap-2 rounded-2xl border px-4 py-3">
+      <Skeleton className="h-4 w-2/3" />
+      <Skeleton className="h-3 w-1/3" />
+    </div>
+  );
+}
+
 export function PayCandidatesDrawer({
   open,
   label,
@@ -82,7 +95,7 @@ export function PayCandidatesDrawer({
   onSkip: () => void;
   onClose: () => void;
 }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [month, setMonth] = useState(() => toDate(day));
   const yesterday = daysBefore(today, 1);
   const isToday = day === today;
   const isYesterday = day === yesterday;
@@ -92,6 +105,11 @@ export function PayCandidatesDrawer({
     : isYesterday
       ? "Yesterday"
       : formatDayLong(day);
+
+  function pickDay(next: string) {
+    setMonth(toDate(next));
+    onChooseDay(next);
+  }
 
   return (
     <Drawer
@@ -114,77 +132,60 @@ export function PayCandidatesDrawer({
               <Button
                 variant={isToday ? "default" : "outline"}
                 className="flex-1"
-                disabled={loading}
-                onClick={() => {
-                  setPickerOpen(false);
-                  onChooseDay(today);
-                }}
+                onClick={() => pickDay(today)}
               >
                 Today
               </Button>
               <Button
                 variant={isYesterday ? "default" : "outline"}
                 className="flex-1"
-                disabled={loading}
-                onClick={() => {
-                  setPickerOpen(false);
-                  onChooseDay(yesterday);
-                }}
+                onClick={() => pickDay(yesterday)}
               >
                 Yesterday
               </Button>
-              <Button
-                variant={!isToday && !isYesterday ? "default" : "outline"}
-                className="flex-1"
-                disabled={loading}
-                onClick={() => setPickerOpen((v) => !v)}
-              >
-                Pick a date
-              </Button>
             </div>
-            {pickerOpen && (
+            <div className="flex justify-center">
               <Calendar
                 mode="single"
                 className="bg-transparent"
-                selected={new Date(`${day}T00:00:00`)}
-                disabled={{ after: new Date() }}
+                month={month}
+                onMonthChange={setMonth}
+                selected={toDate(day)}
+                disabled={{ after: toDate(today) }}
                 onSelect={(date) => {
-                  if (!date) return;
-                  setPickerOpen(false);
-                  onChooseDay(ymd(date));
+                  if (date) pickDay(ymd(date));
                 }}
               />
-            )}
+            </div>
           </div>
 
           {hasAmount ? (
-            loading ? (
-              <div className="flex justify-center py-6">
-                <Loader2Icon className="text-muted-foreground animate-spin" />
-              </div>
-            ) : (
-              <div className="grid gap-2">
-                <span className="text-eyebrow">Expenses on {dayLabel}</span>
-                {candidates.length > 0 ? (
-                  candidates.map((match) => (
-                    <CandidateButton
-                      key={match.id}
-                      match={match}
-                      onClick={() => onLink(match.id)}
-                    />
-                  ))
-                ) : (
-                  <p className="text-muted-foreground px-1 text-sm">
-                    No expense found for {dayLabel}.
-                  </p>
-                )}
-                <Button variant="outline" onClick={onCreate}>
-                  {candidates.length > 0
-                    ? "None of these, add a new expense"
-                    : "Add the expense"}
-                </Button>
-              </div>
-            )
+            <div className="grid gap-2">
+              <span className="text-eyebrow">Expenses on {dayLabel}</span>
+              {loading ? (
+                <>
+                  <CandidateSkeleton />
+                  <CandidateSkeleton />
+                </>
+              ) : candidates.length > 0 ? (
+                candidates.map((match) => (
+                  <CandidateButton
+                    key={match.id}
+                    match={match}
+                    onClick={() => onLink(match.id)}
+                  />
+                ))
+              ) : (
+                <p className="text-muted-foreground px-1 text-sm">
+                  No expense found for {dayLabel}.
+                </p>
+              )}
+              <Button variant="outline" disabled={loading} onClick={onCreate}>
+                {candidates.length > 0
+                  ? "None of these, add a new expense"
+                  : "Add the expense"}
+              </Button>
+            </div>
           ) : (
             <Button variant="default" onClick={onSkip}>
               Mark as done
