@@ -100,7 +100,7 @@ export function ImportFromImage({
     <>
       {isMobile ? (
         <Drawer open={menuOpen} onOpenChange={setMenuOpen}>
-          <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+          <DrawerTrigger render={trigger} />
           <DrawerContent>
             <DrawerHeader>
               <DrawerTitle>Import from image</DrawerTitle>
