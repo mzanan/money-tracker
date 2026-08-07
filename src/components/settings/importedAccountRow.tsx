@@ -89,20 +89,22 @@ export function ImportedAccountRow({ source, count }: Props) {
       meta={`${count} transaction${count === 1 ? "" : "s"}`}
     >
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            disabled={pending}
-            aria-label={`${labelForSource(source)} options`}
-          >
-            {pending ? (
-              <Loader2Icon className="animate-spin" />
-            ) : (
-              <MoreVerticalIcon />
-            )}
-          </Button>
-        </DropdownMenuTrigger>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              disabled={pending}
+              aria-label={`${labelForSource(source)} options`}
+            >
+              {pending ? (
+                <Loader2Icon className="animate-spin" />
+              ) : (
+                <MoreVerticalIcon />
+              )}
+            </Button>
+          }
+        />
         <DropdownMenuContent align="end">
           <DropdownMenuItem onSelect={() => edit.start(source)}>
             Rename

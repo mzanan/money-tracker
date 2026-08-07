@@ -115,17 +115,19 @@ export function ReminderRow({
         </Button>
 
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              disabled={pending}
-              className="text-muted-foreground hover:text-foreground -mr-1 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
-              aria-label="More actions"
-            >
-              <MoreVerticalIcon />
-            </Button>
-          </DropdownMenuTrigger>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                disabled={pending}
+                className="text-muted-foreground hover:text-foreground -mr-1 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
+                aria-label="More actions"
+              >
+                <MoreVerticalIcon />
+              </Button>
+            }
+          />
           <DropdownMenuContent align="end">
             <DropdownMenuItem
               onSelect={() => runAfterMenuClose(() => setEditOpen(true))}

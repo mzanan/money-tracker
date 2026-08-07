@@ -135,7 +135,7 @@ export function ImportFromImage({
         </Drawer>
       ) : (
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-          <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+          <DropdownMenuTrigger render={trigger} />
           <DropdownMenuContent align="end" className="max-w-xs">
             <div className="p-1">{freeAiNotice}</div>
             {OPTIONS.map((option) => (

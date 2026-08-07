@@ -177,16 +177,18 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
         )}
       >
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label="More actions"
-              className="text-muted-foreground hover:text-foreground -mr-0.5"
-            >
-              <EllipsisIcon />
-            </Button>
-          </DropdownMenuTrigger>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label="More actions"
+                className="text-muted-foreground hover:text-foreground -mr-0.5"
+              >
+                <EllipsisIcon />
+              </Button>
+            }
+          />
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={openNote}>
               <PencilLineIcon />
