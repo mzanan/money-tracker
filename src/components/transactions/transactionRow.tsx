@@ -13,6 +13,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
+import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { deleteTransaction } from "@/lib/actions/transactions";
@@ -49,6 +50,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const settings = useSettings();
   const remove = useServerAction();
   const transfer = useServerAction();
+  const runAfterMenuClose = useDeferredMenuAction();
   const [reminderOpen, setReminderOpen] = useState(false);
   const [reminderMounted, setReminderMounted] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
@@ -86,33 +88,33 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
 
   function openTags() {
     setTagsMounted(true);
-    setTagsOpen(true);
+    runAfterMenuClose(() => setTagsOpen(true));
   }
 
   function openNote() {
     setNoteMounted(true);
-    setNoteOpen(true);
+    runAfterMenuClose(() => setNoteOpen(true));
   }
 
   function openReminder() {
     setReminderMounted(true);
-    setReminderOpen(true);
+    runAfterMenuClose(() => setReminderOpen(true));
   }
 
   function openSource() {
     setSourceMounted(true);
-    setSourceOpen(true);
+    runAfterMenuClose(() => setSourceOpen(true));
   }
 
   function openTransfer() {
     setTransferMounted(true);
-    setTransferOpen(true);
+    runAfterMenuClose(() => setTransferOpen(true));
   }
 
   function openDuplicate() {
     setDuplicateMounted(true);
-    setDuplicateOpen(true);
     setDuplicateKey((key) => key + 1);
+    runAfterMenuClose(() => setDuplicateOpen(true));
   }
 
   const avatarSeed = tx.tags[0] || sourceLabel;
@@ -207,10 +209,12 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             {isTransfer ? (
               <DropdownMenuItem
                 onSelect={() =>
-                  transfer.run(() => unmarkTransfer(tx.id), {
-                    confirm: "Undo this transfer?",
-                    success: "Transfer undone",
-                  })
+                  runAfterMenuClose(() =>
+                    transfer.run(() => unmarkTransfer(tx.id), {
+                      confirm: "Undo this transfer?",
+                      success: "Transfer undone",
+                    }),
+                  )
                 }
               >
                 <BanknoteIcon />
@@ -230,10 +234,12 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 onSelect={() =>
-                  remove.run(() => deleteTransaction(tx.id), {
-                    confirm: "Delete this transaction?",
-                    success: "Deleted",
-                  })
+                  runAfterMenuClose(() =>
+                    remove.run(() => deleteTransaction(tx.id), {
+                      confirm: "Delete this transaction?",
+                      success: "Deleted",
+                    }),
+                  )
                 }
               >
                 <Trash2Icon />

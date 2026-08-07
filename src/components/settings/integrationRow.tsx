@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2Icon, MoreVerticalIcon, RefreshCwIcon } from "lucide-react";
 
+import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useServerAction } from "@/hooks/useServerAction";
 import {
   deleteIntegration,
@@ -44,6 +45,7 @@ function timeAgo(iso: string | null): string {
 export function IntegrationRow({ provider, label, integration }: Props) {
   const [open, setOpen] = useState(false);
   const { run, pending } = useServerAction();
+  const runAfterMenuClose = useDeferredMenuAction();
   const connected = integration !== null;
 
   function handleSync() {
@@ -108,7 +110,9 @@ export function IntegrationRow({ provider, label, integration }: Props) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => setOpen(true)}>
+                <DropdownMenuItem
+                  onSelect={() => runAfterMenuClose(() => setOpen(true))}
+                >
                   Edit credentials
                 </DropdownMenuItem>
                 <DropdownMenuItem

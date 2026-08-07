@@ -4,6 +4,7 @@ import { CheckIcon, Loader2Icon, MoreVerticalIcon, XIcon } from "lucide-react";
 
 import { deleteSource, renameSource } from "@/lib/actions/sources";
 import { kindOfSource, labelForSource } from "@/lib/constants/sources";
+import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useInlineEdit } from "@/hooks/useInlineEdit";
 import { useServerAction } from "@/hooks/useServerAction";
 
@@ -25,6 +26,7 @@ interface Props {
 
 export function ImportedAccountRow({ source, count }: Props) {
   const { run, pending } = useServerAction();
+  const runAfterMenuClose = useDeferredMenuAction();
 
   const edit = useInlineEdit((next) => {
     if (!next || next === source) return;
@@ -105,7 +107,10 @@ export function ImportedAccountRow({ source, count }: Props) {
           <DropdownMenuItem onSelect={() => edit.start(source)}>
             Rename
           </DropdownMenuItem>
-          <DropdownMenuItem variant="destructive" onSelect={handleDelete}>
+          <DropdownMenuItem
+            variant="destructive"
+            onSelect={() => runAfterMenuClose(handleDelete)}
+          >
             Delete all
           </DropdownMenuItem>
         </DropdownMenuContent>
