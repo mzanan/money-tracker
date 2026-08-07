@@ -16,6 +16,9 @@ import type { RecurringPayment } from "@/types/db";
 export function useReminderRow(reminder: RecurringPayment, today: string) {
   const [editOpen, setEditOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
+  const [addExpenseOpen, setAddExpenseOpen] = useState(false);
+  const [addExpenseMounted, setAddExpenseMounted] = useState(false);
+  const [addExpenseKey, setAddExpenseKey] = useState(0);
   const [payDay, setPayDay] = useState(today);
   const [payOptions, setPayOptions] = useState<{
     suggested: ReminderPaymentCandidate[];
@@ -57,6 +60,17 @@ export function useReminderRow(reminder: RecurringPayment, today: string) {
     setPayDay(day);
     setPayOptions(null);
     fetchPayOptions(day);
+  }
+
+  function openAddExpense() {
+    setPayOpen(false);
+    setAddExpenseMounted(true);
+    setAddExpenseKey((key) => key + 1);
+    setAddExpenseOpen(true);
+  }
+
+  function handleExpenseCreated(transactionId: string) {
+    confirmPaid(transactionId);
   }
 
   function confirmPaid(linkTransactionId?: string) {
@@ -103,6 +117,12 @@ export function useReminderRow(reminder: RecurringPayment, today: string) {
   return {
     editOpen,
     setEditOpen,
+    addExpenseOpen,
+    setAddExpenseOpen,
+    addExpenseMounted,
+    addExpenseKey,
+    openAddExpense,
+    handleExpenseCreated,
     payOpen,
     payDay,
     payOptions,

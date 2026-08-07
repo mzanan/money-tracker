@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { IconCircle } from "@/components/ui/iconCircle";
 
+import { TransactionFormDialog } from "@/components/transactions/transactionFormDialog";
+
 import { PayCandidatesDrawer } from "./payCandidatesDrawer";
 import { ReminderForm } from "./reminderForm";
 import { useReminderRow } from "./useReminderRow";
@@ -54,6 +56,12 @@ export function ReminderRow({
     markPaidOnly,
     handleDelete,
     setPayOpen,
+    addExpenseOpen,
+    setAddExpenseOpen,
+    addExpenseMounted,
+    addExpenseKey,
+    openAddExpense,
+    handleExpenseCreated,
   } = useReminderRow(reminder, today);
   const runAfterMenuClose = useDeferredMenuAction();
 
@@ -168,10 +176,32 @@ export function ReminderRow({
         recent={payOptions?.recent ?? []}
         onChooseDay={choosePayDay}
         onLink={(transactionId) => confirmPaid(transactionId)}
-        onCreate={() => confirmPaid()}
+        onCreate={openAddExpense}
         onSkip={markPaidOnly}
         onClose={() => setPayOpen(false)}
       />
+
+      {addExpenseMounted && reminder.amount != null && (
+        <TransactionFormDialog
+          key={addExpenseKey}
+          seed={{
+            kind: "expense",
+            amount: reminder.amount,
+            currency: reminder.currency ?? "USD",
+            source: reminder.source ?? "manual",
+            note: reminder.label,
+            tags: [],
+            occurredOn: payDay,
+          }}
+          open={addExpenseOpen}
+          onOpenChange={setAddExpenseOpen}
+          title={`Pay ${reminder.label}`}
+          description="Review the expense before saving. It will be linked to this reminder."
+          submitLabel="Save and mark paid"
+          successMessage="Expense added"
+          onCreated={handleExpenseCreated}
+        />
+      )}
     </li>
   );
 }

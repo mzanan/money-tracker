@@ -36,7 +36,7 @@ import {
 import { ReminderForm } from "@/components/reminders/reminderForm";
 
 import { Avatar } from "./avatar";
-import { DuplicateTransactionDialog } from "./duplicateTransactionDialog";
+import { TransactionFormDialog } from "./transactionFormDialog";
 import { MarkTransferDialog } from "./markTransferDialog";
 import { NoteEditor } from "./noteEditor";
 import { SourceEditor } from "./sourceEditor";
@@ -147,7 +147,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           <TagChips tags={tx.tags} />
         </span>
         {description && (
-          <span className="text-muted-foreground mt-0.5 block truncate text-meta">
+          <span className="text-muted-foreground text-meta mt-0.5 block truncate">
             {description}
           </span>
         )}
@@ -301,14 +301,25 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
         />
       )}
       {duplicateMounted && (
-        <DuplicateTransactionDialog
+        <TransactionFormDialog
           key={duplicateKey}
-          tx={tx}
+          seed={{
+            kind: tx.kind,
+            amount: tx.amount_original,
+            currency: tx.currency_original,
+            source: tx.source,
+            note: tx.note,
+            tags: tx.tags,
+            occurredOn: tx.occurred_on,
+          }}
           open={duplicateOpen}
           onOpenChange={setDuplicateOpen}
+          title="Duplicate transaction"
+          description="Creates a new transaction prefilled from this one."
+          submitLabel="Duplicate"
+          successMessage="Duplicated"
         />
       )}
     </div>
   );
 }
-
