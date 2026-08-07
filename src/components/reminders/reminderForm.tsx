@@ -33,7 +33,7 @@ import { useReminderForm, type ReminderSeed } from "./useReminderForm";
 import type { RecurringFrequency, RecurringPayment } from "@/types/db";
 
 type Props = {
-  trigger?: React.ReactNode;
+  trigger?: React.ReactElement;
   reminder?: RecurringPayment;
   seed?: ReminderSeed;
   title?: string;
@@ -89,7 +89,7 @@ export function ReminderForm({
         if (!next) reset();
       }}
     >
-      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
+      {trigger && <DialogTrigger render={trigger} />}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>

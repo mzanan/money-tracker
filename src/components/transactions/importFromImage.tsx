@@ -161,15 +161,19 @@ export function ImportFromImage({
 
       <Dialog
         open={payload !== null}
-        onOpenChange={(open) => {
+        onOpenChange={(open, eventDetails) => {
+          if (
+            !open &&
+            (eventDetails.reason === "outside-press" ||
+              eventDetails.reason === "escape-key")
+          ) {
+            eventDetails.cancel();
+            return;
+          }
           if (!open) setPayload(null);
         }}
       >
-        <DialogContent
-          className="max-h-[90vh] sm:max-w-lg"
-          onInteractOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
+        <DialogContent className="max-h-[90vh] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {payload?.mode === "receipt"

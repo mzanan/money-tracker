@@ -33,7 +33,7 @@ export function PlacesDialog({
   trigger,
 }: {
   places: Location[];
-  trigger: React.ReactNode;
+  trigger: React.ReactElement;
 }) {
   const [label, setLabel] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -59,7 +59,7 @@ export function PlacesDialog({
 
   return (
     <Dialog>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogTrigger render={trigger} />
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Places</DialogTitle>
