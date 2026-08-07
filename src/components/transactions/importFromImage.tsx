@@ -7,7 +7,7 @@ import {
   SmartphoneIcon,
 } from "lucide-react";
 
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import type { ImageImportMode } from "@/lib/imageExtract";
 
 import {
@@ -61,7 +61,7 @@ export function ImportFromImage({
 }: {
   existingSources: string[];
 }) {
-  const isMobile = useMediaQuery("(max-width: 639px)");
+  const isMobile = useIsMobile();
   const {
     fileInputRef,
     menuOpen,

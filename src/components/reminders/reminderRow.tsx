@@ -87,7 +87,7 @@ export function ReminderRow({
             )}
           </div>
           <div className="mt-0.5 flex items-baseline justify-between gap-3">
-            <span className="text-muted-foreground truncate text-meta">
+            <span className="text-muted-foreground text-meta truncate">
               {metaSegments.join(" · ")}
             </span>
             <span
@@ -100,7 +100,7 @@ export function ReminderRow({
             </span>
           </div>
           {reminder.note && (
-            <p className="text-muted-foreground/90 mt-1 truncate text-meta italic">
+            <p className="text-muted-foreground/90 text-meta mt-1 truncate italic">
               {reminder.note}
             </p>
           )}
@@ -126,7 +126,7 @@ export function ReminderRow({
                 variant="ghost"
                 size="icon-xs"
                 disabled={pending}
-                className="text-muted-foreground hover:text-foreground -mr-1 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
+                className="text-muted-foreground hover:text-foreground -mr-1 opacity-0 transition-opacity group-hover:opacity-100 data-popup-open:opacity-100"
                 aria-label="More actions"
               >
                 <MoreVerticalIcon />
