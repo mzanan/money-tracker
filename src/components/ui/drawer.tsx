@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer";
 
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 type DrawerContextProps = {
@@ -26,17 +27,26 @@ function useDrawer() {
 
 function Drawer({
   modal = true,
-  showSwipeHandle = false,
+  showSwipeHandle,
   snapPoints,
-  swipeDirection = "down",
+  swipeDirection,
   ...props
 }: DrawerPrimitive.Root.Props & {
   showSwipeHandle?: boolean;
 }) {
+  const isMobile = useIsMobile();
+  const resolvedSwipeDirection =
+    swipeDirection ?? (isMobile ? "down" : "right");
+  const resolvedShowSwipeHandle = showSwipeHandle ?? isMobile;
   const hasSnapPoints = snapPoints != null && snapPoints.length > 0;
   const contextValue = React.useMemo(
-    () => ({ hasSnapPoints, modal, showSwipeHandle, swipeDirection }),
-    [hasSnapPoints, modal, showSwipeHandle, swipeDirection],
+    () => ({
+      hasSnapPoints,
+      modal,
+      showSwipeHandle: resolvedShowSwipeHandle,
+      swipeDirection: resolvedSwipeDirection,
+    }),
+    [hasSnapPoints, modal, resolvedShowSwipeHandle, resolvedSwipeDirection],
   );
 
   return (
@@ -45,7 +55,7 @@ function Drawer({
         data-slot="drawer"
         modal={modal}
         snapPoints={snapPoints}
-        swipeDirection={swipeDirection}
+        swipeDirection={resolvedSwipeDirection}
         {...props}
       />
     </DrawerContext.Provider>
