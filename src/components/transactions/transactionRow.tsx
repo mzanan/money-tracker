@@ -61,10 +61,11 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const [duplicateMounted, setDuplicateMounted] = useState(false);
   const [duplicateKey, setDuplicateKey] = useState(0);
   const isTransfer = Boolean(tx.transfer_group);
-  const canDelete = kindOfSource(tx.source) !== "api" && !isTransfer;
+  const isSynced = kindOfSource(tx.source) === "api";
+  const canDelete = !isSynced && !isTransfer;
+  const lockAmountFields = isSynced || isTransfer;
   const canChangeSource =
-    !isTransfer &&
-    (kindOfSource(tx.source) !== "api" || !isSyncedExternalId(tx.external_id));
+    !isTransfer && (!isSynced || !isSyncedExternalId(tx.external_id));
   const txSelectMode = useUiStore((s) => s.txSelectMode);
   const selectedTxs = useUiStore((s) => s.selectedTxs);
   const toggleTxSelected = useUiStore((s) => s.toggleTxSelected);
@@ -252,6 +253,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             tags: tx.tags,
             occurredOn: tx.occurred_on,
           }}
+          locked={lockAmountFields}
           open={editOpen}
           onOpenChange={setEditOpen}
           title="Edit transaction"

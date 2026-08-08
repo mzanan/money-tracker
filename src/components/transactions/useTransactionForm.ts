@@ -18,6 +18,7 @@ import { canonicalTag, tagKey } from "@/lib/tags";
 import type { Kind } from "./kindToggle";
 
 const MAX_TAG_SUGGESTIONS = 12;
+const MAX_TAGS = 10;
 
 export interface TransactionSeed {
   kind: Kind;
@@ -86,13 +87,20 @@ export function useTransactionForm({
     sources && !sources.includes(source) ? [source, ...sources] : sources;
 
   const currentTagKeys = new Set(tags.map(tagKey));
+  const tagLimitReached = tags.length >= MAX_TAGS;
   const query = tagKey(tagInput);
-  const tagSuggestions = (usedTags ?? [])
-    .filter((tag) => !currentTagKeys.has(tagKey(tag)))
-    .filter((tag) => (query ? tagKey(tag).includes(query) : true))
-    .slice(0, MAX_TAG_SUGGESTIONS);
+  const tagSuggestions = tagLimitReached
+    ? []
+    : (usedTags ?? [])
+        .filter((tag) => !currentTagKeys.has(tagKey(tag)))
+        .filter((tag) => (query ? tagKey(tag).includes(query) : true))
+        .slice(0, MAX_TAG_SUGGESTIONS);
 
   function addTag(raw: string) {
+    if (tagLimitReached) {
+      toast.error(`Max ${MAX_TAGS} tags`);
+      return;
+    }
     const canonical = canonicalTag(raw);
     setTagInput("");
     if (!canonical) return;
@@ -166,6 +174,7 @@ export function useTransactionForm({
     tagInput,
     setTagInput,
     tagSuggestions,
+    tagLimitReached,
     addTag,
     removeTag,
     date,

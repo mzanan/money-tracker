@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TagChip } from "@/components/ui/tagChip";
+import { Textarea } from "@/components/ui/textarea";
 
 import { KindToggle } from "./kindToggle";
 import { useTransactionForm, type TransactionSeed } from "./useTransactionForm";
@@ -31,6 +32,7 @@ import { useTransactionForm, type TransactionSeed } from "./useTransactionForm";
 export function TransactionFormDialog({
   seed,
   txId,
+  locked,
   open,
   onOpenChange,
   title,
@@ -41,6 +43,7 @@ export function TransactionFormDialog({
 }: {
   seed: TransactionSeed;
   txId?: string;
+  locked?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
@@ -66,6 +69,7 @@ export function TransactionFormDialog({
     tagInput,
     setTagInput,
     tagSuggestions,
+    tagLimitReached,
     addTag,
     removeTag,
     date,
@@ -91,7 +95,7 @@ export function TransactionFormDialog({
 
         <div className="grid gap-4">
           <div className="flex items-center gap-2">
-            <KindToggle kind={kind} onChange={setKind} />
+            <KindToggle kind={kind} onChange={setKind} disabled={locked} />
             <div className="grid flex-1 gap-1.5">
               <Label htmlFor="duplicate-amount">Amount</Label>
               <div className="flex items-center gap-1.5">
@@ -99,6 +103,7 @@ export function TransactionFormDialog({
                   id="duplicate-amount"
                   inputMode="decimal"
                   value={amount}
+                  disabled={locked}
                   onChange={(e) =>
                     setAmount(e.target.value.replace(/[^\d.,]/g, ""))
                   }
@@ -108,10 +113,17 @@ export function TransactionFormDialog({
                   onValueChange={setCurrency}
                   currencies={currencies}
                   className="w-24"
+                  disabled={locked}
                 />
               </div>
             </div>
           </div>
+          {locked && (
+            <p className="text-muted-foreground -mt-2 text-xs">
+              Amount, currency and kind aren&apos;t editable here (synced or
+              transfer transaction).
+            </p>
+          )}
 
           {!txId && (
             <div className="grid gap-1.5">
@@ -140,7 +152,7 @@ export function TransactionFormDialog({
 
           <div className="grid gap-1.5">
             <Label htmlFor="duplicate-description">Description</Label>
-            <Input
+            <Textarea
               id="duplicate-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -149,7 +161,9 @@ export function TransactionFormDialog({
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="duplicate-tags">Tags</Label>
+            <Label htmlFor="duplicate-tags">
+              Tags{tagLimitReached && " (max 10)"}
+            </Label>
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {tags.map((tag) => (
@@ -160,6 +174,7 @@ export function TransactionFormDialog({
             <Input
               id="duplicate-tags"
               value={tagInput}
+              disabled={tagLimitReached}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === ",") {
@@ -167,7 +182,7 @@ export function TransactionFormDialog({
                   addTag(tagInput);
                 }
               }}
-              placeholder="Add a tag…"
+              placeholder={tagLimitReached ? "Max 10 tags" : "Add a tag…"}
               maxLength={40}
             />
             {tagSuggestions.length > 0 && (

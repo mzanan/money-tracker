@@ -163,15 +163,20 @@ export async function updateTransaction(
     .limit(1)
     .then((rows) => rows[0]);
   if (!tx) return { ok: false, error: "Transaction not found" };
-  if (
-    tx.transfer_group &&
-    (tx.kind !== parsed.data.kind ||
-      tx.amount_original !== parsed.data.amount ||
-      tx.currency_original !== parsed.data.currency)
-  ) {
+  const amountFieldsChanged =
+    tx.kind !== parsed.data.kind ||
+    tx.amount_original !== parsed.data.amount ||
+    tx.currency_original !== parsed.data.currency;
+  if (tx.transfer_group && amountFieldsChanged) {
     return {
       ok: false,
       error: "Undo the transfer before editing amount, currency, or kind",
+    };
+  }
+  if (kindOfSource(tx.source) === "api" && amountFieldsChanged) {
+    return {
+      ok: false,
+      error: "Amount, currency and kind are synced automatically, not editable",
     };
   }
 
