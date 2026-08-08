@@ -202,60 +202,6 @@ export async function updateTransaction(
   }
 }
 
-export async function updateTransactionTags(
-  id: string,
-  tags: string[],
-): Promise<ActionResult> {
-  const user = await getUser();
-  if (!user) return { ok: false, error: "Not authenticated" };
-
-  const normalized = normalizeTags(tags);
-  if (normalized.some((tag) => tag.length > 40)) {
-    return { ok: false, error: "Tags must be 40 characters or fewer" };
-  }
-
-  try {
-    await db
-      .update(transactions)
-      .set({ tags: normalized })
-      .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)));
-    revalidatePath("/", "layout");
-    return { ok: true };
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
-    };
-  }
-}
-
-export async function updateTransactionNote(
-  id: string,
-  note: string,
-): Promise<ActionResult> {
-  const user = await getUser();
-  if (!user) return { ok: false, error: "Not authenticated" };
-
-  const trimmed = note.trim();
-  if (trimmed.length > 280) {
-    return { ok: false, error: "Description must be 280 characters or fewer" };
-  }
-
-  try {
-    await db
-      .update(transactions)
-      .set({ note: trimmed || null })
-      .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)));
-    revalidatePath("/", "layout");
-    return { ok: true };
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
-    };
-  }
-}
-
 export async function updateTransactionSource(
   id: string,
   source: string,

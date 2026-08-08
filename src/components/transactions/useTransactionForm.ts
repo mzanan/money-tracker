@@ -5,12 +5,19 @@ import { toast } from "sonner";
 
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
-import { createTransaction } from "@/lib/actions/transactions";
+import {
+  createTransaction,
+  getUsedTags,
+  updateTransaction,
+} from "@/lib/actions/transactions";
 import { getTransferAccountOptions } from "@/lib/actions/transfers";
 import { kindOfSource } from "@/lib/constants/sources";
 import { parseAndRoundAmount } from "@/lib/currency";
+import { canonicalTag, tagKey } from "@/lib/tags";
 
 import type { Kind } from "./kindToggle";
+
+const MAX_TAG_SUGGESTIONS = 12;
 
 export interface TransactionSeed {
   kind: Kind;
@@ -24,12 +31,14 @@ export interface TransactionSeed {
 
 export function useTransactionForm({
   seed,
+  txId,
   open,
   onOpenChange,
   successMessage,
   onCreated,
 }: {
   seed: TransactionSeed;
+  txId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   successMessage: string;
@@ -46,14 +55,27 @@ export function useTransactionForm({
     kindOfSource(seed.source) === "api" ? "manual" : seed.source,
   );
   const [description, setDescription] = useState(seed.note ?? "");
-  const [tagsInput, setTagsInput] = useState(seed.tags.join(", "));
+  const [tags, setTags] = useState(seed.tags);
+  const [tagInput, setTagInput] = useState("");
+  const [usedTags, setUsedTags] = useState<string[] | null>(null);
   const [date, setDate] = useState(seed.occurredOn);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || txId) return;
     getTransferAccountOptions("").then((result) => {
       if (result.ok) setSources(result.data!.sources);
     });
+  }, [open, txId]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    getUsedTags().then((res) => {
+      if (!cancelled && res.ok) setUsedTags(res.data ?? []);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   const currencies = settings.currencies.includes(currency)
@@ -63,31 +85,60 @@ export function useTransactionForm({
   const sourceOptions =
     sources && !sources.includes(source) ? [source, ...sources] : sources;
 
+  const currentTagKeys = new Set(tags.map(tagKey));
+  const query = tagKey(tagInput);
+  const tagSuggestions = (usedTags ?? [])
+    .filter((tag) => !currentTagKeys.has(tagKey(tag)))
+    .filter((tag) => (query ? tagKey(tag).includes(query) : true))
+    .slice(0, MAX_TAG_SUGGESTIONS);
+
+  function addTag(raw: string) {
+    const canonical = canonicalTag(raw);
+    setTagInput("");
+    if (!canonical) return;
+    if (currentTagKeys.has(tagKey(canonical))) return;
+    setTags((prev) => [...prev, canonical]);
+  }
+
+  function removeTag(tag: string) {
+    setTags((prev) => prev.filter((t) => t !== tag));
+  }
+
   function submit() {
     const parsed = parseAndRoundAmount(amount, currency);
     if (!parsed.ok) {
       toast.error(parsed.error);
       return;
     }
-    if (!source) {
+    if (!txId && !source) {
       toast.error("Pick an account");
       return;
     }
 
-    run(
-      () =>
-        createTransaction({
+    run<{ id: string } | undefined>(
+      async () => {
+        if (txId) {
+          const result = await updateTransaction({
+            id: txId,
+            kind,
+            amount: parsed.amount,
+            currency,
+            tags,
+            note: description.trim() || null,
+            occurredOn: date,
+          });
+          return result.ok ? { ok: true, data: undefined } : result;
+        }
+        return createTransaction({
           kind,
           amount: parsed.amount,
           currency,
-          tags: tagsInput
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter(Boolean),
+          tags,
           note: description.trim() || null,
           occurredOn: date,
           source,
-        }),
+        });
+      },
       {
         success: successMessage,
         onSuccess: (data) => {
@@ -111,8 +162,12 @@ export function useTransactionForm({
     setSource,
     description,
     setDescription,
-    tagsInput,
-    setTagsInput,
+    tags,
+    tagInput,
+    setTagInput,
+    tagSuggestions,
+    addTag,
+    removeTag,
     date,
     setDate,
     pending,

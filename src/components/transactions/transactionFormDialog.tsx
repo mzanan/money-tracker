@@ -23,12 +23,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TagChip } from "@/components/ui/tagChip";
 
 import { KindToggle } from "./kindToggle";
 import { useTransactionForm, type TransactionSeed } from "./useTransactionForm";
 
 export function TransactionFormDialog({
   seed,
+  txId,
   open,
   onOpenChange,
   title,
@@ -38,6 +40,7 @@ export function TransactionFormDialog({
   onCreated,
 }: {
   seed: TransactionSeed;
+  txId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
@@ -59,14 +62,19 @@ export function TransactionFormDialog({
     setSource,
     description,
     setDescription,
-    tagsInput,
-    setTagsInput,
+    tags,
+    tagInput,
+    setTagInput,
+    tagSuggestions,
+    addTag,
+    removeTag,
     date,
     setDate,
     pending,
     submit,
   } = useTransactionForm({
     seed,
+    txId,
     open,
     onOpenChange,
     successMessage,
@@ -105,28 +113,30 @@ export function TransactionFormDialog({
             </div>
           </div>
 
-          <div className="grid gap-1.5">
-            <Label htmlFor="duplicate-source">Account</Label>
-            {sourceOptions === null ? (
-              <p className="text-muted-foreground flex items-center gap-2 text-sm">
-                <Loader2Icon className="size-4 animate-spin" /> Loading
-                accounts…
-              </p>
-            ) : (
-              <Select value={source} onValueChange={setSource}>
-                <SelectTrigger id="duplicate-source">
-                  <SelectValue placeholder="Select account" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sourceOptions.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {labelForSource(s)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
+          {!txId && (
+            <div className="grid gap-1.5">
+              <Label htmlFor="duplicate-source">Account</Label>
+              {sourceOptions === null ? (
+                <p className="text-muted-foreground flex items-center gap-2 text-sm">
+                  <Loader2Icon className="size-4 animate-spin" /> Loading
+                  accounts…
+                </p>
+              ) : (
+                <Select value={source} onValueChange={setSource}>
+                  <SelectTrigger id="duplicate-source">
+                    <SelectValue placeholder="Select account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sourceOptions.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {labelForSource(s)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
 
           <div className="grid gap-1.5">
             <Label htmlFor="duplicate-description">Description</Label>
@@ -138,27 +148,46 @@ export function TransactionFormDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="duplicate-tags">Tags</Label>
-              <Input
-                id="duplicate-tags"
-                value={tagsInput}
-                onChange={(e) => setTagsInput(e.target.value)}
-                placeholder="food, transport…"
-                maxLength={120}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="duplicate-date">Date</Label>
-              <Input
-                id="duplicate-date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-              />
-            </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="duplicate-tags">Tags</Label>
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {tags.map((tag) => (
+                  <TagChip key={tag} tag={tag} onRemove={() => removeTag(tag)} />
+                ))}
+              </div>
+            )}
+            <Input
+              id="duplicate-tags"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") {
+                  e.preventDefault();
+                  addTag(tagInput);
+                }
+              }}
+              placeholder="Add a tag…"
+              maxLength={40}
+            />
+            {tagSuggestions.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {tagSuggestions.map((tag) => (
+                  <TagChip key={tag} tag={tag} onSelect={() => addTag(tag)} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-1.5">
+            <Label htmlFor="duplicate-date">Date</Label>
+            <Input
+              id="duplicate-date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+            />
           </div>
         </div>
 
@@ -168,7 +197,9 @@ export function TransactionFormDialog({
           </Button>
           <Button
             onClick={submit}
-            disabled={pending || !source || sourceOptions === null}
+            disabled={
+              pending || (!txId && (!source || sourceOptions === null))
+            }
           >
             {pending && <Loader2Icon className="animate-spin" />}
             {submitLabel}

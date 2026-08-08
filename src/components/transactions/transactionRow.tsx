@@ -9,7 +9,6 @@ import {
   EllipsisIcon,
   LandmarkIcon,
   PencilLineIcon,
-  TagIcon,
   Trash2Icon,
 } from "lucide-react";
 
@@ -38,10 +37,8 @@ import { ReminderForm } from "@/components/reminders/reminderForm";
 import { Avatar } from "./avatar";
 import { TransactionFormDialog } from "./transactionFormDialog";
 import { MarkTransferDialog } from "./markTransferDialog";
-import { NoteEditor } from "./noteEditor";
 import { SourceEditor } from "./sourceEditor";
 import { TagChips } from "./tagChips";
-import { TagEditor } from "./tagEditor";
 import { TransferBadge } from "./transferBadge";
 
 import type { Transaction } from "@/types/db";
@@ -53,10 +50,9 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const runAfterMenuClose = useDeferredMenuAction();
   const [reminderOpen, setReminderOpen] = useState(false);
   const [reminderMounted, setReminderMounted] = useState(false);
-  const [tagsOpen, setTagsOpen] = useState(false);
-  const [tagsMounted, setTagsMounted] = useState(false);
-  const [noteOpen, setNoteOpen] = useState(false);
-  const [noteMounted, setNoteMounted] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editMounted, setEditMounted] = useState(false);
+  const [editKey, setEditKey] = useState(0);
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferMounted, setTransferMounted] = useState(false);
   const [sourceOpen, setSourceOpen] = useState(false);
@@ -86,14 +82,10 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const showConverted = !sameAsBase && inDisplay !== null;
   const sourceLabel = labelForSource(tx.source);
 
-  function openTags() {
-    setTagsMounted(true);
-    runAfterMenuClose(() => setTagsOpen(true));
-  }
-
-  function openNote() {
-    setNoteMounted(true);
-    runAfterMenuClose(() => setNoteOpen(true));
+  function openEdit() {
+    setEditMounted(true);
+    setEditKey((key) => key + 1);
+    runAfterMenuClose(() => setEditOpen(true));
   }
 
   function openReminder() {
@@ -190,13 +182,9 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             }
           />
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={openNote}>
+            <DropdownMenuItem onSelect={openEdit}>
               <PencilLineIcon />
-              Edit description
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={openTags}>
-              <TagIcon />
-              Edit tags
+              Edit
             </DropdownMenuItem>
             {canChangeSource && (
               <DropdownMenuItem onSelect={openSource}>
@@ -251,20 +239,25 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      {tagsMounted && (
-        <TagEditor
+      {editMounted && (
+        <TransactionFormDialog
+          key={editKey}
           txId={tx.id}
-          tags={tx.tags}
-          open={tagsOpen}
-          onOpenChange={setTagsOpen}
-        />
-      )}
-      {noteMounted && (
-        <NoteEditor
-          txId={tx.id}
-          note={tx.note}
-          open={noteOpen}
-          onOpenChange={setNoteOpen}
+          seed={{
+            kind: tx.kind,
+            amount: tx.amount_original,
+            currency: tx.currency_original,
+            source: tx.source,
+            note: tx.note,
+            tags: tx.tags,
+            occurredOn: tx.occurred_on,
+          }}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          title="Edit transaction"
+          description="Update the details for this transaction."
+          submitLabel="Save"
+          successMessage="Saved"
         />
       )}
       {reminderMounted && (
