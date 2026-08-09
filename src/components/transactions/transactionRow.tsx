@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   BanknoteIcon,
   BellPlusIcon,
@@ -40,6 +39,7 @@ import { MarkTransferDialog } from "./markTransferDialog";
 import { SourceEditor } from "./sourceEditor";
 import { TagChips } from "./tagChips";
 import { TransferBadge } from "./transferBadge";
+import { useDialogState } from "./useDialogState";
 
 import type { Transaction } from "@/types/db";
 
@@ -48,18 +48,11 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const remove = useServerAction();
   const transfer = useServerAction();
   const runAfterMenuClose = useDeferredMenuAction();
-  const [reminderOpen, setReminderOpen] = useState(false);
-  const [reminderMounted, setReminderMounted] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [editMounted, setEditMounted] = useState(false);
-  const [editKey, setEditKey] = useState(0);
-  const [transferOpen, setTransferOpen] = useState(false);
-  const [transferMounted, setTransferMounted] = useState(false);
-  const [sourceOpen, setSourceOpen] = useState(false);
-  const [sourceMounted, setSourceMounted] = useState(false);
-  const [duplicateOpen, setDuplicateOpen] = useState(false);
-  const [duplicateMounted, setDuplicateMounted] = useState(false);
-  const [duplicateKey, setDuplicateKey] = useState(0);
+  const reminder = useDialogState(runAfterMenuClose);
+  const edit = useDialogState(runAfterMenuClose);
+  const transferDialog = useDialogState(runAfterMenuClose);
+  const source = useDialogState(runAfterMenuClose);
+  const duplicate = useDialogState(runAfterMenuClose);
   const isTransfer = Boolean(tx.transfer_group);
   const isSynced = kindOfSource(tx.source) === "api";
   const canDelete = !isSynced && !isTransfer;
@@ -82,33 +75,6 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   const sign = tx.kind === "income" ? "+" : "-";
   const showConverted = !sameAsBase && inDisplay !== null;
   const sourceLabel = labelForSource(tx.source);
-
-  function openEdit() {
-    setEditMounted(true);
-    setEditKey((key) => key + 1);
-    runAfterMenuClose(() => setEditOpen(true));
-  }
-
-  function openReminder() {
-    setReminderMounted(true);
-    runAfterMenuClose(() => setReminderOpen(true));
-  }
-
-  function openSource() {
-    setSourceMounted(true);
-    runAfterMenuClose(() => setSourceOpen(true));
-  }
-
-  function openTransfer() {
-    setTransferMounted(true);
-    runAfterMenuClose(() => setTransferOpen(true));
-  }
-
-  function openDuplicate() {
-    setDuplicateMounted(true);
-    setDuplicateKey((key) => key + 1);
-    runAfterMenuClose(() => setDuplicateOpen(true));
-  }
 
   const avatarSeed = tx.tags[0] || sourceLabel;
   const reminderTitle = tx.tags[0] || sourceLabel;
@@ -183,17 +149,17 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             }
           />
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={openEdit}>
+            <DropdownMenuItem onSelect={edit.openDialog}>
               <PencilLineIcon />
               Edit
             </DropdownMenuItem>
             {canChangeSource && (
-              <DropdownMenuItem onSelect={openSource}>
+              <DropdownMenuItem onSelect={source.openDialog}>
                 <LandmarkIcon />
                 Change account
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onSelect={openDuplicate}>
+            <DropdownMenuItem onSelect={duplicate.openDialog}>
               <CopyIcon />
               Duplicate
             </DropdownMenuItem>
@@ -212,12 +178,12 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
                 Undo transfer
               </DropdownMenuItem>
             ) : (
-              <DropdownMenuItem onSelect={openTransfer}>
+              <DropdownMenuItem onSelect={transferDialog.openDialog}>
                 <BanknoteIcon />
                 Mark as transfer
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onSelect={openReminder}>
+            <DropdownMenuItem onSelect={reminder.openDialog}>
               <BellPlusIcon />
               Set reminder
             </DropdownMenuItem>
@@ -240,9 +206,9 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      {editMounted && (
+      {edit.mounted && (
         <TransactionFormDialog
-          key={editKey}
+          key={edit.key}
           txId={tx.id}
           seed={{
             kind: tx.kind,
@@ -254,18 +220,18 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             occurredOn: tx.occurred_on,
           }}
           locked={lockAmountFields}
-          open={editOpen}
-          onOpenChange={setEditOpen}
+          open={edit.open}
+          onOpenChange={edit.setOpen}
           title="Edit transaction"
           description="Update the details for this transaction."
           submitLabel="Save"
           successMessage="Saved"
         />
       )}
-      {reminderMounted && (
+      {reminder.mounted && (
         <ReminderForm
-          open={reminderOpen}
-          onOpenChange={setReminderOpen}
+          open={reminder.open}
+          onOpenChange={reminder.setOpen}
           title="Set a reminder"
           seed={{
             label: reminderTitle,
@@ -279,25 +245,25 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           }}
         />
       )}
-      {sourceMounted && (
+      {source.mounted && (
         <SourceEditor
           txId={tx.id}
           txSource={tx.source}
-          open={sourceOpen}
-          onOpenChange={setSourceOpen}
+          open={source.open}
+          onOpenChange={source.setOpen}
         />
       )}
-      {transferMounted && (
+      {transferDialog.mounted && (
         <MarkTransferDialog
           txId={tx.id}
           txSource={tx.source}
-          open={transferOpen}
-          onOpenChange={setTransferOpen}
+          open={transferDialog.open}
+          onOpenChange={transferDialog.setOpen}
         />
       )}
-      {duplicateMounted && (
+      {duplicate.mounted && (
         <TransactionFormDialog
-          key={duplicateKey}
+          key={duplicate.key}
           seed={{
             kind: tx.kind,
             amount: tx.amount_original,
@@ -307,8 +273,8 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             tags: tx.tags,
             occurredOn: tx.occurred_on,
           }}
-          open={duplicateOpen}
-          onOpenChange={setDuplicateOpen}
+          open={duplicate.open}
+          onOpenChange={duplicate.setOpen}
           title="Duplicate transaction"
           description="Creates a new transaction prefilled from this one."
           submitLabel="Duplicate"
