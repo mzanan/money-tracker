@@ -1,11 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { usePresence } from "@/hooks/usePresence";
 import { useSettings } from "@/hooks/useSettings";
 import { monthBounds, oldestYearMonthFrom, shiftYearMonth } from "@/lib/dates";
-import { cn } from "@/lib/utils";
 
 import type { Location, RecurringPayment, Transaction } from "@/types/db";
 
@@ -122,22 +120,29 @@ export function MonthDashboard({
   );
 
   const panelOpen = c.panel !== "none";
-  const panel = usePresence(panelOpen);
   const [lastPanel, setLastPanel] =
     useState<Exclude<PanelMode, "none">>("filters");
   if (c.panel !== "none" && c.panel !== lastPanel) {
     setLastPanel(c.panel);
   }
+  const [panelMounted, setPanelMounted] = useState(false);
+  if (panelOpen && !panelMounted) {
+    setPanelMounted(true);
+  }
+  // Mounting the Drawer already open skips its closed frame, so the enter
+  // transition has nothing to animate from and it just pops open. Mount
+  // closed, then flip open a tick later once the browser has painted that
+  // closed frame.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  useEffect(() => {
+    if (!panelMounted) return;
+    const raf = requestAnimationFrame(() => setDrawerOpen(panelOpen));
+    return () => cancelAnimationFrame(raf);
+  }, [panelMounted, panelOpen]);
   const shownPanel = c.panel !== "none" ? c.panel : lastPanel;
 
   return (
-    <div
-      className={cn(
-        "mx-auto w-full max-w-xl",
-        panel.rendered &&
-          "lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,34rem)_minmax(0,24rem)] lg:items-start lg:gap-5",
-      )}
-    >
+    <div className="mx-auto w-full max-w-xl">
       <div className="grid min-w-0 gap-5 *:min-w-0">
         <UpcomingBanner
           reminders={reminders}
@@ -191,7 +196,7 @@ export function MonthDashboard({
         </div>
       </div>
 
-      {panel.rendered && (
+      {panelMounted && (
         <DashboardPanel
           title={
             shownPanel === "filters"
@@ -200,7 +205,7 @@ export function MonthDashboard({
                 ? "Calendar"
                 : "Budget"
           }
-          state={panel.state}
+          open={drawerOpen}
           onClose={c.closePanel}
         >
           {shownPanel === "filters" ? (
