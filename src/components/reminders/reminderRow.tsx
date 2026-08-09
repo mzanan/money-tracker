@@ -100,7 +100,7 @@ export function ReminderRow({
             </span>
             <span
               className={cn(
-                "shrink-0 text-[11px] font-medium tabular-nums",
+                "shrink-0 text-caption font-medium tabular-nums",
                 tone,
               )}
             >

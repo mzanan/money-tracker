@@ -169,6 +169,9 @@
 @utility text-meta {
   @apply text-[11px] tracking-wide uppercase;
 }
+@utility text-caption {
+  @apply text-[11px];
+}
 
 @layer utilities {
   .scrollbar-thin {

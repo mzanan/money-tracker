@@ -110,7 +110,7 @@ export function SpendingBreakdown(props: Props) {
                   {hideAmounts
                     ? HIDDEN_AMOUNT
                     : formatMoney(item.amount, baseCurrency)}
-                  <span className="text-muted-foreground ml-1.5 text-[11px] font-normal">
+                  <span className="text-muted-foreground ml-1.5 text-caption font-normal">
                     {Math.round(item.pct)}%
                   </span>
                 </span>

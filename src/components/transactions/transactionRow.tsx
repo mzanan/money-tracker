@@ -104,7 +104,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             : formatMoney(tx.amount_original, tx.currency_original)}
         </span>
         {showConverted && (
-          <span className="text-muted-foreground mt-0.5 text-[11px] tabular-nums">
+          <span className="text-muted-foreground mt-0.5 text-caption tabular-nums">
             {formatMoney(tx.amount_original, tx.currency_original)}
           </span>
         )}

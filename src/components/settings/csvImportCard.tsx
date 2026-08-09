@@ -120,7 +120,7 @@ export function CsvImportCard({
                 <span className="text-sm font-medium">
                   Replace previously imported rows in this source
                 </span>
-                <span className="text-muted-foreground text-[11px]">
+                <span className="text-muted-foreground text-caption">
                   Deletes only CSV-imported transactions under &quot;
                   {csv.source || "this source"}&quot; before importing. Manual
                   entries and screenshot imports are kept.
