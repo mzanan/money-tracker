@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AI_PROVIDERS, type AiProvider } from "@/config/aiProviders";
+import { AI_PROVIDERS, type AiProvider } from "@/lib/constants/aiProviders";
 
 import { useAssistantKeyForm } from "./useAssistantKeyForm";
 

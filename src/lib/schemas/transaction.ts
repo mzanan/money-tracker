@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { isSupportedCurrency } from "@/config/currencies";
+import { isSupportedCurrency } from "@/lib/constants/currencies";
 
 export const createTransactionSchema = z.object({
   kind: z.enum(["income", "expense"]),

@@ -8,7 +8,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
-import { CURRENCIES } from "@/config/currencies";
+import { CURRENCIES } from "@/lib/constants/currencies";
 import { labelForSource } from "@/lib/constants/sources";
 
 import { Badge } from "@/components/ui/badge";
