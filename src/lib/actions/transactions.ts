@@ -163,15 +163,20 @@ export async function updateTransaction(
     .limit(1)
     .then((rows) => rows[0]);
   if (!tx) return { ok: false, error: "Transaction not found" };
-  if (
-    tx.transfer_group &&
-    (tx.kind !== parsed.data.kind ||
-      tx.amount_original !== parsed.data.amount ||
-      tx.currency_original !== parsed.data.currency)
-  ) {
+  const amountFieldsChanged =
+    tx.kind !== parsed.data.kind ||
+    tx.amount_original !== parsed.data.amount ||
+    tx.currency_original !== parsed.data.currency;
+  if (tx.transfer_group && amountFieldsChanged) {
     return {
       ok: false,
       error: "Undo the transfer before editing amount, currency, or kind",
+    };
+  }
+  if (kindOfSource(tx.source) === "api" && amountFieldsChanged) {
+    return {
+      ok: false,
+      error: "Amount, currency and kind are synced automatically, not editable",
     };
   }
 
@@ -192,60 +197,6 @@ export async function updateTransaction(
           eq(transactions.user_id, user.id),
         ),
       );
-    revalidatePath("/", "layout");
-    return { ok: true };
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
-    };
-  }
-}
-
-export async function updateTransactionTags(
-  id: string,
-  tags: string[],
-): Promise<ActionResult> {
-  const user = await getUser();
-  if (!user) return { ok: false, error: "Not authenticated" };
-
-  const normalized = normalizeTags(tags);
-  if (normalized.some((tag) => tag.length > 40)) {
-    return { ok: false, error: "Tags must be 40 characters or fewer" };
-  }
-
-  try {
-    await db
-      .update(transactions)
-      .set({ tags: normalized })
-      .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)));
-    revalidatePath("/", "layout");
-    return { ok: true };
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
-    };
-  }
-}
-
-export async function updateTransactionNote(
-  id: string,
-  note: string,
-): Promise<ActionResult> {
-  const user = await getUser();
-  if (!user) return { ok: false, error: "Not authenticated" };
-
-  const trimmed = note.trim();
-  if (trimmed.length > 280) {
-    return { ok: false, error: "Description must be 280 characters or fewer" };
-  }
-
-  try {
-    await db
-      .update(transactions)
-      .set({ note: trimmed || null })
-      .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)));
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
