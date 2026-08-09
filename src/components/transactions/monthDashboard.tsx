@@ -1,10 +1,5 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-
-import { useSettings } from "@/hooks/useSettings";
-import { monthBounds, oldestYearMonthFrom, shiftYearMonth } from "@/lib/dates";
-
 import type { Location, RecurringPayment, Transaction } from "@/types/db";
 
 import { UpcomingBanner } from "@/components/reminders/upcomingBanner";
@@ -19,11 +14,7 @@ import { FiltersPanel } from "./filtersPanel";
 import { MonthView } from "./monthView";
 import { QuickAddForm } from "./quickAddForm";
 import { SourceFilter } from "./sourceFilter";
-import { useDashboardControls } from "./useDashboardControls";
-import type { PanelMode } from "./useDashboardControls";
-import { useDaySpend } from "./useDaySpend";
-
-import type { HeroView } from "./balanceHero";
+import { useMonthDashboard } from "./useMonthDashboard";
 
 interface Props {
   yearMonth: string;
@@ -38,7 +29,7 @@ interface Props {
 }
 
 export function MonthDashboard({
-  yearMonth: initialYearMonth,
+  yearMonth,
   lifetimeTransactions,
   sources,
   csvSources,
@@ -48,98 +39,29 @@ export function MonthDashboard({
   today,
   recentTags = null,
 }: Props) {
-  const settings = useSettings();
-  const [visibleYearMonth, setVisibleYearMonth] = useState(initialYearMonth);
-
-  const monthTransactions = useMemo(() => {
-    const [start, end] = monthBounds(visibleYearMonth);
-    return lifetimeTransactions
-      .filter((tx) => tx.occurred_on >= start && tx.occurred_on <= end)
-      .slice()
-      .sort((a, b) => {
-        if (a.occurred_on !== b.occurred_on) {
-          return a.occurred_on < b.occurred_on ? 1 : -1;
-        }
-        return (a.occurred_at ?? "") < (b.occurred_at ?? "") ? 1 : -1;
-      });
-  }, [lifetimeTransactions, visibleYearMonth]);
-
-  const todayYearMonth = today.slice(0, 7);
-  const oldestYearMonth = useMemo(
-    () => oldestYearMonthFrom(lifetimeTransactions),
-    [lifetimeTransactions],
-  );
-  const hasOlder =
-    oldestYearMonth !== null &&
-    shiftYearMonth(visibleYearMonth, -1) >= oldestYearMonth;
-  const hasNewer = visibleYearMonth < todayYearMonth;
-
-  function shiftMonth(delta: number) {
-    setVisibleYearMonth((current) => {
-      const next = shiftYearMonth(current, delta);
-      if (delta < 0 && oldestYearMonth !== null && next < oldestYearMonth) {
-        return current;
-      }
-      if (delta > 0 && next > todayYearMonth) return current;
-      return next;
-    });
-  }
-
-  const c = useDashboardControls({
-    monthTransactions,
+  const {
+    baseCurrency,
+    visibleYearMonth,
+    hasOlder,
+    hasNewer,
+    shiftMonth,
+    c,
+    view,
+    setView,
+    daySpend,
+    isDaily,
+    breakdownTransactions,
+    feedTransactions,
+    panelMounted,
+    drawerOpen,
+    shownPanel,
+  } = useMonthDashboard({
+    yearMonth,
     lifetimeTransactions,
-    reminders,
     places,
-  });
-
-  const [view, setView] = useState<HeroView>("monthly");
-  const daySpend = useDaySpend({
-    yearMonth: visibleYearMonth,
-    transactions: c.sourceFilteredMonth,
+    reminders,
     today,
-    includeTransfers: c.includeTransfers,
   });
-  const isDaily = view === "daily";
-
-  const breakdownTransactions = useMemo(
-    () =>
-      isDaily
-        ? c.sourceFilteredMonth.filter(
-            (tx) => tx.occurred_on === daySpend.selectedDate,
-          )
-        : c.sourceFilteredMonth,
-    [isDaily, c.sourceFilteredMonth, daySpend.selectedDate],
-  );
-
-  const feedTransactions = useMemo(
-    () =>
-      isDaily
-        ? c.monthList.filter((tx) => tx.occurred_on === daySpend.selectedDate)
-        : c.monthList,
-    [isDaily, c.monthList, daySpend.selectedDate],
-  );
-
-  const panelOpen = c.panel !== "none";
-  const [lastPanel, setLastPanel] =
-    useState<Exclude<PanelMode, "none">>("filters");
-  if (c.panel !== "none" && c.panel !== lastPanel) {
-    setLastPanel(c.panel);
-  }
-  const [panelMounted, setPanelMounted] = useState(false);
-  if (panelOpen && !panelMounted) {
-    setPanelMounted(true);
-  }
-  // Mounting the Drawer already open skips its closed frame, so the enter
-  // transition has nothing to animate from and it just pops open. Mount
-  // closed, then flip open a tick later once the browser has painted that
-  // closed frame.
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  useEffect(() => {
-    if (!panelMounted) return;
-    const raf = requestAnimationFrame(() => setDrawerOpen(panelOpen));
-    return () => cancelAnimationFrame(raf);
-  }, [panelMounted, panelOpen]);
-  const shownPanel = c.panel !== "none" ? c.panel : lastPanel;
 
   return (
     <div className="mx-auto w-full max-w-xl">
@@ -210,7 +132,7 @@ export function MonthDashboard({
         >
           {shownPanel === "filters" ? (
             <FiltersPanel
-              baseCurrency={settings.base_currency}
+              baseCurrency={baseCurrency}
               minInput={c.minInput}
               setMinInput={c.setMinInput}
               maxInput={c.maxInput}
