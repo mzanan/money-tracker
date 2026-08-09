@@ -1,7 +1,6 @@
 "use client";
 
 import { CURRENCIES } from "@/config/currencies";
-import type { useCsvImport } from "@/hooks/useCsvImport";
 import type { DateFormat, SignConvention } from "@/lib/csvPresets";
 
 import { Input } from "@/components/ui/input";
@@ -17,6 +16,7 @@ import {
 import { AccountNamePicker } from "./accountNamePicker";
 import { HeaderSelect } from "./headerSelect";
 import { OptionalHeaderSelect } from "./optionalHeaderSelect";
+import type { useCsvImport } from "../useCsvImport";
 
 export function MappingForm({
   csv,
