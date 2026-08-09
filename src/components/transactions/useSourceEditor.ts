@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
+import { useAccountOptions } from "./useAccountOptions";
 import { useServerAction } from "@/hooks/useServerAction";
 import { updateTransactionSource } from "@/lib/actions/transactions";
-import { getTransferAccountOptions } from "@/lib/actions/transfers";
 
 export function useSourceEditor({
   txId,
@@ -18,17 +18,8 @@ export function useSourceEditor({
   onOpenChange: (open: boolean) => void;
 }) {
   const { run, pending } = useServerAction();
-  const [sources, setSources] = useState<string[] | null>(null);
   const [selected, setSelected] = useState("");
-
-  useEffect(() => {
-    if (!open) return;
-    getTransferAccountOptions(txSource).then((result) => {
-      if (!result.ok) return;
-      setSources(result.data!.sources);
-      setSelected("");
-    });
-  }, [open, txSource]);
+  const sources = useAccountOptions(txSource, open, () => setSelected(""));
 
   function submit() {
     if (!selected) return;

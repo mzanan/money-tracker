@@ -2,8 +2,7 @@
 
 import { Loader2Icon } from "lucide-react";
 
-import { labelForSource } from "@/lib/constants/sources";
-
+import { AccountSelect } from "./accountSelect";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,13 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 import { useMarkTransferDialog } from "./useMarkTransferDialog";
 
@@ -46,28 +38,12 @@ export function MarkTransferDialog({
             matching entry there and both are left out of your totals.
           </DialogDescription>
         </DialogHeader>
-        {sources === null ? (
-          <p className="text-muted-foreground flex items-center gap-2 text-sm">
-            <Loader2Icon className="size-4 animate-spin" /> Loading accounts…
-          </p>
-        ) : sources.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            No other account to pick. Import or add one first.
-          </p>
-        ) : (
-          <Select value={selected} onValueChange={setSelected}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select account" />
-            </SelectTrigger>
-            <SelectContent>
-              {sources.map((source) => (
-                <SelectItem key={source} value={source}>
-                  {labelForSource(source)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        <AccountSelect
+          sources={sources}
+          value={selected}
+          onValueChange={setSelected}
+          emptyMessage="No other account to pick. Import or add one first."
+        />
         <Button disabled={!selected || pending} onClick={submit}>
           {pending && <Loader2Icon className="animate-spin" />}
           Confirm

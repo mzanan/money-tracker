@@ -2,8 +2,7 @@
 
 import { Loader2Icon } from "lucide-react";
 
-import { labelForSource } from "@/lib/constants/sources";
-
+import { AccountSelect } from "./accountSelect";
 import { Button } from "@/components/ui/button";
 import { CurrencySelect } from "@/components/ui/currencySelect";
 import {
@@ -16,13 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { TagChip } from "@/components/ui/tagChip";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -128,25 +120,12 @@ export function TransactionFormDialog({
           {!txId && (
             <div className="grid gap-1.5">
               <Label htmlFor="duplicate-source">Account</Label>
-              {sourceOptions === null ? (
-                <p className="text-muted-foreground flex items-center gap-2 text-sm">
-                  <Loader2Icon className="size-4 animate-spin" /> Loading
-                  accounts…
-                </p>
-              ) : (
-                <Select value={source} onValueChange={setSource}>
-                  <SelectTrigger id="duplicate-source">
-                    <SelectValue placeholder="Select account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sourceOptions.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {labelForSource(s)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <AccountSelect
+                id="duplicate-source"
+                sources={sourceOptions}
+                value={source}
+                onValueChange={setSource}
+              />
             </div>
           )}
 
