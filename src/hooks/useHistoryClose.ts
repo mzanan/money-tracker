@@ -9,13 +9,13 @@ export function useHistoryClose(
   onClose: () => void,
 ): void {
   const onCloseRef = useRef(onClose);
-  // Cleanup's own `history.back()` fires an async popstate. Under
-  // StrictMode's mount->cleanup->mount, a fresh onPop is already listening
-  // by the time that popstate arrives and would otherwise treat it as a
-  // real back-press and close what was just re-opened. This ref survives
-  // the remount (refs aren't reset by cleanup) so the next onPop can tell
-  // it was self-triggered and ignore it.
-  const selfTriggeredRef = useRef(false);
+  // StrictMode's dev-only mount->cleanup->mount re-runs this effect
+  // synchronously (before any timer fires), so the remount cancels the
+  // pending cleanup below before it ever calls history.back(). That means a
+  // StrictMode remount never triggers history.back() at all, so there's no
+  // self-triggered popstate to mistake for a real back-press, and a genuine
+  // close (no remount) still cleans up its pushed entry once the timer runs.
+  const cleanupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -24,21 +24,23 @@ export function useHistoryClose(
   useEffect(() => {
     if (!active) return;
 
+    if (cleanupTimeoutRef.current !== null) {
+      clearTimeout(cleanupTimeoutRef.current);
+      cleanupTimeoutRef.current = null;
+    }
     window.history.pushState({ [STATE_KEY]: true }, "");
     function onPop() {
-      if (selfTriggeredRef.current) {
-        selfTriggeredRef.current = false;
-        return;
-      }
       onCloseRef.current();
     }
     window.addEventListener("popstate", onPop);
     return () => {
       window.removeEventListener("popstate", onPop);
-      if (window.history.state?.[STATE_KEY]) {
-        selfTriggeredRef.current = true;
-        window.history.back();
-      }
+      cleanupTimeoutRef.current = setTimeout(() => {
+        cleanupTimeoutRef.current = null;
+        if (window.history.state?.[STATE_KEY]) {
+          window.history.back();
+        }
+      }, 0);
     };
   }, [active]);
 }
