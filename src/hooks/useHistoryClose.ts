@@ -9,12 +9,13 @@ export function useHistoryClose(
   onClose: () => void,
 ): void {
   const onCloseRef = useRef(onClose);
-  // StrictMode's dev-only mount->cleanup->mount re-runs this effect
-  // synchronously (before any timer fires), so the remount cancels the
-  // pending cleanup below before it ever calls history.back(). That means a
-  // StrictMode remount never triggers history.back() at all, so there's no
-  // self-triggered popstate to mistake for a real back-press, and a genuine
-  // close (no remount) still cleans up its pushed entry once the timer runs.
+  // A StrictMode remount, or a real close immediately followed by a
+  // reopen, both re-run this effect before the deferred cleanup below has
+  // fired. Cancelling that pending history.back() alone isn't enough: it
+  // still leaves the entry it would have popped sitting in the stack,
+  // un-consumed. Reusing that entry (skip pushState when already on it)
+  // instead of always pushing a new one avoids ever creating that orphan,
+  // so a later close only ever has one entry of its own to pop.
   const cleanupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -28,7 +29,9 @@ export function useHistoryClose(
       clearTimeout(cleanupTimeoutRef.current);
       cleanupTimeoutRef.current = null;
     }
-    window.history.pushState({ [STATE_KEY]: true }, "");
+    if (!window.history.state?.[STATE_KEY]) {
+      window.history.pushState({ [STATE_KEY]: true }, "");
+    }
     function onPop() {
       onCloseRef.current();
     }
