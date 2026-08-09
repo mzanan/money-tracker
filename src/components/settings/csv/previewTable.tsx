@@ -1,5 +1,3 @@
-"use client";
-
 import type { CsvRow } from "@/lib/actions/csvImport";
 
 export function PreviewTable({

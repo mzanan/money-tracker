@@ -2,7 +2,7 @@
 
 import { CURRENCIES } from "@/config/currencies";
 import type { useCsvImport } from "@/hooks/useCsvImport";
-import type { DateFormat, SignConvention } from "@/lib/csvPresets";
+import type { DateFormat, SignConvention } from "@/lib/csv/presets";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

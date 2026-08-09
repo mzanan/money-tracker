@@ -8,6 +8,8 @@ import { formatMoney } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { CanceledPair } from "@/lib/cancellations";
 
+import { IconCircle } from "@/components/ui/iconCircle";
+
 import { TransactionRow } from "./transactionRow";
 
 export function CanceledGroup({ pair }: { pair: CanceledPair }) {
@@ -24,9 +26,9 @@ export function CanceledGroup({ pair }: { pair: CanceledPair }) {
         aria-expanded={open}
         className="hover:bg-surface-2/60 focus-visible:ring-ring flex w-full cursor-pointer items-center gap-3 rounded-2xl px-3 py-3 text-left opacity-70 transition-colors focus-visible:ring-2 focus-visible:outline-none"
       >
-        <span className="bg-surface-2 text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-full">
+        <IconCircle className="bg-surface-2 text-muted-foreground size-9">
           <Undo2Icon className="size-4" />
-        </span>
+        </IconCircle>
         <span className="min-w-0 flex-1">
           <span className="text-foreground block truncate text-sm font-medium">
             {title}
