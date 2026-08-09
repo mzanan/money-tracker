@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { createReminder, updateReminder } from "@/lib/actions/reminders";
-import { isValidAmountForCurrency } from "@/lib/currency";
+import { amountValidationError } from "@/lib/currency";
 import { computeNextDue } from "@/lib/reminders";
 
 import type { RecurringFrequency, RecurringPayment } from "@/types/db";
@@ -119,13 +119,12 @@ export function useReminderForm({
 
   function submit() {
     const parsedAmount = amount.trim() ? Number(amount) : null;
-    if (
-      parsedAmount &&
-      parsedAmount > 0 &&
-      currency &&
-      !isValidAmountForCurrency(parsedAmount, currency)
-    ) {
-      toast.error(`${currency} has no decimals. Enter a whole number.`);
+    const amountError =
+      parsedAmount && parsedAmount > 0 && currency
+        ? amountValidationError(parsedAmount, currency)
+        : null;
+    if (amountError) {
+      toast.error(amountError);
       return;
     }
     const payload = {
