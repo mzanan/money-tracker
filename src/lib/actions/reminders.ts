@@ -3,7 +3,7 @@
 import { and, desc, eq, isNull, notLike, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-import { isValidAmountForCurrency } from "@/lib/currency";
+import { amountValidationError } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { recurring_payments, transactions, user_settings } from "@/lib/db/schema";
 import { getRates } from "@/lib/rates";
@@ -32,9 +32,7 @@ function reminderAmountError(
   currency: string | null | undefined,
 ): string | null {
   if (amount == null || !currency) return null;
-  return isValidAmountForCurrency(amount, currency)
-    ? null
-    : `${currency} has no decimals. Enter a whole number.`;
+  return amountValidationError(amount, currency);
 }
 
 export async function createReminder(

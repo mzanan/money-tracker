@@ -30,6 +30,15 @@ export function isValidAmountForCurrency(
   return decimals > 0 || Number.isInteger(amount);
 }
 
+export function amountValidationError(
+  amount: number,
+  code: string,
+): string | null {
+  return isValidAmountForCurrency(amount, code)
+    ? null
+    : `${code} has no decimals. Enter a whole number.`;
+}
+
 export function parseAmountInput(value: string): number | null {
   const num = Number(value.replace(/\s/g, "").replace(",", "."));
   return Number.isFinite(num) && num > 0 ? num : null;
@@ -43,11 +52,9 @@ export function parseAndRoundAmount(
   if (numericAmount === null) {
     return { ok: false, error: "Enter an amount" };
   }
-  if (!isValidAmountForCurrency(numericAmount, code)) {
-    return {
-      ok: false,
-      error: `${code} has no decimals. Enter a whole number.`,
-    };
+  const error = amountValidationError(numericAmount, code);
+  if (error) {
+    return { ok: false, error };
   }
   return { ok: true, amount: roundForCurrency(numericAmount, code) };
 }

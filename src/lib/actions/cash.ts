@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { isSupportedCurrency } from "@/config/currencies";
 import { kindOfSource, labelForSource } from "@/lib/constants/sources";
-import { isValidAmountForCurrency } from "@/lib/currency";
+import { amountValidationError } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 import { RatesUnavailableError } from "@/lib/rates";
@@ -35,11 +35,9 @@ export async function recordCashWithdrawal(
   if (kindOfSource(source) === "api") {
     return { ok: false, error: "Can't withdraw from a synced account" };
   }
-  if (!isValidAmountForCurrency(amount, currency)) {
-    return {
-      ok: false,
-      error: `${currency} has no decimals. Enter a whole number.`,
-    };
+  const withdrawalAmountError = amountValidationError(amount, currency);
+  if (withdrawalAmountError) {
+    return { ok: false, error: withdrawalAmountError };
   }
 
   const user = await getUser();
@@ -126,11 +124,9 @@ export async function recordCashExchange(
     [outAmount, outCurrency],
     [inAmount, inCurrency],
   ] as const) {
-    if (!isValidAmountForCurrency(amount, currency)) {
-      return {
-        ok: false,
-        error: `${currency} has no decimals. Enter a whole number.`,
-      };
+    const exchangeAmountError = amountValidationError(amount, currency);
+    if (exchangeAmountError) {
+      return { ok: false, error: exchangeAmountError };
     }
   }
 
