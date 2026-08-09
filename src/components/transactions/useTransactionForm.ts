@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { useAccountOptions } from "./useAccountOptions";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import {
@@ -10,7 +11,6 @@ import {
   getUsedTags,
   updateTransaction,
 } from "@/lib/actions/transactions";
-import { getTransferAccountOptions } from "@/lib/actions/transfers";
 import { kindOfSource } from "@/lib/constants/sources";
 import { parseAndRoundAmount } from "@/lib/currency";
 import { canonicalTag, tagKey } from "@/lib/tags";
@@ -48,7 +48,6 @@ export function useTransactionForm({
   const settings = useSettings();
   const { run, pending } = useServerAction();
 
-  const [sources, setSources] = useState<string[] | null>(null);
   const [kind, setKind] = useState<Kind>(seed.kind);
   const [amount, setAmount] = useState(seed.amount.toString());
   const [currency, setCurrency] = useState(seed.currency);
@@ -61,12 +60,7 @@ export function useTransactionForm({
   const [usedTags, setUsedTags] = useState<string[] | null>(null);
   const [date, setDate] = useState(seed.occurredOn);
 
-  useEffect(() => {
-    if (!open || txId) return;
-    getTransferAccountOptions("").then((result) => {
-      if (result.ok) setSources(result.data!.sources);
-    });
-  }, [open, txId]);
+  const sources = useAccountOptions("", open && !txId);
 
   useEffect(() => {
     if (!open) return;
