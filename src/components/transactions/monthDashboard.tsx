@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useSettings } from "@/hooks/useSettings";
 import { monthBounds, oldestYearMonthFrom, shiftYearMonth } from "@/lib/dates";
@@ -129,6 +129,16 @@ export function MonthDashboard({
   if (panelOpen && !panelMounted) {
     setPanelMounted(true);
   }
+  // Mounting the Drawer already open skips its closed frame, so the enter
+  // transition has nothing to animate from and it just pops open. Mount
+  // closed, then flip open a tick later once the browser has painted that
+  // closed frame.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  useEffect(() => {
+    if (!panelMounted) return;
+    const raf = requestAnimationFrame(() => setDrawerOpen(panelOpen));
+    return () => cancelAnimationFrame(raf);
+  }, [panelMounted, panelOpen]);
   const shownPanel = c.panel !== "none" ? c.panel : lastPanel;
 
   return (
@@ -195,7 +205,7 @@ export function MonthDashboard({
                 ? "Calendar"
                 : "Budget"
           }
-          open={panelOpen}
+          open={drawerOpen}
           onClose={c.closePanel}
         >
           {shownPanel === "filters" ? (
