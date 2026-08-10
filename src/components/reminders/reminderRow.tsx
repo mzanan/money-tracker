@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { IconCircle } from "@/components/ui/iconCircle";
+import { TappableRow } from "@/components/ui/tappableRow";
 
 import { TransactionFormDialog } from "@/components/transactions/transactionFormDialog";
 
@@ -66,7 +67,7 @@ export function ReminderRow({
   const runAfterMenuClose = useDeferredMenuAction();
 
   return (
-    <li className="hover:bg-surface-2/60 group flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors">
+    <TappableRow as="li" className="group">
       <button
         type="button"
         onClick={() => setEditOpen(true)}
@@ -202,6 +203,6 @@ export function ReminderRow({
           onCreated={handleExpenseCreated}
         />
       )}
-    </li>
+    </TappableRow>
   );
 }

@@ -9,6 +9,8 @@ import { formatDayLong } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import type { DayTotalsWithPairs } from "@/lib/cancellations";
 
+import { TappableRow } from "@/components/ui/tappableRow";
+
 import { CanceledGroup } from "./canceledGroup";
 import { TransactionRow } from "./transactionRow";
 
@@ -34,11 +36,12 @@ export function DayGroup({
 
   return (
     <section className="grid min-w-0">
-      <button
+      <TappableRow
         type="button"
+        justify="between"
         onClick={onToggle ?? (() => setInternalOpen((current) => !current))}
         aria-expanded={open}
-        className="hover:bg-surface-2/60 focus-visible:ring-ring flex w-full cursor-pointer items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        className="focus-visible:ring-ring w-full cursor-pointer focus-visible:ring-2 focus-visible:outline-none"
       >
         <span className="flex min-w-0 items-center gap-2">
           <ChevronRightIcon
@@ -68,7 +71,7 @@ export function DayGroup({
             </span>
           )}
         </span>
-      </button>
+      </TappableRow>
       {open && (
         <div className="grid min-w-0 gap-px">
           {day.transactions.map((tx) => (
