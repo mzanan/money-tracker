@@ -21,7 +21,7 @@ import {
   CSV_PRESETS,
   CSV_PRESET_BY_ID,
   type CsvMapping,
-} from "@/lib/csvPresets";
+} from "@/lib/csv/presets";
 
 type Mode = "file" | "paste";
 

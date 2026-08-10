@@ -5,7 +5,7 @@ import {
   OK_STATUSES,
 } from "@/lib/csv/constants";
 import { parseAmount, parseDate, parseDateTime } from "@/lib/csv/parsing";
-import type { CsvMapping } from "@/lib/csvPresets";
+import type { CsvMapping } from "@/lib/csv/presets";
 
 export type NormalizeResult =
   | { ok: true; row: CsvRow }

@@ -1,7 +1,7 @@
 "use client";
 
 import { CURRENCIES } from "@/lib/constants/currencies";
-import type { DateFormat, SignConvention } from "@/lib/csvPresets";
+import type { DateFormat, SignConvention } from "@/lib/csv/presets";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

@@ -1,4 +1,4 @@
-import type { DateFormat } from "@/lib/csvPresets";
+import type { DateFormat } from "@/lib/csv/presets";
 
 export function parseAmount(raw: string | undefined): number | null {
   if (!raw) return null;

@@ -8,7 +8,7 @@ import type {
   CsvMapping,
   DateFormat,
   SignConvention,
-} from "@/lib/csvPresets";
+} from "@/lib/csv/presets";
 
 export function matchesAny(header: string, patterns: readonly RegExp[]): boolean {
   const lower = header.toLowerCase();
