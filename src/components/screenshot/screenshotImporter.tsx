@@ -3,8 +3,6 @@
 import { useRef } from "react";
 import { ImageUpIcon, Loader2Icon } from "lucide-react";
 
-import { useScreenshotImport } from "@/hooks/useScreenshotImport";
-import type { CandidateMatch } from "@/hooks/useScreenshotImport";
 import type { DetectedTransaction } from "@/lib/ai/screenshotExtract";
 import type { ImageImportMode } from "@/lib/imageExtract";
 
@@ -12,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 import { DetectedItemCard } from "./detectedItemCard";
+import { useScreenshotImport } from "./useScreenshotImport";
+import type { CandidateMatch } from "./useScreenshotImport";
 
 interface Props {
   initialItems: DetectedTransaction[] | null;
