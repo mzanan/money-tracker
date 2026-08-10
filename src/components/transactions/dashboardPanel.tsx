@@ -26,7 +26,7 @@ export function DashboardPanel({
 
   return (
     <Drawer open={open} onOpenChange={(next) => !next && onClose()}>
-      <DrawerContent>
+      <DrawerContent className="transition-[transform,opacity,filter]">
         <DrawerHeader className="pb-2">
           <DrawerTitle className="text-eyebrow font-sans">{title}</DrawerTitle>
           <DrawerDescription className="sr-only">
