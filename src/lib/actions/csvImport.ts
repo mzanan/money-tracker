@@ -3,7 +3,7 @@
 import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-import { isSupportedCurrency } from "@/config/currencies";
+import { isSupportedCurrency } from "@/lib/constants/currencies";
 import { isValidAmountForCurrency, roundForCurrency } from "@/lib/currency";
 import { isValidCalendarDate } from "@/lib/dates";
 import { db } from "@/lib/db";

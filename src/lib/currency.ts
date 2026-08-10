@@ -1,4 +1,4 @@
-import { getCurrency } from "@/config/currencies";
+import { getCurrency } from "@/lib/constants/currencies";
 import type { FxRates } from "@/types/db";
 
 export function convert(
