@@ -85,8 +85,8 @@ export function AccountNamePicker({
           aria-invalid={error ? true : undefined}
         />
       )}
-      {error && <p className="text-destructive text-[11px]">{error}</p>}
-      <p className="text-muted-foreground text-[11px]">
+      {error && <p className="text-destructive text-caption">{error}</p>}
+      <p className="text-muted-foreground text-caption">
         Groups these rows in the home filter. Re-importing under the same name
         will not duplicate.
       </p>

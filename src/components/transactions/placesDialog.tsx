@@ -77,7 +77,7 @@ export function PlacesDialog({
           />
           <div className="flex items-center gap-2">
             <label className="grid flex-1 gap-1">
-              <span className="text-muted-foreground text-[11px]">From</span>
+              <span className="text-muted-foreground text-caption">From</span>
               <Input
                 type="date"
                 value={startDate}
@@ -86,7 +86,7 @@ export function PlacesDialog({
               />
             </label>
             <label className="grid flex-1 gap-1">
-              <span className="text-muted-foreground text-[11px]">To</span>
+              <span className="text-muted-foreground text-caption">To</span>
               <Input
                 type="date"
                 value={endDate}
@@ -102,7 +102,7 @@ export function PlacesDialog({
           >
             {create.pending ? <Loader2Icon className="animate-spin" /> : "Add place"}
           </Button>
-          <p className="text-muted-foreground text-[11px]">
+          <p className="text-muted-foreground text-caption">
             Leave a date empty for open ended, e.g. only To for where you were
             before, only From for where you are now.
           </p>

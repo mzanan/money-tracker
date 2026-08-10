@@ -86,13 +86,13 @@ export function CalendarPanel({
           />
         </div>
 
-        <div className="text-muted-foreground flex items-center justify-center gap-4 text-[11px]">
+        <div className="text-muted-foreground flex items-center justify-center gap-4 text-caption">
           <span className="flex items-center gap-1.5">
             <span className="bg-muted-foreground size-1.5 rounded-full" />
             Movements
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-amber-500" />
+            <span className="bg-warning size-1.5 rounded-full" />
             Reminder
           </span>
         </div>

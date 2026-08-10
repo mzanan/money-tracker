@@ -36,7 +36,7 @@ export function CompletedReminderRow({
             {metaSegments.join(" · ")}
           </span>
           {reminder.last_paid_on && (
-            <span className="text-muted-foreground shrink-0 text-[11px] font-medium tabular-nums">
+            <span className="text-muted-foreground shrink-0 text-caption font-medium tabular-nums">
               Paid {formatDateShort(reminder.last_paid_on)}
             </span>
           )}

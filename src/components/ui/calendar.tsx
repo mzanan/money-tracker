@@ -230,7 +230,7 @@ function CalendarDayButton({
           <span className="bg-muted-foreground size-1 rounded-full" />
         )}
         {modifiers.due && (
-          <span className="bg-amber-500 size-1 rounded-full" />
+          <span className="bg-warning size-1 rounded-full" />
         )}
       </span>
     </Button>

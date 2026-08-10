@@ -11,18 +11,9 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
-import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
-import { useServerAction } from "@/hooks/useServerAction";
-import { useSettings } from "@/hooks/useSettings";
-import { deleteTransaction } from "@/lib/actions/transactions";
-import { unmarkTransfer } from "@/lib/actions/transfers";
-import { kindOfSource, labelForSource } from "@/lib/constants/sources";
-import { isSyncedExternalId } from "@/lib/externalIds";
 import { formatMoney } from "@/lib/currency";
 import { computeNextDue } from "@/lib/reminders";
-import { transactionInDisplay } from "@/lib/totals";
 import { cn } from "@/lib/utils";
-import { useUiStore } from "@/stores/uiStore";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -40,51 +31,40 @@ import { MarkTransferDialog } from "./markTransferDialog";
 import { SourceEditor } from "./sourceEditor";
 import { TagChips } from "./tagChips";
 import { TransferBadge } from "./transferBadge";
-import { useDialogState } from "./useDialogState";
+import { useTransactionRow } from "./useTransactionRow";
 
 import type { Transaction } from "@/types/db";
 
 export function TransactionRow({ tx }: { tx: Transaction }) {
-  const settings = useSettings();
-  const remove = useServerAction();
-  const transfer = useServerAction();
-  const runAfterMenuClose = useDeferredMenuAction();
-  const reminder = useDialogState(runAfterMenuClose);
-  const edit = useDialogState(runAfterMenuClose);
-  const transferDialog = useDialogState(runAfterMenuClose);
-  const source = useDialogState(runAfterMenuClose);
-  const duplicate = useDialogState(runAfterMenuClose);
-  const isTransfer = Boolean(tx.transfer_group);
-  const isSynced = kindOfSource(tx.source) === "api";
-  const canDelete = !isSynced && !isTransfer;
-  const lockAmountFields = isSynced || isTransfer;
-  const canChangeSource =
-    !isTransfer && (!isSynced || !isSyncedExternalId(tx.external_id));
-  const txSelectMode = useUiStore((s) => s.txSelectMode);
-  const selectedTxs = useUiStore((s) => s.selectedTxs);
-  const toggleTxSelected = useUiStore((s) => s.toggleTxSelected);
-  const isSelected = selectedTxs.some((t) => t.id === tx.id);
-
-  let inDisplay: number | null;
-  try {
-    inDisplay = transactionInDisplay(tx, settings.base_currency);
-  } catch {
-    inDisplay = null;
-  }
-
-  const sameAsBase = tx.currency_original === settings.base_currency;
-  const sign = tx.kind === "income" ? "+" : "-";
-  const showConverted = !sameAsBase && inDisplay !== null;
-  const sourceLabel = labelForSource(tx.source);
-
-  const avatarSeed = tx.tags[0] || sourceLabel;
-  const reminderTitle = tx.tags[0] || sourceLabel;
-  const description = tx.note?.trim();
+  const {
+    baseCurrency,
+    txSelectMode,
+    isSelected,
+    toggleSelected,
+    avatarSeed,
+    description,
+    isTransfer,
+    sign,
+    inDisplay,
+    showConverted,
+    sourceLabel,
+    reminderTitle,
+    canChangeSource,
+    canDelete,
+    lockAmountFields,
+    reminder,
+    edit,
+    transferDialog,
+    source,
+    duplicate,
+    handleUndoTransfer,
+    handleDelete,
+  } = useTransactionRow(tx);
 
   return (
     <TappableRow
       as="div"
-      onClick={txSelectMode ? () => toggleTxSelected(tx) : undefined}
+      onClick={txSelectMode ? toggleSelected : undefined}
       className={cn(
         "group min-w-0",
         txSelectMode && "cursor-pointer",
@@ -122,11 +102,11 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
         >
           {sign}
           {inDisplay !== null
-            ? formatMoney(inDisplay, settings.base_currency)
+            ? formatMoney(inDisplay, baseCurrency)
             : formatMoney(tx.amount_original, tx.currency_original)}
         </span>
         {showConverted && (
-          <span className="text-muted-foreground mt-0.5 text-[11px] tabular-nums">
+          <span className="text-muted-foreground mt-0.5 text-caption tabular-nums">
             {formatMoney(tx.amount_original, tx.currency_original)}
           </span>
         )}
@@ -166,16 +146,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
               Duplicate
             </DropdownMenuItem>
             {isTransfer ? (
-              <DropdownMenuItem
-                onSelect={() =>
-                  runAfterMenuClose(() =>
-                    transfer.run(() => unmarkTransfer(tx.id), {
-                      confirm: "Undo this transfer?",
-                      success: "Transfer undone",
-                    }),
-                  )
-                }
-              >
+              <DropdownMenuItem onSelect={handleUndoTransfer}>
                 <BanknoteIcon />
                 Undo transfer
               </DropdownMenuItem>
@@ -192,14 +163,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             {canDelete && (
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
-                onSelect={() =>
-                  runAfterMenuClose(() =>
-                    remove.run(() => deleteTransaction(tx.id), {
-                      confirm: "Delete this transaction?",
-                      success: "Deleted",
-                    }),
-                  )
-                }
+                onSelect={handleDelete}
               >
                 <Trash2Icon />
                 Delete

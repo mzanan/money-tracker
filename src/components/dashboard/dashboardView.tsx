@@ -188,7 +188,7 @@ export function DashboardView({
                 </span>
                 <span className="shrink-0 font-semibold tabular-nums">
                   {money(merchant.total)}
-                  <span className="text-muted-foreground ml-1.5 text-[11px] font-normal">
+                  <span className="text-muted-foreground ml-1.5 text-caption font-normal">
                     ×{merchant.count}
                   </span>
                 </span>
