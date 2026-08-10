@@ -2,7 +2,7 @@
 
 import { ArrowRightIcon, Loader2Icon } from "lucide-react";
 
-import { getCurrency } from "@/config/currencies";
+import { getCurrency } from "@/lib/constants/currencies";
 
 import { AmountInput } from "@/components/ui/amountInput";
 import { Button } from "@/components/ui/button";

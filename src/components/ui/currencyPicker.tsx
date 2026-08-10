@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { CheckIcon, SearchIcon } from "lucide-react";
 
-import { CURRENCIES } from "@/config/currencies";
+import { CURRENCIES } from "@/lib/constants/currencies";
 import { cn } from "@/lib/utils";
 
 import { Input } from "@/components/ui/input";

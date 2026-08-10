@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { AI_PROVIDER_IDS } from "@/config/aiProviders";
-import { isSupportedCurrency } from "@/config/currencies";
+import { AI_PROVIDER_IDS } from "@/lib/constants/aiProviders";
+import { isSupportedCurrency } from "@/lib/constants/currencies";
 
 const currencyList = z
   .array(z.string())

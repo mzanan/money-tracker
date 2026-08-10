@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import type { CandidateMatch } from "@/hooks/useScreenshotImport";
+import type { CandidateMatch } from "@/components/screenshot/useScreenshotImport";
 import { previewCandidatesAction } from "@/lib/actions/screenshotImport";
 import type { DetectedTransaction } from "@/lib/ai/screenshotExtract";
 import {

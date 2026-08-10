@@ -10,7 +10,7 @@ import { SHARE_ERROR_CODES, type ShareErrorCode } from "@/lib/screenshotShare";
 import { findCrossSourceCandidates } from "./duplicates";
 import { getUserSources } from "./sources";
 
-import type { CandidateMatch } from "@/hooks/useScreenshotImport";
+import type { CandidateMatch } from "@/components/screenshot/useScreenshotImport";
 
 const SHARE_COOKIE = "mt_share_payload";
 

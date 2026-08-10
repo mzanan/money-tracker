@@ -2,7 +2,7 @@
 
 import { Loader2Icon } from "lucide-react";
 
-import { getCurrency } from "@/config/currencies";
+import { getCurrency } from "@/lib/constants/currencies";
 import { FREQUENCY_OPTIONS } from "@/lib/reminders";
 
 import { AmountInput } from "@/components/ui/amountInput";

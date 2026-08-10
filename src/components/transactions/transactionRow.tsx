@@ -22,6 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { TappableRow } from "@/components/ui/tappableRow";
 import { ReminderForm } from "@/components/reminders/reminderForm";
 
 import { Avatar } from "./avatar";
@@ -61,10 +62,11 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
   } = useTransactionRow(tx);
 
   return (
-    <div
+    <TappableRow
+      as="div"
       onClick={txSelectMode ? toggleSelected : undefined}
       className={cn(
-        "group hover:bg-surface-2/60 flex min-w-0 items-center gap-3 rounded-2xl px-3 py-3 transition-colors",
+        "group min-w-0",
         txSelectMode && "cursor-pointer",
         isSelected && "bg-primary/10 hover:bg-primary/15",
       )}
@@ -245,6 +247,6 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
           successMessage="Duplicated"
         />
       )}
-    </div>
+    </TappableRow>
   );
 }

@@ -19,6 +19,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { TappableRow } from "@/components/ui/tappableRow";
 
 import { TransferBadge } from "./transferBadge";
 
@@ -114,11 +115,12 @@ export function MergeBar() {
                 [first, second],
                 [second, first],
               ].map(([keepTx, removeTx]) => (
-                <button
+                <TappableRow
                   key={keepTx.id}
                   type="button"
+                  bordered
+                  justify="between"
                   onClick={() => keep(keepTx, removeTx)}
-                  className="hover:bg-surface-2/60 border-border flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-colors"
                 >
                   <span className="min-w-0">
                     <span className="flex min-w-0 items-center gap-1.5">
@@ -136,7 +138,7 @@ export function MergeBar() {
                     {keepTx.kind === "expense" ? "-" : "+"}
                     {formatMoney(keepTx.amount_original, keepTx.currency_original)}
                   </span>
-                </button>
+                </TappableRow>
               ))}
             <Button
               variant="ghost"

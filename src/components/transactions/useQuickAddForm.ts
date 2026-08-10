@@ -3,7 +3,7 @@
 import { useId, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
-import { getCurrency } from "@/config/currencies";
+import { getCurrency } from "@/lib/constants/currencies";
 import { useRates } from "@/hooks/useRates";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings, useTimezone } from "@/hooks/useSettings";

@@ -1,7 +1,7 @@
 import { createGoogleGenerativeAI, google } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
 
-import { AI_PROVIDERS, type AiProvider } from "@/config/aiProviders";
+import { AI_PROVIDERS, type AiProvider } from "@/lib/constants/aiProviders";
 
 export interface ChatModelConfig {
   provider: AiProvider | null;

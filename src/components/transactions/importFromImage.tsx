@@ -32,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { IconCircle } from "@/components/ui/iconCircle";
+import { TappableRow } from "@/components/ui/tappableRow";
 import { ScreenshotImporter } from "@/components/screenshot/screenshotImporter";
 
 import { useImportFromImage } from "./useImportFromImage";
@@ -111,11 +112,10 @@ export function ImportFromImage({
             <div className="grid gap-1 px-4 pb-8">
               <div className="pb-2">{freeAiNotice}</div>
               {OPTIONS.map((option) => (
-                <button
+                <TappableRow
                   key={option.mode}
                   type="button"
                   onClick={() => pickMode(option.mode)}
-                  className="hover:bg-surface-2/60 flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors"
                 >
                   <IconCircle className="bg-surface-2 text-foreground">
                     <option.icon className="size-4" />
@@ -128,7 +128,7 @@ export function ImportFromImage({
                       {option.hint}
                     </span>
                   </span>
-                </button>
+                </TappableRow>
               ))}
             </div>
           </DrawerContent>

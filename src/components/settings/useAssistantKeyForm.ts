@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { AI_PROVIDERS, type AiProvider } from "@/config/aiProviders";
+import { AI_PROVIDERS, type AiProvider } from "@/lib/constants/aiProviders";
 import { useServerAction } from "@/hooks/useServerAction";
 import { removeAssistantKey, saveAssistantKey } from "@/lib/actions/settings";
 
