@@ -1,6 +1,6 @@
 "use client";
 
-import { CURRENCIES } from "@/config/currencies";
+import { CURRENCIES } from "@/lib/constants/currencies";
 import type { DateFormat, SignConvention } from "@/lib/csvPresets";
 
 import { Input } from "@/components/ui/input";

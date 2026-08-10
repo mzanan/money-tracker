@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { isSupportedCurrency } from "@/config/currencies";
+import { isSupportedCurrency } from "@/lib/constants/currencies";
 import { kindOfSource, labelForSource } from "@/lib/constants/sources";
 import { amountValidationError } from "@/lib/currency";
 import { db } from "@/lib/db";

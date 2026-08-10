@@ -4,7 +4,7 @@ import { and, eq, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
-import { isSupportedCurrency } from "@/config/currencies";
+import { isSupportedCurrency } from "@/lib/constants/currencies";
 import { normalizeSource } from "@/lib/constants/sources";
 import { isValidAmountForCurrency, roundForCurrency } from "@/lib/currency";
 import { daysBefore, isValidCalendarDate, todayInTz } from "@/lib/dates";
