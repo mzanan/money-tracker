@@ -24,9 +24,6 @@ import {
 import { IconCircle } from "@/components/ui/iconCircle";
 import { TappableRow } from "@/components/ui/tappableRow";
 
-import { TransactionFormDialog } from "@/components/transactions/transactionFormDialog";
-
-import { PayCandidatesDrawer } from "./payCandidatesDrawer";
 import { ReminderForm } from "./reminderForm";
 import { useReminderRow } from "./useReminderRow";
 
@@ -35,35 +32,18 @@ import type { RecurringPayment } from "@/types/db";
 export function ReminderRow({
   reminder,
   today,
+  onMarkPaid,
+  payPending,
+  paySubmitting,
 }: {
   reminder: RecurringPayment;
   today: string;
+  onMarkPaid: () => void;
+  payPending: boolean;
+  paySubmitting: boolean;
 }) {
-  const {
-    editOpen,
-    setEditOpen,
-    payOpen,
-    payDay,
-    payOptions,
-    checking,
-    busy,
-    pending,
-    diff,
-    tone,
-    metaSegments,
-    handleMarkPaid,
-    choosePayDay,
-    confirmPaid,
-    markPaidOnly,
-    handleDelete,
-    setPayOpen,
-    addExpenseOpen,
-    setAddExpenseOpen,
-    addExpenseMounted,
-    addExpenseKey,
-    openAddExpense,
-    handleExpenseCreated,
-  } = useReminderRow(reminder, today);
+  const { editOpen, setEditOpen, pending, diff, tone, metaSegments, handleDelete } =
+    useReminderRow(reminder, today);
   const runAfterMenuClose = useDeferredMenuAction();
 
   return (
@@ -120,12 +100,16 @@ export function ReminderRow({
         <Button
           variant="ghost"
           size="icon-xs"
-          onClick={handleMarkPaid}
-          disabled={busy}
+          onClick={onMarkPaid}
+          disabled={pending || payPending}
           aria-label="Mark paid"
           className="text-muted-foreground hover:text-income"
         >
-          {busy ? <Loader2Icon className="animate-spin" /> : <CheckIcon />}
+          {paySubmitting ? (
+            <Loader2Icon className="animate-spin" />
+          ) : (
+            <CheckIcon />
+          )}
         </Button>
 
         <DropdownMenu>
@@ -165,44 +149,6 @@ export function ReminderRow({
         open={editOpen}
         onOpenChange={setEditOpen}
       />
-
-      <PayCandidatesDrawer
-        open={payOpen}
-        label={reminder.label}
-        today={today}
-        hasAmount={reminder.amount != null}
-        day={payDay}
-        loading={checking}
-        suggested={payOptions?.suggested ?? []}
-        recent={payOptions?.recent ?? []}
-        onChooseDay={choosePayDay}
-        onLink={(transactionId) => confirmPaid(transactionId)}
-        onCreate={openAddExpense}
-        onSkip={markPaidOnly}
-        onClose={() => setPayOpen(false)}
-      />
-
-      {addExpenseMounted && reminder.amount != null && (
-        <TransactionFormDialog
-          key={addExpenseKey}
-          seed={{
-            kind: "expense",
-            amount: reminder.amount,
-            currency: reminder.currency ?? "USD",
-            source: reminder.source ?? "manual",
-            note: reminder.label,
-            tags: [],
-            occurredOn: payDay,
-          }}
-          open={addExpenseOpen}
-          onOpenChange={setAddExpenseOpen}
-          title={`Pay ${reminder.label}`}
-          description="Review the expense before saving. It will be linked to this reminder."
-          submitLabel="Save and mark paid"
-          successMessage="Expense added"
-          onCreated={handleExpenseCreated}
-        />
-      )}
     </TappableRow>
   );
 }

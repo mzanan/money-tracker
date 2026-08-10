@@ -149,6 +149,7 @@ export function MonthDashboard({
             />
           ) : shownPanel === "calendar" ? (
             <CalendarPanel
+              open={drawerOpen}
               yearMonth={visibleYearMonth}
               activityDates={c.activityDates}
               reminderDates={c.reminderDates}

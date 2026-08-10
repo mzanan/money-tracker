@@ -1,33 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import { useServerAction } from "@/hooks/useServerAction";
-import {
-  deleteReminder,
-  getReminderPayOptions,
-  markReminderPaid,
-  type ReminderPaymentCandidate,
-} from "@/lib/actions/reminders";
+import { deleteReminder } from "@/lib/actions/reminders";
 import { daysBetween, reminderMetaSegments } from "@/lib/reminders";
 
 import type { RecurringPayment } from "@/types/db";
 
 export function useReminderRow(reminder: RecurringPayment, today: string) {
   const [editOpen, setEditOpen] = useState(false);
-  const [payOpen, setPayOpen] = useState(false);
-  const [addExpenseOpen, setAddExpenseOpen] = useState(false);
-  const [addExpenseMounted, setAddExpenseMounted] = useState(false);
-  const [addExpenseKey, setAddExpenseKey] = useState(0);
-  const [payDay, setPayDay] = useState(today);
-  const [payOptions, setPayOptions] = useState<{
-    suggested: ReminderPaymentCandidate[];
-    recent: ReminderPaymentCandidate[];
-  } | null>(null);
-  const [checking, setChecking] = useState(false);
   const { run, pending } = useServerAction();
-  const busy = pending || checking;
-  const payRequestRef = useRef(0);
 
   const diff = daysBetween(today, reminder.next_due_on);
   const tone =
@@ -39,74 +22,6 @@ export function useReminderRow(reminder: RecurringPayment, today: string) {
 
   const metaSegments = reminderMetaSegments(reminder);
 
-  async function fetchPayOptions(day: string) {
-    if (reminder.amount == null) return;
-    const requestId = ++payRequestRef.current;
-    setChecking(true);
-    const res = await getReminderPayOptions(reminder.id, day);
-    if (requestId !== payRequestRef.current) return;
-    setChecking(false);
-    setPayOptions(res.ok ? res.data! : { suggested: [], recent: [] });
-  }
-
-  function handleMarkPaid() {
-    setPayDay(today);
-    setPayOptions(null);
-    setPayOpen(true);
-    fetchPayOptions(today);
-  }
-
-  function choosePayDay(day: string) {
-    setPayDay(day);
-    setPayOptions(null);
-    fetchPayOptions(day);
-  }
-
-  function openAddExpense() {
-    setPayOpen(false);
-    setAddExpenseMounted(true);
-    setAddExpenseKey((key) => key + 1);
-    setAddExpenseOpen(true);
-  }
-
-  function handleExpenseCreated(transactionId: string) {
-    confirmPaid(transactionId);
-  }
-
-  function confirmPaid(linkTransactionId?: string) {
-    const day = payDay;
-    setPayOpen(false);
-    run(
-      () =>
-        markReminderPaid(
-          reminder.id,
-          day,
-          linkTransactionId ? { linkTransactionId } : undefined,
-        ),
-      {
-        success: (data) =>
-          data?.completed
-            ? "Last payment, reminder completed"
-            : data?.linked
-              ? "Marked paid, linked to the existing payment"
-              : data?.expenseAdded
-                ? "Marked paid, expense added"
-                : "Marked paid, next due updated",
-      },
-    );
-  }
-
-  function markPaidOnly() {
-    const day = payDay;
-    setPayOpen(false);
-    run(() => markReminderPaid(reminder.id, day, { skipExpense: true }), {
-      success: (data) =>
-        data?.completed
-          ? "Last payment, reminder completed"
-          : "Marked paid, next due updated",
-    });
-  }
-
   function handleDelete() {
     run(() => deleteReminder(reminder.id), {
       confirm: `Delete reminder "${reminder.label}"?`,
@@ -117,26 +32,10 @@ export function useReminderRow(reminder: RecurringPayment, today: string) {
   return {
     editOpen,
     setEditOpen,
-    addExpenseOpen,
-    setAddExpenseOpen,
-    addExpenseMounted,
-    addExpenseKey,
-    openAddExpense,
-    handleExpenseCreated,
-    payOpen,
-    payDay,
-    payOptions,
-    checking,
-    busy,
     pending,
     diff,
     tone,
     metaSegments,
-    handleMarkPaid,
-    choosePayDay,
-    confirmPaid,
-    markPaidOnly,
     handleDelete,
-    setPayOpen,
   };
 }
