@@ -5,7 +5,7 @@ import { AlertTriangleIcon } from "lucide-react";
 import { labelForSource } from "@/lib/constants/sources";
 import { cn } from "@/lib/utils";
 
-import type { CandidateMatch, EditableItem } from "@/hooks/useScreenshotImport";
+import type { CandidateMatch, EditableItem } from "./useScreenshotImport";
 
 export function DuplicateCandidates({
   candidates,

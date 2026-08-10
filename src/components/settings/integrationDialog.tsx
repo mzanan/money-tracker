@@ -1,10 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { Loader2Icon } from "lucide-react";
 
-import { useServerAction } from "@/hooks/useServerAction";
-import { saveIntegration } from "@/lib/actions/integrations";
 import type { IntegrationProvider, IntegrationSummary } from "@/types/db";
 
 import { Button } from "@/components/ui/button";
@@ -26,6 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+
+import { useIntegrationDialog } from "./useIntegrationDialog";
 
 const LOOKBACK_OPTIONS = [
   { value: "30", label: "Last 30 days" },
@@ -49,44 +48,20 @@ export function IntegrationDialog({
   open,
   onOpenChange,
 }: Props) {
-  const isFirstConnect = !integration;
-  // Credentials are never sent to the client. The form starts empty; on edit a
-  // blank field keeps the stored value.
-  const [apiKey, setApiKey] = useState("");
-  const [apiSecret, setApiSecret] = useState("");
-  const [importIncome, setImportIncome] = useState(
-    integration?.importIncome ?? false,
-  );
-  const [lookbackDays, setLookbackDays] = useState("30");
-  const { run, pending } = useServerAction();
-
-  function handleOpenChange(next: boolean) {
-    if (next && !open) {
-      setApiKey("");
-      setApiSecret("");
-      setImportIncome(integration?.importIncome ?? false);
-      setLookbackDays("30");
-    }
-    onOpenChange(next);
-  }
-
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    run(
-      () =>
-        saveIntegration({
-          provider,
-          apiKey,
-          apiSecret,
-          importIncome,
-          initialSinceDays: isFirstConnect ? Number(lookbackDays) : undefined,
-        }),
-      {
-        success: `${label} ${integration ? "updated" : "connected"}`,
-        onSuccess: () => handleOpenChange(false),
-      },
-    );
-  }
+  const {
+    isFirstConnect,
+    apiKey,
+    setApiKey,
+    apiSecret,
+    setApiSecret,
+    importIncome,
+    setImportIncome,
+    lookbackDays,
+    setLookbackDays,
+    pending,
+    handleOpenChange,
+    handleSubmit,
+  } = useIntegrationDialog({ provider, label, integration, open, onOpenChange });
 
   const helpText =
     "Create a read-only API key at bybit.com → API Management with permissions for Wallet (read-only).";

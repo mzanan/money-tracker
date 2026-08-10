@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import type { CanceledPair } from "@/lib/cancellations";
 
 import { IconCircle } from "@/components/ui/iconCircle";
+import { TappableRow } from "@/components/ui/tappableRow";
 
 import { TransactionRow } from "./transactionRow";
 
@@ -20,11 +21,11 @@ export function CanceledGroup({ pair }: { pair: CanceledPair }) {
 
   return (
     <div className="grid min-w-0">
-      <button
+      <TappableRow
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
-        className="hover:bg-surface-2/60 focus-visible:ring-ring flex w-full cursor-pointer items-center gap-3 rounded-2xl px-3 py-3 text-left opacity-70 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        className="focus-visible:ring-ring w-full cursor-pointer opacity-70 focus-visible:ring-2 focus-visible:outline-none"
       >
         <IconCircle className="bg-surface-2 text-muted-foreground size-9">
           <Undo2Icon className="size-4" />
@@ -52,7 +53,7 @@ export function CanceledGroup({ pair }: { pair: CanceledPair }) {
             open && "rotate-90",
           )}
         />
-      </button>
+      </TappableRow>
       {open && (
         <div className="grid min-w-0 gap-px pl-3">
           <TransactionRow tx={pair.expense} />

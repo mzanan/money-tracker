@@ -18,6 +18,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TappableRow } from "@/components/ui/tappableRow";
 
 function ymd(date: Date): string {
   return format(date, "yyyy-MM-dd");
@@ -35,11 +36,7 @@ function CandidateButton({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="hover:bg-surface-2/60 border-border flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-colors"
-    >
+    <TappableRow type="button" bordered justify="between" onClick={onClick}>
       <span className="min-w-0">
         <span className="block truncate text-sm font-medium">
           {labelForSource(match.source)}
@@ -53,7 +50,7 @@ function CandidateButton({
       <span className="shrink-0 text-sm font-semibold tabular-nums">
         -{formatMoney(match.amount, match.currency)}
       </span>
-    </button>
+    </TappableRow>
   );
 }
 

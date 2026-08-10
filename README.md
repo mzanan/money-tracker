@@ -132,10 +132,10 @@ src/
     providers/                # query, theme, toaster
     screenshot/               # screenshotImporter (dialog + share target page)
     ui/                       # shadcn primitives (kebab-case por vendoring)
-  config/currencies.ts        # ISO 4217 con decimals oficial
   hooks/                      # useSettings, useRates, useTimezone, useCsvImport
   lib/
     actions/                  # server actions (transactions, settings, csv, integrations)
+    constants/currencies.ts   # ISO 4217 con decimals oficial
     schemas/                  # Zod
     db/                       # schema.ts + libSQL client (lazy proxy)
     auth.ts                   # Better Auth server config

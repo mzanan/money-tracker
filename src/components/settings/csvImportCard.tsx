@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Loader2Icon, SlidersHorizontalIcon } from "lucide-react";
 
-import { useCsvImport } from "@/hooks/useCsvImport";
 import { useInlineEdit } from "@/hooks/useInlineEdit";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,7 @@ import { FileHeader } from "./csv/fileHeader";
 import { FilePicker } from "./csv/filePicker";
 import { MappingForm } from "./csv/mappingForm";
 import { PreviewTable } from "./csv/previewTable";
+import { useCsvImport } from "./useCsvImport";
 
 export function CsvImportCard({
   existingSources = [],

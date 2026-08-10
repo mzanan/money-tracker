@@ -8,7 +8,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
-import { CURRENCIES } from "@/config/currencies";
+import { CURRENCIES } from "@/lib/constants/currencies";
 import { labelForSource } from "@/lib/constants/sources";
 
 import { Badge } from "@/components/ui/badge";
@@ -26,9 +26,8 @@ import {
 } from "@/components/ui/select";
 import { Surface } from "@/components/ui/surface";
 
-import type { CandidateMatch, EditableItem } from "@/hooks/useScreenshotImport";
-
 import { DuplicateCandidates } from "./duplicateCandidates";
+import type { CandidateMatch, EditableItem } from "./useScreenshotImport";
 
 const CURRENCY_CODES = CURRENCIES.map((currency) => currency.code);
 
