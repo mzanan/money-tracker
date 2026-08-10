@@ -225,7 +225,7 @@ function CalendarDayButton({
       {...props}
     >
       {children}
-      <span className="pointer-events-none flex h-1 opacity-100!">
+      <span className="pointer-events-none flex h-1 w-full items-center justify-center gap-0.5 opacity-100!">
         {modifiers.hasTx && (
           <span className="bg-muted-foreground size-1 rounded-full" />
         )}

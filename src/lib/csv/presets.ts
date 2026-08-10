@@ -21,6 +21,7 @@ export interface CsvMapping {
   directionCol: string;
   statusCol: string;
   externalIdCol: string;
+  feeCol: string;
   sinceDate: string;
 }
 
@@ -46,6 +47,7 @@ export const CSV_PRESETS: CsvPreset[] = [
       signConvention: "direction-column",
       directionCol: "Direction",
       statusCol: "Status",
+      feeCol: "Source fee amount",
     },
   },
   {

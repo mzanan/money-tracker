@@ -6,11 +6,20 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 import { kindOfSource } from "@/lib/constants/sources";
-import { relativeUsdDiff, toUsdPair } from "@/lib/currency";
+import {
+  feeAmountError,
+  relativeUsdDiff,
+  roundForCurrency,
+  toUsdPair,
+} from "@/lib/currency";
 import { getTransferSources } from "@/lib/data/sources";
 import { getUser } from "@/lib/session";
-import { buildTransactionRow, EXTERNAL_ID_PREFIX } from "@/lib/transactions";
-import type { FxRates } from "@/types/db";
+import {
+  buildFeeRow,
+  buildTransactionRow,
+  EXTERNAL_ID_PREFIX,
+} from "@/lib/transactions";
+import type { FxRates, TransactionInsert } from "@/types/db";
 
 import {
   buildCurrencyContext,
@@ -44,6 +53,7 @@ export async function getTransferAccountOptions(
 export async function markAsTransfer(
   txId: string,
   mirrorSource: string,
+  feeAmount?: number,
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
@@ -65,6 +75,19 @@ export async function markAsTransfer(
     return { ok: false, error: "Can't mirror into a synced account" };
   }
 
+  const fee =
+    feeAmount && feeAmount > 0
+      ? roundForCurrency(feeAmount, tx.currency_original)
+      : 0;
+  if (fee > 0) {
+    const feeError = feeAmountError(
+      fee,
+      tx.currency_original,
+      tx.kind === "expense" ? tx.amount_original : undefined,
+    );
+    if (feeError) return { ok: false, error: feeError };
+  }
+
   const ctxResult = await withRatesErrorHandling(() =>
     buildCurrencyContext(user.id),
   );
@@ -72,11 +95,16 @@ export async function markAsTransfer(
   const ctx = ctxResult.data;
   if (!ctx) return { ok: false, error: "Settings not found" };
 
+  const mirrorAmount =
+    tx.kind === "expense"
+      ? roundForCurrency(tx.amount_original - fee, tx.currency_original)
+      : roundForCurrency(tx.amount_original + fee, tx.currency_original);
+
   const mirror = buildTransactionRow(
     {
       userId: user.id,
       kind: tx.kind === "expense" ? "income" : "expense",
-      amount: tx.amount_original,
+      amount: mirrorAmount,
       currency: tx.currency_original,
       occurredOn: tx.occurred_on,
       note: tx.note,
@@ -87,6 +115,25 @@ export async function markAsTransfer(
   );
   if (!mirror) {
     return { ok: false, error: `No rate for ${tx.currency_original}` };
+  }
+
+  let feeRow: TransactionInsert | null = null;
+  if (fee > 0) {
+    feeRow = buildFeeRow(
+      {
+        userId: user.id,
+        amount: fee,
+        currency: tx.currency_original,
+        occurredOn: tx.occurred_on,
+        note: "Transfer fee",
+        source: tx.kind === "expense" ? tx.source : mirrorSource,
+        externalId: `${EXTERNAL_ID_PREFIX.transferFee}${tx.id}`,
+      },
+      ctx,
+    );
+    if (!feeRow) {
+      return { ok: false, error: `No rate for ${tx.currency_original}` };
+    }
   }
 
   try {
@@ -101,6 +148,18 @@ export async function markAsTransfer(
             transactions.external_id,
           ],
         });
+      if (feeRow) {
+        await dbTx
+          .insert(transactions)
+          .values(feeRow)
+          .onConflictDoNothing({
+            target: [
+              transactions.user_id,
+              transactions.source,
+              transactions.external_id,
+            ],
+          });
+      }
       await dbTx
         .update(transactions)
         .set({ transfer_group: tx.id })
@@ -121,6 +180,7 @@ export async function markAsTransfer(
 export async function markPairAsTransfer(
   txId1: string,
   txId2: string,
+  opts?: { recordFeeDelta?: boolean; feeAmount?: number },
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
@@ -170,16 +230,73 @@ export async function markPairAsTransfer(
     return { ok: false, error: "Amounts don't match closely enough for a transfer" };
   }
 
+  const [expenseTx, incomeTx] = txA.kind === "expense" ? [txA, txB] : [txB, txA];
+  const sameCurrency = txA.currency_original === txB.currency_original;
+
+  let fee = 0;
+  if (sameCurrency && opts?.recordFeeDelta) {
+    const delta = expenseTx.amount_original - incomeTx.amount_original;
+    if (delta > 0) fee = roundForCurrency(delta, expenseTx.currency_original);
+  } else if (!sameCurrency && opts?.feeAmount && opts.feeAmount > 0) {
+    fee = roundForCurrency(opts.feeAmount, expenseTx.currency_original);
+  }
+
+  let feeRow: TransactionInsert | null = null;
+  if (fee > 0) {
+    const feeError = feeAmountError(
+      fee,
+      expenseTx.currency_original,
+      expenseTx.amount_original,
+    );
+    if (feeError) return { ok: false, error: feeError };
+
+    const ctxResult = await withRatesErrorHandling(() =>
+      buildCurrencyContext(user.id),
+    );
+    if (!ctxResult.ok) return ctxResult;
+    if (!ctxResult.data) return { ok: false, error: "Settings not found" };
+
+    feeRow = buildFeeRow(
+      {
+        userId: user.id,
+        amount: fee,
+        currency: expenseTx.currency_original,
+        occurredOn: expenseTx.occurred_on,
+        note: "Transfer fee",
+        source: expenseTx.source,
+        externalId: `${EXTERNAL_ID_PREFIX.transferFee}${txId1}`,
+      },
+      ctxResult.data,
+    );
+    if (!feeRow) {
+      return { ok: false, error: `No rate for ${expenseTx.currency_original}` };
+    }
+  }
+
   try {
-    await db
-      .update(transactions)
-      .set({ transfer_group: txId1 })
-      .where(
-        and(
-          eq(transactions.user_id, user.id),
-          inArray(transactions.id, [txId1, txId2]),
-        ),
-      );
+    await db.transaction(async (dbTx) => {
+      await dbTx
+        .update(transactions)
+        .set({ transfer_group: txId1 })
+        .where(
+          and(
+            eq(transactions.user_id, user.id),
+            inArray(transactions.id, [txId1, txId2]),
+          ),
+        );
+      if (feeRow) {
+        await dbTx
+          .insert(transactions)
+          .values(feeRow)
+          .onConflictDoNothing({
+            target: [
+              transactions.user_id,
+              transactions.source,
+              transactions.external_id,
+            ],
+          });
+      }
+    });
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -236,6 +353,17 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
             );
         }
       }
+      await dbTx
+        .delete(transactions)
+        .where(
+          and(
+            eq(transactions.user_id, user.id),
+            eq(
+              transactions.external_id,
+              `${EXTERNAL_ID_PREFIX.transferFee}${tx.transfer_group}`,
+            ),
+          ),
+        );
     });
     revalidatePath("/", "layout");
     return { ok: true };

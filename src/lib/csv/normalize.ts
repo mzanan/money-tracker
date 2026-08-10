@@ -100,6 +100,10 @@ export function normalizeRowDetailed(
     ? (raw[mapping.externalIdCol] ?? "").trim() || null
     : null;
 
+  const feeAmount = mapping.feeCol
+    ? (parseAmount(raw[mapping.feeCol]) ?? undefined)
+    : undefined;
+
   return {
     ok: true,
     row: {
@@ -110,6 +114,7 @@ export function normalizeRowDetailed(
       occurredAt,
       description,
       externalId,
+      feeAmount,
     },
   };
 }
