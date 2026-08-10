@@ -33,17 +33,24 @@ export function ReminderRow({
   reminder,
   today,
   onMarkPaid,
-  payPending,
+  anyPayPending,
   paySubmitting,
 }: {
   reminder: RecurringPayment;
   today: string;
   onMarkPaid: () => void;
-  payPending: boolean;
+  anyPayPending: boolean;
   paySubmitting: boolean;
 }) {
-  const { editOpen, setEditOpen, pending, diff, tone, metaSegments, handleDelete } =
-    useReminderRow(reminder, today);
+  const {
+    editOpen,
+    setEditOpen,
+    pending,
+    diff,
+    tone,
+    metaSegments,
+    handleDelete,
+  } = useReminderRow(reminder, today);
   const runAfterMenuClose = useDeferredMenuAction();
 
   return (
@@ -81,7 +88,7 @@ export function ReminderRow({
             </span>
             <span
               className={cn(
-                "shrink-0 text-caption font-medium tabular-nums",
+                "text-caption shrink-0 font-medium tabular-nums",
                 tone,
               )}
             >
@@ -101,7 +108,7 @@ export function ReminderRow({
           variant="ghost"
           size="icon-xs"
           onClick={onMarkPaid}
-          disabled={pending || payPending}
+          disabled={pending || anyPayPending}
           aria-label="Mark paid"
           className="text-muted-foreground hover:text-income"
         >

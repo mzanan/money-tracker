@@ -166,7 +166,7 @@ export function CalendarPanel({
                       reminder={reminder}
                       today={today}
                       onMarkPaid={() => payFlow.start(reminder)}
-                      payPending={payFlow.pending}
+                      anyPayPending={payFlow.pending}
                       paySubmitting={
                         payFlow.pending &&
                         payFlow.pendingReminderId === reminder.id

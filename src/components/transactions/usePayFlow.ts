@@ -49,6 +49,7 @@ export function usePayFlow(today: string) {
 
   function close() {
     setActiveReminder(null);
+    setAddExpenseOpen(false);
   }
 
   function choosePayDay(day: string) {
