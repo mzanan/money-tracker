@@ -180,6 +180,7 @@ export function detectMapping(
     directionCol: signConvention === "direction-column" ? directionCol : "",
     statusCol,
     externalIdCol,
+    feeCol: "",
     sinceDate: "",
   };
 }

@@ -39,6 +39,19 @@ export function amountValidationError(
     : `${code} has no decimals. Enter a whole number.`;
 }
 
+export function feeAmountError(
+  fee: number,
+  code: string,
+  legAmount?: number,
+): string | null {
+  const amountError = amountValidationError(fee, code);
+  if (amountError) return amountError;
+  if (legAmount !== undefined && fee >= legAmount) {
+    return "Fee must be less than the amount";
+  }
+  return null;
+}
+
 export function parseAmountInput(value: string): number | null {
   const num = Number(value.replace(/\s/g, "").replace(",", "."));
   return Number.isFinite(num) && num > 0 ? num : null;

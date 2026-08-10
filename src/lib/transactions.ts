@@ -17,6 +17,7 @@ export function csvExternalIdCondition() {
     or(
       like(transactions.external_id, `${EXTERNAL_ID_PREFIX.csv}%`),
       notLike(transactions.external_id, "%:%"),
+      like(transactions.external_id, "%:fee"),
     ),
   );
 }
@@ -99,4 +100,11 @@ export function buildTransactionRow(
     source: input.source ?? "manual",
     external_id: input.externalId ?? null,
   };
+}
+
+export function buildFeeRow(
+  input: Omit<BuildTransactionRowInput, "kind" | "tags">,
+  ctx: BuildContext,
+): TransactionInsert | null {
+  return buildTransactionRow({ ...input, kind: "expense" }, ctx);
 }

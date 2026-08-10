@@ -3,6 +3,7 @@
 import { Loader2Icon } from "lucide-react";
 
 import { AccountSelect } from "./accountSelect";
+import { AmountInput } from "@/components/ui/amountInput";
 import { Button } from "@/components/ui/button";
 import { CurrencySelect } from "@/components/ui/currencySelect";
 import {
@@ -17,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TagChip } from "@/components/ui/tagChip";
 import { Textarea } from "@/components/ui/textarea";
+import { getCurrency } from "@/lib/constants/currencies";
 
 import { KindToggle } from "./kindToggle";
 import { useTransactionForm, type TransactionSeed } from "./useTransactionForm";
@@ -91,14 +93,12 @@ export function TransactionFormDialog({
             <div className="grid flex-1 gap-1.5">
               <Label htmlFor="duplicate-amount">Amount</Label>
               <div className="flex items-center gap-1.5">
-                <Input
+                <AmountInput
                   id="duplicate-amount"
-                  inputMode="decimal"
                   value={amount}
+                  onChange={setAmount}
+                  decimals={getCurrency(currency).decimals}
                   disabled={locked}
-                  onChange={(e) =>
-                    setAmount(e.target.value.replace(/[^\d.,]/g, ""))
-                  }
                 />
                 <CurrencySelect
                   value={currency}

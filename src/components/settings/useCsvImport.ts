@@ -48,6 +48,7 @@ const EMPTY_MAPPING: CsvMapping = {
   directionCol: "",
   statusCol: "",
   externalIdCol: "",
+  feeCol: "",
   sinceDate: "",
 };
 

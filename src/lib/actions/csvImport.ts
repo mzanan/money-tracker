@@ -12,6 +12,7 @@ import { isSyncable } from "@/lib/integrations";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
 import {
+  buildFeeRow,
   buildTransactionRow,
   csvExternalIdCondition,
   EXTERNAL_ID_PREFIX,
@@ -29,6 +30,7 @@ export interface CsvRow {
   occurredAt?: string;
   description: string | null;
   externalId?: string | null;
+  feeAmount?: number;
 }
 
 export interface CsvImportInput {
@@ -190,6 +192,28 @@ export async function importCsvRows(
       continue;
     }
     insertRows.push(built);
+
+    if (
+      row.feeAmount &&
+      row.feeAmount > 0 &&
+      isValidAmountForCurrency(row.feeAmount, row.currency)
+    ) {
+      const feeAmount = roundForCurrency(row.feeAmount, row.currency);
+      const feeRow = buildFeeRow(
+        {
+          userId: user.id,
+          amount: feeAmount,
+          currency: row.currency,
+          occurredOn,
+          occurredAt: row.occurredAt,
+          note: "Wise fee",
+          source,
+          externalId: `${externalId}:fee`,
+        },
+        { rates, userCurrencies: settings.currencies },
+      );
+      if (feeRow) insertRows.push(feeRow);
+    }
   }
 
   if (input.replace && insertRows.length === 0) {

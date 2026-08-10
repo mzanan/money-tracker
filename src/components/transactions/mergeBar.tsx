@@ -5,7 +5,6 @@ import { Loader2Icon } from "lucide-react";
 
 import { useServerAction } from "@/hooks/useServerAction";
 import { mergeTransactions } from "@/lib/actions/transactions";
-import { markPairAsTransfer } from "@/lib/actions/transfers";
 import { labelForSource } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
 import { useUiStore } from "@/stores/uiStore";
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/drawer";
 import { TappableRow } from "@/components/ui/tappableRow";
 
+import { MarkPairTransferDialog } from "./markPairTransferDialog";
 import { TransferBadge } from "./transferBadge";
 
 function txLabel(tx: Transaction): string {
@@ -35,12 +35,16 @@ export function MergeBar() {
   const selectedTxs = useUiStore((s) => s.selectedTxs);
   const setTxSelectMode = useUiStore((s) => s.setTxSelectMode);
   const [choosing, setChoosing] = useState(false);
+  const [markingTransfer, setMarkingTransfer] = useState(false);
   const { run, pending } = useServerAction();
 
   if (!txSelectMode) return null;
 
   const canResolve = selectedTxs.length === 2;
   const [first, second] = selectedTxs;
+  const canMarkTransfer = canResolve && first.kind !== second.kind;
+  const expenseTx = canMarkTransfer && first.kind === "expense" ? first : second;
+  const incomeTx = canMarkTransfer && first.kind === "expense" ? second : first;
 
   function keep(keepTx: Transaction, removeTx: Transaction) {
     run(() => mergeTransactions(keepTx.id, removeTx.id), {
@@ -49,16 +53,6 @@ export function MergeBar() {
         setChoosing(false);
         setTxSelectMode(false);
       },
-    });
-  }
-
-  function markTransfer() {
-    if (!canResolve) return;
-    run(() => markPairAsTransfer(first.id, second.id), {
-      confirm:
-        "Mark both as one transfer between your accounts? They'll be linked and left out of your totals.",
-      success: "Marked as a transfer",
-      onSuccess: () => setTxSelectMode(false),
     });
   }
 
@@ -82,10 +76,9 @@ export function MergeBar() {
             <Button
               variant="secondary"
               size="sm"
-              disabled={!canResolve || pending}
-              onClick={markTransfer}
+              disabled={!canMarkTransfer || pending}
+              onClick={() => setMarkingTransfer(true)}
             >
-              {pending && <Loader2Icon className="animate-spin" />}
               Mark as transfer
             </Button>
             <Button
@@ -152,6 +145,19 @@ export function MergeBar() {
           </div>
         </DrawerContent>
       </Drawer>
+
+      {canMarkTransfer && (
+        <MarkPairTransferDialog
+          open={markingTransfer}
+          onOpenChange={setMarkingTransfer}
+          expenseTx={expenseTx}
+          incomeTx={incomeTx}
+          onSuccess={() => {
+            setMarkingTransfer(false);
+            setTxSelectMode(false);
+          }}
+        />
+      )}
     </>
   );
 }

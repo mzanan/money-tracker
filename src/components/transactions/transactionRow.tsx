@@ -223,6 +223,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
         <MarkTransferDialog
           txId={tx.id}
           txSource={tx.source}
+          txCurrency={tx.currency_original}
           open={transferDialog.open}
           onOpenChange={transferDialog.setOpen}
         />
