@@ -43,7 +43,7 @@ export function TransactionFormDialog({
   title: string;
   description: string;
   submitLabel: string;
-  successMessage: string;
+  successMessage?: string;
   onCreated?: (id: string) => void;
 }) {
   const {

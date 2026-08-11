@@ -207,7 +207,6 @@ export function CalendarPanel({
             title={`Pay ${payFlow.activeReminder.label}`}
             description="Review the expense before saving. It will be linked to this reminder."
             submitLabel="Save and mark paid"
-            successMessage="Expense added"
             onCreated={payFlow.handleExpenseCreated}
           />
         )}
