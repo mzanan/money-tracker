@@ -2,14 +2,19 @@
 
 import * as React from "react";
 import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer";
+import { XIcon } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+
+type DrawerSize = "sm" | "md" | "lg";
 
 type DrawerContextProps = {
   hasSnapPoints: boolean;
   modal: DrawerPrimitive.Root.Props["modal"];
   showSwipeHandle: boolean;
+  size: DrawerSize;
   swipeDirection: NonNullable<DrawerPrimitive.Root.Props["swipeDirection"]>;
 };
 
@@ -28,11 +33,13 @@ function useDrawer() {
 function Drawer({
   modal = true,
   showSwipeHandle,
+  size = "sm",
   snapPoints,
   swipeDirection,
   ...props
 }: DrawerPrimitive.Root.Props & {
   showSwipeHandle?: boolean;
+  size?: DrawerSize;
 }) {
   const isMobile = useIsMobile();
   const resolvedSwipeDirection =
@@ -44,9 +51,10 @@ function Drawer({
       hasSnapPoints,
       modal,
       showSwipeHandle: resolvedShowSwipeHandle,
+      size,
       swipeDirection: resolvedSwipeDirection,
     }),
-    [hasSnapPoints, modal, resolvedShowSwipeHandle, resolvedSwipeDirection],
+    [hasSnapPoints, modal, resolvedShowSwipeHandle, size, resolvedSwipeDirection],
   );
 
   return (
@@ -112,7 +120,8 @@ function DrawerContent({
   children,
   ...props
 }: DrawerPrimitive.Popup.Props) {
-  const { hasSnapPoints, modal, showSwipeHandle, swipeDirection } = useDrawer();
+  const { hasSnapPoints, modal, showSwipeHandle, size, swipeDirection } =
+    useDrawer();
   const swipeAxis =
     swipeDirection === "down" || swipeDirection === "up" ? "y" : "x";
 
@@ -129,6 +138,7 @@ function DrawerContent({
         <DrawerPrimitive.Popup
           data-slot="drawer-popup"
           data-swipe-axis={swipeAxis}
+          data-size={size}
           data-snap-points={hasSnapPoints ? "" : undefined}
           className={cn(
             // Base.
@@ -138,7 +148,7 @@ function DrawerContent({
             // Bleed.
             "after:pointer-events-none after:absolute after:bg-(--drawer-bleed-background,var(--color-popover)) data-[swipe-axis=x]:after:inset-y-0 data-[swipe-axis=x]:after:w-(--bleed) data-[swipe-axis=y]:after:inset-x-0 data-[swipe-axis=y]:after:h-(--bleed) data-[swipe-direction=down]:after:top-full data-[swipe-direction=left]:after:right-full data-[swipe-direction=right]:after:left-full data-[swipe-direction=up]:after:bottom-full",
             // Sizing.
-            "[--drawer-content-height:var(--drawer-height,auto)] data-[swipe-axis=x]:[--drawer-content-height:100dvh] data-[swipe-axis=x]:[--drawer-content-width:75%] data-[swipe-axis=y]:[--drawer-content-max-height:calc(100dvh-6rem)] data-[swipe-axis=y]:data-snap-points:[--drawer-content-height:100dvh] data-[swipe-axis=x]:sm:[--drawer-content-width:24rem]",
+            "[--drawer-content-height:var(--drawer-height,auto)] data-[swipe-axis=x]:[--drawer-content-height:100dvh] data-[swipe-axis=x]:[--drawer-content-width:75%] data-[swipe-axis=y]:[--drawer-content-max-height:calc(100dvh-6rem)] data-[swipe-axis=y]:data-snap-points:[--drawer-content-height:100dvh] data-[swipe-axis=x]:data-[size=sm]:sm:[--drawer-content-width:24rem] data-[swipe-axis=x]:data-[size=md]:sm:[--drawer-content-width:28rem] data-[swipe-axis=x]:data-[size=lg]:sm:[--drawer-content-width:32rem]",
             // Stack.
             "[--bleed:3rem] [--peek:1rem] [--stack-height:var(--drawer-frontmost-height,var(--drawer-height,0px))] [--stack-peek-offset:max(0px,calc((var(--nested-drawers)-var(--stack-progress))*var(--peek)))] [--stack-progress:clamp(0,var(--drawer-swipe-progress),1)] [--stack-scale-base:max(0,calc(1-(var(--nested-drawers)*var(--stack-step))))] [--stack-scale:clamp(0,calc(var(--stack-scale-base)+(var(--stack-step)*var(--stack-progress))),1)] [--stack-shrink:calc(1-var(--stack-scale))] [--stack-step:0.05]",
             // Transitions.
@@ -171,6 +181,31 @@ function DrawerContent({
         </DrawerPrimitive.Popup>
       </DrawerPrimitive.Viewport>
     </DrawerPortal>
+  );
+}
+
+function DrawerCloseButton({
+  className,
+  ...props
+}: DrawerPrimitive.Close.Props) {
+  return (
+    <DrawerPrimitive.Close
+      data-slot="drawer-close-button"
+      render={
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className={cn(
+            "absolute top-3 right-3 hidden group-data-[swipe-axis=x]/drawer-popup:inline-flex",
+            className,
+          )}
+        />
+      }
+      {...props}
+    >
+      <XIcon />
+      <span className="sr-only">Close</span>
+    </DrawerPrimitive.Close>
   );
 }
 
@@ -230,6 +265,7 @@ export {
   DrawerSwipeHandle,
   DrawerTrigger,
   DrawerClose,
+  DrawerCloseButton,
   DrawerContent,
   DrawerHeader,
   DrawerFooter,
