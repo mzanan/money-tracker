@@ -69,11 +69,12 @@ function detectedToEditable(
   detected: DetectedTransaction,
   mode: ImageImportMode,
   existingSources: string[],
+  collapsed: boolean,
 ): EditableItem {
   return {
     id: crypto.randomUUID(),
     selected: true,
-    collapsed: true,
+    collapsed,
     kind: detected.kind,
     amount: detected.amount.toString(),
     currency: detected.currency.toUpperCase(),
@@ -114,7 +115,12 @@ export function useScreenshotImport({
 
   const [items, setItems] = useState<EditableItem[]>(
     initialItems?.map((detected) =>
-      detectedToEditable(detected, mode, existingSources),
+      detectedToEditable(
+        detected,
+        mode,
+        existingSources,
+        initialItems.length > 1,
+      ),
     ) ?? [],
   );
   const [ignored, setIgnored] = useState(initialIgnored);
@@ -157,12 +163,17 @@ export function useScreenshotImport({
     startExtract(async () => {
       const extract = await requestImageExtraction(file, mode);
       if (!extract.ok) {
-        toast.error(extract.error);
+        if (!extract.aborted) toast.error(extract.error);
         return;
       }
 
       const editable = extract.items.map((detected) =>
-        detectedToEditable(detected, mode, existingSources),
+        detectedToEditable(
+          detected,
+          mode,
+          existingSources,
+          extract.items.length > 1,
+        ),
       );
       setItems(editable);
       setIgnored(extract.ignored);
