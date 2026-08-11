@@ -42,7 +42,7 @@ export function useTransactionForm({
   txId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  successMessage: string;
+  successMessage?: string;
   onCreated?: (id: string) => void;
 }) {
   const settings = useSettings();

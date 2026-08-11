@@ -88,7 +88,7 @@ export function usePayFlow(today: string) {
             : data?.linked
               ? "Marked paid, linked to the existing payment"
               : data?.expenseAdded
-                ? "Marked paid, expense added"
+                ? "Expense added, marked paid"
                 : "Marked paid, next due updated",
       },
     );
