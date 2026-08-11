@@ -130,7 +130,7 @@ src/
     onboarding/               # onboardingForm
     settings/                 # csvImportCard, integrations*
     providers/                # query, theme, toaster
-    screenshot/               # screenshotImporter (dialog + share target page)
+    screenshot/               # screenshotImporter (drawer + share target page)
     ui/                       # shadcn primitives (kebab-case por vendoring)
   hooks/                      # useSettings, useRates, useTimezone, useCsvImport
   lib/

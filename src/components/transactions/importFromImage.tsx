@@ -7,30 +7,17 @@ import {
   SmartphoneIcon,
 } from "lucide-react";
 
-import { useIsMobile } from "@/hooks/useIsMobile";
 import type { ImageImportMode } from "@/lib/imageExtract";
 
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Drawer,
+  DrawerCloseButton,
   DrawerContent,
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { IconCircle } from "@/components/ui/iconCircle";
 import { TappableRow } from "@/components/ui/tappableRow";
 import { ImageExtractLoading } from "@/components/screenshot/imageExtractLoading";
@@ -63,7 +50,6 @@ export function ImportFromImage({
 }: {
   existingSources: string[];
 }) {
-  const isMobile = useIsMobile();
   const {
     fileInputRef,
     menuOpen,
@@ -73,6 +59,7 @@ export function ImportFromImage({
     extracting,
     extractingMode,
     cancelExtract,
+    handleReviewOpenChange,
     pickMode,
     handleFileChange,
   } = useImportFromImage();
@@ -102,57 +89,40 @@ export function ImportFromImage({
 
   return (
     <>
-      {isMobile ? (
-        <Drawer open={menuOpen} onOpenChange={setMenuOpen}>
-          <DrawerTrigger render={trigger} />
-          <DrawerContent>
-            <DrawerHeader>
-              <DrawerTitle>Import from image</DrawerTitle>
-              <DrawerDescription className="sr-only">
-                Choose how to import a transaction from an image.
-              </DrawerDescription>
-            </DrawerHeader>
-            <div className="grid gap-1 px-4 pb-8">
-              <div className="pb-2">{freeAiNotice}</div>
-              {OPTIONS.map((option) => (
-                <TappableRow
-                  key={option.mode}
-                  type="button"
-                  onClick={() => pickMode(option.mode)}
-                >
-                  <IconCircle className="bg-surface-2 text-foreground">
-                    <option.icon className="size-4" />
-                  </IconCircle>
-                  <span>
-                    <span className="block text-sm font-medium">
-                      {option.label}
-                    </span>
-                    <span className="text-muted-foreground block text-xs">
-                      {option.hint}
-                    </span>
-                  </span>
-                </TappableRow>
-              ))}
-            </div>
-          </DrawerContent>
-        </Drawer>
-      ) : (
-        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-          <DropdownMenuTrigger render={trigger} />
-          <DropdownMenuContent align="end" className="max-w-xs">
-            <div className="p-1">{freeAiNotice}</div>
+      <Drawer open={menuOpen} onOpenChange={setMenuOpen}>
+        <DrawerTrigger render={trigger} />
+        <DrawerContent>
+          <DrawerCloseButton />
+          <DrawerHeader className="pb-2">
+            <DrawerTitle>Import from image</DrawerTitle>
+            <DrawerDescription className="sr-only">
+              Choose how to import a transaction from an image.
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="grid gap-1 px-4 pb-8">
+            <div className="pb-2">{freeAiNotice}</div>
             {OPTIONS.map((option) => (
-              <DropdownMenuItem
+              <TappableRow
                 key={option.mode}
-                onSelect={() => pickMode(option.mode)}
+                type="button"
+                onClick={() => pickMode(option.mode)}
               >
-                <option.icon />
-                {option.label}
-              </DropdownMenuItem>
+                <IconCircle className="bg-surface-2 text-foreground">
+                  <option.icon className="size-4" />
+                </IconCircle>
+                <span>
+                  <span className="block text-sm font-medium">
+                    {option.label}
+                  </span>
+                  <span className="text-muted-foreground block text-xs">
+                    {option.hint}
+                  </span>
+                </span>
+              </TappableRow>
             ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+          </div>
+        </DrawerContent>
+      </Drawer>
 
       <input
         ref={fileInputRef}
@@ -162,52 +132,43 @@ export function ImportFromImage({
         className="hidden"
       />
 
-      <Dialog
+      <Drawer
+        size="lg"
         open={extracting || payload !== null}
-        onOpenChange={(open, eventDetails) => {
-          if (
-            !open &&
-            (eventDetails.reason === "outside-press" ||
-              eventDetails.reason === "escape-key")
-          ) {
-            eventDetails.cancel();
-            return;
-          }
-          if (!open) {
-            if (extracting) cancelExtract();
-            setPayload(null);
-          }
-        }}
+        onOpenChange={handleReviewOpenChange}
       >
-        <DialogContent className="max-h-[90vh] sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
+        <DrawerContent>
+          <DrawerCloseButton className="inline-flex" />
+          <DrawerHeader>
+            <DrawerTitle>
               {(payload?.mode ?? extractingMode) === "receipt"
                 ? "Import from receipt"
                 : "Import from screenshot"}
-            </DialogTitle>
-            <DialogDescription className="sr-only">
+            </DrawerTitle>
+            <DrawerDescription className="sr-only">
               Review the extracted amounts before saving.
-            </DialogDescription>
-          </DialogHeader>
-          {extracting && (
-            <ImageExtractLoading
-              mode={extractingMode}
-              onCancel={cancelExtract}
-            />
-          )}
-          {!extracting && payload && (
-            <ScreenshotImporter
-              mode={payload.mode}
-              initialItems={payload.items}
-              initialIgnored={payload.ignored}
-              initialCandidates={payload.candidates}
-              existingSources={existingSources}
-              onDone={() => setPayload(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="grid gap-4 overflow-y-auto px-4 pb-8">
+            {extracting && (
+              <ImageExtractLoading
+                mode={extractingMode}
+                onCancel={cancelExtract}
+              />
+            )}
+            {!extracting && payload && (
+              <ScreenshotImporter
+                mode={payload.mode}
+                initialItems={payload.items}
+                initialIgnored={payload.ignored}
+                initialCandidates={payload.candidates}
+                existingSources={existingSources}
+                onDone={() => setPayload(null)}
+              />
+            )}
+          </div>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }
