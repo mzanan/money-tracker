@@ -11,13 +11,13 @@ import {
 
 import type { RecurringPayment } from "@/types/db";
 
+type Step = "candidates" | "form";
+
 export function usePayFlow(today: string) {
   const [activeReminder, setActiveReminder] = useState<RecurringPayment | null>(
     null,
   );
-  const [addExpenseOpen, setAddExpenseOpen] = useState(false);
-  const [addExpenseMounted, setAddExpenseMounted] = useState(false);
-  const [addExpenseKey, setAddExpenseKey] = useState(0);
+  const [step, setStep] = useState<Step>("candidates");
   const [payDay, setPayDay] = useState(today);
   const [payOptions, setPayOptions] = useState<{
     suggested: ReminderPaymentCandidate[];
@@ -42,6 +42,7 @@ export function usePayFlow(today: string) {
 
   function start(reminder: RecurringPayment) {
     setActiveReminder(reminder);
+    setStep("candidates");
     setPayDay(today);
     setPayOptions(null);
     fetchPayOptions(reminder, today);
@@ -49,7 +50,7 @@ export function usePayFlow(today: string) {
 
   function close() {
     setActiveReminder(null);
-    setAddExpenseOpen(false);
+    setStep("candidates");
   }
 
   function choosePayDay(day: string) {
@@ -59,9 +60,11 @@ export function usePayFlow(today: string) {
   }
 
   function openAddExpense() {
-    setAddExpenseMounted(true);
-    setAddExpenseKey((key) => key + 1);
-    setAddExpenseOpen(true);
+    setStep("form");
+  }
+
+  function backToCandidates() {
+    setStep("candidates");
   }
 
   function handleExpenseCreated(transactionId: string) {
@@ -120,11 +123,9 @@ export function usePayFlow(today: string) {
     choosePayDay,
     confirmPaid,
     markPaidOnly,
-    addExpenseOpen,
-    setAddExpenseOpen,
-    addExpenseMounted,
-    addExpenseKey,
+    step,
     openAddExpense,
+    backToCandidates,
     handleExpenseCreated,
   };
 }

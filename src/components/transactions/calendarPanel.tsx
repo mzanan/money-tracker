@@ -16,7 +16,7 @@ import type { RecurringPayment } from "@/types/db";
 
 import { DaySection } from "./daySection";
 import { PayCandidatesPanel } from "./payCandidatesPanel";
-import { TransactionFormDialog } from "./transactionFormDialog";
+import { PayExpensePanel } from "./payExpensePanel";
 import { usePayFlow } from "./usePayFlow";
 
 const ymd = (date: Date) => format(date, "yyyy-MM-dd");
@@ -82,19 +82,36 @@ export function CalendarPanel({
     <>
       {payFlow.activeReminder ? (
         <Surface className="grid gap-4">
-          <PayCandidatesPanel
-            reminder={payFlow.activeReminder}
-            today={today}
-            day={payFlow.payDay}
-            loading={payFlow.checking}
-            suggested={payFlow.payOptions?.suggested ?? []}
-            recent={payFlow.payOptions?.recent ?? []}
-            onChooseDay={payFlow.choosePayDay}
-            onLink={(transactionId) => payFlow.confirmPaid(transactionId)}
-            onCreate={payFlow.openAddExpense}
-            onSkip={payFlow.markPaidOnly}
-            onBack={payFlow.close}
-          />
+          {payFlow.step === "form" && payFlow.activeReminder.amount != null ? (
+            <PayExpensePanel
+              reminderLabel={payFlow.activeReminder.label}
+              seed={{
+                kind: "expense",
+                amount: payFlow.activeReminder.amount,
+                currency: payFlow.activeReminder.currency ?? "USD",
+                source: payFlow.activeReminder.source ?? "manual",
+                note: payFlow.activeReminder.label,
+                tags: [],
+                occurredOn: payFlow.payDay,
+              }}
+              onBack={payFlow.backToCandidates}
+              onCreated={payFlow.handleExpenseCreated}
+            />
+          ) : (
+            <PayCandidatesPanel
+              reminder={payFlow.activeReminder}
+              today={today}
+              day={payFlow.payDay}
+              loading={payFlow.checking}
+              suggested={payFlow.payOptions?.suggested ?? []}
+              recent={payFlow.payOptions?.recent ?? []}
+              onChooseDay={payFlow.choosePayDay}
+              onLink={(transactionId) => payFlow.confirmPaid(transactionId)}
+              onCreate={payFlow.openAddExpense}
+              onSkip={payFlow.markPaidOnly}
+              onBack={payFlow.close}
+            />
+          )}
         </Surface>
       ) : (
         <div className="grid gap-5">
@@ -187,29 +204,6 @@ export function CalendarPanel({
           </Surface>
         </div>
       )}
-
-      {payFlow.addExpenseMounted &&
-        payFlow.activeReminder &&
-        payFlow.activeReminder.amount != null && (
-          <TransactionFormDialog
-            key={payFlow.addExpenseKey}
-            seed={{
-              kind: "expense",
-              amount: payFlow.activeReminder.amount,
-              currency: payFlow.activeReminder.currency ?? "USD",
-              source: payFlow.activeReminder.source ?? "manual",
-              note: payFlow.activeReminder.label,
-              tags: [],
-              occurredOn: payFlow.payDay,
-            }}
-            open={payFlow.addExpenseOpen}
-            onOpenChange={payFlow.setAddExpenseOpen}
-            title={`Pay ${payFlow.activeReminder.label}`}
-            description="Review the expense before saving. It will be linked to this reminder."
-            submitLabel="Save and mark paid"
-            onCreated={payFlow.handleExpenseCreated}
-          />
-        )}
     </>
   );
 }
