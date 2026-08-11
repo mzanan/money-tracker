@@ -157,7 +157,7 @@ export function useScreenshotImport({
     startExtract(async () => {
       const extract = await requestImageExtraction(file, mode);
       if (!extract.ok) {
-        toast.error(extract.error);
+        if (!extract.aborted) toast.error(extract.error);
         return;
       }
 

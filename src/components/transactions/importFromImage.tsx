@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { IconCircle } from "@/components/ui/iconCircle";
 import { TappableRow } from "@/components/ui/tappableRow";
+import { ImageExtractLoading } from "@/components/screenshot/imageExtractLoading";
 import { ScreenshotImporter } from "@/components/screenshot/screenshotImporter";
 
 import { useImportFromImage } from "./useImportFromImage";
@@ -70,13 +71,15 @@ export function ImportFromImage({
     payload,
     setPayload,
     extracting,
+    extractingMode,
+    cancelExtract,
     pickMode,
     handleFileChange,
   } = useImportFromImage();
 
   const freeAiNotice = (
     <p className="text-muted-foreground rounded-xl border px-3 py-2 text-xs">
-      ⚠️ Image import runs on free AI tiers: it can be slow, or temporarily
+      Image import runs on free AI tiers: it can be slow, or temporarily
       unavailable when the shared quota runs out. Adding a transaction manually
       always works.
     </p>
@@ -160,7 +163,7 @@ export function ImportFromImage({
       />
 
       <Dialog
-        open={payload !== null}
+        open={extracting || payload !== null}
         onOpenChange={(open, eventDetails) => {
           if (
             !open &&
@@ -170,13 +173,16 @@ export function ImportFromImage({
             eventDetails.cancel();
             return;
           }
-          if (!open) setPayload(null);
+          if (!open) {
+            if (extracting) cancelExtract();
+            setPayload(null);
+          }
         }}
       >
         <DialogContent className="max-h-[90vh] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {payload?.mode === "receipt"
+              {(payload?.mode ?? extractingMode) === "receipt"
                 ? "Import from receipt"
                 : "Import from screenshot"}
             </DialogTitle>
@@ -184,7 +190,13 @@ export function ImportFromImage({
               Review the extracted amounts before saving.
             </DialogDescription>
           </DialogHeader>
-          {payload && (
+          {extracting && (
+            <ImageExtractLoading
+              mode={extractingMode}
+              onCancel={cancelExtract}
+            />
+          )}
+          {!extracting && payload && (
             <ScreenshotImporter
               mode={payload.mode}
               initialItems={payload.items}

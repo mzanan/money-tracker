@@ -5,11 +5,13 @@ export type ImageImportMode = "screenshot" | "receipt";
 
 export type ImageExtractionResult =
   | { ok: true; items: DetectedTransaction[]; ignored: number }
-  | { ok: false; error: string };
+  | { ok: false; error: string; aborted?: false }
+  | { ok: false; aborted: true };
 
 export async function requestImageExtraction(
   file: File,
   mode: ImageImportMode,
+  signal?: AbortSignal,
 ): Promise<ImageExtractionResult> {
   const form = new FormData();
   form.append("image", await compressImage(file));
@@ -19,6 +21,7 @@ export async function requestImageExtraction(
     const response = await fetch("/api/screenshot/extract", {
       method: "POST",
       body: form,
+      signal,
     });
     const payload = (await response.json()) as
       | { items?: DetectedTransaction[]; ignored?: number }
@@ -38,7 +41,10 @@ export async function requestImageExtraction(
       items: "items" in payload ? (payload.items ?? []) : [],
       ignored: "ignored" in payload ? (payload.ignored ?? 0) : 0,
     };
-  } catch {
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      return { ok: false, aborted: true };
+    }
     return { ok: false, error: "Network error while reading image" };
   }
 }

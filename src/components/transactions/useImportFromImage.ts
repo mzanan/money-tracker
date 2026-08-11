@@ -40,9 +40,12 @@ async function loadCandidatesFor(
 export function useImportFromImage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modeRef = useRef<ImageImportMode>("screenshot");
+  const abortRef = useRef<AbortController | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [payload, setPayload] = useState<ImageImportPayload | null>(null);
   const [extracting, startExtract] = useTransition();
+  const [extractingMode, setExtractingMode] =
+    useState<ImageImportMode>("screenshot");
 
   function pickMode(mode: ImageImportMode) {
     modeRef.current = mode;
@@ -57,16 +60,28 @@ export function useImportFromImage() {
     input.click();
   }
 
+  function cancelExtract() {
+    abortRef.current?.abort();
+  }
+
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
     const mode = modeRef.current;
+    setExtractingMode(mode);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     startExtract(async () => {
-      const extract = await requestImageExtraction(file, mode);
+      const extract = await requestImageExtraction(
+        file,
+        mode,
+        controller.signal,
+      );
       if (!extract.ok) {
-        toast.error(extract.error);
+        if (!extract.aborted) toast.error(extract.error);
         return;
       }
       if (extract.items.length === 0) {
@@ -96,6 +111,8 @@ export function useImportFromImage() {
     payload,
     setPayload,
     extracting,
+    extractingMode,
+    cancelExtract,
     pickMode,
     handleFileChange,
   };
