@@ -59,6 +59,7 @@ export function ImportFromImage({
     extracting,
     extractingMode,
     cancelExtract,
+    handleReviewOpenChange,
     pickMode,
     handleFileChange,
   } = useImportFromImage();
@@ -134,16 +135,7 @@ export function ImportFromImage({
       <Drawer
         size="lg"
         open={extracting || payload !== null}
-        onOpenChange={(open, eventDetails) => {
-          if (!open && eventDetails.reason !== "close-press") {
-            eventDetails.cancel();
-            return;
-          }
-          if (!open) {
-            if (extracting) cancelExtract();
-            setPayload(null);
-          }
-        }}
+        onOpenChange={handleReviewOpenChange}
       >
         <DrawerContent>
           <DrawerCloseButton className="inline-flex" />

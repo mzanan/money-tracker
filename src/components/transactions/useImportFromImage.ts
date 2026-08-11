@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import type { Drawer as DrawerPrimitive } from "@base-ui/react/drawer";
 import { toast } from "sonner";
 
 import type { CandidateMatch } from "@/components/screenshot/useScreenshotImport";
@@ -64,6 +65,19 @@ export function useImportFromImage() {
     abortRef.current?.abort();
   }
 
+  const handleReviewOpenChange: NonNullable<
+    DrawerPrimitive.Root.Props["onOpenChange"]
+  > = (open, eventDetails) => {
+    if (!open && eventDetails.reason !== "close-press") {
+      eventDetails.cancel();
+      return;
+    }
+    if (!open) {
+      if (extracting) cancelExtract();
+      setPayload(null);
+    }
+  };
+
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -115,6 +129,7 @@ export function useImportFromImage() {
     extracting,
     extractingMode,
     cancelExtract,
+    handleReviewOpenChange,
     pickMode,
     handleFileChange,
   };
