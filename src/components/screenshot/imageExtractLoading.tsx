@@ -10,9 +10,8 @@ import type { ImageImportMode } from "@/lib/imageExtract";
 function messageFor(mode: ImageImportMode, elapsedMs: number): string {
   const subject = mode === "receipt" ? "receipt" : "screenshot";
   if (elapsedMs < 4000) return `Reading your ${subject}…`;
-  if (elapsedMs < 12000)
-    return "Still reading. Free-tier AI, this can take a bit.";
-  return "Sorry, this is embarrassingly slow. Free-tier AI at work, hang on or cancel and add it manually.";
+  if (elapsedMs < 12000) return "Still reading, this can take a bit.";
+  return "Sorry, this is embarrassingly slow. Hang on or cancel and add it manually.";
 }
 
 export function ImageExtractLoading({
