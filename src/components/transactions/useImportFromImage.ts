@@ -84,6 +84,7 @@ export function useImportFromImage() {
         if (!extract.aborted) toast.error(extract.error);
         return;
       }
+      if (controller.signal.aborted) return;
       if (extract.items.length === 0) {
         toast.info(
           mode === "receipt"
@@ -95,6 +96,7 @@ export function useImportFromImage() {
         return;
       }
       const candidates = await loadCandidatesFor(extract.items);
+      if (controller.signal.aborted) return;
       setPayload({
         mode,
         items: extract.items,
