@@ -129,6 +129,7 @@ export function MonthDashboard({
           }
           open={drawerOpen}
           onClose={c.closePanel}
+          panelKey={shownPanel}
         >
           {shownPanel === "filters" ? (
             <FiltersPanel

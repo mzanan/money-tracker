@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import {
   Drawer,
@@ -15,11 +15,13 @@ export function DashboardPanel({
   title,
   open,
   onClose,
+  panelKey,
   children,
 }: {
   title: string;
   open: boolean;
   onClose: () => void;
+  panelKey?: string;
   children: ReactNode;
 }) {
   useHistoryClose(open, onClose);
@@ -27,6 +29,14 @@ export function DashboardPanel({
   const contentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [drawerHeight, setDrawerHeight] = useState<number | null>(null);
+  const prevPanelKeyRef = useRef(panelKey);
+
+  useLayoutEffect(() => {
+    if (prevPanelKeyRef.current !== panelKey) {
+      prevPanelKeyRef.current = panelKey;
+      setDrawerHeight(null);
+    }
+  }, [panelKey]);
 
   useEffect(() => {
     if (!open) return;
@@ -43,7 +53,6 @@ export function DashboardPanel({
   return (
     <Drawer open={open} onOpenChange={(next) => !next && onClose()}>
       <DrawerContent
-        className="transition-[transform,opacity,filter]"
         style={
           drawerHeight
             ? ({ "--drawer-height": `${drawerHeight}px` } as React.CSSProperties)
