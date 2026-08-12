@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format, parse } from "date-fns";
 
 import { Calendar } from "@/components/ui/calendar";
@@ -15,6 +15,7 @@ import type { DayTotalsWithPairs } from "@/lib/cancellations";
 import type { RecurringPayment } from "@/types/db";
 
 import { DaySection } from "./daySection";
+import { useDrawerStep } from "./drawerStepContext";
 import { PayCandidatesPanel } from "./payCandidatesPanel";
 import { PayExpensePanel } from "./payExpensePanel";
 import { usePayFlow } from "./usePayFlow";
@@ -60,6 +61,27 @@ export function CalendarPanel({
   useEffect(() => {
     if (!open) payFlow.close();
   }, [open, payFlow]);
+
+  const stepApi = useDrawerStep();
+  const payFlowRef = useRef(payFlow);
+
+  useEffect(() => {
+    payFlowRef.current = payFlow;
+  }, [payFlow]);
+
+  useEffect(() => {
+    if (!stepApi) return;
+    return stepApi.registerBack(() => {
+      const flow = payFlowRef.current;
+      if (!flow.activeReminder) return false;
+      if (flow.step === "form") {
+        flow.backToCandidates();
+        return true;
+      }
+      flow.close();
+      return true;
+    });
+  }, [stepApi]);
 
   const [shownDay, setShownDay] = useState<DayTotalsWithPairs | null>(
     selectedDayGroup,

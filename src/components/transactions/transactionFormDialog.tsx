@@ -4,13 +4,14 @@ import { Loader2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerCloseButton,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 import { TransactionFormFields } from "./transactionFormFields";
 import { useTransactionForm, type TransactionSeed } from "./useTransactionForm";
@@ -48,20 +49,28 @@ export function TransactionFormDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{dialogDescription}</DialogDescription>
-        </DialogHeader>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent>
+        <DrawerCloseButton />
+        <DrawerHeader className="pb-2">
+          <DrawerTitle>{title}</DrawerTitle>
+          <DrawerDescription>{dialogDescription}</DrawerDescription>
+        </DrawerHeader>
 
-        <TransactionFormFields form={form} txId={txId} locked={locked} />
+        <div className="grid gap-4 overflow-y-auto px-4 pb-4">
+          <TransactionFormFields form={form} txId={txId} locked={locked} />
+        </div>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+        <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
+          <Button
+            variant="ghost"
+            className="sm:flex-1"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button
+            className="sm:flex-1"
             onClick={form.submit}
             disabled={
               form.pending ||
@@ -71,8 +80,8 @@ export function TransactionFormDialog({
             {form.pending && <Loader2Icon className="animate-spin" />}
             {submitLabel}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

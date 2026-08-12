@@ -24,11 +24,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TappableRow } from "@/components/ui/tappableRow";
 import { ReminderForm } from "@/components/reminders/reminderForm";
+import { ReminderFormStep } from "@/components/reminders/reminderFormStep";
 
 import { Avatar } from "./avatar";
 import { TransactionFormDialog } from "./transactionFormDialog";
+import { TransactionFormStep } from "./transactionFormStep";
 import { MarkTransferDialog } from "./markTransferDialog";
+import { MarkTransferStep } from "./markTransferStep";
 import { SourceEditor } from "./sourceEditor";
+import { SourceEditorStep } from "./sourceEditorStep";
 import { TagChips } from "./tagChips";
 import { TransferBadge } from "./transferBadge";
 import { useTransactionRow } from "./useTransactionRow";
@@ -59,7 +63,132 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
     duplicate,
     handleUndoTransfer,
     handleDelete,
+    stepApi,
+    runAfterMenuClose,
   } = useTransactionRow(tx);
+
+  const editSeed = {
+    kind: tx.kind,
+    amount: tx.amount_original,
+    currency: tx.currency_original,
+    source: tx.source,
+    note: tx.note,
+    tags: tx.tags,
+    occurredOn: tx.occurred_on,
+  };
+
+  function openEdit() {
+    if (stepApi) {
+      runAfterMenuClose(() =>
+        stepApi.push({
+          key: `edit-${tx.id}`,
+          content: (
+            <TransactionFormStep
+              txId={tx.id}
+              seed={editSeed}
+              locked={lockAmountFields}
+              title="Edit transaction"
+              description="Update the details for this transaction."
+              submitLabel="Save"
+              successMessage="Saved"
+              onBack={stepApi.pop}
+            />
+          ),
+        }),
+      );
+    } else {
+      edit.openDialog();
+    }
+  }
+
+  function openDuplicate() {
+    if (stepApi) {
+      runAfterMenuClose(() =>
+        stepApi.push({
+          key: `duplicate-${tx.id}`,
+          content: (
+            <TransactionFormStep
+              seed={editSeed}
+              title="Duplicate transaction"
+              description="Creates a new transaction prefilled from this one."
+              submitLabel="Duplicate"
+              successMessage="Duplicated"
+              onBack={stepApi.pop}
+            />
+          ),
+        }),
+      );
+    } else {
+      duplicate.openDialog();
+    }
+  }
+
+  function openChangeAccount() {
+    if (stepApi) {
+      runAfterMenuClose(() =>
+        stepApi.push({
+          key: `source-${tx.id}`,
+          content: (
+            <SourceEditorStep
+              txId={tx.id}
+              txSource={tx.source}
+              onBack={stepApi.pop}
+            />
+          ),
+        }),
+      );
+    } else {
+      source.openDialog();
+    }
+  }
+
+  function openSetReminder() {
+    if (stepApi) {
+      runAfterMenuClose(() =>
+        stepApi.push({
+          key: `reminder-${tx.id}`,
+          content: (
+            <ReminderFormStep
+              title="Set a reminder"
+              seed={{
+                label: reminderTitle,
+                amount: tx.amount_original,
+                currency: tx.currency_original,
+                source: tx.source,
+                frequency: "MONTHLY",
+                lastPaidOn: tx.occurred_on,
+                nextDueOn: computeNextDue(tx.occurred_on, "MONTHLY"),
+                note: null,
+              }}
+              onBack={stepApi.pop}
+            />
+          ),
+        }),
+      );
+    } else {
+      reminder.openDialog();
+    }
+  }
+
+  function openMarkTransfer() {
+    if (stepApi) {
+      runAfterMenuClose(() =>
+        stepApi.push({
+          key: `transfer-${tx.id}`,
+          content: (
+            <MarkTransferStep
+              txId={tx.id}
+              txSource={tx.source}
+              txCurrency={tx.currency_original}
+              onBack={stepApi.pop}
+            />
+          ),
+        }),
+      );
+    } else {
+      transferDialog.openDialog();
+    }
+  }
 
   return (
     <TappableRow
@@ -131,17 +260,17 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             }
           />
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={edit.openDialog}>
+            <DropdownMenuItem onSelect={openEdit}>
               <PencilLineIcon />
               Edit
             </DropdownMenuItem>
             {canChangeSource && (
-              <DropdownMenuItem onSelect={source.openDialog}>
+              <DropdownMenuItem onSelect={openChangeAccount}>
                 <LandmarkIcon />
                 Change account
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onSelect={duplicate.openDialog}>
+            <DropdownMenuItem onSelect={openDuplicate}>
               <CopyIcon />
               Duplicate
             </DropdownMenuItem>
@@ -151,12 +280,12 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
                 Undo transfer
               </DropdownMenuItem>
             ) : (
-              <DropdownMenuItem onSelect={transferDialog.openDialog}>
+              <DropdownMenuItem onSelect={openMarkTransfer}>
                 <BanknoteIcon />
                 Mark as transfer
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onSelect={reminder.openDialog}>
+            <DropdownMenuItem onSelect={openSetReminder}>
               <BellPlusIcon />
               Set reminder
             </DropdownMenuItem>
@@ -176,15 +305,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
         <TransactionFormDialog
           key={edit.key}
           txId={tx.id}
-          seed={{
-            kind: tx.kind,
-            amount: tx.amount_original,
-            currency: tx.currency_original,
-            source: tx.source,
-            note: tx.note,
-            tags: tx.tags,
-            occurredOn: tx.occurred_on,
-          }}
+          seed={editSeed}
           locked={lockAmountFields}
           open={edit.open}
           onOpenChange={edit.setOpen}
@@ -231,15 +352,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
       {duplicate.mounted && (
         <TransactionFormDialog
           key={duplicate.key}
-          seed={{
-            kind: tx.kind,
-            amount: tx.amount_original,
-            currency: tx.currency_original,
-            source: tx.source,
-            note: tx.note,
-            tags: tx.tags,
-            occurredOn: tx.occurred_on,
-          }}
+          seed={editSeed}
           open={duplicate.open}
           onOpenChange={duplicate.setOpen}
           title="Duplicate transaction"

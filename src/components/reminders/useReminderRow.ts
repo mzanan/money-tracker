@@ -5,11 +5,13 @@ import { useState } from "react";
 import { useServerAction } from "@/hooks/useServerAction";
 import { deleteReminder } from "@/lib/actions/reminders";
 import { daysBetween, reminderMetaSegments } from "@/lib/reminders";
+import { useDrawerStep } from "@/components/transactions/drawerStepContext";
 
 import type { RecurringPayment } from "@/types/db";
 
 export function useReminderRow(reminder: RecurringPayment, today: string) {
   const [editOpen, setEditOpen] = useState(false);
+  const stepApi = useDrawerStep();
   const { run, pending } = useServerAction();
 
   const diff = daysBetween(today, reminder.next_due_on);
@@ -37,5 +39,6 @@ export function useReminderRow(reminder: RecurringPayment, today: string) {
     tone,
     metaSegments,
     handleDelete,
+    stepApi,
   };
 }

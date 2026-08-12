@@ -1,18 +1,26 @@
 "use client";
 
-import { useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 const DROPDOWN_CLOSE_MS = 150;
 
 export function useDeferredMenuAction() {
   const pendingRef = useRef(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  return function runAfterMenuClose(fn: () => void) {
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  return useCallback(function runAfterMenuClose(fn: () => void) {
     if (pendingRef.current) return;
     pendingRef.current = true;
-    setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = null;
       pendingRef.current = false;
       fn();
     }, DROPDOWN_CLOSE_MS);
-  };
+  }, []);
 }

@@ -11,6 +11,7 @@ import { transactionInDisplay } from "@/lib/totals";
 import { useUiStore } from "@/stores/uiStore";
 
 import { useDialogState } from "./useDialogState";
+import { useDrawerStep } from "./drawerStepContext";
 
 import type { Transaction } from "@/types/db";
 
@@ -19,6 +20,7 @@ export function useTransactionRow(tx: Transaction) {
   const remove = useServerAction();
   const transfer = useServerAction();
   const runAfterMenuClose = useDeferredMenuAction();
+  const stepApi = useDrawerStep();
   const reminder = useDialogState(runAfterMenuClose);
   const edit = useDialogState(runAfterMenuClose);
   const transferDialog = useDialogState(runAfterMenuClose);
@@ -97,5 +99,7 @@ export function useTransactionRow(tx: Transaction) {
     duplicate,
     handleUndoTransfer,
     handleDelete,
+    stepApi,
+    runAfterMenuClose,
   };
 }
