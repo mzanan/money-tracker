@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
+import { useDialogState } from "@/hooks/useDialogState";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { deleteTransaction } from "@/lib/actions/transactions";
@@ -10,7 +11,6 @@ import { isSyncedExternalId } from "@/lib/externalIds";
 import { transactionInDisplay } from "@/lib/totals";
 import { useUiStore } from "@/stores/uiStore";
 
-import { useDialogState } from "./useDialogState";
 import { useDrawerStep } from "./drawerStepContext";
 
 import type { Transaction } from "@/types/db";

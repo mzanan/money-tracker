@@ -10,18 +10,14 @@ export function useIntegrationDialog({
   provider,
   label,
   integration,
-  open,
   onOpenChange,
 }: {
   provider: IntegrationProvider;
   label: string;
   integration: IntegrationSummary | null;
-  open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const isFirstConnect = !integration;
-  // Credentials are never sent to the client. The form starts empty; on edit a
-  // blank field keeps the stored value.
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
   const [importIncome, setImportIncome] = useState(
@@ -29,16 +25,6 @@ export function useIntegrationDialog({
   );
   const [lookbackDays, setLookbackDays] = useState("30");
   const { run, pending } = useServerAction();
-
-  function handleOpenChange(next: boolean) {
-    if (next && !open) {
-      setApiKey("");
-      setApiSecret("");
-      setImportIncome(integration?.importIncome ?? false);
-      setLookbackDays("30");
-    }
-    onOpenChange(next);
-  }
 
   function handleSubmit() {
     run(
@@ -52,7 +38,7 @@ export function useIntegrationDialog({
         }),
       {
         success: `${label} ${integration ? "updated" : "connected"}`,
-        onSuccess: () => handleOpenChange(false),
+        onSuccess: () => onOpenChange(false),
       },
     );
   }
@@ -68,7 +54,6 @@ export function useIntegrationDialog({
     lookbackDays,
     setLookbackDays,
     pending,
-    handleOpenChange,
     handleSubmit,
   };
 }

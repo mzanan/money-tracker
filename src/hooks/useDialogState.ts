@@ -7,11 +7,20 @@ export function useDialogState(runAfterMenuClose: (fn: () => void) => void) {
   const [mounted, setMounted] = useState(false);
   const [key, setKey] = useState(0);
 
-  function openDialog() {
+  function mountFresh() {
     setMounted(true);
     setKey((k) => k + 1);
+  }
+
+  function openDialog() {
+    mountFresh();
     runAfterMenuClose(() => setOpen(true));
   }
 
-  return { open, setOpen, mounted, key, openDialog };
+  function openNow() {
+    mountFresh();
+    setOpen(true);
+  }
+
+  return { open, setOpen, mounted, key, openDialog, openNow };
 }
