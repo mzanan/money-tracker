@@ -9,6 +9,7 @@ import { createLocation, deleteLocation } from "@/lib/actions/locations";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
+  DrawerBody,
   DrawerCloseButton,
   DrawerContent,
   DrawerDescription,
@@ -69,7 +70,7 @@ export function PlacesDialog({
             Add or remove the places you track.
           </DrawerDescription>
         </DrawerHeader>
-        <div className="grid gap-2 overflow-y-auto px-4 pb-4">
+        <DrawerBody className="gap-2">
           <form onSubmit={submit} className="grid gap-2">
             <Input
               value={label}
@@ -146,7 +147,7 @@ export function PlacesDialog({
               ))}
             </div>
           )}
-        </div>
+        </DrawerBody>
       </DrawerContent>
     </Drawer>
   );

@@ -7,6 +7,7 @@ import { AmountInput } from "@/components/ui/amountInput";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
+  DrawerBody,
   DrawerCloseButton,
   DrawerContent,
   DrawerDescription,
@@ -46,7 +47,7 @@ export function MarkTransferDialog({
             matching entry there and both are left out of your totals.
           </DrawerDescription>
         </DrawerHeader>
-        <div className="grid gap-4 overflow-y-auto px-4 pb-4">
+        <DrawerBody>
           <AccountSelect
             sources={sources}
             value={selected}
@@ -63,7 +64,7 @@ export function MarkTransferDialog({
               placeholder="0"
             />
           </div>
-        </div>
+        </DrawerBody>
         <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
           <Button
             variant="ghost"

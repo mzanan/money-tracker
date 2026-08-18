@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { CurrencySelect } from "@/components/ui/currencySelect";
 import {
   Drawer,
+  DrawerBody,
   DrawerCloseButton,
   DrawerContent,
   DrawerDescription,
@@ -80,7 +81,13 @@ export function ReminderForm({
     setNextDueOn,
     submit,
     pending,
-  } = useReminderForm({ reminder, seed, onSaved, open: openProp, onOpenChange });
+  } = useReminderForm({
+    reminder,
+    seed,
+    onSaved,
+    open: openProp,
+    onOpenChange,
+  });
 
   return (
     <Drawer
@@ -103,7 +110,7 @@ export function ReminderForm({
           </DrawerDescription>
         </DrawerHeader>
 
-        <div className="grid gap-4 overflow-y-auto px-4 pb-4">
+        <DrawerBody>
           <div className="grid gap-2">
             <Label htmlFor="reminder-label">Name</Label>
             <Input
@@ -233,7 +240,7 @@ export function ReminderForm({
           >
             Recalculate next due from last paid
           </button>
-        </div>
+        </DrawerBody>
 
         <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
           <Button
