@@ -89,6 +89,8 @@
   --surface-2: oklch(0.94 0 0);
   --brand: oklch(0.62 0.22 285);
   --brand-foreground: oklch(0.985 0 0);
+  --container-content-max: 72rem;
+  --drawer-inset: max(0px, calc((100vw - var(--container-content-max)) / 2));
 }
 
 .dark {
