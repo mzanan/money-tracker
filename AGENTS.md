@@ -59,6 +59,14 @@ portabilidad. Schema y migración one-shot documentados en el vault
 - **Huso horario:** `occurred_on` es un `date` puro (sin hora). Se asigna al
   cargar usando `useTimezone()` (override de settings, o auto-detect del
   dispositivo). Cambiar el huso **NO** debe re-mapear registros viejos.
+- **Nunca dos Drawers apilados.** Toda acción disparada desde adentro de un
+  Drawer abierto se renderiza como paso interno del mismo Drawer, vía
+  `DrawerStepContext` (`push`/`pop`, stack en `dashboardPanel.tsx`). Cada
+  formulario tiene su gemelo `*Step.tsx` que comparte el hook de lógica con su
+  `*Dialog.tsx`; el Dialog/Drawer standalone solo se usa cuando no hay ningún
+  Drawer abierto (`useDrawerStep()` devuelve `null`). El back del navegador
+  hace pop de un paso a la vez (`useHistoryClose`); un flujo con estado propio
+  se engancha con `stepApi.registerBack`.
 - **No commits/PRs automáticos.** Siempre preguntar antes (regla del vault
   personal-brain).
 
