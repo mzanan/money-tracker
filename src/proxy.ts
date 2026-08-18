@@ -1,7 +1,7 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PREFIXES = ["/login", "/auth", "/api/auth"];
+const PUBLIC_PREFIXES = ["/login", "/api/auth"];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PREFIXES.some(
