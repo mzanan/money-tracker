@@ -1,7 +1,7 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PREFIXES = ["/login", "/auth", "/api/auth"];
+const PUBLIC_PREFIXES = ["/login", "/api/auth"];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PREFIXES.some(
@@ -20,12 +20,6 @@ export async function proxy(request: NextRequest) {
   if (!sessionCookie && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
-  }
-
-  if (sessionCookie && pathname === "/login") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
