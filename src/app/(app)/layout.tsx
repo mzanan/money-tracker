@@ -19,7 +19,7 @@ export default async function AppLayout({
 }) {
   const user = await getUser();
   if (!user) {
-    redirect("/auth/sign-out");
+    redirect("/login");
   }
 
   const [settings, hideAmounts] = await Promise.all([
