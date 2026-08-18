@@ -3,7 +3,7 @@ import { cache } from "react";
 
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
-import type { ClientSettings } from "@/types/db";
+import type { AssistantSettings, ClientSettings } from "@/types/db";
 
 export const getUserSettings = cache(
   async (userId: string): Promise<ClientSettings | null> => {
@@ -26,14 +26,6 @@ export const getUserSettings = cache(
     return rows[0] ?? null;
   },
 );
-
-export interface AssistantSettings {
-  base_currency: string;
-  timezone: string | null;
-  ai_provider: "google" | "groq" | null;
-  ai_model: string | null;
-  ai_api_key: string | null;
-}
 
 export const getAssistantSettings = cache(
   async (userId: string): Promise<AssistantSettings | null> => {
