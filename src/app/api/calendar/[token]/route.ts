@@ -1,7 +1,8 @@
+import { and, asc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { getActiveReminders } from "@/lib/data/reminders";
-import { getUserIdByCalendarToken } from "@/lib/data/userSettings";
+import { db } from "@/lib/db";
+import { recurring_payments, user_settings } from "@/lib/db/schema";
 import { buildIcsFeed } from "@/lib/ical";
 
 export async function GET(
@@ -14,13 +15,27 @@ export async function GET(
     return NextResponse.json({ error: "missing_token" }, { status: 400 });
   }
 
-  const userId = await getUserIdByCalendarToken(cleanToken);
+  const account = await db
+    .select({ user_id: user_settings.user_id })
+    .from(user_settings)
+    .where(eq(user_settings.calendar_token, cleanToken))
+    .limit(1)
+    .then((rows) => rows[0]);
 
-  if (!userId) {
+  if (!account) {
     return NextResponse.json({ error: "invalid_token" }, { status: 404 });
   }
 
-  const reminders = await getActiveReminders(userId);
+  const reminders = await db
+    .select()
+    .from(recurring_payments)
+    .where(
+      and(
+        eq(recurring_payments.user_id, account.user_id),
+        eq(recurring_payments.active, true),
+      ),
+    )
+    .orderBy(asc(recurring_payments.next_due_on));
 
   const body = buildIcsFeed(reminders);
 

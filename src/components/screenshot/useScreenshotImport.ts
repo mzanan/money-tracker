@@ -19,7 +19,6 @@ import {
 } from "@/lib/actions/screenshotImport";
 import {
   requestImageExtraction,
-  type CandidateMatch,
   type ImageImportMode,
 } from "@/lib/imageExtract";
 import { sourceForApp } from "@/lib/constants/sources";
@@ -54,6 +53,16 @@ const ROW_ERRORS: Record<Exclude<ScreenshotRowStatus, "imported">, string> = {
 function sourceFor(app: string | null, existingSources: string[]): string {
   const source = sourceForApp(app);
   return existingSources.includes(source) ? source : "";
+}
+
+export interface CandidateMatch {
+  id: string;
+  source: string;
+  occurredOn: string;
+  amount: number;
+  currency: string;
+  kind: "income" | "expense";
+  note: string | null;
 }
 
 function detectedToEditable(

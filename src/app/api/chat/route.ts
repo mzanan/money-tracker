@@ -1,10 +1,12 @@
 import { convertToModelMessages, stepCountIs, streamText } from "ai";
 import type { UIMessage } from "ai";
+import { eq } from "drizzle-orm";
 
 import { buildAssistantTools } from "@/lib/ai/assistantTools";
 import { buildSystemPrompt } from "@/lib/ai/prompt";
 import { hasServerKey, resolveChatModel } from "@/lib/ai/provider";
-import { getAssistantSettings } from "@/lib/data/userSettings";
+import { db } from "@/lib/db";
+import { user_settings } from "@/lib/db/schema";
 import { todayInTz } from "@/lib/dates";
 import { ASSISTANT_ENABLED, BUDGET_ENABLED } from "@/lib/featureFlags";
 import { decryptSecret } from "@/lib/integrations/crypto";
@@ -20,7 +22,18 @@ export async function POST(req: Request) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const settings = await getAssistantSettings(user.id);
+  const settings = await db
+    .select({
+      base_currency: user_settings.base_currency,
+      timezone: user_settings.timezone,
+      ai_provider: user_settings.ai_provider,
+      ai_model: user_settings.ai_model,
+      ai_api_key: user_settings.ai_api_key,
+    })
+    .from(user_settings)
+    .where(eq(user_settings.user_id, user.id))
+    .limit(1)
+    .then((rows) => rows[0]);
 
   if (!settings) {
     return Response.json({ error: "Settings not found" }, { status: 400 });

@@ -4,11 +4,11 @@ import { useRef, useState, useTransition } from "react";
 import type { Drawer as DrawerPrimitive } from "@base-ui/react/drawer";
 import { toast } from "sonner";
 
+import type { CandidateMatch } from "@/components/screenshot/useScreenshotImport";
 import { previewCandidatesAction } from "@/lib/actions/screenshotImport";
 import type { DetectedTransaction } from "@/lib/ai/screenshotExtract";
 import {
   requestImageExtraction,
-  type CandidateMatch,
   type ImageImportMode,
 } from "@/lib/imageExtract";
 

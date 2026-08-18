@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { recurring_payments } from "@/lib/db/schema";
@@ -11,21 +11,6 @@ export interface RemindersData {
   reminders: RecurringPayment[];
   completedReminders: RecurringPayment[];
   today: string;
-}
-
-export async function getActiveReminders(
-  userId: string,
-): Promise<RecurringPayment[]> {
-  return db
-    .select()
-    .from(recurring_payments)
-    .where(
-      and(
-        eq(recurring_payments.user_id, userId),
-        eq(recurring_payments.active, true),
-      ),
-    )
-    .orderBy(asc(recurring_payments.next_due_on));
 }
 
 export async function getRemindersData(): Promise<RemindersData> {

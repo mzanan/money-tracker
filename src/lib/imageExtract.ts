@@ -3,16 +3,6 @@ import { compressImage } from "@/lib/imageCompress";
 
 export type ImageImportMode = "screenshot" | "receipt";
 
-export interface CandidateMatch {
-  id: string;
-  source: string;
-  occurredOn: string;
-  amount: number;
-  currency: string;
-  kind: "income" | "expense";
-  note: string | null;
-}
-
 export type ImageExtractionResult =
   | { ok: true; items: DetectedTransaction[]; ignored: number }
   | { ok: false; error: string; aborted?: false }

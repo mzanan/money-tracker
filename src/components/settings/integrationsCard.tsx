@@ -1,6 +1,9 @@
-import { getIntegrationSummaries } from "@/lib/data/integrations";
+import { eq } from "drizzle-orm";
+
+import { db } from "@/lib/db";
+import { api_integrations } from "@/lib/db/schema";
 import { getUser } from "@/lib/session";
-import type { IntegrationProvider } from "@/types/db";
+import type { IntegrationProvider, IntegrationSummary } from "@/types/db";
 
 import {
   Card,
@@ -20,7 +23,21 @@ export async function IntegrationsCard() {
   const user = await getUser();
   if (!user) return null;
 
-  const byProvider = await getIntegrationSummaries(user.id);
+  const integrations = await db
+    .select({
+      provider: api_integrations.provider,
+      import_income: api_integrations.import_income,
+      last_synced_at: api_integrations.last_synced_at,
+    })
+    .from(api_integrations)
+    .where(eq(api_integrations.user_id, user.id));
+
+  const byProvider = new Map<IntegrationProvider, IntegrationSummary>(
+    integrations.map((i) => [
+      i.provider,
+      { importIncome: i.import_income, lastSyncedAt: i.last_synced_at },
+    ]),
+  );
 
   return (
     <Card>

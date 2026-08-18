@@ -5,11 +5,12 @@ import type { DetectedTransaction } from "@/lib/ai/screenshotExtract";
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
 import { todayInTz } from "@/lib/dates";
-import type { CandidateMatch } from "@/lib/imageExtract";
 import { SHARE_ERROR_CODES, type ShareErrorCode } from "@/lib/screenshotShare";
 
 import { findCrossSourceCandidates } from "./duplicates";
 import { getUserSources } from "./sources";
+
+import type { CandidateMatch } from "@/components/screenshot/useScreenshotImport";
 
 const SHARE_COOKIE = "mt_share_payload";
 
