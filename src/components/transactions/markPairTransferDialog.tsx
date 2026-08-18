@@ -6,6 +6,7 @@ import { AmountInput } from "@/components/ui/amountInput";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
+  DrawerBody,
   DrawerCloseButton,
   DrawerContent,
   DrawerDescription,
@@ -55,13 +56,13 @@ export function MarkPairTransferDialog({
             Both transactions will be linked and left out of your totals.
           </DrawerDescription>
         </DrawerHeader>
-        <div className="grid gap-4 overflow-y-auto px-4 pb-4">
+        <DrawerBody>
           {sameCurrency && delta > 0 && (
             <div className="flex items-center justify-between gap-4">
               <p className="min-w-0 text-sm">
                 Record the difference (
-                {formatMoney(delta, expenseTx.currency_original)}) as a
-                transfer fee
+                {formatMoney(delta, expenseTx.currency_original)}) as a transfer
+                fee
               </p>
               <Switch
                 checked={recordFeeDelta}
@@ -84,7 +85,7 @@ export function MarkPairTransferDialog({
               />
             </div>
           )}
-        </div>
+        </DrawerBody>
         <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
           <Button
             variant="ghost"

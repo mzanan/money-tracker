@@ -5,6 +5,7 @@ import { Loader2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
+  DrawerBody,
   DrawerCloseButton,
   DrawerContent,
   DrawerDescription,
@@ -57,9 +58,9 @@ export function TransactionFormDialog({
           <DrawerDescription>{dialogDescription}</DrawerDescription>
         </DrawerHeader>
 
-        <div className="grid gap-4 overflow-y-auto px-4 pb-4">
+        <DrawerBody>
           <TransactionFormFields form={form} txId={txId} locked={locked} />
-        </div>
+        </DrawerBody>
 
         <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
           <Button

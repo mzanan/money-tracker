@@ -6,6 +6,7 @@ import { AccountSelect } from "./accountSelect";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
+  DrawerBody,
   DrawerCloseButton,
   DrawerContent,
   DrawerDescription,
@@ -44,14 +45,14 @@ export function SourceEditor({
             Move this transaction to a different account.
           </DrawerDescription>
         </DrawerHeader>
-        <div className="grid gap-4 overflow-y-auto px-4 pb-4">
+        <DrawerBody>
           <AccountSelect
             sources={sources}
             value={selected}
             onValueChange={setSelected}
             emptyMessage="No other account to pick. Import or add one first."
           />
-        </div>
+        </DrawerBody>
         <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
           <Button
             variant="ghost"

@@ -6,13 +6,15 @@ import type { IntegrationProvider, IntegrationSummary } from "@/types/db";
 
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerBody,
+  DrawerCloseButton,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -61,22 +63,29 @@ export function IntegrationDialog({
     pending,
     handleOpenChange,
     handleSubmit,
-  } = useIntegrationDialog({ provider, label, integration, open, onOpenChange });
+  } = useIntegrationDialog({
+    provider,
+    label,
+    integration,
+    open,
+    onOpenChange,
+  });
 
   const helpText =
     "Create a read-only API key at bybit.com → API Management with permissions for Wallet (read-only).";
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
+    <Drawer size="sm" open={open} onOpenChange={handleOpenChange}>
+      <DrawerContent>
+        <DrawerCloseButton />
+        <DrawerHeader>
+          <DrawerTitle>
             {integration ? `Edit ${label} credentials` : `Connect ${label}`}
-          </DialogTitle>
-          <DialogDescription>{helpText}</DialogDescription>
-        </DialogHeader>
+          </DrawerTitle>
+          <DrawerDescription>{helpText}</DrawerDescription>
+        </DrawerHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
+        <DrawerBody>
           <div className="grid gap-1.5">
             <Label htmlFor="api-key">API key</Label>
             <Input
@@ -84,7 +93,9 @@ export function IntegrationDialog({
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
               required={isFirstConnect}
-              placeholder={isFirstConnect ? undefined : "Leave blank to keep current"}
+              placeholder={
+                isFirstConnect ? undefined : "Leave blank to keep current"
+              }
               autoComplete="off"
             />
           </div>
@@ -97,7 +108,9 @@ export function IntegrationDialog({
               value={apiSecret}
               onChange={(event) => setApiSecret(event.target.value)}
               required={isFirstConnect}
-              placeholder={isFirstConnect ? undefined : "Leave blank to keep current"}
+              placeholder={
+                isFirstConnect ? undefined : "Leave blank to keep current"
+              }
               autoComplete="off"
             />
           </div>
@@ -106,13 +119,11 @@ export function IntegrationDialog({
             <div>
               <p className="text-sm font-medium">Import incoming as income</p>
               <p className="text-muted-foreground text-xs">
-                Only enable if this is where you receive your salary or payments.
+                Only enable if this is where you receive your salary or
+                payments.
               </p>
             </div>
-            <Switch
-              checked={importIncome}
-              onCheckedChange={setImportIncome}
-            />
+            <Switch checked={importIncome} onCheckedChange={setImportIncome} />
           </div>
 
           {isFirstConnect && (
@@ -132,31 +143,33 @@ export function IntegrationDialog({
               </Select>
               <p className="text-muted-foreground text-xs">
                 One-time choice. After the first sync, future syncs are
-                incremental. Longer windows fetch more history but use more
-                API calls (≈1 request per 6 days).
+                incremental. Longer windows fetch more history but use more API
+                calls (≈1 request per 6 days).
               </p>
             </div>
           )}
+        </DrawerBody>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => handleOpenChange(false)}
-              disabled={pending}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={pending || (isFirstConnect && !apiKey.trim())}
-            >
-              {pending && <Loader2Icon className="animate-spin" />}
-              Save
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
+          <Button
+            type="button"
+            variant="ghost"
+            className="sm:flex-1"
+            onClick={() => handleOpenChange(false)}
+            disabled={pending}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="sm:flex-1"
+            onClick={handleSubmit}
+            disabled={pending || (isFirstConnect && !apiKey.trim())}
+          >
+            {pending && <Loader2Icon className="animate-spin" />}
+            Save
+          </Button>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }
