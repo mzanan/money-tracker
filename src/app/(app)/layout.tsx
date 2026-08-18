@@ -35,7 +35,7 @@ export default async function AppLayout({
     <SettingsProvider value={settings}>
       <HideAmountsProvider initial={hideAmounts}>
         <ConfirmProvider>
-        <div className="mx-auto flex w-full max-w-xl flex-1 flex-col lg:max-w-6xl">
+        <div className="mx-auto flex w-full max-w-xl flex-1 flex-col lg:max-w-(--container-content-max)">
           <Header />
           <main className="flex-1 px-4 pt-2 pb-24 lg:pb-8">{children}</main>
         </div>
