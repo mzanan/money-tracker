@@ -61,13 +61,11 @@ export function IntegrationDialog({
     lookbackDays,
     setLookbackDays,
     pending,
-    handleOpenChange,
     handleSubmit,
   } = useIntegrationDialog({
     provider,
     label,
     integration,
-    open,
     onOpenChange,
   });
 
@@ -75,7 +73,7 @@ export function IntegrationDialog({
     "Create a read-only API key at bybit.com → API Management with permissions for Wallet (read-only).";
 
   return (
-    <Drawer size="sm" open={open} onOpenChange={handleOpenChange}>
+    <Drawer size="sm" open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
         <DrawerCloseButton />
         <DrawerHeader>
@@ -155,7 +153,7 @@ export function IntegrationDialog({
             type="button"
             variant="ghost"
             className="sm:flex-1"
-            onClick={() => handleOpenChange(false)}
+            onClick={() => onOpenChange(false)}
             disabled={pending}
           >
             Cancel

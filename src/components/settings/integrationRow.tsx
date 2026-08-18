@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { Loader2Icon, MoreVerticalIcon, RefreshCwIcon } from "lucide-react";
 
 import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
+import { useDialogState } from "@/hooks/useDialogState";
 import { useServerAction } from "@/hooks/useServerAction";
 import {
   deleteIntegration,
@@ -43,9 +43,9 @@ function timeAgo(iso: string | null): string {
 }
 
 export function IntegrationRow({ provider, label, integration }: Props) {
-  const [open, setOpen] = useState(false);
   const { run, pending } = useServerAction();
   const runAfterMenuClose = useDeferredMenuAction();
+  const dialog = useDialogState(runAfterMenuClose);
   const connected = integration !== null;
 
   function handleSync() {
@@ -112,9 +112,7 @@ export function IntegrationRow({ provider, label, integration }: Props) {
                 }
               />
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onSelect={() => runAfterMenuClose(() => setOpen(true))}
-                >
+                <DropdownMenuItem onSelect={() => dialog.openDialog()}>
                   Edit credentials
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -127,19 +125,22 @@ export function IntegrationRow({ provider, label, integration }: Props) {
             </DropdownMenu>
           </>
         ) : (
-          <Button size="sm" onClick={() => setOpen(true)}>
+          <Button size="sm" onClick={() => dialog.openNow()}>
             Connect
           </Button>
         )}
       </div>
 
-      <IntegrationDialog
-        provider={provider}
-        label={label}
-        integration={integration}
-        open={open}
-        onOpenChange={setOpen}
-      />
+      {dialog.mounted && (
+        <IntegrationDialog
+          key={dialog.key}
+          provider={provider}
+          label={label}
+          integration={integration}
+          open={dialog.open}
+          onOpenChange={dialog.setOpen}
+        />
+      )}
     </ListRow>
   );
 }
