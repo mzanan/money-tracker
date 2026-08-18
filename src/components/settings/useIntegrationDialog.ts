@@ -40,8 +40,7 @@ export function useIntegrationDialog({
     onOpenChange(next);
   }
 
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  function handleSubmit() {
     run(
       () =>
         saveIntegration({
