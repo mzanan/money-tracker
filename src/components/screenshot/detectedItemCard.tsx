@@ -10,6 +10,7 @@ import {
 
 import { CURRENCIES } from "@/lib/constants/currencies";
 import { labelForSource } from "@/lib/constants/sources";
+import type { CandidateMatch } from "@/lib/imageExtract";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ import {
 import { Surface } from "@/components/ui/surface";
 
 import { DuplicateCandidates } from "./duplicateCandidates";
-import type { CandidateMatch, EditableItem } from "./useScreenshotImport";
+import type { EditableItem } from "./useScreenshotImport";
 
 const CURRENCY_CODES = CURRENCIES.map((currency) => currency.code);
 
