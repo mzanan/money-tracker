@@ -6,12 +6,14 @@ import { AccountSelect } from "./accountSelect";
 import { AmountInput } from "@/components/ui/amountInput";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerCloseButton,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Label } from "@/components/ui/label";
 import { getCurrency } from "@/lib/constants/currencies";
 
@@ -34,36 +36,52 @@ export function MarkTransferDialog({
     useMarkTransferDialog({ txId, txSource, open, onOpenChange });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Mark as a transfer</DialogTitle>
-          <DialogDescription>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent>
+        <DrawerCloseButton />
+        <DrawerHeader className="pb-2">
+          <DrawerTitle>Mark as a transfer</DrawerTitle>
+          <DrawerDescription>
             Which account did this money move to or from? It creates the
             matching entry there and both are left out of your totals.
-          </DialogDescription>
-        </DialogHeader>
-        <AccountSelect
-          sources={sources}
-          value={selected}
-          onValueChange={setSelected}
-          emptyMessage="No other account to pick. Import or add one first."
-        />
-        <div className="grid gap-1.5">
-          <Label htmlFor="transfer-fee">Fee ({txCurrency}), optional</Label>
-          <AmountInput
-            id="transfer-fee"
-            value={fee}
-            onChange={setFee}
-            decimals={getCurrency(txCurrency).decimals}
-            placeholder="0"
+          </DrawerDescription>
+        </DrawerHeader>
+        <div className="grid gap-4 overflow-y-auto px-4 pb-4">
+          <AccountSelect
+            sources={sources}
+            value={selected}
+            onValueChange={setSelected}
+            emptyMessage="No other account to pick. Import or add one first."
           />
+          <div className="grid gap-1.5">
+            <Label htmlFor="transfer-fee">Fee ({txCurrency}), optional</Label>
+            <AmountInput
+              id="transfer-fee"
+              value={fee}
+              onChange={setFee}
+              decimals={getCurrency(txCurrency).decimals}
+              placeholder="0"
+            />
+          </div>
         </div>
-        <Button disabled={!selected || pending} onClick={submit}>
-          {pending && <Loader2Icon className="animate-spin" />}
-          Confirm
-        </Button>
-      </DialogContent>
-    </Dialog>
+        <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
+          <Button
+            variant="ghost"
+            className="sm:flex-1"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="sm:flex-1"
+            disabled={!selected || pending}
+            onClick={submit}
+          >
+            {pending && <Loader2Icon className="animate-spin" />}
+            Confirm
+          </Button>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

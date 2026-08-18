@@ -6,9 +6,9 @@ const STATE_KEY = "mt_panel";
 
 export function useHistoryClose(
   active: boolean,
-  onClose: () => void,
+  onDismiss: () => boolean | void,
 ): void {
-  const onCloseRef = useRef(onClose);
+  const onDismissRef = useRef(onDismiss);
   // A StrictMode remount, or a real close immediately followed by a
   // reopen, both re-run this effect before the deferred cleanup below has
   // fired. Cancelling that pending history.back() alone isn't enough: it
@@ -19,8 +19,8 @@ export function useHistoryClose(
   const cleanupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
 
   useEffect(() => {
     if (!active) return;
@@ -33,7 +33,10 @@ export function useHistoryClose(
       window.history.pushState({ [STATE_KEY]: true }, "");
     }
     function onPop() {
-      onCloseRef.current();
+      const stayArmed = onDismissRef.current();
+      if (stayArmed && !window.history.state?.[STATE_KEY]) {
+        window.history.pushState({ [STATE_KEY]: true }, "");
+      }
     }
     window.addEventListener("popstate", onPop);
     return () => {

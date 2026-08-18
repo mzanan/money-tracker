@@ -9,14 +9,15 @@ import { AmountInput } from "@/components/ui/amountInput";
 import { Button } from "@/components/ui/button";
 import { CurrencySelect } from "@/components/ui/currencySelect";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerCloseButton,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -82,25 +83,27 @@ export function ReminderForm({
   } = useReminderForm({ reminder, seed, onSaved, open: openProp, onOpenChange });
 
   return (
-    <Dialog
+    <Drawer
+      size="md"
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
         if (!next) reset();
       }}
     >
-      {trigger && <DialogTrigger render={trigger} />}
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
+      {trigger && <DrawerTrigger render={trigger} />}
+      <DrawerContent>
+        <DrawerCloseButton />
+        <DrawerHeader className="pb-2">
+          <DrawerTitle>
             {title ?? (isEdit ? "Edit reminder" : "New reminder")}
-          </DialogTitle>
-          <DialogDescription>
+          </DrawerTitle>
+          <DrawerDescription>
             Track a recurring payment and when it&apos;s next due.
-          </DialogDescription>
-        </DialogHeader>
+          </DrawerDescription>
+        </DrawerHeader>
 
-        <div className="grid gap-4">
+        <div className="grid gap-4 overflow-y-auto px-4 pb-4">
           <div className="grid gap-2">
             <Label htmlFor="reminder-label">Name</Label>
             <Input
@@ -232,19 +235,24 @@ export function ReminderForm({
           </button>
         </div>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>
+        <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
+          <Button
+            variant="ghost"
+            className="sm:flex-1"
+            onClick={() => setOpen(false)}
+          >
             Cancel
           </Button>
           <Button
+            className="sm:flex-1"
             onClick={submit}
             disabled={pending || !label.trim() || !nextDueOn}
           >
             {pending && <Loader2Icon className="animate-spin" />}
             {isEdit ? "Save" : "Add reminder"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

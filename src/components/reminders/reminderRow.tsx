@@ -25,6 +25,7 @@ import { IconCircle } from "@/components/ui/iconCircle";
 import { TappableRow } from "@/components/ui/tappableRow";
 
 import { ReminderForm } from "./reminderForm";
+import { ReminderFormStep } from "./reminderFormStep";
 import { useReminderRow } from "./useReminderRow";
 
 import type { RecurringPayment } from "@/types/db";
@@ -50,14 +51,28 @@ export function ReminderRow({
     tone,
     metaSegments,
     handleDelete,
+    stepApi,
   } = useReminderRow(reminder, today);
   const runAfterMenuClose = useDeferredMenuAction();
+
+  function openEdit() {
+    if (stepApi) {
+      stepApi.push({
+        key: `reminder-edit-${reminder.id}`,
+        content: (
+          <ReminderFormStep reminder={reminder} onBack={stepApi.pop} />
+        ),
+      });
+    } else {
+      setEditOpen(true);
+    }
+  }
 
   return (
     <TappableRow as="li" className="group">
       <button
         type="button"
-        onClick={() => setEditOpen(true)}
+        onClick={openEdit}
         aria-label={`Edit ${reminder.label}`}
         className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
       >
@@ -134,9 +149,7 @@ export function ReminderRow({
             }
           />
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onSelect={() => runAfterMenuClose(() => setEditOpen(true))}
-            >
+            <DropdownMenuItem onSelect={() => runAfterMenuClose(openEdit)}>
               <PencilIcon />
               Edit
             </DropdownMenuItem>
