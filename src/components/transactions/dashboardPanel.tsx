@@ -132,17 +132,21 @@ export function DashboardPanel({
         <div
           ref={contentRef}
           className={cn(
-            "grid gap-5 overflow-y-auto px-4 pb-8",
-            steps.length > 0 && "pt-4",
+            "grid min-w-0 gap-5 overflow-y-auto px-4",
+            steps.length > 0 ? "pt-4 pb-0" : "pb-8",
           )}
         >
           <DrawerStepContext.Provider value={stepApi}>
             {steps.length > 0 && (
-              <div key={steps[steps.length - 1].key}>
+              <div key={steps[steps.length - 1].key} className="min-w-0">
                 {steps[steps.length - 1].content}
               </div>
             )}
-            <div className={steps.length > 0 ? "hidden" : "grid gap-5"}>
+            <div
+              className={
+                steps.length > 0 ? "hidden" : "grid min-w-0 gap-5"
+              }
+            >
               {children}
             </div>
           </DrawerStepContext.Provider>

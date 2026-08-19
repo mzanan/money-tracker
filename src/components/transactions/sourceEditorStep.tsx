@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronLeftIcon, Loader2Icon } from "lucide-react";
+import { Loader2Icon } from "lucide-react";
 
 import { AccountSelect } from "./accountSelect";
 import { Button } from "@/components/ui/button";
+import { StepShell } from "@/components/ui/stepShell";
 
 import { useSourceEditor } from "./useSourceEditor";
 
@@ -26,40 +27,28 @@ export function SourceEditorStep({
   });
 
   return (
-    <div className="grid gap-4">
-      <div className="flex items-start gap-2">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Back"
-          onClick={onBack}
-        >
-          <ChevronLeftIcon />
-        </Button>
-        <div className="min-w-0 pt-1">
-          <p className="text-sm font-semibold">Change account</p>
-          <p className="text-muted-foreground text-xs">
-            Move this transaction to a different account.
-          </p>
-        </div>
-      </div>
-
+    <StepShell
+      title="Change account"
+      description="Move this transaction to a different account."
+      onBack={onBack}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onBack}>
+            Cancel
+          </Button>
+          <Button disabled={!selected || pending} onClick={submit}>
+            {pending && <Loader2Icon className="animate-spin" />}
+            Save
+          </Button>
+        </>
+      }
+    >
       <AccountSelect
         sources={sources}
         value={selected}
         onValueChange={setSelected}
         emptyMessage="No other account to pick. Import or add one first."
       />
-
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onBack}>
-          Cancel
-        </Button>
-        <Button disabled={!selected || pending} onClick={submit}>
-          {pending && <Loader2Icon className="animate-spin" />}
-          Save
-        </Button>
-      </div>
-    </div>
+    </StepShell>
   );
 }

@@ -8,6 +8,7 @@ import { formatMoney } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
+  DrawerBody,
   DrawerContent,
   DrawerDescription,
   DrawerHeader,
@@ -86,7 +87,7 @@ export function MergeBar() {
               preserved.
             </DrawerDescription>
           </DrawerHeader>
-          <div className="grid gap-2 px-4 pb-8">
+          <DrawerBody className="gap-2 pb-8">
             {canResolve &&
               [
                 [first, second],
@@ -126,7 +127,7 @@ export function MergeBar() {
             >
               Keep both, it&apos;s a repeated expense
             </Button>
-          </div>
+          </DrawerBody>
         </DrawerContent>
       </Drawer>
 

@@ -62,7 +62,7 @@ export function CalendarPanel({
   return (
     <>
       {payFlow.activeReminder ? (
-        <Surface className="grid gap-4">
+        <Surface className="grid min-w-0 gap-4">
           {payFlow.step === "form" && payFlow.activeReminder.amount != null ? (
             <PayExpensePanel
               reminderLabel={payFlow.activeReminder.label}

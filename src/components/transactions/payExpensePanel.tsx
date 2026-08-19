@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronLeftIcon, Loader2Icon } from "lucide-react";
+import { Loader2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { StepShell } from "@/components/ui/stepShell";
 import { formatMoney } from "@/lib/currency";
 
 import { TransactionFormFields } from "./transactionFormFields";
@@ -29,38 +30,33 @@ export function PayExpensePanel({
   });
 
   return (
-    <div className="grid gap-4">
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Back to candidates"
-          onClick={onBack}
-        >
-          <ChevronLeftIcon />
-        </Button>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">Pay {reminderLabel}</p>
-          <p className="text-muted-foreground text-xs tabular-nums">
-            {formatMoney(seed.amount, seed.currency)}
-          </p>
-        </div>
-      </div>
-
+    <StepShell
+      title={`Pay ${reminderLabel}`}
+      description={
+        <span className="tabular-nums">
+          {formatMoney(seed.amount, seed.currency)}
+        </span>
+      }
+      onBack={onBack}
+      backAriaLabel="Back to candidates"
+      insetClassName="-mx-5 px-5"
+      footerClassName="bg-card border-transparent"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onBack}>
+            Back
+          </Button>
+          <Button
+            onClick={form.submit}
+            disabled={form.pending || !form.source || form.sourceOptions === null}
+          >
+            {form.pending && <Loader2Icon className="animate-spin" />}
+            Save and mark paid
+          </Button>
+        </>
+      }
+    >
       <TransactionFormFields form={form} />
-
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onBack}>
-          Back
-        </Button>
-        <Button
-          onClick={form.submit}
-          disabled={form.pending || !form.source || form.sourceOptions === null}
-        >
-          {form.pending && <Loader2Icon className="animate-spin" />}
-          Save and mark paid
-        </Button>
-      </div>
-    </div>
+    </StepShell>
   );
 }

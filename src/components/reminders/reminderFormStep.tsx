@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeftIcon, Loader2Icon } from "lucide-react";
+import { Loader2Icon } from "lucide-react";
 
 import { getCurrency } from "@/lib/constants/currencies";
 import { FREQUENCY_OPTIONS } from "@/lib/reminders";
@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { StepShell } from "@/components/ui/stepShell";
 import { Textarea } from "@/components/ui/textarea";
 
 import { useReminderForm, type ReminderSeed } from "./useReminderForm";
@@ -72,26 +73,25 @@ export function ReminderFormStep({
   });
 
   return (
-    <div className="grid gap-4">
-      <div className="flex items-start gap-2">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Back"
-          onClick={onBack}
-        >
-          <ChevronLeftIcon />
-        </Button>
-        <div className="min-w-0 pt-1">
-          <p className="text-sm font-semibold">
-            {title ?? (isEdit ? "Edit reminder" : "New reminder")}
-          </p>
-          <p className="text-muted-foreground text-xs">
-            Track a recurring payment and when it&apos;s next due.
-          </p>
-        </div>
-      </div>
-
+    <StepShell
+      title={title ?? (isEdit ? "Edit reminder" : "New reminder")}
+      description="Track a recurring payment and when it's next due."
+      onBack={onBack}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onBack}>
+            Cancel
+          </Button>
+          <Button
+            onClick={submit}
+            disabled={pending || !label.trim() || !nextDueOn}
+          >
+            {pending && <Loader2Icon className="animate-spin" />}
+            {isEdit ? "Save" : "Add reminder"}
+          </Button>
+        </>
+      }
+    >
       <div className="grid gap-2">
         <Label htmlFor="reminder-step-label">Name</Label>
         <Input
@@ -221,19 +221,6 @@ export function ReminderFormStep({
       >
         Recalculate next due from last paid
       </button>
-
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onBack}>
-          Cancel
-        </Button>
-        <Button
-          onClick={submit}
-          disabled={pending || !label.trim() || !nextDueOn}
-        >
-          {pending && <Loader2Icon className="animate-spin" />}
-          {isEdit ? "Save" : "Add reminder"}
-        </Button>
-      </div>
-    </div>
+    </StepShell>
   );
 }
