@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { Loader2Icon, Trash2Icon } from "lucide-react";
 
-import { useServerAction } from "@/hooks/useServerAction";
-import { createLocation, deleteLocation } from "@/lib/actions/locations";
+import { locationRangeLabel } from "@/lib/places";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,14 +19,7 @@ import { Input } from "@/components/ui/input";
 
 import type { Location } from "@/types/db";
 
-function rangeLabel(place: Location): string {
-  if (place.start_date && place.end_date) {
-    return `${place.start_date} to ${place.end_date}`;
-  }
-  if (place.start_date) return `from ${place.start_date}`;
-  if (place.end_date) return `until ${place.end_date}`;
-  return "any date";
-}
+import { usePlacesDialog } from "./usePlacesDialog";
 
 export function PlacesDialog({
   places,
@@ -37,27 +28,19 @@ export function PlacesDialog({
   places: Location[];
   trigger: React.ReactElement;
 }) {
-  const [label, setLabel] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const create = useServerAction();
-  const remove = useServerAction();
-
-  const sorted = places
-    .slice()
-    .sort((a, b) => ((a.start_date ?? "") < (b.start_date ?? "") ? 1 : -1));
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    create.run(() => createLocation({ label, startDate, endDate }), {
-      success: "Place added",
-      onSuccess: () => {
-        setLabel("");
-        setStartDate("");
-        setEndDate("");
-      },
-    });
-  }
+  const {
+    label,
+    setLabel,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    createPending,
+    removePending,
+    sorted,
+    submit,
+    removePlace,
+  } = usePlacesDialog(places);
 
   return (
     <Drawer size="sm">
@@ -102,9 +85,9 @@ export function PlacesDialog({
             <Button
               type="submit"
               size="sm"
-              disabled={create.pending || !label.trim()}
+              disabled={createPending || !label.trim()}
             >
-              {create.pending ? (
+              {createPending ? (
                 <Loader2Icon className="animate-spin" />
               ) : (
                 "Add place"
@@ -126,18 +109,13 @@ export function PlacesDialog({
                     {place.label}
                   </span>
                   <span className="text-muted-foreground ml-auto shrink-0 text-xs tabular-nums">
-                    {rangeLabel(place)}
+                    {locationRangeLabel(place)}
                   </span>
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    onClick={() =>
-                      remove.run(() => deleteLocation(place.id), {
-                        confirm: `Delete ${place.label}?`,
-                        success: "Deleted",
-                      })
-                    }
-                    disabled={remove.pending}
+                    onClick={() => removePlace(place)}
+                    disabled={removePending}
                     aria-label={`Delete ${place.label}`}
                     className="text-muted-foreground hover:text-destructive shrink-0"
                   >
