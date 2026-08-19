@@ -18,27 +18,12 @@ import {
   type ScreenshotRowStatus,
 } from "@/lib/actions/screenshotImport";
 import {
+  detectedToEditable,
   requestImageExtraction,
   type CandidateMatch,
+  type EditableItem,
   type ImageImportMode,
 } from "@/lib/imageExtract";
-import { sourceForApp } from "@/lib/constants/sources";
-
-export interface EditableItem {
-  id: string;
-  selected: boolean;
-  collapsed: boolean;
-  kind: "income" | "expense";
-  amount: string;
-  currency: string;
-  occurredOn: string | null;
-  description: string;
-  app: string | null;
-  source: string;
-  confidence: "high" | "medium" | "low";
-  replaceId: string | null;
-  error: string | null;
-}
 
 const ROW_ERRORS: Record<Exclude<ScreenshotRowStatus, "imported">, string> = {
   duplicate: "Already imported before (duplicate).",
@@ -50,34 +35,6 @@ const ROW_ERRORS: Record<Exclude<ScreenshotRowStatus, "imported">, string> = {
   invalid_source: "Source must be letters, numbers, spaces or dashes (max 32).",
   failed: "Could not save this row. Try again.",
 };
-
-function sourceFor(app: string | null, existingSources: string[]): string {
-  const source = sourceForApp(app);
-  return existingSources.includes(source) ? source : "";
-}
-
-function detectedToEditable(
-  detected: DetectedTransaction,
-  mode: ImageImportMode,
-  existingSources: string[],
-  collapsed: boolean,
-): EditableItem {
-  return {
-    id: crypto.randomUUID(),
-    selected: true,
-    collapsed,
-    kind: detected.kind,
-    amount: detected.amount.toString(),
-    currency: detected.currency.toUpperCase(),
-    occurredOn: detected.occurredOn,
-    description: detected.description ?? "",
-    app: detected.app,
-    source: mode === "receipt" ? "" : sourceFor(detected.app, existingSources),
-    confidence: detected.confidence,
-    replaceId: null,
-    error: null,
-  };
-}
 
 export function useScreenshotImport({
   initialItems,
