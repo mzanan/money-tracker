@@ -26,3 +26,16 @@ export async function logUsageEvent(input: LogUsageEventInput): Promise<void> {
 export function countryFromHeaders(headers: Headers): string | null {
   return headers.get("x-vercel-ip-country");
 }
+
+export async function logImageExtractError(
+  userId: string,
+  country: string | null,
+  detail: string,
+): Promise<void> {
+  await logUsageEvent({
+    userId,
+    event: "image_extract_error",
+    detail: detail.slice(0, 200),
+    country,
+  });
+}
