@@ -1,14 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { Loader2Icon } from "lucide-react";
 
-import { useServerAction } from "@/hooks/useServerAction";
-import { mergeTransactions } from "@/lib/actions/transactions";
-import { labelForSource } from "@/lib/constants/sources";
+import { transactionLabel } from "@/lib/transactions";
 import { formatMoney } from "@/lib/currency";
-import { useUiStore } from "@/stores/uiStore";
-import type { Transaction } from "@/types/db";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -22,39 +17,28 @@ import { TappableRow } from "@/components/ui/tappableRow";
 
 import { MarkPairTransferDialog } from "./markPairTransferDialog";
 import { TransferBadge } from "./transferBadge";
-
-function txLabel(tx: Transaction): string {
-  const detail = tx.note || tx.tags[0] || "";
-  return detail
-    ? `${labelForSource(tx.source)} · ${detail}`
-    : labelForSource(tx.source);
-}
+import { useMergeBar } from "./useMergeBar";
 
 export function MergeBar() {
-  const txSelectMode = useUiStore((s) => s.txSelectMode);
-  const selectedTxs = useUiStore((s) => s.selectedTxs);
-  const setTxSelectMode = useUiStore((s) => s.setTxSelectMode);
-  const [choosing, setChoosing] = useState(false);
-  const [markingTransfer, setMarkingTransfer] = useState(false);
-  const { run, pending } = useServerAction();
+  const {
+    txSelectMode,
+    selectedTxs,
+    setTxSelectMode,
+    choosing,
+    setChoosing,
+    markingTransfer,
+    setMarkingTransfer,
+    pending,
+    canResolve,
+    first,
+    second,
+    canMarkTransfer,
+    expenseTx,
+    incomeTx,
+    keep,
+  } = useMergeBar();
 
   if (!txSelectMode) return null;
-
-  const canResolve = selectedTxs.length === 2;
-  const [first, second] = selectedTxs;
-  const canMarkTransfer = canResolve && first.kind !== second.kind;
-  const expenseTx = canMarkTransfer && first.kind === "expense" ? first : second;
-  const incomeTx = canMarkTransfer && first.kind === "expense" ? second : first;
-
-  function keep(keepTx: Transaction, removeTx: Transaction) {
-    run(() => mergeTransactions(keepTx.id, removeTx.id), {
-      success: "Unified into one transaction",
-      onSuccess: () => {
-        setChoosing(false);
-        setTxSelectMode(false);
-      },
-    });
-  }
 
   return (
     <>
@@ -118,7 +102,7 @@ export function MergeBar() {
                   <span className="min-w-0">
                     <span className="flex min-w-0 items-center gap-1.5">
                       <span className="block truncate text-sm font-medium">
-                        {txLabel(keepTx)}
+                        {transactionLabel(keepTx)}
                       </span>
                       {keepTx.transfer_group && <TransferBadge />}
                     </span>

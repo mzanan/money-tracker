@@ -48,6 +48,18 @@ export function dayWindow(
   };
 }
 
+export function formatYmd(date: Date): string {
+  return format(date, "yyyy-MM-dd");
+}
+
+export function parseYmd(day: string): Date {
+  return parse(day, "yyyy-MM-dd", new Date());
+}
+
+export function formatYm(date: Date): string {
+  return format(date, "yyyy-MM");
+}
+
 export function shiftYearMonth(yearMonth: string, delta: number): string {
   const date = parse(`${yearMonth}-01`, "yyyy-MM-dd", new Date());
   date.setMonth(date.getMonth() + delta);

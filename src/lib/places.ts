@@ -16,3 +16,12 @@ export function placeOf(
   }
   return best?.label ?? NO_PLACE_LABEL;
 }
+
+export function locationRangeLabel(place: Location): string {
+  if (place.start_date && place.end_date) {
+    return `${place.start_date} to ${place.end_date}`;
+  }
+  if (place.start_date) return `from ${place.start_date}`;
+  if (place.end_date) return `until ${place.end_date}`;
+  return "any date";
+}

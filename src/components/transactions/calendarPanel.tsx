@@ -1,29 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { format, parse } from "date-fns";
-
 import { Calendar } from "@/components/ui/calendar";
 import { Reveal } from "@/components/ui/reveal";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CompletedReminderRow } from "@/components/reminders/completedReminderRow";
 import { ReminderRow } from "@/components/reminders/reminderRow";
-import { formatYearMonthLong, monthBounds } from "@/lib/dates";
+import { formatYearMonthLong, formatYmd } from "@/lib/dates";
 
 import type { DayTotalsWithPairs } from "@/lib/cancellations";
 import type { RecurringPayment } from "@/types/db";
 
 import { DaySection } from "./daySection";
-import { useDrawerStep } from "./drawerStepContext";
 import { PayCandidatesPanel } from "./payCandidatesPanel";
 import { PayExpensePanel } from "./payExpensePanel";
-import { usePayFlow } from "./usePayFlow";
-
-const ymd = (date: Date) => format(date, "yyyy-MM-dd");
-const ym = (date: Date) => format(date, "yyyy-MM");
-
-type ReminderScope = "month" | "all" | "done";
+import { useCalendarPanel } from "./useCalendarPanel";
 
 export function CalendarPanel({
   open,
@@ -48,57 +39,25 @@ export function CalendarPanel({
   completedReminders: RecurringPayment[];
   today: string;
 }) {
-  const defaultMonth = parse(`${yearMonth}-01`, "yyyy-MM-dd", new Date());
-  const selected = selectedDay
-    ? parse(selectedDay, "yyyy-MM-dd", new Date())
-    : undefined;
-
-  const [visibleMonth, setVisibleMonth] = useState<Date>(defaultMonth);
-  const [reminderScope, setReminderScope] = useState<ReminderScope>("month");
-  const visibleYearMonth = ym(visibleMonth);
-  const payFlow = usePayFlow(today);
-
-  useEffect(() => {
-    if (!open) payFlow.close();
-  }, [open, payFlow]);
-
-  const stepApi = useDrawerStep();
-  const payFlowRef = useRef(payFlow);
-
-  useEffect(() => {
-    payFlowRef.current = payFlow;
-  }, [payFlow]);
-
-  useEffect(() => {
-    if (!stepApi) return;
-    return stepApi.registerBack(() => {
-      const flow = payFlowRef.current;
-      if (!flow.activeReminder) return false;
-      if (flow.step === "form") {
-        flow.backToCandidates();
-        return true;
-      }
-      flow.close();
-      return true;
-    });
-  }, [stepApi]);
-
-  const [shownDay, setShownDay] = useState<DayTotalsWithPairs | null>(
+  const {
+    selected,
+    visibleMonth,
+    setVisibleMonth,
+    reminderScope,
+    setReminderScope,
+    visibleYearMonth,
+    payFlow,
+    shownDay,
+    shownReminders,
+  } = useCalendarPanel({
+    open,
+    yearMonth,
+    selectedDay,
     selectedDayGroup,
-  );
-  if (selectedDayGroup && selectedDayGroup !== shownDay) {
-    setShownDay(selectedDayGroup);
-  }
-
-  const shownReminders = useMemo(() => {
-    if (reminderScope === "done") return completedReminders;
-    const sorted = [...reminders].sort((a, b) =>
-      a.next_due_on.localeCompare(b.next_due_on),
-    );
-    if (reminderScope === "all") return sorted;
-    const [start, end] = monthBounds(visibleYearMonth);
-    return sorted.filter((r) => r.next_due_on >= start && r.next_due_on <= end);
-  }, [reminders, completedReminders, reminderScope, visibleYearMonth]);
+    reminders,
+    completedReminders,
+    today,
+  });
 
   return (
     <>
@@ -145,10 +104,10 @@ export function CalendarPanel({
                 month={visibleMonth}
                 onMonthChange={setVisibleMonth}
                 selected={selected}
-                onSelect={(date) => onSelectDay(date ? ymd(date) : null)}
+                onSelect={(date) => onSelectDay(date ? formatYmd(date) : null)}
                 modifiers={{
-                  hasTx: (date) => activityDates.has(ymd(date)),
-                  due: (date) => reminderDates.has(ymd(date)),
+                  hasTx: (date) => activityDates.has(formatYmd(date)),
+                  due: (date) => reminderDates.has(formatYmd(date)),
                 }}
               />
             </div>
@@ -182,7 +141,7 @@ export function CalendarPanel({
               </span>
               <Tabs
                 value={reminderScope}
-                onValueChange={(v) => setReminderScope(v as ReminderScope)}
+                onValueChange={(v) => setReminderScope(v as typeof reminderScope)}
               >
                 <TabsList>
                   <TabsTrigger value="month">Month</TabsTrigger>
