@@ -2,7 +2,22 @@ import { convert } from "@/lib/currency";
 import { periodTotals } from "@/lib/totals";
 import type { Transaction, TransactionKind } from "@/types/db";
 
-import type { TagTotal, TransactionSummary } from "@/lib/data/assistant";
+export interface TagTotal {
+  tag: string;
+  total: number;
+  count: number;
+}
+
+export interface TransactionSummary {
+  date: string;
+  kind: TransactionKind;
+  amount: number;
+  amountOriginal: number;
+  currencyOriginal: string;
+  tags: string[];
+  note: string | null;
+  source: string;
+}
 
 export interface MerchantTotal {
   merchant: string;

@@ -7,6 +7,8 @@ import {
   topTags,
   type MerchantTotal,
   type MonthTotal,
+  type TagTotal,
+  type TransactionSummary,
 } from "@/lib/assistantStats";
 import { convert } from "@/lib/currency";
 import { db } from "@/lib/db";
@@ -17,30 +19,18 @@ import { dayTotalsList, periodTotals } from "@/lib/totals";
 import type { TotalsBreakdown } from "@/lib/totals";
 import type { Transaction, TransactionKind } from "@/types/db";
 
-export type { MerchantTotal, MonthTotal } from "@/lib/assistantStats";
+export type {
+  MerchantTotal,
+  MonthTotal,
+  TagTotal,
+  TransactionSummary,
+} from "@/lib/assistantStats";
 
 export interface DaySpend {
   date: string;
   income: number;
   expense: number;
   net: number;
-}
-
-export interface TagTotal {
-  tag: string;
-  total: number;
-  count: number;
-}
-
-export interface TransactionSummary {
-  date: string;
-  kind: TransactionKind;
-  amount: number;
-  amountOriginal: number;
-  currencyOriginal: string;
-  tags: string[];
-  note: string | null;
-  source: string;
 }
 
 function rangeWhere(userId: string, from?: string, to?: string) {
