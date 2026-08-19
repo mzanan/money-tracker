@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
+import { IconCircle } from "@/components/ui/iconCircle";
+
 export function MiniStat({
   label,
   value,
@@ -37,16 +39,14 @@ export function MiniStat({
         dimmed && "opacity-50",
       )}
     >
-      <span
+      <IconCircle
         className={cn(
-          "flex size-8 items-center justify-center rounded-full",
-          tone === "income"
-            ? "bg-income text-income"
-            : "bg-expense text-expense",
+          "size-8",
+          tone === "income" ? "bg-income text-income" : "bg-expense text-expense",
         )}
       >
         {icon}
-      </span>
+      </IconCircle>
       <div className="grid">
         <span className="text-muted-foreground text-[10px] tracking-wide uppercase">
           {label}
