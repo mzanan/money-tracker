@@ -9,17 +9,20 @@ import { CashWithdrawalForm } from "@/components/settings/cashWithdrawalForm";
 import { CsvImportCard } from "@/components/settings/csvImportCard";
 import { ImportedAccountsCard } from "@/components/settings/importedAccountsCard";
 import { IntegrationsCard } from "@/components/settings/integrationsCard";
+import { PasswordCard } from "@/components/settings/passwordCard";
 import { SettingsForm } from "@/components/settings/settingsForm";
 import { SettingsTabs } from "@/components/settings/settingsTabs";
 import { Button } from "@/components/ui/button";
+import { hasCredentialAccount } from "@/lib/data/account";
 import { getCsvSources, getTransferSources } from "@/lib/data/sources";
 import { requireUser } from "@/lib/session";
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const [existingSources, withdrawalSources] = await Promise.all([
+  const [existingSources, withdrawalSources, hasPassword] = await Promise.all([
     getCsvSources(user.id),
     getTransferSources(user.id, "manual"),
+    hasCredentialAccount(user.id),
   ]);
 
   return (
@@ -35,12 +38,19 @@ export default async function SettingsPage() {
 
       <SettingsTabs
         general={
-          <Section
-            title="Profile"
-            hint="Currencies and timezone for new entries."
-          >
-            <SettingsForm />
-          </Section>
+          <>
+            <Section
+              title="Profile"
+              hint="Currencies and timezone for new entries."
+            >
+              <SettingsForm />
+            </Section>
+            {hasPassword && (
+              <Section title="Security" hint="Change your account password.">
+                <PasswordCard />
+              </Section>
+            )}
+          </>
         }
         assistant={
           <Section
