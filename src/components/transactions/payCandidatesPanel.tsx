@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { ChevronLeftIcon } from "lucide-react";
-import { format } from "date-fns";
 
 import { labelForSource } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
-import { daysBefore, formatDateShort, formatDayLong } from "@/lib/dates";
+import { formatDateShort, formatYmd, parseYmd } from "@/lib/dates";
 import type { ReminderPaymentCandidate } from "@/lib/actions/reminders";
 
 import { Button } from "@/components/ui/button";
@@ -16,13 +14,7 @@ import { TappableRow } from "@/components/ui/tappableRow";
 
 import type { RecurringPayment } from "@/types/db";
 
-function ymd(date: Date): string {
-  return format(date, "yyyy-MM-dd");
-}
-
-function toDate(day: string): Date {
-  return new Date(`${day}T00:00:00`);
-}
+import { usePayCandidatesPanel } from "./usePayCandidatesPanel";
 
 function CandidateButton({
   match,
@@ -84,31 +76,18 @@ export function PayCandidatesPanel({
   onSkip: () => void;
   onBack: () => void;
 }) {
-  const [month, setMonth] = useState(() => toDate(day));
-  const [showLoading, setShowLoading] = useState(false);
-  useEffect(() => {
-    if (!loading) return;
-    const timeout = setTimeout(() => setShowLoading(true), 150);
-    return () => {
-      clearTimeout(timeout);
-      setShowLoading(false);
-    };
-  }, [loading]);
-  const yesterday = daysBefore(today, 1);
-  const isToday = day === today;
-  const isYesterday = day === yesterday;
+  const {
+    month,
+    setMonth,
+    showLoading,
+    yesterday,
+    isToday,
+    isYesterday,
+    dayLabel,
+    pickDay,
+  } = usePayCandidatesPanel({ day, today, loading, onChooseDay });
   const candidates = [...suggested, ...recent];
   const hasAmount = reminder.amount != null;
-  const dayLabel = isToday
-    ? "Today"
-    : isYesterday
-      ? "Yesterday"
-      : formatDayLong(day);
-
-  function pickDay(next: string) {
-    setMonth(toDate(next));
-    onChooseDay(next);
-  }
 
   return (
     <div className="grid gap-4">
@@ -157,10 +136,10 @@ export function PayCandidatesPanel({
             className="bg-transparent"
             month={month}
             onMonthChange={setMonth}
-            selected={toDate(day)}
-            disabled={{ after: toDate(today) }}
+            selected={parseYmd(day)}
+            disabled={{ after: parseYmd(today) }}
             onSelect={(date) => {
-              if (date) pickDay(ymd(date));
+              if (date) pickDay(formatYmd(date));
             }}
           />
         </div>

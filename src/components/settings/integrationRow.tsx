@@ -2,13 +2,7 @@
 
 import { Loader2Icon, MoreVerticalIcon, RefreshCwIcon } from "lucide-react";
 
-import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
-import { useDialogState } from "@/hooks/useDialogState";
-import { useServerAction } from "@/hooks/useServerAction";
-import {
-  deleteIntegration,
-  syncIntegration,
-} from "@/lib/actions/integrations";
+import { timeAgo } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import type { IntegrationProvider, IntegrationSummary } from "@/types/db";
 
@@ -23,6 +17,7 @@ import {
 import { ListRow } from "@/components/ui/listRow";
 
 import { IntegrationDialog } from "./integrationDialog";
+import { useIntegrationRow } from "./useIntegrationRow";
 
 interface Props {
   provider: IntegrationProvider;
@@ -30,40 +25,9 @@ interface Props {
   integration: IntegrationSummary | null;
 }
 
-function timeAgo(iso: string | null): string {
-  if (!iso) return "Never synced";
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const minutes = Math.floor(diffMs / 60_000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
 export function IntegrationRow({ provider, label, integration }: Props) {
-  const { run, pending } = useServerAction();
-  const runAfterMenuClose = useDeferredMenuAction();
-  const dialog = useDialogState(runAfterMenuClose);
-  const connected = integration !== null;
-
-  function handleSync() {
-    run(() => syncIntegration(provider), {
-      success: (data) =>
-        `Imported ${data?.imported ?? 0} transaction${data?.imported === 1 ? "" : "s"}` +
-        ((data?.skipped ?? 0) > 0 ? `, ${data?.skipped} skipped` : "") +
-        ((data?.absorbed ?? 0) > 0
-          ? `, ${data?.absorbed} merged from manual entries`
-          : ""),
-    });
-  }
-
-  function handleDisconnect() {
-    run(() => deleteIntegration(provider), {
-      success: `${label} disconnected`,
-    });
-  }
+  const { pending, dialog, connected, handleSync, handleDisconnect } =
+    useIntegrationRow({ provider, label, integration });
 
   return (
     <ListRow
@@ -78,7 +42,7 @@ export function IntegrationRow({ provider, label, integration }: Props) {
         </Badge>
       }
       meta={
-        connected
+        integration
           ? `Last sync · ${timeAgo(integration.lastSyncedAt)}`
           : "Connect to start syncing"
       }

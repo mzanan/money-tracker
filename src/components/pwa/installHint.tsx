@@ -1,94 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { ShareIcon, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
-
-const DISMISS_KEY = "pwa:installHintDismissed";
-const DISMISS_EVENT = "pwa:installHintDismissed";
-const AUTO_HIDE_MS = 10_000;
-
-function isIos(): boolean {
-  if (typeof window === "undefined") return false;
-  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
-}
-
-function isStandalone(): boolean {
-  if (typeof window === "undefined") return false;
-  if (window.matchMedia("(display-mode: standalone)").matches) return true;
-  type NavigatorWithStandalone = Navigator & { standalone?: boolean };
-  return (window.navigator as NavigatorWithStandalone).standalone === true;
-}
-
-function subscribeDismiss(callback: () => void) {
-  if (typeof window === "undefined") return () => {};
-  window.addEventListener(DISMISS_EVENT, callback);
-  return () => window.removeEventListener(DISMISS_EVENT, callback);
-}
-
-function getIosSnapshot(): boolean {
-  if (typeof window === "undefined") return false;
-  if (isStandalone()) return false;
-  if (localStorage.getItem(DISMISS_KEY) === "1") return false;
-  return isIos();
-}
-
-function getIosServerSnapshot(): boolean {
-  return false;
-}
+import { useInstallHint } from "./useInstallHint";
 
 export function InstallHint() {
-  const [androidEvent, setAndroidEvent] =
-    useState<BeforeInstallPromptEvent | null>(null);
-  const [expired, setExpired] = useState(false);
+  const { show, isAndroid, install, close } = useInstallHint();
 
-  const showIos = useSyncExternalStore(
-    subscribeDismiss,
-    getIosSnapshot,
-    getIosServerSnapshot,
-  );
-
-  const visible = Boolean(androidEvent) || showIos;
-
-  useEffect(() => {
-    if (!visible) return;
-    const timer = window.setTimeout(() => setExpired(true), AUTO_HIDE_MS);
-    return () => window.clearTimeout(timer);
-  }, [visible]);
-
-  useEffect(() => {
-    const onBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      if (localStorage.getItem(DISMISS_KEY) === "1") return;
-      setAndroidEvent(e as BeforeInstallPromptEvent);
-    };
-    window.addEventListener("beforeinstallprompt", onBeforeInstall);
-    return () =>
-      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
-  }, []);
-
-  const close = useCallback(() => {
-    localStorage.setItem(DISMISS_KEY, "1");
-    setAndroidEvent(null);
-    window.dispatchEvent(new Event(DISMISS_EVENT));
-  }, []);
-
-  const install = useCallback(async () => {
-    if (!androidEvent) return;
-    await androidEvent.prompt();
-    const choice = await androidEvent.userChoice;
-    if (choice.outcome === "accepted") close();
-    else setAndroidEvent(null);
-  }, [androidEvent, close]);
-
-  if (!visible || expired) return null;
+  if (!show) return null;
 
   return (
     <Surface
@@ -97,7 +19,7 @@ export function InstallHint() {
       className="fixed right-3 bottom-3 left-3 z-40 flex items-center gap-3 border shadow-lg sm:right-auto sm:left-3 sm:max-w-sm"
     >
       <div className="flex-1 text-sm">
-        {androidEvent ? (
+        {isAndroid ? (
           <p>
             <span className="font-medium">Install Money Tracker</span> for
             faster access from your home screen.
@@ -113,7 +35,7 @@ export function InstallHint() {
           </p>
         )}
       </div>
-      {androidEvent && (
+      {isAndroid && (
         <Button size="sm" onClick={install}>
           Install
         </Button>
