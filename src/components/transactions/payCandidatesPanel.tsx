@@ -24,7 +24,13 @@ function CandidateButton({
   onClick: () => void;
 }) {
   return (
-    <TappableRow type="button" bordered justify="between" onClick={onClick}>
+    <TappableRow
+      type="button"
+      bordered
+      justify="between"
+      className="min-w-0"
+      onClick={onClick}
+    >
       <span className="min-w-0">
         <span className="block truncate text-sm font-medium">
           {labelForSource(match.source)}
