@@ -1,4 +1,5 @@
 import type {
+  accounts,
   api_integrations,
   fx_rates_cache,
   locations,
@@ -65,3 +66,6 @@ export type RecurringPayment = typeof recurring_payments.$inferSelect;
 export type RecurringPaymentInsert = typeof recurring_payments.$inferInsert;
 export type RecurringPaymentUpdate = Partial<RecurringPaymentInsert>;
 export type RecurringFrequency = RecurringPayment["frequency"];
+
+export type Account = typeof accounts.$inferSelect;
+export type AccountInsert = typeof accounts.$inferInsert;
