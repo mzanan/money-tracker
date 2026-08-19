@@ -25,8 +25,8 @@ export function StepShell({
   children: ReactNode;
 }) {
   return (
-    <div className="grid gap-4">
-      <div className="flex items-start gap-2">
+    <div className="grid min-w-0 gap-4">
+      <div className="flex min-w-0 items-start gap-2">
         <Button
           variant="ghost"
           size="icon-sm"
