@@ -2,8 +2,9 @@
 
 import { Loader2Icon } from "lucide-react";
 
+import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { getCurrency } from "@/lib/constants/currencies";
-import { labelForSource } from "@/lib/constants/sources";
+import { resolveSourceLabel } from "@/lib/constants/sources";
 
 import { AmountInput } from "@/components/ui/amountInput";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import {
 import { useCashWithdrawalForm } from "./useCashWithdrawalForm";
 
 export function CashWithdrawalForm({ sources }: { sources: string[] }) {
+  const accountLabels = useAccountLabels();
   const {
     currencies,
     amount,
@@ -62,7 +64,7 @@ export function CashWithdrawalForm({ sources }: { sources: string[] }) {
                 <SelectContent>
                   {sources.map((s) => (
                     <SelectItem key={s} value={s}>
-                      {labelForSource(s)}
+                      {resolveSourceLabel(s, accountLabels)}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -2,11 +2,12 @@ import { and, eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { accounts } from "@/lib/db/schema";
-import { labelForSource } from "@/lib/constants/sources";
+import type { AccountLabels } from "@/lib/constants/sources";
 
 import type { Account } from "@/types/db";
 
-export type AccountLabels = Record<string, string>;
+export type { AccountLabels } from "@/lib/constants/sources";
+export { resolveSourceLabel } from "@/lib/constants/sources";
 
 export async function listAccounts(userId: string): Promise<Account[]> {
   return db.select().from(accounts).where(eq(accounts.user_id, userId));
@@ -27,11 +28,4 @@ export async function getAccountBySource(
 export async function getAccountLabels(userId: string): Promise<AccountLabels> {
   const rows = await listAccounts(userId);
   return Object.fromEntries(rows.map((row) => [row.source, row.label]));
-}
-
-export function resolveSourceLabel(
-  source: string,
-  accountLabels: AccountLabels,
-): string {
-  return accountLabels[source] ?? labelForSource(source);
 }

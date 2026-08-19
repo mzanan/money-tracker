@@ -2,7 +2,12 @@ import { createHash } from "node:crypto";
 
 import { and, isNotNull, like, notLike, or } from "drizzle-orm";
 
-import { kindOfSource, labelForSource } from "@/lib/constants/sources";
+import {
+  kindOfSource,
+  labelForSource,
+  resolveSourceLabel,
+  type AccountLabels,
+} from "@/lib/constants/sources";
 import { EXTERNAL_ID_PREFIX, isCsvExternalId } from "@/lib/externalIds";
 import { snapshotRatesFor } from "@/lib/currency";
 import { transactions } from "@/lib/db/schema";
@@ -61,11 +66,15 @@ export function normalizeTags(tags: string[] | null | undefined): string[] {
   return dedupeTags(tags);
 }
 
-export function transactionLabel(tx: Transaction): string {
-  const detail = tx.note || tx.tags[0] || "";
-  return detail
-    ? `${labelForSource(tx.source)} · ${detail}`
+export function transactionLabel(
+  tx: Transaction,
+  accountLabels?: AccountLabels,
+): string {
+  const sourceLabel = accountLabels
+    ? resolveSourceLabel(tx.source, accountLabels)
     : labelForSource(tx.source);
+  const detail = tx.note || tx.tags[0] || "";
+  return detail ? `${sourceLabel} · ${detail}` : sourceLabel;
 }
 
 export function csvSourcesFrom(

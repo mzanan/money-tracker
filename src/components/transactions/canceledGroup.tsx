@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { ChevronRightIcon, Undo2Icon } from "lucide-react";
 
-import { labelForSource } from "@/lib/constants/sources";
+import { useAccountLabels } from "@/hooks/useAccountLabels";
+import { resolveSourceLabel } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { CanceledPair } from "@/lib/cancellations";
@@ -14,10 +15,10 @@ import { TappableRow } from "@/components/ui/tappableRow";
 import { TransactionRow } from "./transactionRow";
 
 export function CanceledGroup({ pair }: { pair: CanceledPair }) {
+  const accountLabels = useAccountLabels();
   const [open, setOpen] = useState(false);
-  const title =
-    pair.expense.note?.trim() ||
-    `Canceled payment · ${labelForSource(pair.expense.source)}`;
+  const sourceLabel = resolveSourceLabel(pair.expense.source, accountLabels);
+  const title = pair.expense.note?.trim() || `Canceled payment · ${sourceLabel}`;
 
   return (
     <div className="grid min-w-0">
@@ -35,7 +36,7 @@ export function CanceledGroup({ pair }: { pair: CanceledPair }) {
             {title}
           </span>
           <span className="text-muted-foreground block text-meta">
-            Canceled and refunded · {labelForSource(pair.expense.source)}
+            Canceled and refunded · {sourceLabel}
           </span>
         </span>
         <span className="flex shrink-0 flex-col items-end">

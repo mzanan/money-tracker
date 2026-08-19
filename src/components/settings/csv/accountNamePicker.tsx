@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-import { kindOfSource, labelForSource } from "@/lib/constants/sources";
+import { useAccountLabels } from "@/hooks/useAccountLabels";
+import { kindOfSource, labelForSource, resolveSourceLabel } from "@/lib/constants/sources";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +34,7 @@ export function AccountNamePicker({
   onChange: (value: string) => void;
   existingSources: string[];
 }) {
+  const accountLabels = useAccountLabels();
   const matchesExisting = existingSources.includes(value.trim().toLowerCase());
   const [customMode, setCustomMode] = useState(
     !matchesExisting && existingSources.length > 0,
@@ -69,7 +71,7 @@ export function AccountNamePicker({
           <SelectContent>
             {existingSources.map((s) => (
               <SelectItem key={s} value={s}>
-                {labelForSource(s)}
+                {resolveSourceLabel(s, accountLabels)}
               </SelectItem>
             ))}
             <SelectItem value="__new">+ New account</SelectItem>

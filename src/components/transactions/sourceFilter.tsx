@@ -8,11 +8,12 @@ import {
   RefreshCwIcon,
 } from "lucide-react";
 
+import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { syncIntegration } from "@/lib/actions/integrations";
 import { setCashEnabled } from "@/lib/actions/settings";
-import { kindOfSource, labelForSource } from "@/lib/constants/sources";
+import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
 import type { IntegrationProvider } from "@/types/db";
 
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export function SourceFilter({
   onChange,
 }: Props) {
   const settings = useSettings();
+  const accountLabels = useAccountLabels();
   const { run, pending } = useServerAction();
   const kind = selected === "all" ? null : kindOfSource(selected);
 
@@ -45,7 +47,7 @@ export function SourceFilter({
     if (kind !== "api") return;
     run(() => syncIntegration(selected as IntegrationProvider), {
       success: (data) =>
-        `${labelForSource(selected)}: imported ${data?.imported ?? 0}` +
+        `${resolveSourceLabel(selected, accountLabels)}: imported ${data?.imported ?? 0}` +
         ((data?.skipped ?? 0) > 0 ? `, ${data?.skipped} skipped` : "") +
         ((data?.absorbed ?? 0) > 0
           ? `, ${data?.absorbed} merged from manual`
@@ -76,7 +78,7 @@ export function SourceFilter({
             selected={selected === src}
             onClick={() => onChange(src)}
           >
-            {labelForSource(src)}
+            {resolveSourceLabel(src, accountLabels)}
           </SourceTab>
         ))}
         {!showCashTab && (

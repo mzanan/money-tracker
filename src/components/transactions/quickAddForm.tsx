@@ -2,7 +2,8 @@
 
 import { ChevronDownIcon, Loader2Icon, PlusIcon } from "lucide-react";
 
-import { labelForSource } from "@/lib/constants/sources";
+import { useAccountLabels } from "@/hooks/useAccountLabels";
+import { resolveSourceLabel } from "@/lib/constants/sources";
 import { cn } from "@/lib/utils";
 
 import { AmountInput } from "@/components/ui/amountInput";
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function QuickAddForm({ recentTags, source }: Props) {
+  const accountLabels = useAccountLabels();
   const resolvedSource = source === "all" ? "manual" : source;
   const {
     kind,
@@ -54,7 +56,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
         <p className="text-muted-foreground px-1 text-xs">
           Adding to{" "}
           <span className="text-foreground font-medium">
-            {labelForSource(resolvedSource)}
+            {resolveSourceLabel(resolvedSource, accountLabels)}
           </span>
         </p>
         <div className="flex items-center gap-2">
