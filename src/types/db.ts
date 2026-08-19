@@ -37,6 +37,11 @@ export type ClientSettings = Omit<
   "calendar_token" | "ai_api_key"
 >;
 
+export type AssistantSettings = Pick<
+  UserSettings,
+  "base_currency" | "timezone" | "ai_provider" | "ai_model" | "ai_api_key"
+>;
+
 export type FxRatesCache = typeof fx_rates_cache.$inferSelect;
 
 export type ApiIntegration = typeof api_integrations.$inferSelect;

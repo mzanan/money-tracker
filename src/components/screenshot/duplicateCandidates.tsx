@@ -3,9 +3,10 @@
 import { AlertTriangleIcon } from "lucide-react";
 
 import { labelForSource } from "@/lib/constants/sources";
+import type { CandidateMatch } from "@/lib/imageExtract";
 import { cn } from "@/lib/utils";
 
-import type { CandidateMatch, EditableItem } from "./useScreenshotImport";
+import type { EditableItem } from "./useScreenshotImport";
 
 export function DuplicateCandidates({
   candidates,
