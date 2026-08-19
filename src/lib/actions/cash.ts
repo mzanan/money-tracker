@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { isSupportedCurrency } from "@/lib/constants/currencies";
-import { kindOfSource, labelForSource } from "@/lib/constants/sources";
+import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
 import { amountValidationError } from "@/lib/currency";
+import { getAccountLabels } from "@/lib/data/accounts";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 import { RatesUnavailableError } from "@/lib/rates";
@@ -54,8 +55,9 @@ export async function recordCashWithdrawal(
   }
   if (!ctx) return { ok: false, error: "Settings not found" };
 
+  const accountLabels = await getAccountLabels(user.id);
   const group = crypto.randomUUID();
-  const note = `Cash withdrawal from ${labelForSource(source)}`;
+  const note = `Cash withdrawal from ${resolveSourceLabel(source, accountLabels)}`;
   const out = buildTransactionRow(
     {
       userId: user.id,

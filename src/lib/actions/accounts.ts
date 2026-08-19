@@ -53,12 +53,17 @@ export async function removeAccount(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const guardError = guardEditable(source);
+  const normalizedSource = normalizeSource(source);
+  if (!normalizedSource) return { ok: false, error: "Invalid account" };
+
+  const guardError = guardEditable(normalizedSource);
   if (guardError) return { ok: false, error: guardError };
 
   const deleted = await db
     .delete(accounts)
-    .where(and(eq(accounts.user_id, user.id), eq(accounts.source, source)))
+    .where(
+      and(eq(accounts.user_id, user.id), eq(accounts.source, normalizedSource)),
+    )
     .returning({ id: accounts.id });
 
   revalidatePath("/", "layout");
