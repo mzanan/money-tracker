@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/passwordInput";
 import {
   Select,
   SelectContent,
@@ -100,9 +101,8 @@ export function AssistantKeyPanel({
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="assistant-key">API key</Label>
-            <Input
+            <PasswordInput
               id="assistant-key"
-              type="password"
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
               placeholder={hasKey ? "••••••••" : "Paste your API key"}

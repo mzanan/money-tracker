@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/passwordInput";
 import {
   Select,
   SelectContent,
@@ -100,9 +101,8 @@ export function IntegrationDialog({
 
           <div className="grid gap-1.5">
             <Label htmlFor="api-secret">API secret</Label>
-            <Input
+            <PasswordInput
               id="api-secret"
-              type="password"
               value={apiSecret}
               onChange={(event) => setApiSecret(event.target.value)}
               required={isFirstConnect}
