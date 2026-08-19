@@ -4,6 +4,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 
+import { logUsageEvent } from "@/lib/data/usageEvents";
 import { db, schema } from "@/lib/db";
 
 const disableSignUp = process.env.AUTH_DISABLE_SIGNUPS === "true";
@@ -23,6 +24,15 @@ export const auth = betterAuth({
   advanced: {
     database: {
       generateId: () => crypto.randomUUID(),
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (createdUser) => {
+          await logUsageEvent({ userId: createdUser.id, event: "signup" });
+        },
+      },
     },
   },
   session: {
