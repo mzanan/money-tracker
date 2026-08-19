@@ -4,6 +4,10 @@ import type { UIMessage } from "ai";
 import { buildAssistantTools } from "@/lib/ai/assistantTools";
 import { buildSystemPrompt } from "@/lib/ai/prompt";
 import { hasServerKey, resolveChatModel } from "@/lib/ai/provider";
+import {
+  countryFromHeaders,
+  logUsageEvent,
+} from "@/lib/data/usageEvents";
 import { getAssistantSettings } from "@/lib/data/userSettings";
 import { todayInTz } from "@/lib/dates";
 import { ASSISTANT_ENABLED, BUDGET_ENABLED } from "@/lib/featureFlags";
@@ -50,6 +54,13 @@ export async function POST(req: Request) {
 
   const { messages }: { messages: UIMessage[] } = await req.json();
   const timezone = settings.timezone ?? "UTC";
+
+  await logUsageEvent({
+    userId: user.id,
+    event: "chat_message",
+    detail: userApiKey ? "byok" : "server_key",
+    country: countryFromHeaders(req.headers),
+  });
 
   const result = streamText({
     model: resolveChatModel({

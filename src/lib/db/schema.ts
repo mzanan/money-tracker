@@ -280,3 +280,36 @@ export const recurring_payments = sqliteTable(
   },
   (t) => [check("recurring_payments_amount_positive", sql`${t.amount} > 0`)],
 );
+
+export const usage_events = sqliteTable(
+  "usage_events",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    user_id: text("user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    event: text("event", {
+      enum: [
+        "signup",
+        "image_extract_success",
+        "image_extract_error",
+        "chat_message",
+      ],
+    }).notNull(),
+    detail: text("detail"),
+    country: text("country"),
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (t) => [
+    index("usage_events_user_created_idx").on(t.user_id, t.created_at),
+    index("usage_events_event_created_idx").on(t.event, t.created_at),
+    check(
+      "usage_events_event_check",
+      sql`${t.event} IN ('signup', 'image_extract_success', 'image_extract_error', 'chat_message')`,
+    ),
+  ],
+);
