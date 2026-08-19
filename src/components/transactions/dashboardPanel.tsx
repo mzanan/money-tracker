@@ -132,8 +132,8 @@ export function DashboardPanel({
         <div
           ref={contentRef}
           className={cn(
-            "grid gap-5 overflow-y-auto px-4 pb-8",
-            steps.length > 0 && "pt-4",
+            "grid gap-5 overflow-y-auto px-4",
+            steps.length > 0 ? "pt-4 pb-0" : "pb-8",
           )}
         >
           <DrawerStepContext.Provider value={stepApi}>

@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronLeftIcon, Loader2Icon } from "lucide-react";
+import { Loader2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { StepShell } from "@/components/ui/stepShell";
 
 import { TransactionFormFields } from "./transactionFormFields";
 import { useTransactionForm, type TransactionSeed } from "./useTransactionForm";
@@ -40,39 +41,29 @@ export function TransactionFormStep({
   });
 
   return (
-    <div className="grid gap-4">
-      <div className="flex items-start gap-2">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Back"
-          onClick={onBack}
-        >
-          <ChevronLeftIcon />
-        </Button>
-        <div className="min-w-0 pt-1">
-          <p className="text-sm font-semibold">{title}</p>
-          <p className="text-muted-foreground text-xs">{description}</p>
-        </div>
-      </div>
-
+    <StepShell
+      title={title}
+      description={description}
+      onBack={onBack}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onBack}>
+            Cancel
+          </Button>
+          <Button
+            onClick={form.submit}
+            disabled={
+              form.pending ||
+              (!txId && (!form.source || form.sourceOptions === null))
+            }
+          >
+            {form.pending && <Loader2Icon className="animate-spin" />}
+            {submitLabel}
+          </Button>
+        </>
+      }
+    >
       <TransactionFormFields form={form} txId={txId} locked={locked} />
-
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onBack}>
-          Cancel
-        </Button>
-        <Button
-          onClick={form.submit}
-          disabled={
-            form.pending ||
-            (!txId && (!form.source || form.sourceOptions === null))
-          }
-        >
-          {form.pending && <Loader2Icon className="animate-spin" />}
-          {submitLabel}
-        </Button>
-      </div>
-    </div>
+    </StepShell>
   );
 }
