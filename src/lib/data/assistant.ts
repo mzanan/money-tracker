@@ -1,5 +1,15 @@
 import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
 
+import {
+  filterTransactionSummaries,
+  monthlyTrend,
+  topMerchants,
+  topTags,
+  type MerchantTotal,
+  type MonthTotal,
+  type TagTotal,
+  type TransactionSummary,
+} from "@/lib/assistantStats";
 import { convert } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { recurring_payments, transactions } from "@/lib/db/schema";
@@ -9,41 +19,18 @@ import { dayTotalsList, periodTotals } from "@/lib/totals";
 import type { TotalsBreakdown } from "@/lib/totals";
 import type { Transaction, TransactionKind } from "@/types/db";
 
+export type {
+  MerchantTotal,
+  MonthTotal,
+  TagTotal,
+  TransactionSummary,
+} from "@/lib/assistantStats";
+
 export interface DaySpend {
   date: string;
   income: number;
   expense: number;
   net: number;
-}
-
-export interface TagTotal {
-  tag: string;
-  total: number;
-  count: number;
-}
-
-export interface TransactionSummary {
-  date: string;
-  kind: TransactionKind;
-  amount: number;
-  amountOriginal: number;
-  currencyOriginal: string;
-  tags: string[];
-  note: string | null;
-  source: string;
-}
-
-function baseValue(tx: Transaction, baseCurrency: string): number | null {
-  try {
-    return convert(
-      tx.amount_original,
-      tx.currency_original,
-      baseCurrency,
-      tx.fx_rates_snapshot,
-    );
-  } catch {
-    return null;
-  }
 }
 
 function rangeWhere(userId: string, from?: string, to?: string) {
@@ -105,31 +92,9 @@ export async function getTopTags(
     limit?: number;
   } = {},
 ): Promise<TagTotal[]> {
-  const { from, to, kind = "expense", limit = 5 } = options;
+  const { from, to, ...statsOptions } = options;
   const txs = await fetchRange(userId, from, to);
-  const byTag = new Map<string, { total: number; count: number }>();
-  for (const tx of txs) {
-    if (tx.kind !== kind) continue;
-    const value = baseValue(tx, baseCurrency);
-    if (value === null) continue;
-    const labels = tx.tags.length > 0 ? tx.tags : ["Untagged"];
-    for (const label of labels) {
-      const entry = byTag.get(label) ?? { total: 0, count: 0 };
-      entry.total += value;
-      entry.count += 1;
-      byTag.set(label, entry);
-    }
-  }
-  return Array.from(byTag.entries())
-    .map(([tag, { total, count }]) => ({ tag, total, count }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, limit);
-}
-
-export interface MerchantTotal {
-  merchant: string;
-  total: number;
-  count: number;
+  return topTags(txs, baseCurrency, statsOptions);
 }
 
 export async function getTopMerchants(
@@ -141,23 +106,9 @@ export async function getTopMerchants(
     limit?: number;
   } = {},
 ): Promise<MerchantTotal[]> {
-  const { from, to, limit = 10 } = options;
+  const { from, to, limit } = options;
   const txs = await fetchRange(userId, from, to);
-  const byMerchant = new Map<string, { total: number; count: number }>();
-  for (const tx of txs) {
-    if (tx.kind !== "expense") continue;
-    const value = baseValue(tx, baseCurrency);
-    if (value === null) continue;
-    const label = tx.note?.trim() || "Unlabeled";
-    const entry = byMerchant.get(label) ?? { total: 0, count: 0 };
-    entry.total += value;
-    entry.count += 1;
-    byMerchant.set(label, entry);
-  }
-  return Array.from(byMerchant.entries())
-    .map(([merchant, { total, count }]) => ({ merchant, total, count }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, limit);
+  return topMerchants(txs, baseCurrency, limit);
 }
 
 export interface RecurringPaymentSummary {
@@ -221,34 +172,13 @@ export async function getRecurringPayments(
   });
 }
 
-export interface MonthTotal {
-  month: string;
-  income: number;
-  expense: number;
-  net: number;
-}
-
 export async function getMonthlyTrend(
   userId: string,
   baseCurrency: string,
   months = 6,
 ): Promise<MonthTotal[]> {
   const txs = await fetchRange(userId);
-  const byMonth = new Map<string, Transaction[]>();
-  for (const tx of txs) {
-    const month = tx.occurred_on.slice(0, 7);
-    const list = byMonth.get(month) ?? [];
-    list.push(tx);
-    byMonth.set(month, list);
-  }
-  return Array.from(byMonth.entries())
-    .sort(([a], [b]) => (a < b ? 1 : -1))
-    .slice(0, months)
-    .reverse()
-    .map(([month, list]) => {
-      const { income, expense, net } = periodTotals(list, baseCurrency);
-      return { month, income, expense, net };
-    });
+  return monthlyTrend(txs, baseCurrency, months);
 }
 
 export async function searchTransactions(
@@ -262,27 +192,7 @@ export async function searchTransactions(
     limit?: number;
   } = {},
 ): Promise<TransactionSummary[]> {
-  const { from, to, query, kind, limit = 10 } = options;
+  const { from, to, ...statsOptions } = options;
   const txs = await fetchRange(userId, from, to);
-  const needle = query?.trim().toLowerCase();
-  const matches: TransactionSummary[] = [];
-  for (const tx of txs) {
-    if (kind && tx.kind !== kind) continue;
-    if (needle) {
-      const haystack = `${tx.note ?? ""} ${tx.tags.join(" ")}`.toLowerCase();
-      if (!haystack.includes(needle)) continue;
-    }
-    matches.push({
-      date: tx.occurred_on,
-      kind: tx.kind,
-      amount: baseValue(tx, baseCurrency) ?? tx.amount_original,
-      amountOriginal: tx.amount_original,
-      currencyOriginal: tx.currency_original,
-      tags: tx.tags,
-      note: tx.note,
-      source: tx.source,
-    });
-    if (matches.length >= limit) break;
-  }
-  return matches;
+  return filterTransactionSummaries(txs, baseCurrency, statsOptions);
 }

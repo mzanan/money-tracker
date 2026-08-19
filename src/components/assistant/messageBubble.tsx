@@ -1,22 +1,11 @@
 import type { UIMessage } from "ai";
 
+import { isToolPart, messageText } from "@/lib/ai/message";
 import { cn } from "@/lib/utils";
-
-function textOf(message: UIMessage): string {
-  return message.parts
-    .filter((part) => part.type === "text")
-    .map((part) => ("text" in part ? part.text : ""))
-    .join("")
-    .trim();
-}
-
-function isToolPart(type: string): boolean {
-  return type.startsWith("tool-") || type === "dynamic-tool";
-}
 
 export function MessageBubble({ message }: { message: UIMessage }) {
   const isUser = message.role === "user";
-  const text = textOf(message);
+  const text = messageText(message);
   const working =
     !isUser && !text && message.parts.some((part) => isToolPart(part.type));
 
