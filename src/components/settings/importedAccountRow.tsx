@@ -2,8 +2,9 @@
 
 import { CheckIcon, Loader2Icon, MoreVerticalIcon, XIcon } from "lucide-react";
 
-import { deleteSource, renameSource } from "@/lib/actions/sources";
-import { kindOfSource, labelForSource } from "@/lib/constants/sources";
+import { removeAccount, upsertAccountLabel } from "@/lib/actions/accounts";
+import { deleteSource } from "@/lib/actions/sources";
+import { kindOfSource } from "@/lib/constants/sources";
 import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useInlineEdit } from "@/hooks/useInlineEdit";
 import { useServerAction } from "@/hooks/useServerAction";
@@ -21,23 +22,41 @@ import { ListRow } from "@/components/ui/listRow";
 
 interface Props {
   source: string;
+  label: string;
   count: number;
+  hasAccount: boolean;
 }
 
-export function ImportedAccountRow({ source, count }: Props) {
+export function ImportedAccountRow({
+  source,
+  label,
+  count,
+  hasAccount,
+}: Props) {
   const { run, pending } = useServerAction();
   const runAfterMenuClose = useDeferredMenuAction();
+  const reserved = kindOfSource(source) !== "csv";
 
   const edit = useInlineEdit((next) => {
-    if (!next || next === source) return;
-    run(() => renameSource(source, next), {
-      success: `Renamed to ${labelForSource(next)}`,
+    if (!next || next === label) return;
+    run(() => upsertAccountLabel(source, next), {
+      success: `Renamed to ${next}`,
     });
   });
 
-  function handleDelete() {
+  function handleRemoveAccount() {
+    run(() => removeAccount(source), {
+      confirm:
+        count > 0
+          ? `Remove the "${label}" label? Transactions are kept, the name falls back to a default.`
+          : undefined,
+      success: "Account removed",
+    });
+  }
+
+  function handleDeleteAll() {
     run(() => deleteSource(source), {
-      confirm: `Delete all ${count} transaction${count === 1 ? "" : "s"} from ${labelForSource(source)}? This cannot be undone.`,
+      confirm: `Delete all ${count} transaction${count === 1 ? "" : "s"} from ${label}? This cannot be undone.`,
       success: (data) => `Deleted ${data?.deleted ?? 0} transactions`,
     });
   }
@@ -78,7 +97,7 @@ export function ImportedAccountRow({ source, count }: Props) {
 
   return (
     <ListRow
-      title={labelForSource(source)}
+      title={label}
       badge={
         kindOfSource(source) === "api" && (
           <Badge variant="outline" size="xs">
@@ -86,7 +105,11 @@ export function ImportedAccountRow({ source, count }: Props) {
           </Badge>
         )
       }
-      meta={`${count} transaction${count === 1 ? "" : "s"}`}
+      meta={
+        count > 0
+          ? `${count} transaction${count === 1 ? "" : "s"}`
+          : "No transactions yet"
+      }
     >
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -95,7 +118,7 @@ export function ImportedAccountRow({ source, count }: Props) {
               variant="ghost"
               size="icon-sm"
               disabled={pending}
-              aria-label={`${labelForSource(source)} options`}
+              aria-label={`${label} options`}
             >
               {pending ? (
                 <Loader2Icon className="animate-spin" />
@@ -106,15 +129,27 @@ export function ImportedAccountRow({ source, count }: Props) {
           }
         />
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => edit.start(source)}>
-            Rename
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            variant="destructive"
-            onSelect={() => runAfterMenuClose(handleDelete)}
-          >
-            Delete all
-          </DropdownMenuItem>
+          {!reserved && (
+            <DropdownMenuItem onSelect={() => edit.start(label)}>
+              Rename
+            </DropdownMenuItem>
+          )}
+          {!reserved && hasAccount && (
+            <DropdownMenuItem
+              variant="destructive"
+              onSelect={() => runAfterMenuClose(handleRemoveAccount)}
+            >
+              Remove account
+            </DropdownMenuItem>
+          )}
+          {count > 0 && (
+            <DropdownMenuItem
+              variant="destructive"
+              onSelect={() => runAfterMenuClose(handleDeleteAll)}
+            >
+              Delete all transactions
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </ListRow>

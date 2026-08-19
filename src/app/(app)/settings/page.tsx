@@ -81,8 +81,8 @@ export default async function SettingsPage() {
               <IntegrationsCard />
             </Section>
             <Section
-              title="Imported accounts"
-              hint="Rename or wipe everything under an account."
+              title="Accounts"
+              hint="Create, rename, remove or wipe an account."
             >
               <ImportedAccountsCard />
             </Section>
