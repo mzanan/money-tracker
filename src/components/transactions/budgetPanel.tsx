@@ -3,7 +3,9 @@
 import { ChatComposer } from "@/components/assistant/chatComposer";
 import { MessageList } from "@/components/assistant/messageList";
 import { useAssistant } from "@/components/assistant/useAssistant";
+import { ApiKeyRequiredNotice } from "@/components/ui/apiKeyRequiredNotice";
 import { ErrorText } from "@/components/ui/errorText";
+import { useSettings } from "@/hooks/useSettings";
 
 const BUDGET_SUGGESTIONS = [
   "Where is my money going this month?",
@@ -13,8 +15,17 @@ const BUDGET_SUGGESTIONS = [
 ];
 
 export function BudgetPanel() {
+  const settings = useSettings();
   const { messages, input, setInput, submit, ask, busy, error } =
     useAssistant();
+
+  if (!settings.hasAiKey) {
+    return (
+      <div className="flex h-[60vh] max-h-[32rem] items-center justify-center px-6 text-center">
+        <ApiKeyRequiredNotice feature="The assistant" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[60vh] max-h-[32rem] flex-col">

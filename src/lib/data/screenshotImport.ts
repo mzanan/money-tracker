@@ -22,7 +22,9 @@ export const SHARE_ERRORS: Record<ShareErrorCode, string> = {
   invalid: "Could not read the upload. Try again.",
   type: "Unsupported image type. Use PNG, JPEG or WebP.",
   size: "Image is too large (max 6 MB).",
-  config: "Screenshot import isn't configured. Try again later.",
+  byok_required: "Image import runs on your own AI key. Add it in Settings.",
+  key_decrypt_failed:
+    "Your API key could not be read. Re-enter it in Settings.",
   extract: "Could not read that screenshot. Try a clearer photo.",
   too_many_items:
     "Too many items detected to hand off automatically. Upload the screenshot again from this page.",

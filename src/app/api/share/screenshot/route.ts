@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { extractFromImage } from "@/lib/ai/screenshotExtract";
+import { getAssistantSettings } from "@/lib/data/userSettings";
+import { decryptSecret } from "@/lib/integrations/crypto";
 import type { ShareErrorCode } from "@/lib/screenshotShare";
 import { getUser } from "@/lib/session";
 
@@ -37,16 +39,28 @@ export async function POST(req: Request) {
     return redirectWithError(req, "size");
   }
 
-  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    return redirectWithError(req, "config");
+  const settings = await getAssistantSettings(user.id);
+  if (!settings?.ai_api_key || !settings.ai_provider) {
+    return redirectWithError(req, "byok_required");
+  }
+
+  let apiKey: string;
+  try {
+    apiKey = decryptSecret(settings.ai_api_key, `${user.id}:ai`);
+  } catch {
+    return redirectWithError(req, "key_decrypt_failed");
   }
 
   let payload;
   try {
-    payload = await extractFromImage({
-      data: new Uint8Array(await file.arrayBuffer()),
-      mimeType: file.type,
-    });
+    payload = await extractFromImage(
+      {
+        data: new Uint8Array(await file.arrayBuffer()),
+        mimeType: file.type,
+      },
+      "screenshot",
+      { provider: settings.ai_provider, apiKey },
+    );
   } catch {
     return redirectWithError(req, "extract");
   }

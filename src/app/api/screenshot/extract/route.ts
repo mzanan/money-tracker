@@ -6,6 +6,8 @@ import {
   logImageExtractError,
   logUsageEvent,
 } from "@/lib/data/usageEvents";
+import { getAssistantSettings } from "@/lib/data/userSettings";
+import { decryptSecret } from "@/lib/integrations/crypto";
 import { getUser } from "@/lib/session";
 
 const MAX_BYTES = 6 * 1024 * 1024;
@@ -21,10 +23,19 @@ export async function POST(req: Request) {
   const logError = (detail: string) =>
     logImageExtractError(user.id, country, detail);
 
-  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    await logError("vision_not_configured");
+  const settings = await getAssistantSettings(user.id);
+  if (!settings?.ai_api_key || !settings.ai_provider) {
+    await logError("byok_required");
+    return NextResponse.json({ error: "byok_required" }, { status: 403 });
+  }
+
+  let apiKey: string;
+  try {
+    apiKey = decryptSecret(settings.ai_api_key, `${user.id}:ai`);
+  } catch {
+    await logError("key_decrypt_failed");
     return NextResponse.json(
-      { error: "vision_not_configured" },
+      { error: "key_decrypt_failed" },
       { status: 503 },
     );
   }
@@ -65,6 +76,7 @@ export async function POST(req: Request) {
         mimeType: file.type,
       },
       mode,
+      { provider: settings.ai_provider, apiKey },
     );
     await logUsageEvent({
       userId: user.id,

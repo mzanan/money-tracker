@@ -35,7 +35,7 @@ export type UserSettingsUpdate = Partial<UserSettingsInsert>;
 export type ClientSettings = Omit<
   UserSettings,
   "calendar_token" | "ai_api_key"
->;
+> & { hasAiKey: boolean };
 
 export type AssistantSettings = Pick<
   UserSettings,

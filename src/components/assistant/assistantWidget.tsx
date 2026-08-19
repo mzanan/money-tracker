@@ -4,11 +4,13 @@ import { SparklesIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useSettings } from "@/hooks/useSettings";
 
 import { ChatPanel } from "./chatPanel";
 import { useAssistant } from "./useAssistant";
 
 export function AssistantWidget() {
+  const settings = useSettings();
   const [open, setOpen] = useState(false);
   const { messages, input, setInput, submit, ask, busy, status } =
     useAssistant();
@@ -23,6 +25,7 @@ export function AssistantWidget() {
         ask={ask}
         busy={busy}
         hasError={status === "error"}
+        hasApiKey={settings.hasAiKey}
         onClose={() => setOpen(false)}
       />
     );

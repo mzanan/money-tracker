@@ -1,6 +1,14 @@
 export const AI_PROVIDERS = {
-  google: { label: "Google Gemini", defaultModel: "gemini-2.5-flash" },
-  groq: { label: "Groq", defaultModel: "llama-3.3-70b-versatile" },
+  google: {
+    label: "Google Gemini",
+    defaultModel: "gemini-2.5-flash",
+    visionModel: "gemini-2.5-flash",
+  },
+  groq: {
+    label: "Groq",
+    defaultModel: "llama-3.3-70b-versatile",
+    visionModel: "qwen/qwen3.6-27b",
+  },
 } as const;
 
 export type AiProvider = keyof typeof AI_PROVIDERS;

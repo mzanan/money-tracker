@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 
 import { ScreenshotImporter } from "@/components/screenshot/screenshotImporter";
+import { ApiKeyRequiredNotice } from "@/components/ui/apiKeyRequiredNotice";
 import { Button } from "@/components/ui/button";
 import { ErrorText } from "@/components/ui/errorText";
 import {
@@ -9,6 +10,7 @@ import {
   isShareErrorCode,
   SHARE_ERRORS,
 } from "@/lib/data/screenshotImport";
+import { getUserSettings } from "@/lib/data/userSettings";
 import { requireUser } from "@/lib/session";
 
 export default async function ScreenshotImportPage({
@@ -19,8 +21,11 @@ export default async function ScreenshotImportPage({
   const user = await requireUser();
   const { error } = await searchParams;
   const errorMessage = error && isShareErrorCode(error) ? SHARE_ERRORS[error] : undefined;
-  const { initial, fromShare, initialCandidates, existingSources } =
-    await getScreenshotImportPageData(user.id);
+  const [settings, { initial, fromShare, initialCandidates, existingSources }] =
+    await Promise.all([
+      getUserSettings(user.id),
+      getScreenshotImportPageData(user.id),
+    ]);
 
   return (
     <div className="mx-auto grid w-full max-w-xl gap-5">
@@ -43,13 +48,17 @@ export default async function ScreenshotImportPage({
 
       {errorMessage && <ErrorText>{errorMessage}</ErrorText>}
 
-      <ScreenshotImporter
-        initialItems={initial?.items ?? null}
-        initialIgnored={initial?.ignored ?? 0}
-        initialCandidates={initialCandidates}
-        existingSources={existingSources}
-        consumeShareCookie={fromShare}
-      />
+      {settings?.hasAiKey ? (
+        <ScreenshotImporter
+          initialItems={initial?.items ?? null}
+          initialIgnored={initial?.ignored ?? 0}
+          initialCandidates={initialCandidates}
+          existingSources={existingSources}
+          consumeShareCookie={fromShare}
+        />
+      ) : (
+        <ApiKeyRequiredNotice feature="Image import" />
+      )}
     </div>
   );
 }
