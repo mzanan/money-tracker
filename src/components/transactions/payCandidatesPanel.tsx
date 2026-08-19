@@ -90,7 +90,7 @@ export function PayCandidatesPanel({
   const hasAmount = reminder.amount != null;
 
   return (
-    <div className="grid gap-4">
+    <div className="grid min-w-0 gap-4">
       <div className="flex items-center gap-2">
         <Button
           variant="ghost"
