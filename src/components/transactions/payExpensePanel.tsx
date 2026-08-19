@@ -39,6 +39,7 @@ export function PayExpensePanel({
       }
       onBack={onBack}
       backAriaLabel="Back to candidates"
+      insetClassName="-mx-5 px-5"
       footerClassName="bg-card border-transparent"
       footer={
         <>

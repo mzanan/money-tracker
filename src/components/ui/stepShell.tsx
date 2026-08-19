@@ -12,6 +12,7 @@ export function StepShell({
   backAriaLabel,
   footer,
   footerClassName,
+  insetClassName = "-mx-4 px-4",
   children,
 }: {
   title: ReactNode;
@@ -20,6 +21,7 @@ export function StepShell({
   backAriaLabel?: string;
   footer: ReactNode;
   footerClassName?: string;
+  insetClassName?: string;
   children: ReactNode;
 }) {
   return (
@@ -34,7 +36,7 @@ export function StepShell({
           <ChevronLeftIcon />
         </Button>
         <div className="min-w-0 pt-1">
-          <p className="text-sm font-semibold">{title}</p>
+          <p className="truncate text-sm font-semibold">{title}</p>
           {description && (
             <p className="text-muted-foreground text-xs">{description}</p>
           )}
@@ -45,7 +47,8 @@ export function StepShell({
 
       <div
         className={cn(
-          "border-border bg-popover sticky bottom-0 z-10 -mx-4 flex justify-end gap-2 border-t px-4 py-3",
+          "border-border bg-popover sticky bottom-0 z-10 flex justify-end gap-2 border-t py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]",
+          insetClassName,
           footerClassName,
         )}
       >
