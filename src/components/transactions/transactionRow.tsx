@@ -8,6 +8,7 @@ import {
   EllipsisIcon,
   LandmarkIcon,
   PencilLineIcon,
+  PinIcon,
   Trash2Icon,
 } from "lucide-react";
 
@@ -56,6 +57,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
     canChangeSource,
     canDelete,
     lockAmountFields,
+    resolvedFixed,
     reminder,
     edit,
     transferDialog,
@@ -63,6 +65,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
     duplicate,
     handleUndoTransfer,
     handleDelete,
+    handleToggleFixed,
     stepApi,
     runAfterMenuClose,
   } = useTransactionRow(tx);
@@ -289,6 +292,12 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
               <BellPlusIcon />
               Set reminder
             </DropdownMenuItem>
+            {!isTransfer && (
+              <DropdownMenuItem onSelect={handleToggleFixed}>
+                <PinIcon />
+                {resolvedFixed ? "Mark as variable" : "Mark as fixed"}
+              </DropdownMenuItem>
+            )}
             {canDelete && (
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"

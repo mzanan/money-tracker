@@ -26,7 +26,13 @@ export function SpendProjectionCard({
 }) {
   const settings = useSettings();
   const { hideAmounts } = useHideAmounts();
-  const { isCurrentMonth, projection, realTotal } = useSpendProjection({
+  const {
+    isCurrentMonth,
+    projection,
+    realTotal,
+    fixedPaidCount,
+    fixedUpcomingCount,
+  } = useSpendProjection({
     yearMonth,
     today,
     monthTransactions,
@@ -53,9 +59,14 @@ export function SpendProjectionCard({
       {isCurrentMonth && projection ? (
         <div className="mt-4 grid gap-3">
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs">
-              Daily average
-            </span>
+            <div>
+              <span className="text-muted-foreground text-xs">
+                Daily average
+              </span>
+              <span className="text-muted-foreground block text-[10px]">
+                Variable spend only
+              </span>
+            </div>
             <span className="text-sm font-semibold tabular-nums">
               {money(projection.variableDailyAverage)}
             </span>
@@ -68,11 +79,24 @@ export function SpendProjectionCard({
               {money(projection.projectedVariable)}
             </span>
           </div>
-          <div className="border-border flex items-center justify-between border-t pt-3">
-            <span className="text-muted-foreground text-xs">
-              Projected total
-            </span>
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-muted-foreground text-xs">
+                Fixed this month
+              </span>
+              {projection.fixedUpcoming > 0 && (
+                <span className="text-muted-foreground block text-[10px]">
+                  {fixedPaidCount} paid, {fixedUpcomingCount} upcoming
+                </span>
+              )}
+            </div>
             <span className="text-sm font-semibold tabular-nums">
+              {money(projection.fixedTotal)}
+            </span>
+          </div>
+          <div className="border-border flex items-center justify-between border-t pt-3">
+            <span className="text-base font-semibold">Projected total</span>
+            <span className="text-base font-semibold tabular-nums">
               {money(projection.projectedTotal)}
             </span>
           </div>

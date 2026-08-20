@@ -6,8 +6,11 @@ import { useRates } from "@/hooks/useRates";
 import { useSettings } from "@/hooks/useSettings";
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { monthBounds } from "@/lib/dates";
-import { excludePaidReminders } from "@/lib/fixedExpenses";
-import { computeSpendProjection } from "@/lib/spendProjection";
+import { excludePaidReminders, splitFixedVariable } from "@/lib/fixedExpenses";
+import {
+  computeSpendProjection,
+  monthElapsedTransactions,
+} from "@/lib/spendProjection";
 import { periodTotals } from "@/lib/totals";
 
 import type { RecurringPayment, Transaction } from "@/types/db";
@@ -68,5 +71,18 @@ export function useSpendProjection({
     ).expense;
   }, [isCurrentMonth, monthTransactions, settings.base_currency]);
 
-  return { isCurrentMonth, projection, realTotal };
+  const fixedCounts = useMemo(() => {
+    if (!isCurrentMonth) return { paid: 0, upcoming: 0 };
+    const elapsed = monthElapsedTransactions(monthTransactions, today);
+    const { fixed } = splitFixedVariable(elapsed, fixedLabels);
+    return { paid: fixed.length, upcoming: unpaidRecurring.length };
+  }, [isCurrentMonth, monthTransactions, today, fixedLabels, unpaidRecurring]);
+
+  return {
+    isCurrentMonth,
+    projection,
+    realTotal,
+    fixedPaidCount: fixedCounts.paid,
+    fixedUpcomingCount: fixedCounts.upcoming,
+  };
 }

@@ -16,6 +16,15 @@ export interface SpendProjection {
   recurringIncomplete: boolean;
 }
 
+export function monthElapsedTransactions(
+  monthTransactions: Transaction[],
+  today: string,
+): Transaction[] {
+  return excludeCanceledPairs(monthTransactions).filter(
+    (tx) => tx.occurred_on <= today,
+  );
+}
+
 export function computeSpendProjection({
   yearMonth,
   today,
@@ -37,9 +46,7 @@ export function computeSpendProjection({
   const totalDaysInMonth = Number(monthEnd.slice(8, 10));
   const daysElapsed = Math.max(Number(today.slice(8, 10)), 1);
 
-  const elapsed = excludeCanceledPairs(monthTransactions).filter(
-    (tx) => tx.occurred_on <= today,
-  );
+  const elapsed = monthElapsedTransactions(monthTransactions, today);
   const { fixed, variable } = splitFixedVariable(elapsed, fixedLabels);
 
   const variableSpendSoFar = periodTotals(variable, baseCurrency).expense;
