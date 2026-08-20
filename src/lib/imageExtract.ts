@@ -63,6 +63,12 @@ export type ImageExtractionResult =
   | { ok: false; error: string; aborted?: false }
   | { ok: false; aborted: true };
 
+const FRIENDLY_ERRORS: Record<string, string> = {
+  byok_required: "Image import runs on your own AI key. Add it in Settings.",
+  key_decrypt_failed:
+    "Your API key could not be read. Re-enter it in Settings.",
+};
+
 export async function requestImageExtraction(
   file: File,
   mode: ImageImportMode,
@@ -83,12 +89,12 @@ export async function requestImageExtraction(
       | { error: string };
 
     if (!response.ok) {
+      const code = "error" in payload ? payload.error : null;
       return {
         ok: false,
-        error:
-          "error" in payload
-            ? `Could not read: ${payload.error}`
-            : "Could not read image",
+        error: code
+          ? (FRIENDLY_ERRORS[code] ?? `Could not read: ${code}`)
+          : "Could not read image",
       };
     }
     return {

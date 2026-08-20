@@ -9,6 +9,7 @@ import {
 
 import type { ImageImportMode } from "@/lib/imageExtract";
 
+import { ApiKeyRequiredNotice } from "@/components/ui/apiKeyRequiredNotice";
 import {
   Drawer,
   DrawerCloseButton,
@@ -22,6 +23,7 @@ import { IconCircle } from "@/components/ui/iconCircle";
 import { TappableRow } from "@/components/ui/tappableRow";
 import { ImageExtractLoading } from "@/components/screenshot/imageExtractLoading";
 import { ScreenshotImporter } from "@/components/screenshot/screenshotImporter";
+import { useSettings } from "@/hooks/useSettings";
 
 import { useImportFromImage } from "./useImportFromImage";
 
@@ -50,6 +52,7 @@ export function ImportFromImage({
 }: {
   existingSources: string[];
 }) {
+  const settings = useSettings();
   const {
     fileInputRef,
     menuOpen,
@@ -64,13 +67,14 @@ export function ImportFromImage({
     handleFileChange,
   } = useImportFromImage();
 
-  const freeAiNotice = (
-    <p className="text-muted-foreground rounded-xl border px-3 py-2 text-xs">
-      Image import runs on free AI tiers: it can be slow, or temporarily
-      unavailable when the shared quota runs out. Adding a transaction manually
-      always works.
-    </p>
-  );
+  if (!settings.hasAiKey) {
+    return (
+      <ApiKeyRequiredNotice
+        feature="Image import"
+        className="shrink-0 py-3"
+      />
+    );
+  }
 
   const trigger = (
     <button
@@ -100,7 +104,6 @@ export function ImportFromImage({
             </DrawerDescription>
           </DrawerHeader>
           <div className="grid gap-1 px-4 pb-8">
-            <div className="pb-2">{freeAiNotice}</div>
             {OPTIONS.map((option) => (
               <TappableRow
                 key={option.mode}

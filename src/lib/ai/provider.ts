@@ -1,23 +1,30 @@
-import { createGoogleGenerativeAI, google } from "@ai-sdk/google";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
 
 import { AI_PROVIDERS, type AiProvider } from "@/lib/constants/aiProviders";
 
 export interface ChatModelConfig {
-  provider: AiProvider | null;
+  provider: AiProvider;
   model: string | null;
-  apiKey: string | null;
+  apiKey: string;
 }
 
-export function hasServerKey(): boolean {
-  return Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
+export interface VisionModelConfig {
+  provider: AiProvider;
+  apiKey: string;
+}
+
+function clientFor(provider: AiProvider, apiKey: string) {
+  return provider === "groq"
+    ? createGroq({ apiKey })
+    : createGoogleGenerativeAI({ apiKey });
 }
 
 export function resolveChatModel({ provider, model, apiKey }: ChatModelConfig) {
-  if (apiKey && provider) {
-    const modelId = model?.trim() || AI_PROVIDERS[provider].defaultModel;
-    if (provider === "groq") return createGroq({ apiKey })(modelId);
-    return createGoogleGenerativeAI({ apiKey })(modelId);
-  }
-  return google(process.env.AI_CHAT_MODEL ?? AI_PROVIDERS.google.defaultModel);
+  const modelId = model?.trim() || AI_PROVIDERS[provider].defaultModel;
+  return clientFor(provider, apiKey)(modelId);
+}
+
+export function resolveVisionModel({ provider, apiKey }: VisionModelConfig) {
+  return clientFor(provider, apiKey)(AI_PROVIDERS[provider].visionModel);
 }

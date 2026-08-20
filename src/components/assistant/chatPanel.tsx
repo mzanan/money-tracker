@@ -3,6 +3,7 @@
 import type { UIMessage } from "ai";
 import { XIcon } from "lucide-react";
 
+import { ApiKeyRequiredNotice } from "@/components/ui/apiKeyRequiredNotice";
 import { Button } from "@/components/ui/button";
 import { ErrorText } from "@/components/ui/errorText";
 
@@ -17,6 +18,7 @@ export function ChatPanel({
   ask,
   busy,
   hasError,
+  hasApiKey,
   onClose,
 }: {
   messages: UIMessage[];
@@ -26,6 +28,7 @@ export function ChatPanel({
   ask: (text: string) => void;
   busy: boolean;
   hasError: boolean;
+  hasApiKey: boolean;
   onClose: () => void;
 }) {
   return (
@@ -42,20 +45,28 @@ export function ChatPanel({
         </Button>
       </header>
 
-      <MessageList messages={messages} onSuggest={ask} />
+      {hasApiKey ? (
+        <>
+          <MessageList messages={messages} onSuggest={ask} />
 
-      {hasError && (
-        <ErrorText className="px-3 pb-1">
-          Could not respond. Try again in a moment.
-        </ErrorText>
+          {hasError && (
+            <ErrorText className="px-3 pb-1">
+              Could not respond. Try again in a moment.
+            </ErrorText>
+          )}
+
+          <ChatComposer
+            input={input}
+            setInput={setInput}
+            onSubmit={submit}
+            busy={busy}
+          />
+        </>
+      ) : (
+        <div className="flex flex-1 items-center justify-center px-6 text-center">
+          <ApiKeyRequiredNotice feature="The assistant" />
+        </div>
       )}
-
-      <ChatComposer
-        input={input}
-        setInput={setInput}
-        onSubmit={submit}
-        busy={busy}
-      />
     </div>
   );
 }

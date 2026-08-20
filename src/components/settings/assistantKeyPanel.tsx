@@ -56,12 +56,12 @@ export function AssistantKeyPanel({
           <SparklesIcon className="size-4" />
           Assistant model
           <Badge variant={hasKey ? "secondary" : "outline"} size="xs">
-            {hasKey ? "Own key" : "Default"}
+            {hasKey ? "Own key" : "Not configured"}
           </Badge>
         </CardTitle>
         <CardDescription>
-          The assistant uses the app&apos;s free model by default. Add your own
-          API key to use your provider and model of choice.
+          The assistant and image import both run on your own API key. Add
+          one below to use them.
         </CardDescription>
       </CardHeader>
       <CardContent>

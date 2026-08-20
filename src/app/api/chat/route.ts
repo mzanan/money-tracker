@@ -3,7 +3,7 @@ import type { UIMessage } from "ai";
 
 import { buildAssistantTools } from "@/lib/ai/assistantTools";
 import { buildSystemPrompt } from "@/lib/ai/prompt";
-import { hasServerKey, resolveChatModel } from "@/lib/ai/provider";
+import { resolveChatModel } from "@/lib/ai/provider";
 import {
   countryFromHeaders,
   logUsageEvent,
@@ -30,24 +30,16 @@ export async function POST(req: Request) {
     return Response.json({ error: "Settings not found" }, { status: 400 });
   }
 
-  let userApiKey: string | null = null;
-  if (settings.ai_api_key) {
-    try {
-      userApiKey = decryptSecret(settings.ai_api_key, `${user.id}:ai`);
-    } catch {
-      return Response.json(
-        { error: "Your API key could not be read. Re-enter it in Settings." },
-        { status: 503 },
-      );
-    }
+  if (!settings.ai_api_key || !settings.ai_provider) {
+    return Response.json({ error: "byok_required" }, { status: 403 });
   }
 
-  if (!userApiKey && !hasServerKey()) {
+  let userApiKey: string;
+  try {
+    userApiKey = decryptSecret(settings.ai_api_key, `${user.id}:ai`);
+  } catch {
     return Response.json(
-      {
-        error:
-          "The assistant is not configured. Add your own API key in Settings.",
-      },
+      { error: "Your API key could not be read. Re-enter it in Settings." },
       { status: 503 },
     );
   }
@@ -58,7 +50,7 @@ export async function POST(req: Request) {
   await logUsageEvent({
     userId: user.id,
     event: "chat_message",
-    detail: userApiKey ? "byok" : "server_key",
+    detail: settings.ai_provider,
     country: countryFromHeaders(req.headers),
   });
 

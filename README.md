@@ -96,7 +96,6 @@ onboarding pide al menos 1 moneda + la moneda base.
    - `NEXT_PUBLIC_BETTER_AUTH_URL` (igual)
    - `GOOGLE_CLIENT_ID`
    - `GOOGLE_CLIENT_SECRET`
-   - `GOOGLE_GENERATIVE_AI_API_KEY`
 4. Deploy.
 5. Crear tu cuenta una vez (sign-up o Google).
 6. **Single-user lockdown:** una vez creada tu cuenta, setear

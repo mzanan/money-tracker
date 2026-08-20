@@ -36,7 +36,7 @@ export function useAssistantKeyForm({
     run(() => removeAssistantKey(), {
       success: "API key removed",
       confirm:
-        "Remove your API key? The assistant will fall back to the app's default model.",
+        "Remove your API key? The assistant and image import stop working until you add one again.",
       onSuccess: () => {
         setProvider("google");
         setModel("");

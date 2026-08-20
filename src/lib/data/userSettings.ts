@@ -16,6 +16,7 @@ export const getUserSettings = cache(
         cash_enabled: user_settings.cash_enabled,
         ai_provider: user_settings.ai_provider,
         ai_model: user_settings.ai_model,
+        ai_api_key: user_settings.ai_api_key,
         onboarded_at: user_settings.onboarded_at,
         created_at: user_settings.created_at,
         updated_at: user_settings.updated_at,
@@ -23,7 +24,10 @@ export const getUserSettings = cache(
       .from(user_settings)
       .where(eq(user_settings.user_id, userId))
       .limit(1);
-    return rows[0] ?? null;
+    const row = rows[0];
+    if (!row) return null;
+    const { ai_api_key, ...rest } = row;
+    return { ...rest, hasAiKey: Boolean(ai_api_key) };
   },
 );
 
