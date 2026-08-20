@@ -11,6 +11,7 @@ export const getUserSettings = cache(
       .select({
         user_id: user_settings.user_id,
         currencies: user_settings.currencies,
+        fixed_labels: user_settings.fixed_labels,
         base_currency: user_settings.base_currency,
         timezone: user_settings.timezone,
         cash_enabled: user_settings.cash_enabled,

@@ -104,6 +104,11 @@ export const transactions = sqliteTable(
     source: text("source").notNull().default("manual"),
     external_id: text("external_id"),
     transfer_group: text("transfer_group"),
+    recurring_id: text("recurring_id").references(
+      () => recurring_payments.id,
+      { onDelete: "set null" },
+    ),
+    is_fixed: integer("is_fixed", { mode: "boolean" }),
     created_at: text("created_at")
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
@@ -194,6 +199,10 @@ export const user_settings = sqliteTable(
     currencies: text("currencies", { mode: "json" })
       .$type<string[]>()
       .notNull(),
+    fixed_labels: text("fixed_labels", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
     base_currency: text("base_currency").notNull(),
     timezone: text("timezone"),
     cash_enabled: integer("cash_enabled", { mode: "boolean" })
