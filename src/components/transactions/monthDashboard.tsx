@@ -14,7 +14,6 @@ import { FiltersPanel } from "./filtersPanel";
 import { MonthView } from "./monthView";
 import { QuickAddForm } from "./quickAddForm";
 import { SourceFilter } from "./sourceFilter";
-import { SpendProjectionCard } from "./spendProjectionCard";
 import { useMonthDashboard } from "./useMonthDashboard";
 
 interface Props {
@@ -86,12 +85,6 @@ export function MonthDashboard({
           view={view}
           onViewChange={setView}
           daySpend={daySpend}
-        />
-        <SpendProjectionCard
-          yearMonth={visibleYearMonth}
-          today={today}
-          monthTransactions={c.sourceFilteredMonth}
-          reminders={reminders}
         />
         <SourceFilter
           sources={sources}

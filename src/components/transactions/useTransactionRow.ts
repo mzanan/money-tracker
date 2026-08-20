@@ -5,10 +5,11 @@ import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useDialogState } from "@/hooks/useDialogState";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
-import { deleteTransaction } from "@/lib/actions/transactions";
+import { deleteTransaction, setTransactionFixed } from "@/lib/actions/transactions";
 import { unmarkTransfer } from "@/lib/actions/transfers";
 import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
 import { isSyncedExternalId } from "@/lib/externalIds";
+import { isFixedTransaction } from "@/lib/fixedExpenses";
 import { transactionInDisplay } from "@/lib/totals";
 import { useUiStore } from "@/stores/uiStore";
 
@@ -21,6 +22,7 @@ export function useTransactionRow(tx: Transaction) {
   const accountLabels = useAccountLabels();
   const remove = useServerAction();
   const transfer = useServerAction();
+  const fixedToggle = useServerAction();
   const runAfterMenuClose = useDeferredMenuAction();
   const stepApi = useDrawerStep();
   const reminder = useDialogState(runAfterMenuClose);
@@ -55,9 +57,19 @@ export function useTransactionRow(tx: Transaction) {
   const avatarSeed = tx.tags[0] || sourceLabel;
   const reminderTitle = tx.tags[0] || sourceLabel;
   const description = tx.note?.trim();
+  const resolvedFixed = isFixedTransaction(tx, settings.fixed_labels);
 
   function toggleSelected() {
     toggleTxSelected(tx);
+  }
+
+  function handleToggleFixed() {
+    const next = !resolvedFixed;
+    runAfterMenuClose(() =>
+      fixedToggle.run(() => setTransactionFixed(tx.id, next), {
+        success: next ? "Marked as fixed" : "Marked as variable",
+      }),
+    );
   }
 
   function handleUndoTransfer() {
@@ -94,6 +106,7 @@ export function useTransactionRow(tx: Transaction) {
     canChangeSource,
     canDelete,
     lockAmountFields,
+    resolvedFixed,
     reminder,
     edit,
     transferDialog,
@@ -101,6 +114,7 @@ export function useTransactionRow(tx: Transaction) {
     duplicate,
     handleUndoTransfer,
     handleDelete,
+    handleToggleFixed,
     stepApi,
     runAfterMenuClose,
   };

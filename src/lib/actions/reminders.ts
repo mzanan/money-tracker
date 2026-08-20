@@ -146,6 +146,7 @@ async function buildReminderExpenseRow(
       occurredOn: day,
       note: reminder.label,
       externalId: `${EXTERNAL_ID_PREFIX.reminder}${reminder.id}:${day}`,
+      recurringId: reminder.id,
     },
     { rates, userCurrencies },
   );
@@ -208,6 +209,7 @@ export async function getReminderPayOptions(
         eq(transactions.user_id, user.id),
         eq(transactions.kind, "expense"),
         eq(transactions.occurred_on, day),
+        isNull(transactions.recurring_id),
         or(
           isNull(transactions.external_id),
           notLike(transactions.external_id, `${EXTERNAL_ID_PREFIX.reminder}%`),
@@ -235,7 +237,11 @@ export async function getReminderPayOptions(
       rates,
     );
     suggested = result.matches
-      .filter((m) => !m.external_id?.startsWith(EXTERNAL_ID_PREFIX.reminder))
+      .filter(
+        (m) =>
+          !m.external_id?.startsWith(EXTERNAL_ID_PREFIX.reminder) &&
+          m.recurring_id == null,
+      )
       .map(toCandidate);
   }
 
@@ -301,10 +307,17 @@ export async function markReminderPaid(
         .limit(1)
         .then((rows) => rows[0]);
       if (!tx) return { ok: false, error: "Transaction not found" };
+      if (tx.recurring_id != null && tx.recurring_id !== id) {
+        return {
+          ok: false,
+          error: "This transaction is already linked to another reminder",
+        };
+      }
 
       const patch: Partial<typeof tx> = {};
       if (!tx.comment) patch.comment = reminder.label;
-      if (Object.keys(patch).length > 0) linkUpdate = { id: linkId, patch };
+      patch.recurring_id = reminder.id;
+      linkUpdate = { id: linkId, patch };
       day = tx.occurred_on;
     }
     const resolvedDay = day;
@@ -329,15 +342,25 @@ export async function markReminderPaid(
     let expenseAdded = false;
     await db.transaction(async (dbTx) => {
       if (linkUpdate) {
-        await dbTx
+        const linked = await dbTx
           .update(transactions)
           .set(linkUpdate.patch)
           .where(
             and(
               eq(transactions.id, linkUpdate.id),
               eq(transactions.user_id, user.id),
+              or(
+                isNull(transactions.recurring_id),
+                eq(transactions.recurring_id, id),
+              ),
             ),
+          )
+          .returning({ id: transactions.id });
+        if (linked.length === 0) {
+          throw new Error(
+            "This transaction is already linked to another reminder",
           );
+        }
       }
       await dbTx
         .update(recurring_payments)

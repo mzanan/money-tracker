@@ -6,7 +6,11 @@ import { useRates } from "@/hooks/useRates";
 import { useSettings } from "@/hooks/useSettings";
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { monthBounds } from "@/lib/dates";
-import { computeSpendProjection } from "@/lib/spendProjection";
+import { excludePaidReminders, splitFixedVariable } from "@/lib/fixedExpenses";
+import {
+  computeSpendProjection,
+  monthElapsedTransactions,
+} from "@/lib/spendProjection";
 import { periodTotals } from "@/lib/totals";
 
 import type { RecurringPayment, Transaction } from "@/types/db";
@@ -24,16 +28,18 @@ export function useSpendProjection({
 }) {
   const settings = useSettings();
   const ratesQuery = useRates();
+  const fixedLabels = settings.fixed_labels;
 
   const isCurrentMonth = yearMonth === today.slice(0, 7);
 
   const unpaidRecurring = useMemo(() => {
     if (!isCurrentMonth) return [];
     const [monthStart, monthEnd] = monthBounds(yearMonth);
-    return reminders.filter(
+    const dueThisMonth = reminders.filter(
       (r) => r.next_due_on >= monthStart && r.next_due_on <= monthEnd,
     );
-  }, [reminders, yearMonth, isCurrentMonth]);
+    return excludePaidReminders(dueThisMonth, monthTransactions);
+  }, [reminders, yearMonth, isCurrentMonth, monthTransactions]);
 
   const projection = useMemo(() => {
     if (!isCurrentMonth) return null;
@@ -42,6 +48,7 @@ export function useSpendProjection({
       today,
       monthTransactions,
       unpaidRecurring,
+      fixedLabels,
       baseCurrency: settings.base_currency,
       rates: ratesQuery.data?.rates ?? null,
     });
@@ -51,6 +58,7 @@ export function useSpendProjection({
     today,
     monthTransactions,
     unpaidRecurring,
+    fixedLabels,
     settings.base_currency,
     ratesQuery.data,
   ]);
@@ -63,5 +71,18 @@ export function useSpendProjection({
     ).expense;
   }, [isCurrentMonth, monthTransactions, settings.base_currency]);
 
-  return { isCurrentMonth, projection, realTotal };
+  const fixedCounts = useMemo(() => {
+    if (!isCurrentMonth) return { paid: 0, upcoming: 0 };
+    const elapsed = monthElapsedTransactions(monthTransactions, today);
+    const { fixed } = splitFixedVariable(elapsed, fixedLabels);
+    return { paid: fixed.length, upcoming: unpaidRecurring.length };
+  }, [isCurrentMonth, monthTransactions, today, fixedLabels, unpaidRecurring]);
+
+  return {
+    isCurrentMonth,
+    projection,
+    realTotal,
+    fixedPaidCount: fixedCounts.paid,
+    fixedUpcomingCount: fixedCounts.upcoming,
+  };
 }

@@ -1,15 +1,28 @@
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { convert } from "@/lib/currency";
 import { monthBounds } from "@/lib/dates";
+import { splitFixedVariable } from "@/lib/fixedExpenses";
 import { periodTotals } from "@/lib/totals";
 
 import type { FxRates, RecurringPayment, Transaction } from "@/types/db";
 
 export interface SpendProjection {
-  dailyAverage: number;
+  variableDailyAverage: number;
+  projectedVariable: number;
+  fixedPaid: number;
+  fixedUpcoming: number;
+  fixedTotal: number;
   projectedTotal: number;
-  projectedWithRecurring: number;
   recurringIncomplete: boolean;
+}
+
+export function monthElapsedTransactions(
+  monthTransactions: Transaction[],
+  today: string,
+): Transaction[] {
+  return excludeCanceledPairs(monthTransactions).filter(
+    (tx) => tx.occurred_on <= today,
+  );
 }
 
 export function computeSpendProjection({
@@ -17,6 +30,7 @@ export function computeSpendProjection({
   today,
   monthTransactions,
   unpaidRecurring,
+  fixedLabels,
   baseCurrency,
   rates,
 }: {
@@ -24,6 +38,7 @@ export function computeSpendProjection({
   today: string;
   monthTransactions: Transaction[];
   unpaidRecurring: RecurringPayment[];
+  fixedLabels: string[];
   baseCurrency: string;
   rates: FxRates | null;
 }): SpendProjection {
@@ -31,18 +46,17 @@ export function computeSpendProjection({
   const totalDaysInMonth = Number(monthEnd.slice(8, 10));
   const daysElapsed = Math.max(Number(today.slice(8, 10)), 1);
 
-  const spendSoFar = periodTotals(
-    excludeCanceledPairs(monthTransactions).filter(
-      (tx) => tx.occurred_on <= today,
-    ),
-    baseCurrency,
-  ).expense;
+  const elapsed = monthElapsedTransactions(monthTransactions, today);
+  const { fixed, variable } = splitFixedVariable(elapsed, fixedLabels);
 
-  const dailyAverage = spendSoFar / daysElapsed;
-  const projectedTotal = dailyAverage * totalDaysInMonth;
+  const variableSpendSoFar = periodTotals(variable, baseCurrency).expense;
+  const fixedPaid = periodTotals(fixed, baseCurrency).expense;
+
+  const variableDailyAverage = variableSpendSoFar / daysElapsed;
+  const projectedVariable = variableDailyAverage * totalDaysInMonth;
 
   let recurringIncomplete = false;
-  const recurringRemaining = unpaidRecurring.reduce((sum, reminder) => {
+  const fixedUpcoming = unpaidRecurring.reduce((sum, reminder) => {
     if (reminder.amount == null) return sum;
     const currency = reminder.currency ?? baseCurrency;
     if (currency === baseCurrency) return sum + reminder.amount;
@@ -58,10 +72,16 @@ export function computeSpendProjection({
     }
   }, 0);
 
+  const fixedTotal = fixedPaid + fixedUpcoming;
+  const projectedTotal = projectedVariable + fixedTotal;
+
   return {
-    dailyAverage,
+    variableDailyAverage,
+    projectedVariable,
+    fixedPaid,
+    fixedUpcoming,
+    fixedTotal,
     projectedTotal,
-    projectedWithRecurring: projectedTotal + recurringRemaining,
     recurringIncomplete,
   };
 }

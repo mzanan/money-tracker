@@ -254,6 +254,36 @@ export async function updateTransactionSource(
   }
 }
 
+export async function setTransactionFixed(
+  id: string,
+  isFixed: boolean | null,
+): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const tx = await db
+    .select()
+    .from(transactions)
+    .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)))
+    .limit(1)
+    .then((rows) => rows[0]);
+  if (!tx) return { ok: false, error: "Transaction not found" };
+
+  try {
+    await db
+      .update(transactions)
+      .set({ is_fixed: isFixed })
+      .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)));
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Update failed",
+    };
+  }
+}
+
 export async function mergeTransactions(
   keepId: string,
   removeId: string,

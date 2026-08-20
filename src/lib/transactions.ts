@@ -55,6 +55,7 @@ export interface BuildTransactionRowInput {
   note?: string | null;
   source?: string;
   externalId?: string | null;
+  recurringId?: string | null;
 }
 
 export interface BuildContext {
@@ -115,6 +116,7 @@ export function buildTransactionRow(
     ...(input.occurredAt && { occurred_at: input.occurredAt }),
     source: input.source ?? "manual",
     external_id: input.externalId ?? null,
+    recurring_id: input.recurringId ?? null,
   };
 }
 

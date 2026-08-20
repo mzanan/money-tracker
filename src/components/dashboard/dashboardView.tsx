@@ -15,20 +15,25 @@ import { Surface } from "@/components/ui/surface";
 import { SpendingBreakdown } from "@/components/transactions/spendingBreakdown";
 import { MonthView } from "@/components/transactions/monthView";
 
+import { SpendProjectionCard } from "./spendProjectionCard";
 import { useDashboardView } from "./useDashboardView";
 
-import type { Location, Transaction } from "@/types/db";
+import type { Location, RecurringPayment, Transaction } from "@/types/db";
 
 interface Props {
   yearMonth: string;
   lifetimeTransactions: Transaction[];
   places: Location[];
+  reminders: RecurringPayment[];
+  today: string;
 }
 
 export function DashboardView({
   yearMonth,
   lifetimeTransactions,
   places,
+  reminders,
+  today,
 }: Props) {
   const settings = useSettings();
   const { hideAmounts } = useHideAmounts();
@@ -118,12 +123,21 @@ export function DashboardView({
           </span>
         </div>
         <div className="-mt-1.5 flex items-center justify-between gap-3 text-sm">
-          <span className="text-muted-foreground">Average per day</span>
+          <span className="text-muted-foreground">
+            Average per day (all spend)
+          </span>
           <span className="font-semibold tabular-nums">
             {money(v.avgPerDay)}
           </span>
         </div>
       </Surface>
+
+      <SpendProjectionCard
+        yearMonth={v.visibleYearMonth}
+        today={today}
+        monthTransactions={v.monthTransactions}
+        reminders={reminders}
+      />
 
       <SpendingBreakdown
         transactions={v.monthTransactions}
