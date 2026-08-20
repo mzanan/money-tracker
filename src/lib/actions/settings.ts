@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
+import { normalizeFixedLabel } from "@/lib/fixedExpenses";
 import { encryptSecret } from "@/lib/integrations/crypto";
 import {
   assistantKeySchema,
@@ -72,6 +73,47 @@ export async function setCashEnabled(enabled: boolean): Promise<ActionResult> {
     await db
       .update(user_settings)
       .set({ cash_enabled: enabled })
+      .where(eq(user_settings.user_id, user.id));
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Save failed",
+    };
+  }
+}
+
+const FIXED_LABELS_MAX_ENTRIES = 50;
+const FIXED_LABELS_MAX_LENGTH = 60;
+
+export async function setFixedLabels(labels: string[]): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const normalized = Array.from(
+    new Set(
+      labels.map((label) => normalizeFixedLabel(label)).filter(Boolean),
+    ),
+  );
+
+  if (normalized.some((label) => label.length > FIXED_LABELS_MAX_LENGTH)) {
+    return {
+      ok: false,
+      error: `Each label must be ${FIXED_LABELS_MAX_LENGTH} characters or fewer`,
+    };
+  }
+  if (normalized.length > FIXED_LABELS_MAX_ENTRIES) {
+    return {
+      ok: false,
+      error: `Keep the list to ${FIXED_LABELS_MAX_ENTRIES} labels or fewer`,
+    };
+  }
+
+  try {
+    await db
+      .update(user_settings)
+      .set({ fixed_labels: normalized })
       .where(eq(user_settings.user_id, user.id));
     revalidatePath("/", "layout");
     return { ok: true };
