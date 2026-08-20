@@ -1,3 +1,5 @@
+import { computeNextDue } from "@/lib/reminders";
+
 import type { RecurringPayment, Transaction } from "@/types/db";
 
 export const FIXED_TX_SOURCE = {
@@ -40,12 +42,27 @@ export function excludePaidReminders(
   reminders: RecurringPayment[],
   monthTransactions: Transaction[],
 ): RecurringPayment[] {
-  return reminders.filter(
-    (reminder) =>
-      !monthTransactions.some(
-        (tx) =>
-          tx.recurring_id === reminder.id &&
-          tx.occurred_on >= reminder.next_due_on,
-      ),
-  );
+  return reminders.filter((reminder) => {
+    const matchingTxs = monthTransactions.filter(
+      (tx) => tx.recurring_id === reminder.id,
+    );
+    if (matchingTxs.length === 0) return true;
+
+    const expectedNextDue =
+      reminder.last_paid_on == null
+        ? null
+        : computeNextDue(
+            reminder.last_paid_on,
+            reminder.frequency,
+            reminder.interval_months,
+          );
+    const nextDueIsTrustworthy = expectedNextDue === reminder.next_due_on;
+
+    if (nextDueIsTrustworthy) {
+      return !matchingTxs.some((tx) => tx.occurred_on >= reminder.next_due_on);
+    }
+    return !matchingTxs.some(
+      (tx) => tx.occurred_on >= (reminder.last_paid_on ?? ""),
+    );
+  });
 }

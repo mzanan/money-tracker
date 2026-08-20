@@ -342,15 +342,25 @@ export async function markReminderPaid(
     let expenseAdded = false;
     await db.transaction(async (dbTx) => {
       if (linkUpdate) {
-        await dbTx
+        const linked = await dbTx
           .update(transactions)
           .set(linkUpdate.patch)
           .where(
             and(
               eq(transactions.id, linkUpdate.id),
               eq(transactions.user_id, user.id),
+              or(
+                isNull(transactions.recurring_id),
+                eq(transactions.recurring_id, id),
+              ),
             ),
+          )
+          .returning({ id: transactions.id });
+        if (linked.length === 0) {
+          throw new Error(
+            "This transaction is already linked to another reminder",
           );
+        }
       }
       await dbTx
         .update(recurring_payments)
