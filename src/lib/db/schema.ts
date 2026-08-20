@@ -139,6 +139,28 @@ export const locations = sqliteTable("locations", {
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
 });
 
+export const accounts = sqliteTable(
+  "accounts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    source: text("source").notNull(),
+    label: text("label").notNull(),
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    updated_at: text("updated_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString()),
+  },
+  (t) => [uniqueIndex("accounts_user_source_uniq").on(t.user_id, t.source)],
+);
+
 export const merchant_categories = sqliteTable(
   "merchant_categories",
   {

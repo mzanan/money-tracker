@@ -2,7 +2,7 @@ import { asc, desc, eq, sql } from "drizzle-orm";
 
 import { kindOfSource } from "@/lib/constants/sources";
 import { db } from "@/lib/db";
-import { transactions, user_settings } from "@/lib/db/schema";
+import { accounts, transactions, user_settings } from "@/lib/db/schema";
 import { isSyncable } from "@/lib/integrations";
 
 export interface ImportedSource {
@@ -13,17 +13,31 @@ export interface ImportedSource {
 export async function getImportedSources(
   userId: string,
 ): Promise<ImportedSource[]> {
-  const rows = await db
-    .select({
-      source: transactions.source,
-      count: sql<number>`count(*)`,
-    })
-    .from(transactions)
-    .where(eq(transactions.user_id, userId))
-    .groupBy(transactions.source)
-    .orderBy(desc(sql`count(*)`));
+  const [rows, accountRows] = await Promise.all([
+    db
+      .select({
+        source: transactions.source,
+        count: sql<number>`count(*)`,
+      })
+      .from(transactions)
+      .where(eq(transactions.user_id, userId))
+      .groupBy(transactions.source)
+      .orderBy(desc(sql`count(*)`)),
+    db
+      .select({ source: accounts.source })
+      .from(accounts)
+      .where(eq(accounts.user_id, userId)),
+  ]);
 
-  return rows.map((r) => ({ source: r.source, count: Number(r.count) }));
+  const sources = rows.map((r) => ({ source: r.source, count: Number(r.count) }));
+  const knownSources = new Set(sources.map((s) => s.source));
+  for (const { source } of accountRows) {
+    if (!knownSources.has(source)) {
+      sources.push({ source, count: 0 });
+      knownSources.add(source);
+    }
+  }
+  return sources;
 }
 
 export async function getTransferSources(
@@ -37,11 +51,15 @@ export async function getTransferSources(
 }
 
 export async function getUserSources(userId: string): Promise<string[]> {
-  const [rows, settings] = await Promise.all([
+  const [rows, accountRows, settings] = await Promise.all([
     db
       .selectDistinct({ source: transactions.source })
       .from(transactions)
       .where(eq(transactions.user_id, userId)),
+    db
+      .select({ source: accounts.source })
+      .from(accounts)
+      .where(eq(accounts.user_id, userId)),
     db
       .select({ cash_enabled: user_settings.cash_enabled })
       .from(user_settings)
@@ -51,6 +69,7 @@ export async function getUserSources(userId: string): Promise<string[]> {
   ]);
 
   const set = new Set(rows.map((r) => r.source).filter(Boolean));
+  for (const { source } of accountRows) set.add(source);
   if (settings?.cash_enabled) set.add("manual");
   return Array.from(set).sort();
 }

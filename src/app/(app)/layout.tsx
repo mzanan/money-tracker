@@ -6,8 +6,10 @@ import { AutoSync } from "@/components/providers/autoSync";
 import { ConfirmProvider } from "@/components/providers/confirmProvider";
 import { InstallHint } from "@/components/pwa/installHint";
 import { MergeBar } from "@/components/transactions/mergeBar";
+import { AccountLabelsProvider } from "@/hooks/useAccountLabels";
 import { HideAmountsProvider } from "@/hooks/useHideAmounts";
 import { SettingsProvider } from "@/hooks/useSettings";
+import { getAccountLabels } from "@/lib/data/accounts";
 import { getUserSettings } from "@/lib/data/userSettings";
 import { readHideAmountsCookie } from "@/lib/preferences.server";
 import { getUser } from "@/lib/session";
@@ -22,9 +24,10 @@ export default async function AppLayout({
     redirect("/login");
   }
 
-  const [settings, hideAmounts] = await Promise.all([
+  const [settings, hideAmounts, accountLabels] = await Promise.all([
     getUserSettings(user.id),
     readHideAmountsCookie(),
+    getAccountLabels(user.id),
   ]);
 
   if (!settings || !settings.onboarded_at) {
@@ -33,6 +36,7 @@ export default async function AppLayout({
 
   return (
     <SettingsProvider value={settings}>
+      <AccountLabelsProvider value={accountLabels}>
       <HideAmountsProvider initial={hideAmounts}>
         <ConfirmProvider>
         <div className="mx-auto flex w-full max-w-xl flex-1 flex-col lg:max-w-(--container-content-max)">
@@ -45,6 +49,7 @@ export default async function AppLayout({
         </ConfirmProvider>
         <AutoSync />
       </HideAmountsProvider>
+      </AccountLabelsProvider>
     </SettingsProvider>
   );
 }

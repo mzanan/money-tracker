@@ -1,6 +1,9 @@
+"use client";
+
 import { Loader2Icon } from "lucide-react";
 
-import { labelForSource } from "@/lib/constants/sources";
+import { useAccountLabels } from "@/hooks/useAccountLabels";
+import { resolveSourceLabel } from "@/lib/constants/sources";
 
 import {
   Select,
@@ -23,6 +26,7 @@ export function AccountSelect({
   id?: string;
   emptyMessage?: string;
 }) {
+  const accountLabels = useAccountLabels();
   if (sources === null) {
     return (
       <p className="text-muted-foreground flex items-center gap-2 text-sm">
@@ -41,7 +45,7 @@ export function AccountSelect({
       <SelectContent>
         {sources.map((source) => (
           <SelectItem key={source} value={source}>
-            {labelForSource(source)}
+            {resolveSourceLabel(source, accountLabels)}
           </SelectItem>
         ))}
       </SelectContent>

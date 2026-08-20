@@ -2,6 +2,7 @@
 
 import { Loader2Icon } from "lucide-react";
 
+import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { transactionLabel } from "@/lib/transactions";
 import { formatMoney } from "@/lib/currency";
 
@@ -21,6 +22,7 @@ import { TransferBadge } from "./transferBadge";
 import { useMergeBar } from "./useMergeBar";
 
 export function MergeBar() {
+  const accountLabels = useAccountLabels();
   const {
     txSelectMode,
     selectedTxs,
@@ -103,7 +105,7 @@ export function MergeBar() {
                   <span className="min-w-0">
                     <span className="flex min-w-0 items-center gap-1.5">
                       <span className="block truncate text-sm font-medium">
-                        {transactionLabel(keepTx)}
+                        {transactionLabel(keepTx, accountLabels)}
                       </span>
                       {keepTx.transfer_group && <TransferBadge />}
                     </span>

@@ -19,6 +19,15 @@ export function labelForSource(source: string): string {
   );
 }
 
+export type AccountLabels = Record<string, string>;
+
+export function resolveSourceLabel(
+  source: string,
+  accountLabels: AccountLabels,
+): string {
+  return accountLabels[source] ?? labelForSource(source);
+}
+
 export function kindOfSource(source: string): SourceKind {
   if (source === "manual") return "manual";
   if (API_SOURCES.has(source)) return "api";

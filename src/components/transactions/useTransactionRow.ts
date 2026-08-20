@@ -1,12 +1,13 @@
 "use client";
 
+import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useDialogState } from "@/hooks/useDialogState";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { deleteTransaction } from "@/lib/actions/transactions";
 import { unmarkTransfer } from "@/lib/actions/transfers";
-import { kindOfSource, labelForSource } from "@/lib/constants/sources";
+import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
 import { isSyncedExternalId } from "@/lib/externalIds";
 import { transactionInDisplay } from "@/lib/totals";
 import { useUiStore } from "@/stores/uiStore";
@@ -17,6 +18,7 @@ import type { Transaction } from "@/types/db";
 
 export function useTransactionRow(tx: Transaction) {
   const settings = useSettings();
+  const accountLabels = useAccountLabels();
   const remove = useServerAction();
   const transfer = useServerAction();
   const runAfterMenuClose = useDeferredMenuAction();
@@ -49,7 +51,7 @@ export function useTransactionRow(tx: Transaction) {
   const sameAsBase = tx.currency_original === settings.base_currency;
   const sign = tx.kind === "income" ? "+" : "-";
   const showConverted = !sameAsBase && inDisplay !== null;
-  const sourceLabel = labelForSource(tx.source);
+  const sourceLabel = resolveSourceLabel(tx.source, accountLabels);
   const avatarSeed = tx.tags[0] || sourceLabel;
   const reminderTitle = tx.tags[0] || sourceLabel;
   const description = tx.note?.trim();

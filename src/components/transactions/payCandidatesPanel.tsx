@@ -2,7 +2,8 @@
 
 import { ChevronLeftIcon } from "lucide-react";
 
-import { labelForSource } from "@/lib/constants/sources";
+import { useAccountLabels } from "@/hooks/useAccountLabels";
+import { resolveSourceLabel } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
 import { formatDateShort, formatYmd, parseYmd } from "@/lib/dates";
 import type { ReminderPaymentCandidate } from "@/lib/actions/reminders";
@@ -23,6 +24,7 @@ function CandidateButton({
   match: ReminderPaymentCandidate;
   onClick: () => void;
 }) {
+  const accountLabels = useAccountLabels();
   return (
     <TappableRow
       type="button"
@@ -33,7 +35,7 @@ function CandidateButton({
     >
       <span className="min-w-0">
         <span className="block truncate text-sm font-medium">
-          {labelForSource(match.source)}
+          {resolveSourceLabel(match.source, accountLabels)}
           {match.note ? ` · ${match.note}` : ""}
         </span>
         <span className="text-muted-foreground block text-xs">
