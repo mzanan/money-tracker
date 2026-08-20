@@ -48,21 +48,22 @@ export function excludePaidReminders(
     );
     if (matchingTxs.length === 0) return true;
 
-    const expectedNextDue =
-      reminder.last_paid_on == null
-        ? null
-        : computeNextDue(
-            reminder.last_paid_on,
-            reminder.frequency,
-            reminder.interval_months,
-          );
+    if (reminder.last_paid_on == null) {
+      return !matchingTxs.some((tx) => tx.occurred_on >= reminder.next_due_on);
+    }
+
+    const expectedNextDue = computeNextDue(
+      reminder.last_paid_on,
+      reminder.frequency,
+      reminder.interval_months,
+    );
     const nextDueIsTrustworthy = expectedNextDue === reminder.next_due_on;
 
     if (nextDueIsTrustworthy) {
       return !matchingTxs.some((tx) => tx.occurred_on >= reminder.next_due_on);
     }
     return !matchingTxs.some(
-      (tx) => tx.occurred_on >= (reminder.last_paid_on ?? ""),
+      (tx) => tx.occurred_on >= (reminder.last_paid_on as string),
     );
   });
 }
