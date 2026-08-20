@@ -38,7 +38,7 @@ export function useSpendProjection({
     const dueThisMonth = reminders.filter(
       (r) => r.next_due_on >= monthStart && r.next_due_on <= monthEnd,
     );
-    return excludePaidReminders(dueThisMonth, monthTransactions, yearMonth);
+    return excludePaidReminders(dueThisMonth, monthTransactions);
   }, [reminders, yearMonth, isCurrentMonth, monthTransactions]);
 
   const projection = useMemo(() => {

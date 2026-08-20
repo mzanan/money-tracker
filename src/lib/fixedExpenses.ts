@@ -39,16 +39,13 @@ export function splitFixedVariable(
 export function excludePaidReminders(
   reminders: RecurringPayment[],
   monthTransactions: Transaction[],
-  yearMonth: string,
 ): RecurringPayment[] {
-  const paidRecurringIds = new Set(
-    monthTransactions
-      .filter((tx) => tx.recurring_id != null)
-      .map((tx) => tx.recurring_id as string),
+  return reminders.filter(
+    (reminder) =>
+      !monthTransactions.some(
+        (tx) =>
+          tx.recurring_id === reminder.id &&
+          tx.occurred_on >= reminder.next_due_on,
+      ),
   );
-  return reminders.filter((reminder) => {
-    if (reminder.last_paid_on == null) return true;
-    if (reminder.last_paid_on.slice(0, 7) !== yearMonth) return true;
-    return !paidRecurringIds.has(reminder.id);
-  });
 }

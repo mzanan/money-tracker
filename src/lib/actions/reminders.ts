@@ -307,6 +307,12 @@ export async function markReminderPaid(
         .limit(1)
         .then((rows) => rows[0]);
       if (!tx) return { ok: false, error: "Transaction not found" };
+      if (tx.recurring_id != null && tx.recurring_id !== id) {
+        return {
+          ok: false,
+          error: "This transaction is already linked to another reminder",
+        };
+      }
 
       const patch: Partial<typeof tx> = {};
       if (!tx.comment) patch.comment = reminder.label;
