@@ -57,23 +57,23 @@ export function SpendProjectionCard({
               Daily average
             </span>
             <span className="text-sm font-semibold tabular-nums">
-              {money(projection.dailyAverage)}
+              {money(projection.variableDailyAverage)}
             </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs">
-              Projected month-end
+              Projected variable
             </span>
             <span className="text-sm font-semibold tabular-nums">
-              {money(projection.projectedTotal)}
+              {money(projection.projectedVariable)}
             </span>
           </div>
           <div className="border-border flex items-center justify-between border-t pt-3">
             <span className="text-muted-foreground text-xs">
-              With upcoming bills
+              Projected total
             </span>
             <span className="text-sm font-semibold tabular-nums">
-              {money(projection.projectedWithRecurring)}
+              {money(projection.projectedTotal)}
             </span>
           </div>
           {projection.recurringIncomplete && (

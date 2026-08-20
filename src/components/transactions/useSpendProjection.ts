@@ -6,6 +6,7 @@ import { useRates } from "@/hooks/useRates";
 import { useSettings } from "@/hooks/useSettings";
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { monthBounds } from "@/lib/dates";
+import { excludePaidReminders } from "@/lib/fixedExpenses";
 import { computeSpendProjection } from "@/lib/spendProjection";
 import { periodTotals } from "@/lib/totals";
 
@@ -24,16 +25,18 @@ export function useSpendProjection({
 }) {
   const settings = useSettings();
   const ratesQuery = useRates();
+  const fixedLabels = settings.fixed_labels;
 
   const isCurrentMonth = yearMonth === today.slice(0, 7);
 
   const unpaidRecurring = useMemo(() => {
     if (!isCurrentMonth) return [];
     const [monthStart, monthEnd] = monthBounds(yearMonth);
-    return reminders.filter(
+    const dueThisMonth = reminders.filter(
       (r) => r.next_due_on >= monthStart && r.next_due_on <= monthEnd,
     );
-  }, [reminders, yearMonth, isCurrentMonth]);
+    return excludePaidReminders(dueThisMonth, monthTransactions, yearMonth);
+  }, [reminders, yearMonth, isCurrentMonth, monthTransactions]);
 
   const projection = useMemo(() => {
     if (!isCurrentMonth) return null;
@@ -42,6 +45,7 @@ export function useSpendProjection({
       today,
       monthTransactions,
       unpaidRecurring,
+      fixedLabels,
       baseCurrency: settings.base_currency,
       rates: ratesQuery.data?.rates ?? null,
     });
@@ -51,6 +55,7 @@ export function useSpendProjection({
     today,
     monthTransactions,
     unpaidRecurring,
+    fixedLabels,
     settings.base_currency,
     ratesQuery.data,
   ]);

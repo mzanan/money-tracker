@@ -1,4 +1,4 @@
-import type { Transaction } from "@/types/db";
+import type { RecurringPayment, Transaction } from "@/types/db";
 
 export const FIXED_TX_SOURCE = {
   override: "override",
@@ -34,4 +34,21 @@ export function splitFixedVariable(
     else variable.push(tx);
   }
   return { fixed, variable };
+}
+
+export function excludePaidReminders(
+  reminders: RecurringPayment[],
+  monthTransactions: Transaction[],
+  yearMonth: string,
+): RecurringPayment[] {
+  const paidRecurringIds = new Set(
+    monthTransactions
+      .filter((tx) => tx.recurring_id != null)
+      .map((tx) => tx.recurring_id as string),
+  );
+  return reminders.filter((reminder) => {
+    if (reminder.last_paid_on == null) return true;
+    if (reminder.last_paid_on.slice(0, 7) !== yearMonth) return true;
+    return !paidRecurringIds.has(reminder.id);
+  });
 }
