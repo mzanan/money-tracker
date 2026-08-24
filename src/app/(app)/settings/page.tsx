@@ -18,8 +18,13 @@ import { hasCredentialAccount } from "@/lib/data/account";
 import { getCsvSources, getTransferSources } from "@/lib/data/sources";
 import { requireUser } from "@/lib/session";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const user = await requireUser();
+  const { tab } = await searchParams;
   const [existingSources, withdrawalSources, hasPassword] = await Promise.all([
     getCsvSources(user.id),
     getTransferSources(user.id, "manual"),
@@ -38,6 +43,7 @@ export default async function SettingsPage() {
       </header>
 
       <SettingsTabs
+        defaultTab={tab}
         general={
           <>
             <Section

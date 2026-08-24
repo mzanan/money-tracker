@@ -10,13 +10,16 @@ const TABS = [
 
 type TabValue = (typeof TABS)[number]["value"];
 
+const TAB_VALUES = TABS.map((tab) => tab.value) as readonly string[];
+
 export function SettingsTabs({
+  defaultTab,
   general,
   assistant,
   cash,
   accounts,
   data,
-}: Record<TabValue, React.ReactNode>) {
+}: Record<TabValue, React.ReactNode> & { defaultTab?: string }) {
   const content: Record<TabValue, React.ReactNode> = {
     general,
     assistant,
@@ -24,9 +27,12 @@ export function SettingsTabs({
     accounts,
     data,
   };
+  const initialTab = TAB_VALUES.includes(defaultTab ?? "")
+    ? (defaultTab as TabValue)
+    : "general";
 
   return (
-    <Tabs defaultValue="general">
+    <Tabs defaultValue={initialTab}>
       <TabsList className="w-full">
         {TABS.map((tab) => (
           <TabsTrigger key={tab.value} value={tab.value}>

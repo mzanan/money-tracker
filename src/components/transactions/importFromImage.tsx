@@ -9,7 +9,7 @@ import {
 
 import type { ImageImportMode } from "@/lib/imageExtract";
 
-import { ApiKeyRequiredNotice } from "@/components/ui/apiKeyRequiredNotice";
+import { ApiKeyRequiredDialog } from "@/components/ui/apiKeyRequiredNotice";
 import {
   Drawer,
   DrawerCloseButton,
@@ -67,15 +67,6 @@ export function ImportFromImage({
     handleFileChange,
   } = useImportFromImage();
 
-  if (!settings.hasAiKey) {
-    return (
-      <ApiKeyRequiredNotice
-        feature="Image import"
-        className="shrink-0 py-3"
-      />
-    );
-  }
-
   const trigger = (
     <button
       type="button"
@@ -90,6 +81,10 @@ export function ImportFromImage({
       Import from image
     </button>
   );
+
+  if (!settings.hasAiKey) {
+    return <ApiKeyRequiredDialog feature="Image import" trigger={trigger} />;
+  }
 
   return (
     <>
