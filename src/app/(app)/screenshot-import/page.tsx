@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 
 import { ScreenshotImporter } from "@/components/screenshot/screenshotImporter";
-import { ApiKeyRequiredNotice } from "@/components/ui/apiKeyRequiredNotice";
+import { ApiKeyRequiredDialog } from "@/components/ui/apiKeyRequiredNotice";
 import { Button } from "@/components/ui/button";
 import { ErrorText } from "@/components/ui/errorText";
 import {
@@ -57,7 +57,7 @@ export default async function ScreenshotImportPage({
           consumeShareCookie={fromShare}
         />
       ) : (
-        <ApiKeyRequiredNotice feature="Image import" />
+        <ApiKeyRequiredDialog feature="Image import" />
       )}
     </div>
   );
