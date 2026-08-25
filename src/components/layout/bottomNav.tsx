@@ -2,15 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartPieIcon, HomeIcon, SettingsIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const ITEMS = [
-  { href: "/", label: "Home", icon: HomeIcon },
-  { href: "/dashboard", label: "Dashboard", icon: ChartPieIcon },
-  { href: "/settings", label: "Settings", icon: SettingsIcon },
-] as const;
+import { NAV_ITEMS, navLinkTextClass } from "./navItems";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -21,7 +16,7 @@ export function BottomNav() {
       className="bg-background/90 border-border fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
     >
       <div className="mx-auto flex max-w-xs items-stretch justify-around">
-        {ITEMS.map(({ href, label, icon: Icon }) => {
+        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link
@@ -30,9 +25,7 @@ export function BottomNav() {
               aria-label={label}
               className={cn(
                 "flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors",
-                active
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
+                navLinkTextClass(active),
               )}
             >
               <Icon className="size-5" />
