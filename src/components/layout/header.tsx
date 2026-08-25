@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { ChartPieIcon, LogOutIcon, SettingsIcon } from "lucide-react";
+import { LogOutIcon, SettingsIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/authClient";
@@ -13,7 +13,10 @@ import { Button } from "@/components/ui/button";
 
 import { BaseCurrencyPicker } from "./baseCurrencyPicker";
 import { Brand } from "./brand";
+import { NAV_ITEMS } from "./navItems";
 import { ThemeToggle } from "./themeToggle";
+
+const DASHBOARD_ITEM = NAV_ITEMS.find((item) => item.href === "/dashboard")!;
 
 export function Header() {
   const router = useRouter();
@@ -36,14 +39,14 @@ export function Header() {
           asChild
           variant="ghost"
           size="icon-sm"
-          aria-label="Dashboard"
+          aria-label={DASHBOARD_ITEM.label}
           className={cn(
             "hidden lg:inline-flex",
-            pathname === "/dashboard" && "text-foreground",
+            pathname === DASHBOARD_ITEM.href && "text-foreground",
           )}
         >
-          <Link href="/dashboard">
-            <ChartPieIcon />
+          <Link href={DASHBOARD_ITEM.href}>
+            <DASHBOARD_ITEM.icon />
           </Link>
         </Button>
         <Button asChild variant="ghost" size="icon-sm" aria-label="Settings">
