@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { LogOutIcon, SettingsIcon } from "lucide-react";
+import { LogOutIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/authClient";
@@ -17,6 +17,7 @@ import { NAV_ITEMS } from "./navItems";
 import { ThemeToggle } from "./themeToggle";
 
 const DASHBOARD_ITEM = NAV_ITEMS.find((item) => item.href === "/dashboard")!;
+const SETTINGS_ITEM = NAV_ITEMS.find((item) => item.href === "/settings")!;
 
 export function Header() {
   const router = useRouter();
@@ -49,9 +50,15 @@ export function Header() {
             <DASHBOARD_ITEM.icon />
           </Link>
         </Button>
-        <Button asChild variant="ghost" size="icon-sm" aria-label="Settings">
-          <Link href="/settings">
-            <SettingsIcon />
+        <Button
+          asChild
+          variant="ghost"
+          size="icon-sm"
+          aria-label={SETTINGS_ITEM.label}
+          className={cn(pathname === SETTINGS_ITEM.href && "text-foreground")}
+        >
+          <Link href={SETTINGS_ITEM.href}>
+            <SETTINGS_ITEM.icon />
           </Link>
         </Button>
         <Button

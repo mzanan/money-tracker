@@ -5,3 +5,7 @@ export const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: ChartPieIcon },
   { href: "/settings", label: "Settings", icon: SettingsIcon },
 ] as const;
+
+export function navLinkTextClass(active: boolean) {
+  return active ? "text-foreground" : "text-muted-foreground hover:text-foreground";
+}
