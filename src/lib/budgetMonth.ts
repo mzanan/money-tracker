@@ -50,6 +50,12 @@ export interface CarriedOverGroup {
   transactions: Transaction[];
 }
 
+export function hasBudgetMonthOverride(
+  tx: Pick<Transaction, "budget_month">,
+): boolean {
+  return tx.budget_month !== null;
+}
+
 export function partitionCarriedOver(transactions: Transaction[]): {
   native: Transaction[];
   carriedOver: Transaction[];
@@ -57,7 +63,7 @@ export function partitionCarriedOver(transactions: Transaction[]): {
   const native: Transaction[] = [];
   const carriedOver: Transaction[] = [];
   for (const tx of transactions) {
-    (tx.budget_month !== null ? carriedOver : native).push(tx);
+    (hasBudgetMonthOverride(tx) ? carriedOver : native).push(tx);
   }
   return { native, carriedOver };
 }
@@ -104,7 +110,5 @@ export function mergeMovedOutIntoDays(
       });
     }
   }
-  return Array.from(byDate.values()).sort((a, b) =>
-    a.date > b.date ? -1 : 1,
-  );
+  return Array.from(byDate.values()).sort((a, b) => (a.date > b.date ? -1 : 1));
 }

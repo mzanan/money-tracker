@@ -10,7 +10,7 @@ import {
   setTransactionFixed,
 } from "@/lib/actions/transactions";
 import { setBudgetMonthShift, unmarkTransfer } from "@/lib/actions/transfers";
-import { canShiftBudgetMonth } from "@/lib/budgetMonth";
+import { canShiftBudgetMonth, hasBudgetMonthOverride } from "@/lib/budgetMonth";
 import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
 import { formatMonthShort, shiftYearMonth } from "@/lib/dates";
 import { isSyncedExternalId } from "@/lib/externalIds";
@@ -50,9 +50,9 @@ export function useTransactionRow(
   const canShiftMonth = canShiftBudgetMonth(tx);
   const realMonth = tx.occurred_on.slice(0, 7);
   const isMovedOut =
-    showBudgetMonthBadges && !showDate && tx.budget_month !== null;
+    showBudgetMonthBadges && !showDate && hasBudgetMonthOverride(tx);
   const isCarriedOver =
-    showBudgetMonthBadges && showDate && tx.budget_month !== null;
+    showBudgetMonthBadges && showDate && hasBudgetMonthOverride(tx);
   const budgetMonthLabel = tx.budget_month
     ? `Move back to ${formatMonthShort(realMonth)}`
     : "Move to next month";

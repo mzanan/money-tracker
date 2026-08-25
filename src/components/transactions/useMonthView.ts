@@ -34,15 +34,16 @@ export function useMonthView(
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const { native, carriedOver } = useMemo(
-    () =>
-      groupCarriedOver
-        ? partitionCarriedOver(transactions)
-        : { native: transactions, carriedOver: [] },
-    [transactions, groupCarriedOver],
+    () => partitionCarriedOver(transactions),
+    [transactions],
   );
   const carriedOverGroups = useMemo(
-    () => groupCarriedOverByMonth(carriedOver),
-    [carriedOver],
+    () => (groupCarriedOver ? groupCarriedOverByMonth(carriedOver) : []),
+    [carriedOver, groupCarriedOver],
+  );
+  const displayOnlyRows = useMemo(
+    () => (groupCarriedOver ? movedOut : [...movedOut, ...carriedOver]),
+    [movedOut, carriedOver, groupCarriedOver],
   );
 
   const nativeDays = useMemo(
@@ -50,8 +51,8 @@ export function useMonthView(
     [native, settings.base_currency, includeTransfers],
   );
   const days = useMemo(
-    () => mergeMovedOutIntoDays(nativeDays, movedOut),
-    [nativeDays, movedOut],
+    () => mergeMovedOutIntoDays(nativeDays, displayOnlyRows),
+    [nativeDays, displayOnlyRows],
   );
 
   const shown = days.slice(0, visibleDays);

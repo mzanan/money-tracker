@@ -94,7 +94,7 @@ export function FiltersPanel({
         <MonthView
           transactions={results}
           includeTransfers={includeTransfers}
-          groupCarriedOver={false}
+          groupCarriedOver={scope === "month"}
           emptyLabel="No transactions match these filters."
         />
       </Reveal>

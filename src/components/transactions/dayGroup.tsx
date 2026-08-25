@@ -89,7 +89,11 @@ export function DayGroup({
             />
           ))}
           {day.pairs.map((pair) => (
-            <CanceledGroup key={pair.expense.id} pair={pair} />
+            <CanceledGroup
+              key={pair.expense.id}
+              pair={pair}
+              showBudgetMonthBadges={showBudgetMonthBadges}
+            />
           ))}
         </div>
       )}

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useSettings } from "@/hooks/useSettings";
+import { hasBudgetMonthOverride } from "@/lib/budgetMonth";
 import {
   effectiveYearMonth,
   forwardMonthCap,
@@ -51,7 +52,7 @@ export function useMonthDashboard({
       lifetimeTransactions.filter(
         (tx) =>
           tx.occurred_on.slice(0, 7) === visibleYearMonth &&
-          tx.budget_month !== null,
+          hasBudgetMonthOverride(tx),
       ),
     [lifetimeTransactions, visibleYearMonth],
   );
@@ -115,7 +116,7 @@ export function useMonthDashboard({
         ? c.monthList.filter(
             (tx) =>
               tx.occurred_on === daySpend.selectedDate ||
-              tx.budget_month !== null,
+              hasBudgetMonthOverride(tx),
           )
         : c.monthList,
     [isDaily, c.monthList, daySpend.selectedDate],
