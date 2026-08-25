@@ -3,6 +3,7 @@
 import {
   BanknoteIcon,
   BellPlusIcon,
+  CalendarArrowDownIcon,
   CheckIcon,
   CopyIcon,
   EllipsisIcon,
@@ -28,6 +29,7 @@ import { ReminderForm } from "@/components/reminders/reminderForm";
 import { ReminderFormStep } from "@/components/reminders/reminderFormStep";
 
 import { Avatar } from "./avatar";
+import { BudgetMonthBadge } from "./budgetMonthBadge";
 import { TransactionFormDialog } from "./transactionFormDialog";
 import { TransactionFormStep } from "./transactionFormStep";
 import { MarkTransferDialog } from "./markTransferDialog";
@@ -63,9 +65,13 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
     transferDialog,
     source,
     duplicate,
+    canShiftMonth,
+    showBudgetMonthBadge,
+    budgetMonthLabel,
     handleUndoTransfer,
     handleDelete,
     handleToggleFixed,
+    handleShiftBudgetMonth,
     stepApi,
     runAfterMenuClose,
   } = useTransactionRow(tx);
@@ -217,6 +223,9 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             {sourceLabel}
           </span>
           {isTransfer && <TransferBadge />}
+          {showBudgetMonthBadge && (
+            <BudgetMonthBadge occurredOn={tx.occurred_on} />
+          )}
           <TagChips tags={tx.tags} />
         </span>
         {description && (
@@ -286,6 +295,12 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
               <DropdownMenuItem onSelect={openMarkTransfer}>
                 <BanknoteIcon />
                 Mark as transfer
+              </DropdownMenuItem>
+            )}
+            {canShiftMonth && (
+              <DropdownMenuItem onSelect={handleShiftBudgetMonth}>
+                <CalendarArrowDownIcon />
+                {budgetMonthLabel}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onSelect={openSetReminder}>

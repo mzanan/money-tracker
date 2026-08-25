@@ -170,6 +170,11 @@ drizzle/migrations/           # SQL generado por drizzle-kit
 - **Huso horario**: `occurred_on` es un `date` puro asignado al cargar (día del
   dispositivo, o del override en settings). Cambiar el huso **no** re-mapea
   registros viejos.
+- **Mes de presupuesto**: transfers y withdrawals (fila con `transfer_group`
+  o `external_id` de withdrawal/fee) se pueden mover al mes siguiente desde
+  el menú de la fila (`budget_month`, nullable). `occurred_on` nunca se
+  toca; todo bucketing mensual en dashboard lee `effectiveYearMonth(tx)`
+  (`budget_month ?? occurred_on.slice(0, 7)`), no `occurred_on` directo.
 - **Auth**: email+password + Google OAuth vía Better Auth.
   `AUTH_DISABLE_SIGNUPS=true` bloquea registros nuevos en ambos métodos
   (single-user). El OTP por email se descartó el 2026-06-11: dependía de
