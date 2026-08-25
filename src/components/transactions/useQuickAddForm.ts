@@ -58,6 +58,7 @@ export function useQuickAddForm(source?: string) {
     setWithdrawal(false);
     setWithdrawalTotal("");
     setWithdrawalFee("");
+    setChargedCurrencyState(settings.currencies[0]);
   }
 
   const currency = settings.currencies.includes(currencyState)

@@ -9,12 +9,7 @@ import {
   normalizeSource,
   resolveSourceLabel,
 } from "@/lib/constants/sources";
-import {
-  amountValidationError,
-  feeAmountError,
-  formatMoney,
-  roundForCurrency,
-} from "@/lib/currency";
+import { amountValidationError, formatMoney } from "@/lib/currency";
 import { getAccountLabels } from "@/lib/data/accounts";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
@@ -25,7 +20,7 @@ import {
   EXTERNAL_ID_PREFIX,
   type BuildContext,
 } from "@/lib/transactions";
-import { withdrawalChargedAmount } from "@/lib/withdrawal";
+import { resolveWithdrawalCharge } from "@/lib/withdrawal";
 import type { TransactionInsert } from "@/types/db";
 
 import {
@@ -100,38 +95,16 @@ export async function recordCashWithdrawal(
   ) {
     return { ok: false, error: "Enter the total charged or the exchange rate" };
   }
-  let fee = parsed.data.fee;
-  if (fee !== undefined) {
-    fee = roundForCurrency(fee, chargedCurrency);
-  }
-  const converted = withdrawalChargedAmount({
+  const charge = resolveWithdrawalCharge({
     received: amount,
     receivedCurrency: currency,
     chargedCurrency,
     total,
     rate,
-    fee,
+    fee: parsed.data.fee,
   });
-  if (converted === null) {
-    return { ok: false, error: "Charged amount must be greater than the fee" };
-  }
-  if (fee !== undefined && fee > 0) {
-    const withdrawalFeeError = feeAmountError(
-      fee,
-      chargedCurrency,
-      total ?? converted,
-    );
-    if (withdrawalFeeError) {
-      return { ok: false, error: withdrawalFeeError };
-    }
-  }
-  const convertedAmountError = amountValidationError(
-    converted,
-    chargedCurrency,
-  );
-  if (convertedAmountError) {
-    return { ok: false, error: convertedAmountError };
-  }
+  if (!charge.ok) return { ok: false, error: charge.error };
+  const { converted, fee } = charge;
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
@@ -329,33 +302,15 @@ export async function recordWithdrawalExpense(
   if (totalAmountError) {
     return { ok: false, error: totalAmountError };
   }
-  let fee = parsed.data.fee;
-  if (fee !== undefined) {
-    fee = roundForCurrency(fee, chargedCurrency);
-  }
-  const converted = withdrawalChargedAmount({
+  const charge = resolveWithdrawalCharge({
     received: cashAmount,
     receivedCurrency: cashCurrency,
     chargedCurrency,
     total,
-    fee,
+    fee: parsed.data.fee,
   });
-  if (converted === null) {
-    return { ok: false, error: "Charged amount must be greater than the fee" };
-  }
-  if (fee !== undefined && fee > 0) {
-    const withdrawalFeeError = feeAmountError(fee, chargedCurrency, total);
-    if (withdrawalFeeError) {
-      return { ok: false, error: withdrawalFeeError };
-    }
-  }
-  const convertedAmountError = amountValidationError(
-    converted,
-    chargedCurrency,
-  );
-  if (convertedAmountError) {
-    return { ok: false, error: convertedAmountError };
-  }
+  if (!charge.ok) return { ok: false, error: charge.error };
+  const { converted, fee } = charge;
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
