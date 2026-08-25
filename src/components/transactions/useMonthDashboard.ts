@@ -46,6 +46,16 @@ export function useMonthDashboard({
       });
   }, [lifetimeTransactions, visibleYearMonth]);
 
+  const monthMovedOut = useMemo(
+    () =>
+      lifetimeTransactions.filter(
+        (tx) =>
+          tx.occurred_on.slice(0, 7) === visibleYearMonth &&
+          tx.budget_month !== null,
+      ),
+    [lifetimeTransactions, visibleYearMonth],
+  );
+
   const todayYearMonth = today.slice(0, 7);
   const oldestYearMonth = useMemo(
     () => oldestYearMonthFrom(lifetimeTransactions),
@@ -74,6 +84,7 @@ export function useMonthDashboard({
 
   const c = useDashboardControls({
     monthTransactions,
+    monthMovedOut,
     lifetimeTransactions,
     reminders,
     places,
@@ -104,6 +115,16 @@ export function useMonthDashboard({
         ? c.monthList.filter((tx) => tx.occurred_on === daySpend.selectedDate)
         : c.monthList,
     [isDaily, c.monthList, daySpend.selectedDate],
+  );
+
+  const feedMovedOut = useMemo(
+    () =>
+      isDaily
+        ? c.movedOutList.filter(
+            (tx) => tx.occurred_on === daySpend.selectedDate,
+          )
+        : c.movedOutList,
+    [isDaily, c.movedOutList, daySpend.selectedDate],
   );
 
   const panelOpen = c.panel !== "none";
@@ -141,6 +162,7 @@ export function useMonthDashboard({
     isDaily,
     breakdownTransactions,
     feedTransactions,
+    feedMovedOut,
     panelMounted,
     drawerOpen,
     shownPanel,

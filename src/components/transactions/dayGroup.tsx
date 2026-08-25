@@ -19,11 +19,15 @@ export function DayGroup({
   defaultOpen = false,
   open: openProp,
   onToggle,
+  title,
+  showRowDate = false,
 }: {
   day: DayTotalsWithPairs;
   defaultOpen?: boolean;
   open?: boolean;
   onToggle?: () => void;
+  title?: string;
+  showRowDate?: boolean;
 }) {
   const settings = useSettings();
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
@@ -52,7 +56,7 @@ export function DayGroup({
           />
           <span className="grid min-w-0">
             <span className="text-foreground truncate text-sm font-medium">
-              {formatDayLong(day.date)}
+              {title ?? formatDayLong(day.date)}
             </span>
             <span className="text-muted-foreground text-meta">
               {count === 1 ? "1 entry" : `${count} entries`}
@@ -75,7 +79,7 @@ export function DayGroup({
       {open && (
         <div className="grid min-w-0 gap-px">
           {day.transactions.map((tx) => (
-            <TransactionRow key={tx.id} tx={tx} />
+            <TransactionRow key={tx.id} tx={tx} showDate={showRowDate} />
           ))}
           {day.pairs.map((pair) => (
             <CanceledGroup key={pair.expense.id} pair={pair} />

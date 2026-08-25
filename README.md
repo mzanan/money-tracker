@@ -175,6 +175,10 @@ drizzle/migrations/           # SQL generado por drizzle-kit
   el menú de la fila (`budget_month`, nullable). `occurred_on` nunca se
   toca; todo bucketing mensual en dashboard lee `effectiveYearMonth(tx)`
   (`budget_month ?? occurred_on.slice(0, 7)`), no `occurred_on` directo.
+  En la vista mensual la fila movida sigue visible en su mes real (badge
+  "Moved to {mes}", monto atenuado, no suma en los totales) y aparece
+  además en el mes destino dentro de un grupo "Carried over from {mes}"
+  (badge "From {mes}", ese sí suma en los totales).
 - **Auth**: email+password + Google OAuth vía Better Auth.
   `AUTH_DISABLE_SIGNUPS=true` bloquea registros nuevos en ambos métodos
   (single-user). El OTP por email se descartó el 2026-06-11: dependía de

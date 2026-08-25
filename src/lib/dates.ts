@@ -91,6 +91,16 @@ export function formatMonthShort(yearMonth: string): string {
   return format(date, "MMM", { locale: enUS });
 }
 
+export function formatMonthLong(yearMonth: string): string {
+  const date = parse(`${yearMonth}-01`, "yyyy-MM-dd", new Date());
+  return format(date, "MMMM", { locale: enUS });
+}
+
+export function formatDayShort(yyyymmdd: string): string {
+  const date = parse(yyyymmdd, "yyyy-MM-dd", new Date());
+  return format(date, "MMM d", { locale: enUS });
+}
+
 export function formatYearMonthShort(yearMonth: string): string {
   const date = parse(`${yearMonth}-01`, "yyyy-MM-dd", new Date());
   return format(date, "MMM yyyy", { locale: enUS });

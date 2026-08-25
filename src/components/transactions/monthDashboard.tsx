@@ -52,6 +52,7 @@ export function MonthDashboard({
     isDaily,
     breakdownTransactions,
     feedTransactions,
+    feedMovedOut,
     panelMounted,
     drawerOpen,
     shownPanel,
@@ -108,6 +109,7 @@ export function MonthDashboard({
         <div className="min-h-[100svh]">
           <MonthView
             transactions={feedTransactions}
+            movedOut={feedMovedOut}
             includeTransfers={c.includeTransfers}
             emptyLabel={
               isDaily

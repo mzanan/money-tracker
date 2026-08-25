@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { formatMoney } from "@/lib/currency";
+import { formatDayShort } from "@/lib/dates";
 import { computeNextDue } from "@/lib/reminders";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +43,13 @@ import { useTransactionRow } from "./useTransactionRow";
 
 import type { Transaction } from "@/types/db";
 
-export function TransactionRow({ tx }: { tx: Transaction }) {
+export function TransactionRow({
+  tx,
+  showDate = false,
+}: {
+  tx: Transaction;
+  showDate?: boolean;
+}) {
   const {
     baseCurrency,
     txSelectMode,
@@ -66,7 +73,8 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
     source,
     duplicate,
     canShiftMonth,
-    showBudgetMonthBadge,
+    isMovedOut,
+    isCarriedOver,
     budgetMonthLabel,
     handleUndoTransfer,
     handleDelete,
@@ -74,7 +82,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
     handleShiftBudgetMonth,
     stepApi,
     runAfterMenuClose,
-  } = useTransactionRow(tx);
+  } = useTransactionRow(tx, showDate);
 
   const editSeed = {
     kind: tx.kind,
@@ -223,13 +231,21 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             {sourceLabel}
           </span>
           {isTransfer && <TransferBadge />}
-          {showBudgetMonthBadge && (
-            <BudgetMonthBadge occurredOn={tx.occurred_on} />
+          {isCarriedOver && (
+            <BudgetMonthBadge
+              direction="from"
+              yearMonth={tx.occurred_on.slice(0, 7)}
+            />
+          )}
+          {isMovedOut && tx.budget_month && (
+            <BudgetMonthBadge direction="to" yearMonth={tx.budget_month} />
           )}
           <TagChips tags={tx.tags} />
         </span>
-        {description && (
+        {(showDate || description) && (
           <span className="text-muted-foreground text-meta mt-0.5 block truncate">
+            {showDate && formatDayShort(tx.occurred_on)}
+            {showDate && description ? " · " : ""}
             {description}
           </span>
         )}
@@ -238,7 +254,11 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
         <span
           className={cn(
             "text-sm leading-tight font-semibold tabular-nums",
-            tx.kind === "income" ? "text-income" : "text-foreground",
+            isMovedOut
+              ? "text-muted-foreground"
+              : tx.kind === "income"
+                ? "text-income"
+                : "text-foreground",
           )}
         >
           {sign}

@@ -1,5 +1,6 @@
 import { EXTERNAL_ID_PREFIX } from "@/lib/externalIds";
 
+import type { DayTotalsWithPairs } from "@/lib/cancellations";
 import type { Transaction } from "@/types/db";
 
 type GroupShape = Pick<Transaction, "transfer_group" | "external_id">;
@@ -42,4 +43,68 @@ export function linkedExternalIds(group: string): string[] {
     `${EXTERNAL_ID_PREFIX.withdrawal}${group}:out`,
     `${EXTERNAL_ID_PREFIX.withdrawal}${group}:in`,
   ];
+}
+
+export interface CarriedOverGroup {
+  month: string;
+  transactions: Transaction[];
+}
+
+export function partitionCarriedOver(transactions: Transaction[]): {
+  native: Transaction[];
+  carriedOver: Transaction[];
+} {
+  const native: Transaction[] = [];
+  const carriedOver: Transaction[] = [];
+  for (const tx of transactions) {
+    (tx.budget_month !== null ? carriedOver : native).push(tx);
+  }
+  return { native, carriedOver };
+}
+
+export function groupCarriedOverByMonth(
+  transactions: Transaction[],
+): CarriedOverGroup[] {
+  const byMonth = new Map<string, Transaction[]>();
+  for (const tx of transactions) {
+    const month = tx.occurred_on.slice(0, 7);
+    const list = byMonth.get(month) ?? [];
+    list.push(tx);
+    byMonth.set(month, list);
+  }
+  return Array.from(byMonth.entries())
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([month, txs]) => ({ month, transactions: txs }));
+}
+
+export function mergeMovedOutIntoDays(
+  days: DayTotalsWithPairs[],
+  movedOut: Transaction[],
+): DayTotalsWithPairs[] {
+  if (movedOut.length === 0) return days;
+  const byDate = new Map(
+    days.map((day) => [
+      day.date,
+      { ...day, transactions: [...day.transactions] },
+    ]),
+  );
+  for (const tx of movedOut) {
+    const date = tx.occurred_on;
+    const existing = byDate.get(date);
+    if (existing) {
+      existing.transactions.push(tx);
+    } else {
+      byDate.set(date, {
+        date,
+        transactions: [tx],
+        income: 0,
+        expense: 0,
+        net: 0,
+        pairs: [],
+      });
+    }
+  }
+  return Array.from(byDate.values()).sort((a, b) =>
+    a.date > b.date ? -1 : 1,
+  );
 }

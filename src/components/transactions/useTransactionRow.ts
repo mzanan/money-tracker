@@ -19,7 +19,7 @@ import { useDrawerStep } from "./drawerStepContext";
 
 import type { Transaction } from "@/types/db";
 
-export function useTransactionRow(tx: Transaction) {
+export function useTransactionRow(tx: Transaction, showDate = false) {
   const settings = useSettings();
   const accountLabels = useAccountLabels();
   const remove = useServerAction();
@@ -42,8 +42,8 @@ export function useTransactionRow(tx: Transaction) {
     !isTransfer && (!isSynced || !isSyncedExternalId(tx.external_id));
   const canShiftMonth = canShiftBudgetMonth(tx);
   const realMonth = tx.occurred_on.slice(0, 7);
-  const showBudgetMonthBadge =
-    tx.budget_month !== null && tx.budget_month !== realMonth;
+  const isMovedOut = !showDate && tx.budget_month !== null;
+  const isCarriedOver = showDate && tx.budget_month !== null;
   const budgetMonthLabel = tx.budget_month
     ? `Move back to ${formatMonthShort(realMonth)}`
     : "Move to next month";
@@ -136,7 +136,8 @@ export function useTransactionRow(tx: Transaction) {
     source,
     duplicate,
     canShiftMonth,
-    showBudgetMonthBadge,
+    isMovedOut,
+    isCarriedOver,
     budgetMonthLabel,
     handleUndoTransfer,
     handleDelete,

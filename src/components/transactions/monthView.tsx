@@ -7,20 +7,24 @@ import { Surface } from "@/components/ui/surface";
 
 import type { Transaction } from "@/types/db";
 
+import { CarriedOverGroup } from "./carriedOverGroup";
 import { DayGroup } from "./dayGroup";
 import { useMonthView } from "./useMonthView";
 
 export function MonthView({
   transactions,
+  movedOut = [],
   emptyLabel = "No transactions this month.",
   includeTransfers = false,
 }: {
   transactions: Transaction[];
+  movedOut?: Transaction[];
   emptyLabel?: string;
   includeTransfers?: boolean;
 }) {
   const {
     days,
+    carriedOverGroups,
     shown,
     hasMore,
     sentinelRef,
@@ -29,9 +33,9 @@ export function MonthView({
     toggleDay,
     txSelectMode,
     setTxSelectMode,
-  } = useMonthView(transactions, includeTransfers);
+  } = useMonthView(transactions, includeTransfers, movedOut);
 
-  if (days.length === 0) {
+  if (days.length === 0 && carriedOverGroups.length === 0) {
     return (
       <Surface
         radius="lg"
@@ -62,6 +66,9 @@ export function MonthView({
           {txSelectMode ? "Done" : "Merge duplicates"}
         </Button>
       </div>
+      {carriedOverGroups.map((group) => (
+        <CarriedOverGroup key={group.month} group={group} />
+      ))}
       {shown.map((day) => (
         <DayGroup
           key={day.date}
