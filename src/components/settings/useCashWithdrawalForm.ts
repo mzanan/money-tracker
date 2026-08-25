@@ -28,8 +28,9 @@ export function useCashWithdrawalForm(sources: string[]) {
   const [date, setDate] = useState(() => todayInTz(timezone));
 
   const needsCharge = chargedCurrency !== currency;
-  const totalFilled = total.trim() !== "";
-  const rateFilled = rate.trim() !== "";
+  const totalFilled = parseAmountInput(total) !== null;
+  const rateFilled = parseAmountInput(rate) !== null;
+  const feeFilled = parseAmountInput(fee) !== null;
 
   function setCurrency(value: string) {
     setCurrencyState(value);
@@ -61,7 +62,7 @@ export function useCashWithdrawalForm(sources: string[]) {
     }
     const parsedTotal = totalFilled ? parseAmountInput(total) : null;
     const parsedRate = rateFilled ? parseAmountInput(rate) : null;
-    const parsedFee = fee.trim() !== "" ? parseAmountInput(fee) : null;
+    const parsedFee = feeFilled ? parseAmountInput(fee) : null;
     run(
       () =>
         recordCashWithdrawal({

@@ -65,12 +65,6 @@ export async function recordCashWithdrawal(
   let fee = parsed.data.fee;
   if (fee !== undefined) {
     fee = roundForCurrency(fee, chargedCurrency);
-    if (fee > 0) {
-      const withdrawalFeeError = feeAmountError(fee, chargedCurrency, total);
-      if (withdrawalFeeError) {
-        return { ok: false, error: withdrawalFeeError };
-      }
-    }
   }
   const converted = withdrawalChargedAmount({
     received: amount,
@@ -82,6 +76,16 @@ export async function recordCashWithdrawal(
   });
   if (converted === null) {
     return { ok: false, error: "Charged amount must be greater than the fee" };
+  }
+  if (fee !== undefined && fee > 0) {
+    const withdrawalFeeError = feeAmountError(
+      fee,
+      chargedCurrency,
+      total ?? converted,
+    );
+    if (withdrawalFeeError) {
+      return { ok: false, error: withdrawalFeeError };
+    }
   }
   const convertedAmountError = amountValidationError(
     converted,
