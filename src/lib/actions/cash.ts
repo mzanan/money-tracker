@@ -5,13 +5,23 @@ import { z } from "zod";
 
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
-import { amountValidationError } from "@/lib/currency";
+import {
+  amountValidationError,
+  feeAmountError,
+  roundForCurrency,
+} from "@/lib/currency";
 import { getAccountLabels } from "@/lib/data/accounts";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 import { RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
-import { buildTransactionRow, EXTERNAL_ID_PREFIX } from "@/lib/transactions";
+import {
+  buildFeeRow,
+  buildTransactionRow,
+  EXTERNAL_ID_PREFIX,
+} from "@/lib/transactions";
+import { withdrawalChargedAmount } from "@/lib/withdrawal";
+import type { TransactionInsert } from "@/types/db";
 
 import { buildCurrencyContext, type ActionResult } from "./transactions";
 
@@ -20,6 +30,10 @@ const withdrawalSchema = z.object({
   currency: z.string().refine(isSupportedCurrency),
   source: z.string().min(1),
   occurredOn: z.iso.date("Invalid date (yyyy-MM-dd)"),
+  chargedCurrency: z.string().refine(isSupportedCurrency),
+  total: z.number().finite().positive().optional(),
+  rate: z.number().finite().positive().optional(),
+  fee: z.number().finite().nonnegative().optional(),
 });
 
 export type CashWithdrawalInput = z.infer<typeof withdrawalSchema>;
@@ -29,7 +43,8 @@ export async function recordCashWithdrawal(
 ): Promise<ActionResult> {
   const parsed = withdrawalSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid data" };
-  const { amount, currency, source, occurredOn } = parsed.data;
+  const { amount, currency, source, occurredOn, chargedCurrency, total, rate } =
+    parsed.data;
   if (source === "manual") {
     return { ok: false, error: "Pick a non-cash account" };
   }
@@ -39,6 +54,41 @@ export async function recordCashWithdrawal(
   const withdrawalAmountError = amountValidationError(amount, currency);
   if (withdrawalAmountError) {
     return { ok: false, error: withdrawalAmountError };
+  }
+  if (
+    chargedCurrency !== currency &&
+    total === undefined &&
+    rate === undefined
+  ) {
+    return { ok: false, error: "Enter the total charged or the exchange rate" };
+  }
+  let fee = parsed.data.fee;
+  if (fee !== undefined) {
+    fee = roundForCurrency(fee, chargedCurrency);
+    if (fee > 0) {
+      const withdrawalFeeError = feeAmountError(fee, chargedCurrency, total);
+      if (withdrawalFeeError) {
+        return { ok: false, error: withdrawalFeeError };
+      }
+    }
+  }
+  const converted = withdrawalChargedAmount({
+    received: amount,
+    receivedCurrency: currency,
+    chargedCurrency,
+    total,
+    rate,
+    fee,
+  });
+  if (converted === null) {
+    return { ok: false, error: "Charged amount must be greater than the fee" };
+  }
+  const convertedAmountError = amountValidationError(
+    converted,
+    chargedCurrency,
+  );
+  if (convertedAmountError) {
+    return { ok: false, error: convertedAmountError };
   }
 
   const user = await getUser();
@@ -62,8 +112,8 @@ export async function recordCashWithdrawal(
     {
       userId: user.id,
       kind: "expense",
-      amount,
-      currency,
+      amount: converted,
+      currency: chargedCurrency,
       occurredOn,
       note,
       source,
@@ -87,11 +137,33 @@ export async function recordCashWithdrawal(
     return { ok: false, error: `No rate for ${currency}` };
   }
 
+  let feeRow: TransactionInsert | null = null;
+  if (fee !== undefined && fee > 0) {
+    feeRow = buildFeeRow(
+      {
+        userId: user.id,
+        amount: fee,
+        currency: chargedCurrency,
+        occurredOn,
+        note: "Withdrawal fee",
+        source,
+        externalId: `${EXTERNAL_ID_PREFIX.transferFee}${group}`,
+      },
+      ctx,
+    );
+    if (!feeRow) {
+      return { ok: false, error: `No rate for ${chargedCurrency}` };
+    }
+  }
+
   try {
-    await db.insert(transactions).values([
-      { ...out, transfer_group: group },
-      { ...incoming, transfer_group: group },
-    ]);
+    await db
+      .insert(transactions)
+      .values([
+        { ...out, transfer_group: group },
+        { ...incoming, transfer_group: group },
+        ...(feeRow ? [feeRow] : []),
+      ]);
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {

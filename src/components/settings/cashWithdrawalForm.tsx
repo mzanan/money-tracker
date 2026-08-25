@@ -5,6 +5,7 @@ import { Loader2Icon } from "lucide-react";
 import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { getCurrency } from "@/lib/constants/currencies";
 import { resolveSourceLabel } from "@/lib/constants/sources";
+import { RATE_DECIMALS } from "@/lib/withdrawal";
 
 import { AmountInput } from "@/components/ui/amountInput";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,17 @@ export function CashWithdrawalForm({ sources }: { sources: string[] }) {
     setAmount,
     currency,
     setCurrency,
+    chargedCurrency,
+    setChargedCurrency,
+    total,
+    setTotal,
+    rate,
+    setRate,
+    fee,
+    setFee,
+    needsCharge,
+    totalFilled,
+    rateFilled,
     source,
     setSource,
     date,
@@ -49,6 +61,10 @@ export function CashWithdrawalForm({ sources }: { sources: string[] }) {
             <p className="text-muted-foreground text-xs">
               Move money from an account into your cash pocket. Does not count
               as spending; each cash expense you log draws it down.
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Enter what your account was charged, or the rate it used. One of
+              the two is enough.
             </p>
           </div>
           <div className="flex items-end gap-2">
@@ -71,7 +87,7 @@ export function CashWithdrawalForm({ sources }: { sources: string[] }) {
               </Select>
             </div>
             <div className="grid flex-1 gap-1.5">
-              <Label htmlFor="withdrawal-amount">Amount</Label>
+              <Label htmlFor="withdrawal-amount">Cash received</Label>
               <div className="flex gap-1">
                 <AmountInput
                   id="withdrawal-amount"
@@ -85,10 +101,64 @@ export function CashWithdrawalForm({ sources }: { sources: string[] }) {
                   value={currency}
                   onValueChange={setCurrency}
                   currencies={currencies}
-                  ariaLabel="Withdrawal currency"
+                  ariaLabel="Cash currency"
                   className="bg-surface-2 h-9 w-[4.5rem] border-none text-xs"
                 />
               </div>
+            </div>
+          </div>
+          <div className="flex items-end gap-2">
+            <div className="grid flex-1 gap-1.5">
+              <Label htmlFor="withdrawal-total">Total charged</Label>
+              <div className="flex gap-1">
+                <AmountInput
+                  id="withdrawal-total"
+                  placeholder="0"
+                  value={total}
+                  onChange={setTotal}
+                  decimals={getCurrency(chargedCurrency).decimals}
+                  disabled={rateFilled}
+                  className="bg-surface-2 h-9 border-none"
+                />
+                <CurrencySelect
+                  value={chargedCurrency}
+                  onValueChange={setChargedCurrency}
+                  currencies={currencies}
+                  ariaLabel="Charged currency"
+                  className="bg-surface-2 h-9 w-[4.5rem] border-none text-xs"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex items-end gap-2">
+            {needsCharge && (
+              <div className="grid flex-1 gap-1.5">
+                <Label htmlFor="withdrawal-rate">
+                  Rate (1 {chargedCurrency} = ? {currency})
+                </Label>
+                <AmountInput
+                  id="withdrawal-rate"
+                  placeholder="0"
+                  value={rate}
+                  onChange={setRate}
+                  decimals={RATE_DECIMALS}
+                  disabled={totalFilled}
+                  className="bg-surface-2 h-9 border-none"
+                />
+              </div>
+            )}
+            <div className="grid flex-1 gap-1.5">
+              <Label htmlFor="withdrawal-fee">
+                Fee ({chargedCurrency}), optional
+              </Label>
+              <AmountInput
+                id="withdrawal-fee"
+                placeholder="0"
+                value={fee}
+                onChange={setFee}
+                decimals={getCurrency(chargedCurrency).decimals}
+                className="bg-surface-2 h-9 border-none"
+              />
             </div>
           </div>
           <div className="flex items-end gap-2">
