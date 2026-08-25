@@ -11,6 +11,7 @@ import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/emptyState";
 import { Surface } from "@/components/ui/surface";
 import { SpendingBreakdown } from "@/components/transactions/spendingBreakdown";
 import { MonthView } from "@/components/transactions/monthView";
@@ -76,44 +77,60 @@ export function DashboardView({
 
       <Surface padding="md" className="grid gap-3">
         <span className="text-eyebrow">Monthly trend</span>
-        <div className="flex items-end justify-between gap-2">
-          {v.trend.map((month) => (
-            <button
-              key={month.month}
-              type="button"
-              aria-pressed={month.month === v.visibleYearMonth}
-              onClick={() => v.setVisibleYearMonth(month.month)}
-              className="group flex flex-1 cursor-pointer flex-col items-center gap-1.5 rounded-lg"
-            >
-              <span className="text-muted-foreground text-[10px] tabular-nums">
-                {money(month.expense)}
-              </span>
-              <span className="flex h-24 w-full items-end justify-center">
-                <span
-                  className={cn(
-                    "w-3/5 rounded-t-md transition-colors",
-                    month.month === v.visibleYearMonth
-                      ? "bg-primary"
-                      : "bg-primary/30 group-hover:bg-primary/50",
-                  )}
-                  style={{
-                    height: `${v.trendMax > 0 ? Math.max((month.expense / v.trendMax) * 100, 2) : 2}%`,
-                  }}
-                />
-              </span>
-              <span
+        {v.hasAnyData ? (
+          <div className="flex items-end justify-between gap-2">
+            {v.trend.map((month) => (
+              <button
+                key={month.month}
+                type="button"
+                aria-pressed={month.month === v.visibleYearMonth}
+                disabled={!month.hasData}
+                onClick={
+                  month.hasData
+                    ? () => v.setVisibleYearMonth(month.month)
+                    : undefined
+                }
                 className={cn(
-                  "text-[10px] font-medium",
-                  month.month === v.visibleYearMonth
-                    ? "text-foreground"
-                    : "text-muted-foreground group-hover:text-foreground",
+                  "group flex flex-1 flex-col items-center gap-1.5 rounded-lg",
+                  month.hasData ? "cursor-pointer" : "cursor-default",
                 )}
               >
-                {month.label}
-              </span>
-            </button>
-          ))}
-        </div>
+                <span className="text-muted-foreground text-[10px] tabular-nums">
+                  {month.hasData ? money(month.expense) : ""}
+                </span>
+                <span className="flex h-24 w-full items-end justify-center">
+                  <span
+                    className={cn(
+                      "w-3/5 rounded-t-md transition-colors",
+                      !month.hasData
+                        ? "bg-muted"
+                        : month.month === v.visibleYearMonth
+                          ? "bg-primary"
+                          : "bg-primary/30 group-hover:bg-primary/50",
+                    )}
+                    style={{
+                      height: `${v.trendMax > 0 ? Math.max((month.expense / v.trendMax) * 100, 2) : 2}%`,
+                    }}
+                  />
+                </span>
+                <span
+                  className={cn(
+                    "text-[10px] font-medium",
+                    !month.hasData
+                      ? "text-muted-foreground"
+                      : month.month === v.visibleYearMonth
+                        ? "text-foreground"
+                        : "text-muted-foreground group-hover:text-foreground",
+                  )}
+                >
+                  {month.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <EmptyState>No transactions yet.</EmptyState>
+        )}
         <div className="border-border flex items-center justify-between gap-3 border-t pt-3 text-sm">
           <span className="text-muted-foreground">
             Spent {formatYearMonthLong(v.visibleYearMonth)}
@@ -210,9 +227,7 @@ export function DashboardView({
             ))}
           </ul>
         ) : (
-          <p className="text-muted-foreground text-sm">
-            No expenses this month.
-          </p>
+          <EmptyState>No expenses this month.</EmptyState>
         )}
       </Surface>
 

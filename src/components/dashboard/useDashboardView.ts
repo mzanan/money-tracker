@@ -64,10 +64,15 @@ export function useDashboardView({
   }, [lifetimeTransactions, visibleYearMonth]);
 
   const trend = useMemo(() => {
-    const months: { month: string; label: string; expense: number }[] = [];
+    const months: {
+      month: string;
+      label: string;
+      expense: number;
+      hasData: boolean;
+    }[] = [];
     for (let i = TREND_MONTHS - 1; i >= 0; i--) {
       const month = shiftYearMonth(yearMonth, -i);
-      if (oldestYearMonth !== null && month < oldestYearMonth) continue;
+      const hasData = oldestYearMonth !== null && month >= oldestYearMonth;
       const [start, end] = monthBounds(month);
       let expense = 0;
       for (const tx of excludeCanceledPairs(
@@ -86,10 +91,13 @@ export function useDashboardView({
         month,
         label: format(parse(`${month}-01`, "yyyy-MM-dd", new Date()), "MMM"),
         expense,
+        hasData,
       });
     }
     return months;
   }, [yearMonth, oldestYearMonth, lifetimeTransactions, settings.base_currency]);
+
+  const hasAnyData = oldestYearMonth !== null;
 
   const trendMax = useMemo(
     () => Math.max(...trend.map((month) => month.expense), 0),
@@ -180,6 +188,7 @@ export function useDashboardView({
     monthTransactions,
     trend,
     trendMax,
+    hasAnyData,
     topMerchants,
     monthExpense: monthStats.expense,
     avgPerDay: monthStats.avgPerDay,
