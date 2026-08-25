@@ -4,9 +4,11 @@ import { useId, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { getCurrency } from "@/lib/constants/currencies";
+import { kindOfSource } from "@/lib/constants/sources";
 import { useRates } from "@/hooks/useRates";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
+import { recordWithdrawalExpense } from "@/lib/actions/cash";
 import { createTransaction } from "@/lib/actions/transactions";
 import {
   convert,
@@ -16,6 +18,7 @@ import {
   roundForCurrency,
 } from "@/lib/currency";
 import { todayInTz } from "@/lib/dates";
+import { withdrawalChargedAmount } from "@/lib/withdrawal";
 import { useUiStore } from "@/stores/uiStore";
 
 import type { Kind } from "./kindToggle";
@@ -42,12 +45,44 @@ export function useQuickAddForm(source?: string) {
   const [tagsInput, setTagsInput] = useState("");
   const [date, setDate] = useState(() => todayInTz(timezone));
   const [showExtras, setShowExtras] = useState(false);
+  const [withdrawal, setWithdrawal] = useState(false);
+  const [withdrawalTotal, setWithdrawalTotal] = useState("");
+  const [withdrawalFee, setWithdrawalFee] = useState("");
+  const [chargedCurrencyState, setChargedCurrencyState] = useState(
+    settings.currencies[0],
+  );
+  const [lastSource, setLastSource] = useState(source);
+
+  if (source !== lastSource) {
+    setLastSource(source);
+    setWithdrawal(false);
+    setWithdrawalTotal("");
+    setWithdrawalFee("");
+    setChargedCurrencyState(settings.currencies[0]);
+  }
 
   const currency = settings.currencies.includes(currencyState)
     ? currencyState
     : settings.currencies[0];
 
+  const chargedCurrency = settings.currencies.includes(chargedCurrencyState)
+    ? chargedCurrencyState
+    : settings.currencies[0];
+
   const numericAmount = parseAmountInput(amount);
+
+  const withdrawalAvailable =
+    kind === "expense" &&
+    source !== undefined &&
+    kindOfSource(source) === "csv";
+  const withdrawalActive = withdrawal && withdrawalAvailable;
+  const withdrawalTotalFilled = parseAmountInput(withdrawalTotal) !== null;
+
+  function setChargedCurrency(value: string) {
+    setChargedCurrencyState(value);
+    setWithdrawalTotal("");
+    setWithdrawalFee("");
+  }
 
   const preview = useMemo(() => {
     if (numericAmount === null) return null;
@@ -76,6 +111,56 @@ export function useQuickAddForm(source?: string) {
       return;
     }
     const rounded = parsed.amount;
+
+    if (withdrawalActive) {
+      const total = parseAmountInput(withdrawalTotal);
+      if (total === null) {
+        toast.error("Enter the total charged");
+        return;
+      }
+      const fee = parseAmountInput(withdrawalFee) ?? undefined;
+      const booked = withdrawalChargedAmount({
+        received: rounded,
+        receivedCurrency: currency,
+        chargedCurrency,
+        total,
+        fee,
+      });
+      if (booked === null) {
+        toast.error("Charged amount must be greater than the fee");
+        return;
+      }
+      run(
+        () =>
+          recordWithdrawalExpense({
+            cashAmount: rounded,
+            cashCurrency: currency,
+            chargedCurrency,
+            total,
+            fee,
+            source: source ?? "",
+            occurredOn: date,
+            note: description.trim() || null,
+            tags: tagsInput
+              .split(",")
+              .map((tag) => tag.trim())
+              .filter(Boolean),
+          }),
+        {
+          success: `Withdrawal · ${formatMoney(booked, chargedCurrency)}`,
+          onSuccess: () => {
+            setAmount("");
+            setDescription("");
+            setTagsInput("");
+            setWithdrawalTotal("");
+            setWithdrawalFee("");
+            setWithdrawal(false);
+            setLastCurrency(currency);
+          },
+        },
+      );
+      return;
+    }
 
     run(
       () =>
@@ -120,6 +205,17 @@ export function useQuickAddForm(source?: string) {
     baseCurrency: settings.base_currency,
     showExtras,
     setShowExtras,
+    withdrawal,
+    setWithdrawal,
+    withdrawalAvailable,
+    withdrawalActive,
+    withdrawalTotal,
+    setWithdrawalTotal,
+    withdrawalFee,
+    setWithdrawalFee,
+    withdrawalTotalFilled,
+    chargedCurrency,
+    setChargedCurrency,
     description,
     setDescription,
     tagsId,
