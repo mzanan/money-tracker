@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useSettings } from "@/hooks/useSettings";
-import { monthBounds, oldestYearMonthFrom, shiftYearMonth } from "@/lib/dates";
+import {
+  effectiveYearMonth,
+  forwardMonthCap,
+  newestYearMonthFrom,
+  oldestYearMonthFrom,
+  shiftYearMonth,
+} from "@/lib/dates";
 
 import { useDashboardControls } from "./useDashboardControls";
 import type { PanelMode } from "./useDashboardControls";
@@ -29,9 +35,8 @@ export function useMonthDashboard({
   const [visibleYearMonth, setVisibleYearMonth] = useState(yearMonth);
 
   const monthTransactions = useMemo(() => {
-    const [start, end] = monthBounds(visibleYearMonth);
     return lifetimeTransactions
-      .filter((tx) => tx.occurred_on >= start && tx.occurred_on <= end)
+      .filter((tx) => effectiveYearMonth(tx) === visibleYearMonth)
       .slice()
       .sort((a, b) => {
         if (a.occurred_on !== b.occurred_on) {
@@ -46,10 +51,15 @@ export function useMonthDashboard({
     () => oldestYearMonthFrom(lifetimeTransactions),
     [lifetimeTransactions],
   );
+  const newestYearMonth = useMemo(
+    () => newestYearMonthFrom(lifetimeTransactions),
+    [lifetimeTransactions],
+  );
+  const forwardCap = forwardMonthCap(todayYearMonth, newestYearMonth);
   const hasOlder =
     oldestYearMonth !== null &&
     shiftYearMonth(visibleYearMonth, -1) >= oldestYearMonth;
-  const hasNewer = visibleYearMonth < todayYearMonth;
+  const hasNewer = visibleYearMonth < forwardCap;
 
   function shiftMonth(delta: number) {
     setVisibleYearMonth((current) => {
@@ -57,7 +67,7 @@ export function useMonthDashboard({
       if (delta < 0 && oldestYearMonth !== null && next < oldestYearMonth) {
         return current;
       }
-      if (delta > 0 && next > todayYearMonth) return current;
+      if (delta > 0 && next > forwardCap) return current;
       return next;
     });
   }

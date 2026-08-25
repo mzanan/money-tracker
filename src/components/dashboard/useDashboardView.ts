@@ -8,7 +8,10 @@ import { todayInTz } from "@/lib/dates";
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import {
+  effectiveYearMonth,
+  forwardMonthCap,
   monthBounds,
+  newestYearMonthFrom,
   oldestYearMonthFrom,
   shiftYearMonth,
 } from "@/lib/dates";
@@ -34,10 +37,15 @@ export function useDashboardView({
     () => oldestYearMonthFrom(lifetimeTransactions),
     [lifetimeTransactions],
   );
+  const newestYearMonth = useMemo(
+    () => newestYearMonthFrom(lifetimeTransactions),
+    [lifetimeTransactions],
+  );
+  const forwardCap = forwardMonthCap(yearMonth, newestYearMonth);
   const hasOlder =
     oldestYearMonth !== null &&
     shiftYearMonth(visibleYearMonth, -1) >= oldestYearMonth;
-  const hasNewer = visibleYearMonth < yearMonth;
+  const hasNewer = visibleYearMonth < forwardCap;
 
   function shiftMonth(delta: number) {
     setVisibleYearMonth((current) => {
@@ -45,15 +53,14 @@ export function useDashboardView({
       if (delta < 0 && oldestYearMonth !== null && next < oldestYearMonth) {
         return current;
       }
-      if (delta > 0 && next > yearMonth) return current;
+      if (delta > 0 && next > forwardCap) return current;
       return next;
     });
   }
 
   const monthTransactions = useMemo(() => {
-    const [start, end] = monthBounds(visibleYearMonth);
     return lifetimeTransactions
-      .filter((tx) => tx.occurred_on >= start && tx.occurred_on <= end)
+      .filter((tx) => effectiveYearMonth(tx) === visibleYearMonth)
       .slice()
       .sort((a, b) => {
         if (a.occurred_on !== b.occurred_on) {
@@ -73,12 +80,9 @@ export function useDashboardView({
     for (let i = TREND_MONTHS - 1; i >= 0; i--) {
       const month = shiftYearMonth(yearMonth, -i);
       const hasData = oldestYearMonth !== null && month >= oldestYearMonth;
-      const [start, end] = monthBounds(month);
       let expense = 0;
       for (const tx of excludeCanceledPairs(
-        lifetimeTransactions.filter(
-          (t) => t.occurred_on >= start && t.occurred_on <= end,
-        ),
+        lifetimeTransactions.filter((t) => effectiveYearMonth(t) === month),
       )) {
         if (tx.kind !== "expense" || tx.transfer_group) continue;
         try {
