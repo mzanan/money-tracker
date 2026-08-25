@@ -11,6 +11,7 @@ import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/emptyState";
 import { Surface } from "@/components/ui/surface";
 import { SpendingBreakdown } from "@/components/transactions/spendingBreakdown";
 import { MonthView } from "@/components/transactions/monthView";
@@ -128,7 +129,7 @@ export function DashboardView({
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground text-sm">No transactions yet.</p>
+          <EmptyState>No transactions yet.</EmptyState>
         )}
         <div className="border-border flex items-center justify-between gap-3 border-t pt-3 text-sm">
           <span className="text-muted-foreground">
@@ -226,9 +227,7 @@ export function DashboardView({
             ))}
           </ul>
         ) : (
-          <p className="text-muted-foreground text-sm">
-            No expenses this month.
-          </p>
+          <EmptyState>No expenses this month.</EmptyState>
         )}
       </Surface>
 
