@@ -208,27 +208,23 @@ export function QuickAddForm({ recentTags, source }: Props) {
 
             {withdrawalActive && (
               <>
-                <div className="flex items-end gap-2">
-                  <AmountCurrencyField
-                    id="withdrawal-total"
-                    label="Total charged"
-                    value={withdrawalTotal}
-                    onChange={setWithdrawalTotal}
-                    currency={chargedCurrency}
-                    onCurrencyChange={setChargedCurrency}
-                    currencies={currencies}
-                    currencyAriaLabel="Charged currency"
-                  />
-                </div>
-                <div className="flex items-end gap-2">
-                  <AmountField
-                    id="withdrawal-fee"
-                    label="Fee (optional)"
-                    value={withdrawalFee}
-                    onChange={setWithdrawalFee}
-                    decimals={getCurrency(chargedCurrency).decimals}
-                  />
-                </div>
+                <AmountCurrencyField
+                  id="withdrawal-total"
+                  label="Total charged"
+                  value={withdrawalTotal}
+                  onChange={setWithdrawalTotal}
+                  currency={chargedCurrency}
+                  onCurrencyChange={setChargedCurrency}
+                  currencies={currencies}
+                  currencyAriaLabel="Charged currency"
+                />
+                <AmountField
+                  id="withdrawal-fee"
+                  label="Fee (optional)"
+                  value={withdrawalFee}
+                  onChange={setWithdrawalFee}
+                  decimals={getCurrency(chargedCurrency).decimals}
+                />
                 <p className="text-muted-foreground text-xs">
                   Books total minus fee on the account. Cash received goes in
                   the note.

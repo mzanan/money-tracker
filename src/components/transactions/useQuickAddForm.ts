@@ -18,6 +18,7 @@ import {
   roundForCurrency,
 } from "@/lib/currency";
 import { todayInTz } from "@/lib/dates";
+import { withdrawalChargedAmount } from "@/lib/withdrawal";
 import { useUiStore } from "@/stores/uiStore";
 
 import type { Kind } from "./kindToggle";
@@ -50,6 +51,14 @@ export function useQuickAddForm(source?: string) {
   const [chargedCurrencyState, setChargedCurrencyState] = useState(
     settings.currencies[0],
   );
+  const [lastSource, setLastSource] = useState(source);
+
+  if (source !== lastSource) {
+    setLastSource(source);
+    setWithdrawal(false);
+    setWithdrawalTotal("");
+    setWithdrawalFee("");
+  }
 
   const currency = settings.currencies.includes(currencyState)
     ? currencyState
@@ -109,7 +118,17 @@ export function useQuickAddForm(source?: string) {
         return;
       }
       const fee = parseAmountInput(withdrawalFee) ?? undefined;
-      const booked = roundForCurrency(total - (fee ?? 0), chargedCurrency);
+      const booked = withdrawalChargedAmount({
+        received: rounded,
+        receivedCurrency: currency,
+        chargedCurrency,
+        total,
+        fee,
+      });
+      if (booked === null) {
+        toast.error("Charged amount must be greater than the fee");
+        return;
+      }
       run(
         () =>
           recordWithdrawalExpense({

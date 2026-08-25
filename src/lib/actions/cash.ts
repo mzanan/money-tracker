@@ -18,17 +18,21 @@ import {
 import { getAccountLabels } from "@/lib/data/accounts";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
-import { RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
 import {
   buildFeeRow,
   buildTransactionRow,
   EXTERNAL_ID_PREFIX,
+  type BuildContext,
 } from "@/lib/transactions";
 import { withdrawalChargedAmount } from "@/lib/withdrawal";
 import type { TransactionInsert } from "@/types/db";
 
-import { buildCurrencyContext, type ActionResult } from "./transactions";
+import {
+  buildCurrencyContext,
+  withRatesErrorHandling,
+  type ActionResult,
+} from "./transactions";
 
 const withdrawalSchema = z.object({
   amount: z.number().finite().positive(),
@@ -43,6 +47,39 @@ const withdrawalSchema = z.object({
 
 export type CashWithdrawalInput = z.infer<typeof withdrawalSchema>;
 
+function withdrawableSourceError(source: string): string | null {
+  if (source === "manual") return "Pick a non-cash account";
+  if (kindOfSource(source) === "api") {
+    return "Can't withdraw from a synced account";
+  }
+  return null;
+}
+
+function buildWithdrawalFeeRow(
+  input: {
+    userId: string;
+    fee: number;
+    currency: string;
+    occurredOn: string;
+    source: string;
+    group: string;
+  },
+  ctx: BuildContext,
+): TransactionInsert | null {
+  return buildFeeRow(
+    {
+      userId: input.userId,
+      amount: input.fee,
+      currency: input.currency,
+      occurredOn: input.occurredOn,
+      note: "Withdrawal fee",
+      source: input.source,
+      externalId: `${EXTERNAL_ID_PREFIX.transferFee}${input.group}`,
+    },
+    ctx,
+  );
+}
+
 export async function recordCashWithdrawal(
   input: CashWithdrawalInput,
 ): Promise<ActionResult> {
@@ -50,12 +87,8 @@ export async function recordCashWithdrawal(
   if (!parsed.success) return { ok: false, error: "Invalid data" };
   const { amount, currency, source, occurredOn, chargedCurrency, total, rate } =
     parsed.data;
-  if (source === "manual") {
-    return { ok: false, error: "Pick a non-cash account" };
-  }
-  if (kindOfSource(source) === "api") {
-    return { ok: false, error: "Can't withdraw from a synced account" };
-  }
+  const sourceError = withdrawableSourceError(source);
+  if (sourceError) return { ok: false, error: sourceError };
   const withdrawalAmountError = amountValidationError(amount, currency);
   if (withdrawalAmountError) {
     return { ok: false, error: withdrawalAmountError };
@@ -103,15 +136,11 @@ export async function recordCashWithdrawal(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  let ctx;
-  try {
-    ctx = await buildCurrencyContext(user.id);
-  } catch (error) {
-    if (error instanceof RatesUnavailableError) {
-      return { ok: false, error: "Exchange rates unavailable. Try again." };
-    }
-    return { ok: false, error: "Error fetching rates" };
-  }
+  const ctxResult = await withRatesErrorHandling(() =>
+    buildCurrencyContext(user.id),
+  );
+  if (!ctxResult.ok) return ctxResult;
+  const ctx = ctxResult.data;
   if (!ctx) return { ok: false, error: "Settings not found" };
 
   const accountLabels = await getAccountLabels(user.id);
@@ -148,15 +177,14 @@ export async function recordCashWithdrawal(
 
   let feeRow: TransactionInsert | null = null;
   if (fee !== undefined && fee > 0) {
-    feeRow = buildFeeRow(
+    feeRow = buildWithdrawalFeeRow(
       {
         userId: user.id,
-        amount: fee,
+        fee,
         currency: chargedCurrency,
         occurredOn,
-        note: "Withdrawal fee",
         source,
-        externalId: `${EXTERNAL_ID_PREFIX.transferFee}${group}`,
+        group,
       },
       ctx,
     );
@@ -216,15 +244,11 @@ export async function recordCashExchange(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  let ctx;
-  try {
-    ctx = await buildCurrencyContext(user.id);
-  } catch (error) {
-    if (error instanceof RatesUnavailableError) {
-      return { ok: false, error: "Exchange rates unavailable. Try again." };
-    }
-    return { ok: false, error: "Error fetching rates" };
-  }
+  const ctxResult = await withRatesErrorHandling(() =>
+    buildCurrencyContext(user.id),
+  );
+  if (!ctxResult.ok) return ctxResult;
+  const ctx = ctxResult.data;
   if (!ctx) return { ok: false, error: "Settings not found" };
 
   const group = crypto.randomUUID();
@@ -295,12 +319,8 @@ export async function recordWithdrawalExpense(
     parsed.data;
   const source = normalizeSource(parsed.data.source);
   if (!source) return { ok: false, error: "Invalid source" };
-  if (source === "manual") {
-    return { ok: false, error: "Pick a non-cash account" };
-  }
-  if (kindOfSource(source) === "api") {
-    return { ok: false, error: "Can't withdraw from a synced account" };
-  }
+  const sourceError = withdrawableSourceError(source);
+  if (sourceError) return { ok: false, error: sourceError };
   const cashAmountError = amountValidationError(cashAmount, cashCurrency);
   if (cashAmountError) {
     return { ok: false, error: cashAmountError };
@@ -340,15 +360,11 @@ export async function recordWithdrawalExpense(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  let ctx;
-  try {
-    ctx = await buildCurrencyContext(user.id);
-  } catch (error) {
-    if (error instanceof RatesUnavailableError) {
-      return { ok: false, error: "Exchange rates unavailable. Try again." };
-    }
-    return { ok: false, error: "Error fetching rates" };
-  }
+  const ctxResult = await withRatesErrorHandling(() =>
+    buildCurrencyContext(user.id),
+  );
+  if (!ctxResult.ok) return ctxResult;
+  const ctx = ctxResult.data;
   if (!ctx) return { ok: false, error: "Settings not found" };
 
   const group = crypto.randomUUID();
@@ -374,15 +390,14 @@ export async function recordWithdrawalExpense(
 
   let feeRow: TransactionInsert | null = null;
   if (fee !== undefined && fee > 0) {
-    feeRow = buildFeeRow(
+    feeRow = buildWithdrawalFeeRow(
       {
         userId: user.id,
-        amount: fee,
+        fee,
         currency: chargedCurrency,
         occurredOn,
-        note: "Withdrawal fee",
         source,
-        externalId: `${EXTERNAL_ID_PREFIX.transferFee}${group}`,
+        group,
       },
       ctx,
     );
