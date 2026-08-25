@@ -5,11 +5,14 @@ import { Loader2Icon } from "lucide-react";
 import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { getCurrency } from "@/lib/constants/currencies";
 import { resolveSourceLabel } from "@/lib/constants/sources";
+import { RATE_DECIMALS } from "@/lib/withdrawal";
 
-import { AmountInput } from "@/components/ui/amountInput";
+import {
+  AmountCurrencyField,
+  AmountField,
+} from "@/components/ui/amountCurrencyField";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CurrencySelect } from "@/components/ui/currencySelect";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -30,6 +33,17 @@ export function CashWithdrawalForm({ sources }: { sources: string[] }) {
     setAmount,
     currency,
     setCurrency,
+    chargedCurrency,
+    setChargedCurrency,
+    total,
+    setTotal,
+    rate,
+    setRate,
+    fee,
+    setFee,
+    needsCharge,
+    totalFilled,
+    rateFilled,
     source,
     setSource,
     date,
@@ -49,6 +63,10 @@ export function CashWithdrawalForm({ sources }: { sources: string[] }) {
             <p className="text-muted-foreground text-xs">
               Move money from an account into your cash pocket. Does not count
               as spending; each cash expense you log draws it down.
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Enter what your account was charged, or the rate it used. One of
+              the two is enough.
             </p>
           </div>
           <div className="flex items-end gap-2">
@@ -70,26 +88,48 @@ export function CashWithdrawalForm({ sources }: { sources: string[] }) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid flex-1 gap-1.5">
-              <Label htmlFor="withdrawal-amount">Amount</Label>
-              <div className="flex gap-1">
-                <AmountInput
-                  id="withdrawal-amount"
-                  placeholder="0"
-                  value={amount}
-                  onChange={setAmount}
-                  decimals={getCurrency(currency).decimals}
-                  className="bg-surface-2 h-9 border-none"
-                />
-                <CurrencySelect
-                  value={currency}
-                  onValueChange={setCurrency}
-                  currencies={currencies}
-                  ariaLabel="Withdrawal currency"
-                  className="bg-surface-2 h-9 w-[4.5rem] border-none text-xs"
-                />
-              </div>
-            </div>
+            <AmountCurrencyField
+              id="withdrawal-amount"
+              label="Cash received"
+              value={amount}
+              onChange={setAmount}
+              currency={currency}
+              onCurrencyChange={setCurrency}
+              currencies={currencies}
+              currencyAriaLabel="Cash currency"
+            />
+          </div>
+          <div className="flex items-end gap-2">
+            <AmountCurrencyField
+              id="withdrawal-total"
+              label="Total charged"
+              value={total}
+              onChange={setTotal}
+              currency={chargedCurrency}
+              onCurrencyChange={setChargedCurrency}
+              currencies={currencies}
+              currencyAriaLabel="Charged currency"
+              disabled={rateFilled}
+            />
+          </div>
+          <div className="flex items-end gap-2">
+            {needsCharge && (
+              <AmountField
+                id="withdrawal-rate"
+                label={`Rate (1 ${chargedCurrency} = ? ${currency})`}
+                value={rate}
+                onChange={setRate}
+                decimals={RATE_DECIMALS}
+                disabled={totalFilled}
+              />
+            )}
+            <AmountField
+              id="withdrawal-fee"
+              label={`Fee (${chargedCurrency}), optional`}
+              value={fee}
+              onChange={setFee}
+              decimals={getCurrency(chargedCurrency).decimals}
+            />
           </div>
           <div className="flex items-end gap-2">
             <div className="grid flex-1 gap-1.5">
