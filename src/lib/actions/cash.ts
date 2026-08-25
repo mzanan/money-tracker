@@ -32,6 +32,7 @@ const withdrawalSchema = z.object({
   occurredOn: z.iso.date("Invalid date (yyyy-MM-dd)"),
   chargedCurrency: z.string().refine(isSupportedCurrency),
   total: z.number().finite().positive().optional(),
+  rate: z.number().finite().positive().optional(),
   fee: z.number().finite().nonnegative().optional(),
 });
 
@@ -42,7 +43,7 @@ export async function recordCashWithdrawal(
 ): Promise<ActionResult> {
   const parsed = withdrawalSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid data" };
-  const { amount, currency, source, occurredOn, chargedCurrency, total } =
+  const { amount, currency, source, occurredOn, chargedCurrency, total, rate } =
     parsed.data;
   if (source === "manual") {
     return { ok: false, error: "Pick a non-cash account" };
@@ -54,8 +55,12 @@ export async function recordCashWithdrawal(
   if (withdrawalAmountError) {
     return { ok: false, error: withdrawalAmountError };
   }
-  if (chargedCurrency !== currency && total === undefined) {
-    return { ok: false, error: "Enter the total charged" };
+  if (
+    chargedCurrency !== currency &&
+    total === undefined &&
+    rate === undefined
+  ) {
+    return { ok: false, error: "Enter the total charged or the exchange rate" };
   }
   let fee = parsed.data.fee;
   if (fee !== undefined) {
@@ -72,6 +77,7 @@ export async function recordCashWithdrawal(
     receivedCurrency: currency,
     chargedCurrency,
     total,
+    rate,
     fee,
   });
   if (converted === null) {
