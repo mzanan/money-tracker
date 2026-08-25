@@ -112,7 +112,11 @@ export function useMonthDashboard({
   const feedTransactions = useMemo(
     () =>
       isDaily
-        ? c.monthList.filter((tx) => tx.occurred_on === daySpend.selectedDate)
+        ? c.monthList.filter(
+            (tx) =>
+              tx.occurred_on === daySpend.selectedDate ||
+              tx.budget_month !== null,
+          )
         : c.monthList,
     [isDaily, c.monthList, daySpend.selectedDate],
   );

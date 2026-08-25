@@ -5,7 +5,10 @@ import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useDialogState } from "@/hooks/useDialogState";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
-import { deleteTransaction, setTransactionFixed } from "@/lib/actions/transactions";
+import {
+  deleteTransaction,
+  setTransactionFixed,
+} from "@/lib/actions/transactions";
 import { setBudgetMonthShift, unmarkTransfer } from "@/lib/actions/transfers";
 import { canShiftBudgetMonth } from "@/lib/budgetMonth";
 import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
@@ -19,7 +22,11 @@ import { useDrawerStep } from "./drawerStepContext";
 
 import type { Transaction } from "@/types/db";
 
-export function useTransactionRow(tx: Transaction, showDate = false) {
+export function useTransactionRow(
+  tx: Transaction,
+  showDate = false,
+  showBudgetMonthBadges = true,
+) {
   const settings = useSettings();
   const accountLabels = useAccountLabels();
   const remove = useServerAction();
@@ -42,8 +49,10 @@ export function useTransactionRow(tx: Transaction, showDate = false) {
     !isTransfer && (!isSynced || !isSyncedExternalId(tx.external_id));
   const canShiftMonth = canShiftBudgetMonth(tx);
   const realMonth = tx.occurred_on.slice(0, 7);
-  const isMovedOut = !showDate && tx.budget_month !== null;
-  const isCarriedOver = showDate && tx.budget_month !== null;
+  const isMovedOut =
+    showBudgetMonthBadges && !showDate && tx.budget_month !== null;
+  const isCarriedOver =
+    showBudgetMonthBadges && showDate && tx.budget_month !== null;
   const budgetMonthLabel = tx.budget_month
     ? `Move back to ${formatMonthShort(realMonth)}`
     : "Move to next month";

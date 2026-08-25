@@ -16,11 +16,13 @@ export function MonthView({
   movedOut = [],
   emptyLabel = "No transactions this month.",
   includeTransfers = false,
+  groupCarriedOver = true,
 }: {
   transactions: Transaction[];
   movedOut?: Transaction[];
   emptyLabel?: string;
   includeTransfers?: boolean;
+  groupCarriedOver?: boolean;
 }) {
   const {
     days,
@@ -33,7 +35,7 @@ export function MonthView({
     toggleDay,
     txSelectMode,
     setTxSelectMode,
-  } = useMonthView(transactions, includeTransfers, movedOut);
+  } = useMonthView(transactions, includeTransfers, movedOut, groupCarriedOver);
 
   if (days.length === 0 && carriedOverGroups.length === 0) {
     return (

@@ -21,6 +21,7 @@ export function DayGroup({
   onToggle,
   title,
   showRowDate = false,
+  showBudgetMonthBadges = true,
 }: {
   day: DayTotalsWithPairs;
   defaultOpen?: boolean;
@@ -28,6 +29,7 @@ export function DayGroup({
   onToggle?: () => void;
   title?: string;
   showRowDate?: boolean;
+  showBudgetMonthBadges?: boolean;
 }) {
   const settings = useSettings();
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
@@ -79,7 +81,12 @@ export function DayGroup({
       {open && (
         <div className="grid min-w-0 gap-px">
           {day.transactions.map((tx) => (
-            <TransactionRow key={tx.id} tx={tx} showDate={showRowDate} />
+            <TransactionRow
+              key={tx.id}
+              tx={tx}
+              showDate={showRowDate}
+              showBudgetMonthBadges={showBudgetMonthBadges}
+            />
           ))}
           {day.pairs.map((pair) => (
             <CanceledGroup key={pair.expense.id} pair={pair} />

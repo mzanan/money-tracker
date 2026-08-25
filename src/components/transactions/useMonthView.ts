@@ -21,6 +21,7 @@ export function useMonthView(
   transactions: Transaction[],
   includeTransfers = false,
   movedOut: Transaction[] = [],
+  groupCarriedOver = true,
 ) {
   const settings = useSettings();
   const txSelectMode = useUiStore((s) => s.txSelectMode);
@@ -33,8 +34,11 @@ export function useMonthView(
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const { native, carriedOver } = useMemo(
-    () => partitionCarriedOver(transactions),
-    [transactions],
+    () =>
+      groupCarriedOver
+        ? partitionCarriedOver(transactions)
+        : { native: transactions, carriedOver: [] },
+    [transactions, groupCarriedOver],
   );
   const carriedOverGroups = useMemo(
     () => groupCarriedOverByMonth(carriedOver),
@@ -42,8 +46,7 @@ export function useMonthView(
   );
 
   const nativeDays = useMemo(
-    () =>
-      dayTotalsWithPairs(native, settings.base_currency, includeTransfers),
+    () => dayTotalsWithPairs(native, settings.base_currency, includeTransfers),
     [native, settings.base_currency, includeTransfers],
   );
   const days = useMemo(

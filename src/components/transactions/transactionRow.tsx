@@ -46,9 +46,11 @@ import type { Transaction } from "@/types/db";
 export function TransactionRow({
   tx,
   showDate = false,
+  showBudgetMonthBadges = true,
 }: {
   tx: Transaction;
   showDate?: boolean;
+  showBudgetMonthBadges?: boolean;
 }) {
   const {
     baseCurrency,
@@ -82,7 +84,7 @@ export function TransactionRow({
     handleShiftBudgetMonth,
     stepApi,
     runAfterMenuClose,
-  } = useTransactionRow(tx, showDate);
+  } = useTransactionRow(tx, showDate, showBudgetMonthBadges);
 
   const editSeed = {
     kind: tx.kind,
@@ -267,7 +269,7 @@ export function TransactionRow({
             : formatMoney(tx.amount_original, tx.currency_original)}
         </span>
         {showConverted && (
-          <span className="text-muted-foreground mt-0.5 text-caption tabular-nums">
+          <span className="text-muted-foreground text-caption mt-0.5 tabular-nums">
             {formatMoney(tx.amount_original, tx.currency_original)}
           </span>
         )}
