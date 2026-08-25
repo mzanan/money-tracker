@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { LogOutIcon, SettingsIcon } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import { ChartPieIcon, LogOutIcon, SettingsIcon } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/authClient";
 import { ASSISTANT_ENABLED } from "@/lib/featureFlags";
 
@@ -16,6 +17,7 @@ import { ThemeToggle } from "./themeToggle";
 
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
 
   async function handleSignOut() {
     await authClient.signOut();
@@ -30,6 +32,20 @@ export function Header() {
         <BaseCurrencyPicker />
         {ASSISTANT_ENABLED && <AssistantWidget />}
         <ThemeToggle />
+        <Button
+          asChild
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Dashboard"
+          className={cn(
+            "hidden lg:inline-flex",
+            pathname === "/dashboard" && "text-foreground",
+          )}
+        >
+          <Link href="/dashboard">
+            <ChartPieIcon />
+          </Link>
+        </Button>
         <Button asChild variant="ghost" size="icon-sm" aria-label="Settings">
           <Link href="/settings">
             <SettingsIcon />
