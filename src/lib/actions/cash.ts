@@ -4,10 +4,15 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { isSupportedCurrency } from "@/lib/constants/currencies";
-import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
+import {
+  kindOfSource,
+  normalizeSource,
+  resolveSourceLabel,
+} from "@/lib/constants/sources";
 import {
   amountValidationError,
   feeAmountError,
+  formatMoney,
   roundForCurrency,
 } from "@/lib/currency";
 import { getAccountLabels } from "@/lib/data/accounts";
@@ -257,6 +262,139 @@ export async function recordCashExchange(
       { ...out, transfer_group: group },
       { ...incoming, transfer_group: group },
     ]);
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Insert failed",
+    };
+  }
+}
+
+const withdrawalExpenseSchema = z.object({
+  cashAmount: z.number().finite().positive(),
+  cashCurrency: z.string().refine(isSupportedCurrency),
+  chargedCurrency: z.string().refine(isSupportedCurrency),
+  total: z.number().finite().positive(),
+  fee: z.number().finite().nonnegative().optional(),
+  source: z.string().trim().min(1).max(32),
+  occurredOn: z.iso.date("Invalid date (yyyy-MM-dd)"),
+  note: z.string().trim().max(280).nullable().optional(),
+  tags: z.array(z.string().trim().min(1).max(40)).max(10).optional(),
+});
+
+export type WithdrawalExpenseInput = z.infer<typeof withdrawalExpenseSchema>;
+
+export async function recordWithdrawalExpense(
+  input: WithdrawalExpenseInput,
+): Promise<ActionResult> {
+  const parsed = withdrawalExpenseSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid data" };
+  const { cashAmount, cashCurrency, chargedCurrency, total, occurredOn, tags } =
+    parsed.data;
+  const source = normalizeSource(parsed.data.source);
+  if (!source) return { ok: false, error: "Invalid source" };
+  if (source === "manual") {
+    return { ok: false, error: "Pick a non-cash account" };
+  }
+  if (kindOfSource(source) === "api") {
+    return { ok: false, error: "Can't withdraw from a synced account" };
+  }
+  const cashAmountError = amountValidationError(cashAmount, cashCurrency);
+  if (cashAmountError) {
+    return { ok: false, error: cashAmountError };
+  }
+  const totalAmountError = amountValidationError(total, chargedCurrency);
+  if (totalAmountError) {
+    return { ok: false, error: totalAmountError };
+  }
+  let fee = parsed.data.fee;
+  if (fee !== undefined) {
+    fee = roundForCurrency(fee, chargedCurrency);
+  }
+  const converted = withdrawalChargedAmount({
+    received: cashAmount,
+    receivedCurrency: cashCurrency,
+    chargedCurrency,
+    total,
+    fee,
+  });
+  if (converted === null) {
+    return { ok: false, error: "Charged amount must be greater than the fee" };
+  }
+  if (fee !== undefined && fee > 0) {
+    const withdrawalFeeError = feeAmountError(fee, chargedCurrency, total);
+    if (withdrawalFeeError) {
+      return { ok: false, error: withdrawalFeeError };
+    }
+  }
+  const convertedAmountError = amountValidationError(
+    converted,
+    chargedCurrency,
+  );
+  if (convertedAmountError) {
+    return { ok: false, error: convertedAmountError };
+  }
+
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  let ctx;
+  try {
+    ctx = await buildCurrencyContext(user.id);
+  } catch (error) {
+    if (error instanceof RatesUnavailableError) {
+      return { ok: false, error: "Exchange rates unavailable. Try again." };
+    }
+    return { ok: false, error: "Error fetching rates" };
+  }
+  if (!ctx) return { ok: false, error: "Settings not found" };
+
+  const group = crypto.randomUUID();
+  const base = parsed.data.note?.trim() || "ATM withdrawal";
+  const note = `${base} · ${formatMoney(cashAmount, cashCurrency, { showCode: true })}`;
+  const expense = buildTransactionRow(
+    {
+      userId: user.id,
+      kind: "expense",
+      amount: converted,
+      currency: chargedCurrency,
+      occurredOn,
+      tags,
+      note,
+      source,
+      externalId: `${EXTERNAL_ID_PREFIX.withdrawal}${group}`,
+    },
+    ctx,
+  );
+  if (!expense) {
+    return { ok: false, error: `No rate for ${chargedCurrency}` };
+  }
+
+  let feeRow: TransactionInsert | null = null;
+  if (fee !== undefined && fee > 0) {
+    feeRow = buildFeeRow(
+      {
+        userId: user.id,
+        amount: fee,
+        currency: chargedCurrency,
+        occurredOn,
+        note: "Withdrawal fee",
+        source,
+        externalId: `${EXTERNAL_ID_PREFIX.transferFee}${group}`,
+      },
+      ctx,
+    );
+    if (!feeRow) {
+      return { ok: false, error: `No rate for ${chargedCurrency}` };
+    }
+  }
+
+  try {
+    await db
+      .insert(transactions)
+      .values([expense, ...(feeRow ? [feeRow] : [])]);
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {

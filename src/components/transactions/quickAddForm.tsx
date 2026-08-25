@@ -3,15 +3,21 @@
 import { ChevronDownIcon, Loader2Icon, PlusIcon } from "lucide-react";
 
 import { useAccountLabels } from "@/hooks/useAccountLabels";
+import { getCurrency } from "@/lib/constants/currencies";
 import { resolveSourceLabel } from "@/lib/constants/sources";
 import { cn } from "@/lib/utils";
 
 import { AmountInput } from "@/components/ui/amountInput";
+import {
+  AmountCurrencyField,
+  AmountField,
+} from "@/components/ui/amountCurrencyField";
 import { Button } from "@/components/ui/button";
 import { CurrencySelect } from "@/components/ui/currencySelect";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Surface } from "@/components/ui/surface";
+import { Switch } from "@/components/ui/switch";
 
 import { KindToggle } from "./kindToggle";
 import { useQuickAddForm } from "./useQuickAddForm";
@@ -39,6 +45,17 @@ export function QuickAddForm({ recentTags, source }: Props) {
     baseCurrency,
     showExtras,
     setShowExtras,
+    withdrawal,
+    setWithdrawal,
+    withdrawalAvailable,
+    withdrawalActive,
+    withdrawalTotal,
+    setWithdrawalTotal,
+    withdrawalFee,
+    setWithdrawalFee,
+    withdrawalTotalFilled,
+    chargedCurrency,
+    setChargedCurrency,
     description,
     setDescription,
     tagsId,
@@ -88,7 +105,11 @@ export function QuickAddForm({ recentTags, source }: Props) {
           </div>
           <Button
             type="submit"
-            disabled={pending || numericAmount === null}
+            disabled={
+              pending ||
+              numericAmount === null ||
+              (withdrawalActive && !withdrawalTotalFilled)
+            }
             className="h-11 rounded-xl px-4"
           >
             {pending ? <Loader2Icon className="animate-spin" /> : <PlusIcon />}
@@ -107,23 +128,24 @@ export function QuickAddForm({ recentTags, source }: Props) {
           className="bg-surface-2 h-9 rounded-xl border-none"
         />
 
-        {(preview ||
-          (currency !== baseCurrency &&
-            ratesPending &&
-            numericAmount !== null)) && (
-          <div className="text-muted-foreground -mt-1 px-1 text-xs">
-            {preview ? (
-              <>
-                ≈ <span className="text-foreground">{preview}</span>{" "}
-                <span className="opacity-60">today&apos;s rate</span>
-              </>
-            ) : (
-              <span className="inline-flex items-center gap-1">
-                <Loader2Icon className="size-3 animate-spin" /> Calculating…
-              </span>
-            )}
-          </div>
-        )}
+        {!withdrawalActive &&
+          (preview ||
+            (currency !== baseCurrency &&
+              ratesPending &&
+              numericAmount !== null)) && (
+            <div className="text-muted-foreground -mt-1 px-1 text-xs">
+              {preview ? (
+                <>
+                  ≈ <span className="text-foreground">{preview}</span>{" "}
+                  <span className="opacity-60">today&apos;s rate</span>
+                </>
+              ) : (
+                <span className="inline-flex items-center gap-1">
+                  <Loader2Icon className="size-3 animate-spin" /> Calculating…
+                </span>
+              )}
+            </div>
+          )}
 
         <button
           type="button"
@@ -136,7 +158,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
               showExtras && "rotate-180",
             )}
           />
-          {showExtras ? "Hide details" : "Add tags, date"}
+          {showExtras ? "Hide details" : "Add tags, date, withdrawal"}
         </button>
 
         {showExtras && (
@@ -172,6 +194,47 @@ export function QuickAddForm({ recentTags, source }: Props) {
                 className="bg-surface-2 h-9 border-none"
               />
             </div>
+
+            {withdrawalAvailable && (
+              <div className="flex items-center justify-between">
+                <Label htmlFor="withdrawal-toggle">Withdrawal</Label>
+                <Switch
+                  id="withdrawal-toggle"
+                  checked={withdrawal}
+                  onCheckedChange={setWithdrawal}
+                />
+              </div>
+            )}
+
+            {withdrawalActive && (
+              <>
+                <div className="flex items-end gap-2">
+                  <AmountCurrencyField
+                    id="withdrawal-total"
+                    label="Total charged"
+                    value={withdrawalTotal}
+                    onChange={setWithdrawalTotal}
+                    currency={chargedCurrency}
+                    onCurrencyChange={setChargedCurrency}
+                    currencies={currencies}
+                    currencyAriaLabel="Charged currency"
+                  />
+                </div>
+                <div className="flex items-end gap-2">
+                  <AmountField
+                    id="withdrawal-fee"
+                    label="Fee (optional)"
+                    value={withdrawalFee}
+                    onChange={setWithdrawalFee}
+                    decimals={getCurrency(chargedCurrency).decimals}
+                  />
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  Books total minus fee on the account. Cash received goes in
+                  the note.
+                </p>
+              </>
+            )}
           </div>
         )}
       </form>
