@@ -170,6 +170,17 @@ drizzle/migrations/           # SQL generado por drizzle-kit
 - **Huso horario**: `occurred_on` es un `date` puro asignado al cargar (día del
   dispositivo, o del override en settings). Cambiar el huso **no** re-mapea
   registros viejos.
+- **Transferencias**: toda fila con `transfer_group` guarda el monto **neto en
+  tránsito**, ya descontadas las comisiones. Cada comisión es una fila de gasto
+  aparte, sin `transfer_group`, en la cuenta que la cobró: `transferfee:<grupo>`
+  para el origen y `transferfee:<grupo>:dest` para el destino. Así la comisión
+  suma una sola vez, tanto en el tab de la cuenta (que cuenta las
+  transferencias) como en All (que las excluye). Si el destino está en otra
+  moneda, el monto recibido se carga en esa moneda y la tasa real queda
+  implícita en el par de montos, no se guarda aparte. Se carga desde el toggle
+  "Transfer" del quick-add, o marcando una fila existente desde el menú.
+  Disponible en cuentas csv y en cash (solo con cash habilitado), nunca en
+  cuentas sincronizadas ni en el tab All.
 - **Mes de presupuesto**: transfers y withdrawals (fila con `transfer_group`
   o `external_id` de withdrawal/fee) se pueden mover al mes siguiente desde
   el menú de la fila (`budget_month`, nullable). `occurred_on` nunca se
