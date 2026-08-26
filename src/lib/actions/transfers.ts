@@ -13,7 +13,8 @@ import {
 } from "@/lib/budgetMonth";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
-import { kindOfSource, normalizeSource } from "@/lib/constants/sources";
+import { getAccountCurrencies } from "@/lib/data/accounts";
+import { kindOfSource, labelForSource, normalizeSource } from "@/lib/constants/sources";
 import {
   amountValidationError,
   relativeUsdDiff,
@@ -25,6 +26,7 @@ import { shiftYearMonth } from "@/lib/dates";
 import {
   aggregateFeesBySide,
   inTransitAmount,
+  transferCurrencyError,
   transferFeeAmountsError,
   transferFeeSpecs,
   transferLegsAreNet,
@@ -169,6 +171,25 @@ export async function recordTransfer(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
+  const accountCurrencies = await getAccountCurrencies(user.id, [
+    source,
+    destinationSource,
+  ]);
+  const originError = transferCurrencyError({
+    legCurrency: currency,
+    accountCurrency: accountCurrencies.get(source),
+    accountLabel: labelForSource(source),
+    side: "sent",
+  });
+  if (originError) return { ok: false, error: originError };
+  const destinationError = transferCurrencyError({
+    legCurrency: destinationCurrency,
+    accountCurrency: accountCurrencies.get(destinationSource),
+    accountLabel: labelForSource(destinationSource),
+    side: "received",
+  });
+  if (destinationError) return { ok: false, error: destinationError };
+
   const ctxResult = await withRatesErrorHandling(() =>
     buildCurrencyContext(user.id),
   );
@@ -250,11 +271,14 @@ export async function recordTransfer(
 
 export async function markAsTransfer(
   txId: string,
-  mirrorSource: string,
+  rawMirrorSource: string,
   opts?: MarkTransferOptions,
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+
+  const mirrorSource = normalizeSource(rawMirrorSource);
+  if (!mirrorSource) return { ok: false, error: "Invalid account name" };
 
   const tx = await db
     .select()
@@ -286,11 +310,24 @@ export async function markAsTransfer(
       error: "The received amount must be in a different currency",
     };
   }
+
+  const isExpense = tx.kind === "expense";
+  const mirrorCurrency = received?.currency ?? tx.currency_original;
+
+  const mirrorAccountCurrency = (
+    await getAccountCurrencies(user.id, [mirrorSource])
+  ).get(mirrorSource);
+  const currencyError = transferCurrencyError({
+    legCurrency: mirrorCurrency,
+    accountCurrency: mirrorAccountCurrency,
+    accountLabel: labelForSource(mirrorSource),
+    side: isExpense ? "received" : "sent",
+  });
+  if (currencyError) return { ok: false, error: currencyError };
+
   if (received && !(received.amount > 0)) {
     return { ok: false, error: "Enter the amount received" };
   }
-  const isExpense = tx.kind === "expense";
-  const mirrorCurrency = received?.currency ?? tx.currency_original;
   const originCurrency = isExpense ? tx.currency_original : mirrorCurrency;
   const destinationCurrency = isExpense ? mirrorCurrency : tx.currency_original;
 

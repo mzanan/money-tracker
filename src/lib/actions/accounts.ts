@@ -5,9 +5,11 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
 import { accounts } from "@/lib/db/schema";
+import { isSupportedCurrency } from "@/lib/constants/currencies";
 import {
   capitalizeLabel,
   kindOfSource,
+  labelForSource,
   normalizeSource,
 } from "@/lib/constants/sources";
 import { getUser } from "@/lib/session";
@@ -49,6 +51,39 @@ export async function upsertAccountLabel(
 
   revalidatePath("/", "layout");
   return { ok: true, data: { id: row.id } };
+}
+
+export async function setAccountCurrency(
+  source: string,
+  currency: string | null,
+): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const normalizedSource = normalizeSource(source);
+  if (!normalizedSource) return { ok: false, error: "Invalid account" };
+
+  const guardError = guardEditable(normalizedSource);
+  if (guardError) return { ok: false, error: guardError };
+  if (currency !== null && !isSupportedCurrency(currency)) {
+    return { ok: false, error: "Unsupported currency" };
+  }
+
+  await db
+    .insert(accounts)
+    .values({
+      user_id: user.id,
+      source: normalizedSource,
+      label: labelForSource(normalizedSource),
+      currency,
+    })
+    .onConflictDoUpdate({
+      target: [accounts.user_id, accounts.source],
+      set: { currency },
+    });
+
+  revalidatePath("/", "layout");
+  return { ok: true };
 }
 
 export async function removeAccount(

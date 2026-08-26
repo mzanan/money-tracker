@@ -156,6 +156,7 @@ export const accounts = sqliteTable(
       .references(() => user.id, { onDelete: "cascade" }),
     source: text("source").notNull(),
     label: text("label").notNull(),
+    currency: text("currency"),
     created_at: text("created_at")
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
