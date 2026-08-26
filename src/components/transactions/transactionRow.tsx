@@ -200,6 +200,7 @@ export function TransactionRow({
               txSource={tx.source}
               txCurrency={tx.currency_original}
               txAmount={tx.amount_original}
+              txKind={tx.kind}
               onBack={stepApi.pop}
             />
           ),
@@ -393,6 +394,7 @@ export function TransactionRow({
           txSource={tx.source}
           txCurrency={tx.currency_original}
           txAmount={tx.amount_original}
+          txKind={tx.kind}
           open={transferDialog.open}
           onOpenChange={transferDialog.setOpen}
         />

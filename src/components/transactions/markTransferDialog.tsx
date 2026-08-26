@@ -24,6 +24,7 @@ export function MarkTransferDialog({
   txSource,
   txCurrency,
   txAmount,
+  txKind,
   open,
   onOpenChange,
 }: {
@@ -31,6 +32,7 @@ export function MarkTransferDialog({
   txSource: string;
   txCurrency: string;
   txAmount: number;
+  txKind: "expense" | "income";
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -88,6 +90,7 @@ export function MarkTransferDialog({
             receivedCurrency={receivedCurrency}
             onReceivedCurrencyChange={setReceivedCurrency}
             preview={preview}
+            txKind={txKind}
           />
         </DrawerBody>
         <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
