@@ -33,7 +33,20 @@ export function useMonthDashboard({
   today: string;
 }) {
   const settings = useSettings();
-  const [visibleYearMonth, setVisibleYearMonth] = useState(yearMonth);
+  const [selectedYearMonth, setSelectedYearMonth] = useState(yearMonth);
+
+  const todayYearMonth = today.slice(0, 7);
+  const oldestYearMonth = useMemo(
+    () => oldestYearMonthFrom(lifetimeTransactions),
+    [lifetimeTransactions],
+  );
+  const newestYearMonth = useMemo(
+    () => newestYearMonthFrom(lifetimeTransactions),
+    [lifetimeTransactions],
+  );
+  const forwardCap = forwardMonthCap(todayYearMonth, newestYearMonth);
+  const visibleYearMonth =
+    selectedYearMonth > forwardCap ? forwardCap : selectedYearMonth;
 
   const monthTransactions = useMemo(() => {
     return lifetimeTransactions
@@ -57,23 +70,13 @@ export function useMonthDashboard({
     [lifetimeTransactions, visibleYearMonth],
   );
 
-  const todayYearMonth = today.slice(0, 7);
-  const oldestYearMonth = useMemo(
-    () => oldestYearMonthFrom(lifetimeTransactions),
-    [lifetimeTransactions],
-  );
-  const newestYearMonth = useMemo(
-    () => newestYearMonthFrom(lifetimeTransactions),
-    [lifetimeTransactions],
-  );
-  const forwardCap = forwardMonthCap(todayYearMonth, newestYearMonth);
   const hasOlder =
     oldestYearMonth !== null &&
     shiftYearMonth(visibleYearMonth, -1) >= oldestYearMonth;
   const hasNewer = visibleYearMonth < forwardCap;
 
   function shiftMonth(delta: number) {
-    setVisibleYearMonth((current) => {
+    setSelectedYearMonth((current) => {
       const next = shiftYearMonth(current, delta);
       if (delta < 0 && oldestYearMonth !== null && next < oldestYearMonth) {
         return current;
