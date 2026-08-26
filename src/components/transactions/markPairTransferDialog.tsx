@@ -2,7 +2,6 @@
 
 import { Loader2Icon } from "lucide-react";
 
-import { AmountInput } from "@/components/ui/amountInput";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -14,12 +13,11 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { getCurrency } from "@/lib/constants/currencies";
+import { ErrorText } from "@/components/ui/errorText";
 import { formatMoney } from "@/lib/currency";
 import type { Transaction } from "@/types/db";
 
+import { TransferFeeFields } from "./transferFeeFields";
 import { useMarkPairTransferDialog } from "./useMarkPairTransferDialog";
 
 export function MarkPairTransferDialog({
@@ -35,16 +33,8 @@ export function MarkPairTransferDialog({
   incomeTx: Transaction;
   onSuccess: () => void;
 }) {
-  const {
-    sameCurrency,
-    delta,
-    recordFeeDelta,
-    setRecordFeeDelta,
-    feeAmount,
-    setFeeAmount,
-    pending,
-    submit,
-  } = useMarkPairTransferDialog({ expenseTx, incomeTx, onSuccess });
+  const { sameCurrency, delta, fees, setFees, deltaMismatch, pending, submit } =
+    useMarkPairTransferDialog({ expenseTx, incomeTx, onSuccess });
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -58,32 +48,24 @@ export function MarkPairTransferDialog({
         </DrawerHeader>
         <DrawerBody>
           {sameCurrency && delta > 0 && (
-            <div className="flex items-center justify-between gap-4">
-              <p className="min-w-0 text-sm">
-                Record the difference (
-                {formatMoney(delta, expenseTx.currency_original)}) as a transfer
-                fee
-              </p>
-              <Switch
-                checked={recordFeeDelta}
-                onCheckedChange={setRecordFeeDelta}
-                aria-label="Record the difference as a transfer fee"
-              />
-            </div>
+            <p className="text-muted-foreground text-sm">
+              The amounts differ by{" "}
+              {formatMoney(delta, expenseTx.currency_original)}. Split it
+              between the accounts that charged it.
+            </p>
           )}
-          {!sameCurrency && (
-            <div className="grid gap-1.5">
-              <Label htmlFor="pair-transfer-fee">
-                Fee ({expenseTx.currency_original}), optional
-              </Label>
-              <AmountInput
-                id="pair-transfer-fee"
-                value={feeAmount}
-                onChange={setFeeAmount}
-                decimals={getCurrency(expenseTx.currency_original).decimals}
-                placeholder="0"
-              />
-            </div>
+          <TransferFeeFields
+            idPrefix="pair-transfer"
+            fees={fees}
+            onChange={setFees}
+            sourceCurrency={expenseTx.currency_original}
+            destinationCurrency={incomeTx.currency_original}
+          />
+          {deltaMismatch && (
+            <ErrorText>
+              The fees must add up to{" "}
+              {formatMoney(delta, expenseTx.currency_original)}.
+            </ErrorText>
           )}
         </DrawerBody>
         <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
@@ -94,7 +76,11 @@ export function MarkPairTransferDialog({
           >
             Cancel
           </Button>
-          <Button className="sm:flex-1" disabled={pending} onClick={submit}>
+          <Button
+            className="sm:flex-1"
+            disabled={pending || deltaMismatch}
+            onClick={submit}
+          >
             {pending && <Loader2Icon className="animate-spin" />}
             Confirm
           </Button>

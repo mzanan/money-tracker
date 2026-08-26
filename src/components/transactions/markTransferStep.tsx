@@ -3,34 +3,51 @@
 import { Loader2Icon } from "lucide-react";
 
 import { AccountSelect } from "./accountSelect";
-import { AmountInput } from "@/components/ui/amountInput";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { StepShell } from "@/components/ui/stepShell";
-import { getCurrency } from "@/lib/constants/currencies";
+import { useSettings } from "@/hooks/useSettings";
 
+import { TransferFeeSection } from "./transferFeeSection";
 import { useMarkTransferDialog } from "./useMarkTransferDialog";
 
 export function MarkTransferStep({
   txId,
   txSource,
   txCurrency,
+  txAmount,
   onBack,
 }: {
   txId: string;
   txSource: string;
   txCurrency: string;
+  txAmount: number;
   onBack: () => void;
 }) {
-  const { sources, selected, setSelected, fee, setFee, pending, submit } =
-    useMarkTransferDialog({
-      txId,
-      txSource,
-      open: true,
-      onOpenChange: (open) => {
-        if (!open) onBack();
-      },
-    });
+  const settings = useSettings();
+  const {
+    sources,
+    selected,
+    setSelected,
+    fees,
+    setFees,
+    receivedAmount,
+    setReceivedAmount,
+    receivedCurrency,
+    setReceivedCurrency,
+    destinationCurrency,
+    preview,
+    pending,
+    submit,
+  } = useMarkTransferDialog({
+    txId,
+    txSource,
+    txCurrency,
+    txAmount,
+    open: true,
+    onOpenChange: (open) => {
+      if (!open) onBack();
+    },
+  });
 
   return (
     <StepShell
@@ -55,16 +72,19 @@ export function MarkTransferStep({
         onValueChange={setSelected}
         emptyMessage="No other account to pick. Import or add one first."
       />
-      <div className="grid gap-1.5">
-        <Label htmlFor="transfer-fee-step">Fee ({txCurrency}), optional</Label>
-        <AmountInput
-          id="transfer-fee-step"
-          value={fee}
-          onChange={setFee}
-          decimals={getCurrency(txCurrency).decimals}
-          placeholder="0"
-        />
-      </div>
+      <TransferFeeSection
+        idPrefix="transfer-step"
+        fees={fees}
+        onFeesChange={setFees}
+        sourceCurrency={txCurrency}
+        destinationCurrency={destinationCurrency}
+        currencies={settings.currencies}
+        receivedAmount={receivedAmount}
+        onReceivedAmountChange={setReceivedAmount}
+        receivedCurrency={receivedCurrency}
+        onReceivedCurrencyChange={setReceivedCurrency}
+        preview={preview}
+      />
     </StepShell>
   );
 }

@@ -8,6 +8,8 @@ export const EXTERNAL_ID_PREFIX = {
   transferFee: "transferfee:",
 } as const;
 
+export const TRANSFER_FEE_DEST_SUFFIX = ":dest";
+
 export function isCsvExternalId(id: string | null | undefined): boolean {
   return (
     id != null &&

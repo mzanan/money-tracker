@@ -9,12 +9,17 @@ import {
   type AccountLabels,
 } from "@/lib/constants/sources";
 import { EXTERNAL_ID_PREFIX, isCsvExternalId } from "@/lib/externalIds";
+import type { TransferFeeSpec } from "@/lib/transfer";
 import { snapshotRatesFor } from "@/lib/currency";
 import { transactions } from "@/lib/db/schema";
 import { dedupeTags } from "@/lib/tags";
 import type { FxRates, Transaction, TransactionInsert } from "@/types/db";
 
-export { EXTERNAL_ID_PREFIX, isCsvExternalId } from "@/lib/externalIds";
+export {
+  EXTERNAL_ID_PREFIX,
+  isCsvExternalId,
+  TRANSFER_FEE_DEST_SUFFIX,
+} from "@/lib/externalIds";
 
 export function csvExternalIdCondition() {
   return and(
@@ -125,4 +130,35 @@ export function buildFeeRow(
   ctx: BuildContext,
 ): TransactionInsert | null {
   return buildTransactionRow({ ...input, kind: "expense" }, ctx);
+}
+
+export function buildTransferFeeRows({
+  userId,
+  occurredOn,
+  ctx,
+  specs,
+}: {
+  userId: string;
+  occurredOn: string;
+  ctx: BuildContext;
+  specs: ReadonlyArray<TransferFeeSpec>;
+}): { ok: true; data: TransactionInsert[] } | { ok: false; error: string } {
+  const rows: TransactionInsert[] = [];
+  for (const spec of specs) {
+    const row = buildFeeRow(
+      {
+        userId,
+        amount: spec.amount,
+        currency: spec.currency,
+        occurredOn,
+        note: "Transfer fee",
+        source: spec.source,
+        externalId: spec.externalId,
+      },
+      ctx,
+    );
+    if (!row) return { ok: false, error: `No rate for ${spec.currency}` };
+    rows.push(row);
+  }
+  return { ok: true, data: rows };
 }

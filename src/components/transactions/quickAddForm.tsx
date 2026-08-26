@@ -19,7 +19,9 @@ import { Label } from "@/components/ui/label";
 import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
 
+import { AccountSelect } from "./accountSelect";
 import { KindToggle } from "./kindToggle";
+import { TransferFeeSection } from "./transferFeeSection";
 import { useQuickAddForm } from "./useQuickAddForm";
 
 interface Props {
@@ -29,8 +31,8 @@ interface Props {
 
 export function QuickAddForm({ recentTags, source }: Props) {
   const accountLabels = useAccountLabels();
-  const resolvedSource = source === "all" ? "manual" : source;
   const {
+    extrasLabel,
     kind,
     setKind,
     amount,
@@ -44,6 +46,21 @@ export function QuickAddForm({ recentTags, source }: Props) {
     ratesPending,
     baseCurrency,
     showExtras,
+    transfer,
+    setTransfer,
+    transferAvailable,
+    transferActive,
+    transferSources,
+    transferDestination,
+    setTransferDestination,
+    transferFees,
+    setTransferFees,
+    receivedAmount,
+    setReceivedAmount,
+    receivedCurrency,
+    setReceivedCurrency,
+    destinationCurrency,
+    transferPreview,
     setShowExtras,
     withdrawal,
     setWithdrawal,
@@ -65,7 +82,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
     setDate,
     pending,
     handleSubmit,
-  } = useQuickAddForm(resolvedSource);
+  } = useQuickAddForm(source);
 
   return (
     <Surface asChild radius="lg" padding="sm" className="grid gap-3">
@@ -73,7 +90,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
         <p className="text-muted-foreground px-1 text-xs">
           Adding to{" "}
           <span className="text-foreground font-medium">
-            {resolveSourceLabel(resolvedSource, accountLabels)}
+            {resolveSourceLabel(source, accountLabels)}
           </span>
         </p>
         <div className="flex items-center gap-2">
@@ -108,7 +125,8 @@ export function QuickAddForm({ recentTags, source }: Props) {
             disabled={
               pending ||
               numericAmount === null ||
-              (withdrawalActive && !withdrawalTotalFilled)
+              (withdrawalActive && !withdrawalTotalFilled) ||
+              (transferActive && !transferDestination)
             }
             className="h-11 rounded-xl px-4"
           >
@@ -129,6 +147,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
         />
 
         {!withdrawalActive &&
+          !transferActive &&
           (preview ||
             (currency !== baseCurrency &&
               ratesPending &&
@@ -158,7 +177,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
               showExtras && "rotate-180",
             )}
           />
-          {showExtras ? "Hide details" : "Add tags, date, withdrawal"}
+          {showExtras ? "Hide details" : extrasLabel}
         </button>
 
         {showExtras && (
@@ -194,6 +213,45 @@ export function QuickAddForm({ recentTags, source }: Props) {
                 className="bg-surface-2 h-9 border-none"
               />
             </div>
+
+            {transferAvailable && (
+              <div className="flex items-center justify-between">
+                <Label htmlFor="transfer-toggle">Transfer</Label>
+                <Switch
+                  id="transfer-toggle"
+                  checked={transfer}
+                  onCheckedChange={setTransfer}
+                />
+              </div>
+            )}
+
+            {transferActive && (
+              <>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="transfer-destination">To account</Label>
+                  <AccountSelect
+                    id="transfer-destination"
+                    sources={transferSources}
+                    value={transferDestination}
+                    onValueChange={setTransferDestination}
+                    emptyMessage="No other account to pick. Import or add one first."
+                  />
+                </div>
+                <TransferFeeSection
+                  idPrefix="quick-transfer"
+                  fees={transferFees}
+                  onFeesChange={setTransferFees}
+                  sourceCurrency={currency}
+                  destinationCurrency={destinationCurrency}
+                  currencies={currencies}
+                  receivedAmount={receivedAmount}
+                  onReceivedAmountChange={setReceivedAmount}
+                  receivedCurrency={receivedCurrency}
+                  onReceivedCurrencyChange={setReceivedCurrency}
+                  preview={transferPreview}
+                />
+              </>
+            )}
 
             {withdrawalAvailable && (
               <div className="flex items-center justify-between">
