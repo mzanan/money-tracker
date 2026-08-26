@@ -56,7 +56,7 @@ export function useDashboardControls({
   const max = parseAmount(maxInput);
   const amountActive = min != null || max != null;
   const showQuickAdd =
-    selectedSource === "all" || kindOfSource(selectedSource) !== "api";
+    selectedSource !== "all" && kindOfSource(selectedSource) !== "api";
 
   function togglePanel(mode: PanelMode) {
     setPanel((current) => (current === mode ? "none" : mode));

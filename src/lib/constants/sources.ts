@@ -57,3 +57,18 @@ export function normalizeSource(raw: string): string | null {
   if (!SOURCE_RE.test(source) || RESERVED_SOURCES.has(source)) return null;
   return source;
 }
+
+export function transferAvailableFor(
+  source: string,
+  cashEnabled: boolean,
+): boolean {
+  if (!source || source === "all") return false;
+  if (kindOfSource(source) === "api") return false;
+  if (source === "manual") return cashEnabled;
+  return true;
+}
+
+export function withdrawalAvailableFor(source: string): boolean {
+  return Boolean(source) && kindOfSource(source) === "csv";
+}
+
