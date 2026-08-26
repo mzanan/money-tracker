@@ -1,7 +1,12 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { accounts, api_integrations, locations, transactions } from "@/lib/db/schema";
+import {
+  accounts,
+  api_integrations,
+  locations,
+  transactions,
+} from "@/lib/db/schema";
 import { getUserSettings } from "@/lib/data/userSettings";
 import { thisYearMonth } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
