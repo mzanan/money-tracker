@@ -47,7 +47,7 @@ export function useTransactionRow(
   const lockAmountFields = isSynced || isTransfer;
   const canChangeSource =
     !isTransfer && (!isSynced || !isSyncedExternalId(tx.external_id));
-  const canShiftMonth = canShiftBudgetMonth(tx);
+  const canShiftMonth = canShiftBudgetMonth(tx) || hasBudgetMonthOverride(tx);
   const realMonth = tx.occurred_on.slice(0, 7);
   const isMovedOut =
     showBudgetMonthBadges && !showDate && hasBudgetMonthOverride(tx);
