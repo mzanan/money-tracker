@@ -94,7 +94,9 @@ export function useTransactionRow(
   function handleUndoTransfer() {
     runAfterMenuClose(() =>
       transfer.run(() => unmarkTransfer(tx.id), {
-        confirm: "Undo this transfer?",
+        confirm: tx.budget_month
+          ? `Undo this transfer? Its rows keep ${formatMonthShort(tx.budget_month)} as budget month and can be moved back individually.`
+          : "Undo this transfer?",
         success: "Transfer undone",
       }),
     );
