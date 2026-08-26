@@ -86,6 +86,21 @@ export function formatYearMonthLong(yearMonth: string): string {
   return format(date, "MMMM yyyy", { locale: enUS });
 }
 
+export function formatMonthShort(yearMonth: string): string {
+  const date = parse(`${yearMonth}-01`, "yyyy-MM-dd", new Date());
+  return format(date, "MMM", { locale: enUS });
+}
+
+export function formatMonthLong(yearMonth: string): string {
+  const date = parse(`${yearMonth}-01`, "yyyy-MM-dd", new Date());
+  return format(date, "MMMM", { locale: enUS });
+}
+
+export function formatDayShort(yyyymmdd: string): string {
+  const date = parse(yyyymmdd, "yyyy-MM-dd", new Date());
+  return format(date, "MMM d", { locale: enUS });
+}
+
 export function formatYearMonthShort(yearMonth: string): string {
   const date = parse(`${yearMonth}-01`, "yyyy-MM-dd", new Date());
   return format(date, "MMM yyyy", { locale: enUS });
@@ -110,6 +125,29 @@ export function oldestYearMonthFrom(
     if (row.occurred_on < oldest) oldest = row.occurred_on;
   }
   return oldest.slice(0, 7);
+}
+
+export function newestYearMonthFrom(
+  rows: ReadonlyArray<{ occurred_on: string; budget_month: string | null }>,
+): string | null {
+  if (rows.length === 0) return null;
+  let newest = effectiveYearMonth(rows[0]);
+  for (const row of rows) {
+    const month = effectiveYearMonth(row);
+    if (month > newest) newest = month;
+  }
+  return newest;
+}
+
+export function effectiveYearMonth(tx: {
+  occurred_on: string;
+  budget_month: string | null;
+}): string {
+  return tx.budget_month ?? tx.occurred_on.slice(0, 7);
+}
+
+export function forwardMonthCap(base: string, newest: string | null): string {
+  return newest !== null && newest > base ? newest : base;
 }
 
 export function getSupportedTimezones(): string[] {

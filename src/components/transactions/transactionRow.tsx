@@ -3,6 +3,7 @@
 import {
   BanknoteIcon,
   BellPlusIcon,
+  CalendarArrowDownIcon,
   CheckIcon,
   CopyIcon,
   EllipsisIcon,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { formatMoney } from "@/lib/currency";
+import { formatDayShort } from "@/lib/dates";
 import { computeNextDue } from "@/lib/reminders";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +30,7 @@ import { ReminderForm } from "@/components/reminders/reminderForm";
 import { ReminderFormStep } from "@/components/reminders/reminderFormStep";
 
 import { Avatar } from "./avatar";
+import { BudgetMonthBadge } from "./budgetMonthBadge";
 import { TransactionFormDialog } from "./transactionFormDialog";
 import { TransactionFormStep } from "./transactionFormStep";
 import { MarkTransferDialog } from "./markTransferDialog";
@@ -40,7 +43,15 @@ import { useTransactionRow } from "./useTransactionRow";
 
 import type { Transaction } from "@/types/db";
 
-export function TransactionRow({ tx }: { tx: Transaction }) {
+export function TransactionRow({
+  tx,
+  showDate = false,
+  showBudgetMonthBadges = true,
+}: {
+  tx: Transaction;
+  showDate?: boolean;
+  showBudgetMonthBadges?: boolean;
+}) {
   const {
     baseCurrency,
     txSelectMode,
@@ -63,12 +74,17 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
     transferDialog,
     source,
     duplicate,
+    canShiftMonth,
+    isMovedOut,
+    isCarriedOver,
+    budgetMonthLabel,
     handleUndoTransfer,
     handleDelete,
     handleToggleFixed,
+    handleShiftBudgetMonth,
     stepApi,
     runAfterMenuClose,
-  } = useTransactionRow(tx);
+  } = useTransactionRow(tx, showDate, showBudgetMonthBadges);
 
   const editSeed = {
     kind: tx.kind,
@@ -217,10 +233,21 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             {sourceLabel}
           </span>
           {isTransfer && <TransferBadge />}
+          {isCarriedOver && (
+            <BudgetMonthBadge
+              direction="from"
+              yearMonth={tx.occurred_on.slice(0, 7)}
+            />
+          )}
+          {isMovedOut && tx.budget_month && (
+            <BudgetMonthBadge direction="to" yearMonth={tx.budget_month} />
+          )}
           <TagChips tags={tx.tags} />
         </span>
-        {description && (
+        {(showDate || description) && (
           <span className="text-muted-foreground text-meta mt-0.5 block truncate">
+            {showDate && formatDayShort(tx.occurred_on)}
+            {showDate && description ? " · " : ""}
             {description}
           </span>
         )}
@@ -229,7 +256,11 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
         <span
           className={cn(
             "text-sm leading-tight font-semibold tabular-nums",
-            tx.kind === "income" ? "text-income" : "text-foreground",
+            isMovedOut
+              ? "text-muted-foreground"
+              : tx.kind === "income"
+                ? "text-income"
+                : "text-foreground",
           )}
         >
           {sign}
@@ -238,7 +269,7 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
             : formatMoney(tx.amount_original, tx.currency_original)}
         </span>
         {showConverted && (
-          <span className="text-muted-foreground mt-0.5 text-caption tabular-nums">
+          <span className="text-muted-foreground text-caption mt-0.5 tabular-nums">
             {formatMoney(tx.amount_original, tx.currency_original)}
           </span>
         )}
@@ -286,6 +317,12 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
               <DropdownMenuItem onSelect={openMarkTransfer}>
                 <BanknoteIcon />
                 Mark as transfer
+              </DropdownMenuItem>
+            )}
+            {canShiftMonth && (
+              <DropdownMenuItem onSelect={handleShiftBudgetMonth}>
+                <CalendarArrowDownIcon />
+                {budgetMonthLabel}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onSelect={openSetReminder}>

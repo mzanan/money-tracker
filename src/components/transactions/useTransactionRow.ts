@@ -5,9 +5,14 @@ import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useDialogState } from "@/hooks/useDialogState";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
-import { deleteTransaction, setTransactionFixed } from "@/lib/actions/transactions";
-import { unmarkTransfer } from "@/lib/actions/transfers";
+import {
+  deleteTransaction,
+  setTransactionFixed,
+} from "@/lib/actions/transactions";
+import { setBudgetMonthShift, unmarkTransfer } from "@/lib/actions/transfers";
+import { canShiftBudgetMonth, hasBudgetMonthOverride } from "@/lib/budgetMonth";
 import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
+import { formatMonthShort } from "@/lib/dates";
 import { isSyncedExternalId } from "@/lib/externalIds";
 import { isFixedTransaction } from "@/lib/fixedExpenses";
 import { transactionInDisplay } from "@/lib/totals";
@@ -17,12 +22,17 @@ import { useDrawerStep } from "./drawerStepContext";
 
 import type { Transaction } from "@/types/db";
 
-export function useTransactionRow(tx: Transaction) {
+export function useTransactionRow(
+  tx: Transaction,
+  showDate = false,
+  showBudgetMonthBadges = true,
+) {
   const settings = useSettings();
   const accountLabels = useAccountLabels();
   const remove = useServerAction();
   const transfer = useServerAction();
   const fixedToggle = useServerAction();
+  const budgetMonthShift = useServerAction();
   const runAfterMenuClose = useDeferredMenuAction();
   const stepApi = useDrawerStep();
   const reminder = useDialogState(runAfterMenuClose);
@@ -37,6 +47,15 @@ export function useTransactionRow(tx: Transaction) {
   const lockAmountFields = isSynced || isTransfer;
   const canChangeSource =
     !isTransfer && (!isSynced || !isSyncedExternalId(tx.external_id));
+  const canShiftMonth = canShiftBudgetMonth(tx);
+  const realMonth = tx.occurred_on.slice(0, 7);
+  const isMovedOut =
+    showBudgetMonthBadges && !showDate && hasBudgetMonthOverride(tx);
+  const isCarriedOver =
+    showBudgetMonthBadges && showDate && hasBudgetMonthOverride(tx);
+  const budgetMonthLabel = tx.budget_month
+    ? `Move back to ${formatMonthShort(realMonth)}`
+    : "Move to next month";
 
   const txSelectMode = useUiStore((s) => s.txSelectMode);
   const selectedTxs = useUiStore((s) => s.selectedTxs);
@@ -81,6 +100,16 @@ export function useTransactionRow(tx: Transaction) {
     );
   }
 
+  function handleShiftBudgetMonth() {
+    const next = tx.budget_month ? 0 : 1;
+    const successMessage = next === 1 ? "Moved to next month" : "Moved back";
+    runAfterMenuClose(() =>
+      budgetMonthShift.run(() => setBudgetMonthShift(tx.id, next), {
+        success: successMessage,
+      }),
+    );
+  }
+
   function handleDelete() {
     runAfterMenuClose(() =>
       remove.run(() => deleteTransaction(tx.id), {
@@ -112,9 +141,14 @@ export function useTransactionRow(tx: Transaction) {
     transferDialog,
     source,
     duplicate,
+    canShiftMonth,
+    isMovedOut,
+    isCarriedOver,
+    budgetMonthLabel,
     handleUndoTransfer,
     handleDelete,
     handleToggleFixed,
+    handleShiftBudgetMonth,
     stepApi,
     runAfterMenuClose,
   };

@@ -1,8 +1,13 @@
 "use server";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import {
+  BUDGET_MONTH_LOCK_ERROR,
+  budgetMonthGroupOf,
+  linkedExternalIds,
+} from "@/lib/budgetMonth";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 import { kindOfSource } from "@/lib/constants/sources";
@@ -13,6 +18,7 @@ import {
   toUsdPair,
 } from "@/lib/currency";
 import { getTransferSources } from "@/lib/data/sources";
+import { shiftYearMonth } from "@/lib/dates";
 import { getUser } from "@/lib/session";
 import {
   buildFeeRow,
@@ -67,6 +73,12 @@ export async function markAsTransfer(
   if (!tx) return { ok: false, error: "Transaction not found" };
   if (tx.transfer_group) {
     return { ok: false, error: "Already marked as a transfer" };
+  }
+  if (tx.budget_month) {
+    return {
+      ok: false,
+      error: BUDGET_MONTH_LOCK_ERROR,
+    };
   }
   if (mirrorSource === tx.source) {
     return { ok: false, error: "Pick a different account" };
@@ -200,6 +212,12 @@ export async function markPairAsTransfer(
   if (rows.length !== 2) return { ok: false, error: "Transaction not found" };
   if (rows.some((r) => r.transfer_group)) {
     return { ok: false, error: "Already marked as a transfer" };
+  }
+  if (rows.some((r) => r.budget_month)) {
+    return {
+      ok: false,
+      error: BUDGET_MONTH_LOCK_ERROR,
+    };
   }
 
   const [txA, txB] = rows;
@@ -344,7 +362,7 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
         } else {
           await dbTx
             .update(transactions)
-            .set({ transfer_group: null })
+            .set({ transfer_group: null, budget_month: null })
             .where(
               and(
                 eq(transactions.id, row.id),
@@ -364,6 +382,73 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
             ),
           ),
         );
+    });
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Update failed",
+    };
+  }
+}
+
+export async function setBudgetMonthShift(
+  txId: string,
+  shift: 1 | 0,
+): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const tx = await db
+    .select()
+    .from(transactions)
+    .where(and(eq(transactions.id, txId), eq(transactions.user_id, user.id)))
+    .limit(1)
+    .then((rows) => rows[0]);
+  if (!tx) return { ok: false, error: "Transaction not found" };
+
+  const group = budgetMonthGroupOf(tx);
+  if (!group) {
+    return { ok: false, error: "Only transfers and withdrawals can be moved" };
+  }
+
+  const linked = await db
+    .select()
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.user_id, user.id),
+        or(
+          eq(transactions.transfer_group, group),
+          inArray(transactions.external_id, linkedExternalIds(group)),
+        ),
+      ),
+    );
+
+  const anchorMonth = linked
+    .reduce(
+      (oldest, row) => (row.occurred_on < oldest ? row.occurred_on : oldest),
+      tx.occurred_on,
+    )
+    .slice(0, 7);
+  const target = shift === 1 ? shiftYearMonth(anchorMonth, 1) : null;
+
+  try {
+    await db.transaction(async (dbTx) => {
+      for (const row of linked) {
+        const value =
+          target === row.occurred_on.slice(0, 7) ? null : target;
+        await dbTx
+          .update(transactions)
+          .set({ budget_month: value })
+          .where(
+            and(
+              eq(transactions.id, row.id),
+              eq(transactions.user_id, user.id),
+            ),
+          );
+      }
     });
     revalidatePath("/", "layout");
     return { ok: true };

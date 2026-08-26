@@ -3,7 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useSettings } from "@/hooks/useSettings";
-import { monthBounds, oldestYearMonthFrom, shiftYearMonth } from "@/lib/dates";
+import { hasBudgetMonthOverride } from "@/lib/budgetMonth";
+import {
+  effectiveYearMonth,
+  forwardMonthCap,
+  newestYearMonthFrom,
+  oldestYearMonthFrom,
+  shiftYearMonth,
+} from "@/lib/dates";
 
 import { useDashboardControls } from "./useDashboardControls";
 import type { PanelMode } from "./useDashboardControls";
@@ -26,12 +33,24 @@ export function useMonthDashboard({
   today: string;
 }) {
   const settings = useSettings();
-  const [visibleYearMonth, setVisibleYearMonth] = useState(yearMonth);
+  const [selectedYearMonth, setSelectedYearMonth] = useState(yearMonth);
+
+  const todayYearMonth = today.slice(0, 7);
+  const oldestYearMonth = useMemo(
+    () => oldestYearMonthFrom(lifetimeTransactions),
+    [lifetimeTransactions],
+  );
+  const newestYearMonth = useMemo(
+    () => newestYearMonthFrom(lifetimeTransactions),
+    [lifetimeTransactions],
+  );
+  const forwardCap = forwardMonthCap(todayYearMonth, newestYearMonth);
+  const visibleYearMonth =
+    selectedYearMonth > forwardCap ? forwardCap : selectedYearMonth;
 
   const monthTransactions = useMemo(() => {
-    const [start, end] = monthBounds(visibleYearMonth);
     return lifetimeTransactions
-      .filter((tx) => tx.occurred_on >= start && tx.occurred_on <= end)
+      .filter((tx) => effectiveYearMonth(tx) === visibleYearMonth)
       .slice()
       .sort((a, b) => {
         if (a.occurred_on !== b.occurred_on) {
@@ -41,29 +60,35 @@ export function useMonthDashboard({
       });
   }, [lifetimeTransactions, visibleYearMonth]);
 
-  const todayYearMonth = today.slice(0, 7);
-  const oldestYearMonth = useMemo(
-    () => oldestYearMonthFrom(lifetimeTransactions),
-    [lifetimeTransactions],
+  const monthMovedOut = useMemo(
+    () =>
+      lifetimeTransactions.filter(
+        (tx) =>
+          tx.occurred_on.slice(0, 7) === visibleYearMonth &&
+          hasBudgetMonthOverride(tx),
+      ),
+    [lifetimeTransactions, visibleYearMonth],
   );
+
   const hasOlder =
     oldestYearMonth !== null &&
     shiftYearMonth(visibleYearMonth, -1) >= oldestYearMonth;
-  const hasNewer = visibleYearMonth < todayYearMonth;
+  const hasNewer = visibleYearMonth < forwardCap;
 
   function shiftMonth(delta: number) {
-    setVisibleYearMonth((current) => {
+    setSelectedYearMonth((current) => {
       const next = shiftYearMonth(current, delta);
       if (delta < 0 && oldestYearMonth !== null && next < oldestYearMonth) {
         return current;
       }
-      if (delta > 0 && next > todayYearMonth) return current;
+      if (delta > 0 && next > forwardCap) return current;
       return next;
     });
   }
 
   const c = useDashboardControls({
     monthTransactions,
+    monthMovedOut,
     lifetimeTransactions,
     reminders,
     places,
@@ -91,9 +116,23 @@ export function useMonthDashboard({
   const feedTransactions = useMemo(
     () =>
       isDaily
-        ? c.monthList.filter((tx) => tx.occurred_on === daySpend.selectedDate)
+        ? c.monthList.filter(
+            (tx) =>
+              tx.occurred_on === daySpend.selectedDate ||
+              hasBudgetMonthOverride(tx),
+          )
         : c.monthList,
     [isDaily, c.monthList, daySpend.selectedDate],
+  );
+
+  const feedMovedOut = useMemo(
+    () =>
+      isDaily
+        ? c.movedOutList.filter(
+            (tx) => tx.occurred_on === daySpend.selectedDate,
+          )
+        : c.movedOutList,
+    [isDaily, c.movedOutList, daySpend.selectedDate],
   );
 
   const panelOpen = c.panel !== "none";
@@ -131,6 +170,7 @@ export function useMonthDashboard({
     isDaily,
     breakdownTransactions,
     feedTransactions,
+    feedMovedOut,
     panelMounted,
     drawerOpen,
     shownPanel,

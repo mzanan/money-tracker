@@ -109,6 +109,7 @@ export const transactions = sqliteTable(
       { onDelete: "set null" },
     ),
     is_fixed: integer("is_fixed", { mode: "boolean" }),
+    budget_month: text("budget_month"),
     created_at: text("created_at")
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),

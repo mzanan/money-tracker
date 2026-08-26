@@ -17,6 +17,7 @@ import {
 import { getUser } from "@/lib/session";
 import { kindOfSource, normalizeSource } from "@/lib/constants/sources";
 import { dedupeTags } from "@/lib/tags";
+import { BUDGET_MONTH_LOCK_ERROR } from "@/lib/budgetMonth";
 import { buildTransactionRow, normalizeTags } from "@/lib/transactions";
 
 export type ActionResult<T = void> =
@@ -181,6 +182,12 @@ export async function updateTransaction(
       error: "Amount, currency and kind are synced automatically, not editable",
     };
   }
+  if (tx.budget_month && tx.occurred_on !== parsed.data.occurredOn) {
+    return {
+      ok: false,
+      error: BUDGET_MONTH_LOCK_ERROR,
+    };
+  }
 
   try {
     await db
@@ -311,6 +318,12 @@ export async function mergeTransactions(
       return {
         ok: false,
         error: "Undo the transfer before merging this transaction",
+      };
+    }
+    if (keep.budget_month || removed.budget_month) {
+      return {
+        ok: false,
+        error: BUDGET_MONTH_LOCK_ERROR,
       };
     }
 

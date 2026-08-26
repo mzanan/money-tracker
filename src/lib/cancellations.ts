@@ -56,20 +56,53 @@ export function splitCanceledPairs(
   return { pairs, rest: transactions.filter((tx) => !used.has(tx.id)) };
 }
 
+export function splitCanceledPairsPreferring(
+  primary: Transaction[],
+  extra: Transaction[],
+): { pairs: CanceledPair[]; rest: Transaction[] } {
+  if (extra.length === 0) return splitCanceledPairs(primary);
+  const internal = splitCanceledPairs(primary);
+  const crossed = splitCanceledPairs([...internal.rest, ...extra]);
+  return {
+    pairs: [...internal.pairs, ...crossed.pairs],
+    rest: crossed.rest,
+  };
+}
+
 export function excludeCanceledPairs(
   transactions: Transaction[],
 ): Transaction[] {
   return splitCanceledPairs(transactions).rest;
 }
 
+export function pairedTransactionIds(
+  days: ReadonlyArray<DayTotalsWithPairs>,
+): Set<string> {
+  const ids = new Set<string>();
+  for (const day of days) {
+    for (const pair of day.pairs) {
+      ids.add(pair.expense.id);
+      ids.add(pair.income.id);
+    }
+  }
+  return ids;
+}
+
 export function dayTotalsWithPairs(
   transactions: Transaction[],
   displayCurrency: string,
   includeTransfers = false,
+  pairingOnly: Transaction[] = [],
 ): DayTotalsWithPairs[] {
-  const { pairs, rest } = splitCanceledPairs(transactions);
+  const { pairs, rest } = splitCanceledPairsPreferring(
+    transactions,
+    pairingOnly,
+  );
+  const pairingIds = new Set(pairingOnly.map((tx) => tx.id));
+  const counted =
+    pairingIds.size === 0 ? rest : rest.filter((tx) => !pairingIds.has(tx.id));
   const days: DayTotalsWithPairs[] = dayTotalsList(
-    rest,
+    counted,
     displayCurrency,
     includeTransfers,
   ).map((day) => ({ ...day, pairs: [] }));

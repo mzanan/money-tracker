@@ -1,4 +1,5 @@
 import { convert } from "@/lib/currency";
+import { effectiveYearMonth } from "@/lib/dates";
 import { periodTotals } from "@/lib/totals";
 import type { Transaction, TransactionKind } from "@/types/db";
 
@@ -99,7 +100,7 @@ export function monthlyTrend(
 ): MonthTotal[] {
   const byMonth = new Map<string, Transaction[]>();
   for (const tx of txs) {
-    const month = tx.occurred_on.slice(0, 7);
+    const month = effectiveYearMonth(tx);
     const list = byMonth.get(month) ?? [];
     list.push(tx);
     byMonth.set(month, list);

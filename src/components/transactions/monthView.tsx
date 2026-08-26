@@ -3,24 +3,31 @@
 import { Loader2Icon, ListChecksIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/emptyState";
 import { Surface } from "@/components/ui/surface";
 
 import type { Transaction } from "@/types/db";
 
+import { CarriedOverGroup } from "./carriedOverGroup";
 import { DayGroup } from "./dayGroup";
 import { useMonthView } from "./useMonthView";
 
 export function MonthView({
   transactions,
+  movedOut = [],
   emptyLabel = "No transactions this month.",
   includeTransfers = false,
+  groupCarriedOver = true,
 }: {
   transactions: Transaction[];
+  movedOut?: Transaction[];
   emptyLabel?: string;
   includeTransfers?: boolean;
+  groupCarriedOver?: boolean;
 }) {
   const {
     days,
+    carriedOverGroups,
     shown,
     hasMore,
     sentinelRef,
@@ -29,9 +36,9 @@ export function MonthView({
     toggleDay,
     txSelectMode,
     setTxSelectMode,
-  } = useMonthView(transactions, includeTransfers);
+  } = useMonthView(transactions, includeTransfers, movedOut, groupCarriedOver);
 
-  if (days.length === 0) {
+  if (days.length === 0 && carriedOverGroups.length === 0) {
     return (
       <Surface
         radius="lg"
@@ -62,6 +69,12 @@ export function MonthView({
           {txSelectMode ? "Done" : "Merge duplicates"}
         </Button>
       </div>
+      {carriedOverGroups.map((group) => (
+        <CarriedOverGroup key={group.month} group={group} />
+      ))}
+      {days.length === 0 && (
+        <EmptyState className="px-3 py-8 text-center">{emptyLabel}</EmptyState>
+      )}
       {shown.map((day) => (
         <DayGroup
           key={day.date}

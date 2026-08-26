@@ -14,11 +14,18 @@ import { TappableRow } from "@/components/ui/tappableRow";
 
 import { TransactionRow } from "./transactionRow";
 
-export function CanceledGroup({ pair }: { pair: CanceledPair }) {
+export function CanceledGroup({
+  pair,
+  showBudgetMonthBadges = true,
+}: {
+  pair: CanceledPair;
+  showBudgetMonthBadges?: boolean;
+}) {
   const accountLabels = useAccountLabels();
   const [open, setOpen] = useState(false);
   const sourceLabel = resolveSourceLabel(pair.expense.source, accountLabels);
-  const title = pair.expense.note?.trim() || `Canceled payment · ${sourceLabel}`;
+  const title =
+    pair.expense.note?.trim() || `Canceled payment · ${sourceLabel}`;
 
   return (
     <div className="grid min-w-0">
@@ -57,8 +64,14 @@ export function CanceledGroup({ pair }: { pair: CanceledPair }) {
       </TappableRow>
       {open && (
         <div className="grid min-w-0 gap-px pl-3">
-          <TransactionRow tx={pair.expense} />
-          <TransactionRow tx={pair.income} />
+          <TransactionRow
+            tx={pair.expense}
+            showBudgetMonthBadges={showBudgetMonthBadges}
+          />
+          <TransactionRow
+            tx={pair.income}
+            showBudgetMonthBadges={showBudgetMonthBadges}
+          />
         </div>
       )}
     </div>

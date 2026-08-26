@@ -4,11 +4,9 @@ import { useMemo, useState } from "react";
 
 import { useSettings, useTimezone } from "@/hooks/useSettings";
 import { dayTotalsWithPairs } from "@/lib/cancellations";
-import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import { kindOfSource } from "@/lib/constants/sources";
 import { todayInTz } from "@/lib/dates";
-import { filterByAmount } from "@/lib/filters";
-import { placeOf } from "@/lib/places";
+import { applyListFilters, filterByAmount } from "@/lib/filters";
 
 import type { DayTotalsWithPairs } from "@/lib/cancellations";
 import type { Location, RecurringPayment, Transaction } from "@/types/db";
@@ -29,11 +27,13 @@ function bySource(txs: Transaction[], source: string): Transaction[] {
 
 export function useDashboardControls({
   monthTransactions,
+  monthMovedOut,
   lifetimeTransactions,
   reminders,
   places,
 }: {
   monthTransactions: Transaction[];
+  monthMovedOut: Transaction[];
   lifetimeTransactions: Transaction[];
   reminders: RecurringPayment[];
   places: Location[];
@@ -74,30 +74,36 @@ export function useDashboardControls({
     () => bySource(monthTransactions, selectedSource),
     [monthTransactions, selectedSource],
   );
+  const sourceFilteredMovedOut = useMemo(
+    () => bySource(monthMovedOut, selectedSource),
+    [monthMovedOut, selectedSource],
+  );
   const sourceFilteredLifetime = useMemo(
     () => bySource(lifetimeTransactions, selectedSource),
     [lifetimeTransactions, selectedSource],
   );
 
-  const monthList = useMemo(() => {
-    let list = sourceFilteredMonth;
-    if (selectedKind !== "all") {
-      list = list.filter((tx) => tx.kind === selectedKind);
-    }
-    if (selectedTag !== null) {
-      list = list.filter((tx) =>
-        tx.tags.length === 0
-          ? selectedTag === UNTAGGED_LABEL
-          : tx.tags.includes(selectedTag),
-      );
-    }
-    if (selectedPlace !== null) {
-      list = list.filter(
-        (tx) => placeOf(tx.occurred_on, places) === selectedPlace,
-      );
-    }
-    return list;
-  }, [sourceFilteredMonth, selectedKind, selectedTag, selectedPlace, places]);
+  const monthList = useMemo(
+    () =>
+      applyListFilters(sourceFilteredMonth, {
+        kind: selectedKind,
+        tag: selectedTag,
+        place: selectedPlace,
+        places,
+      }),
+    [sourceFilteredMonth, selectedKind, selectedTag, selectedPlace, places],
+  );
+
+  const movedOutList = useMemo(
+    () =>
+      applyListFilters(sourceFilteredMovedOut, {
+        kind: selectedKind,
+        tag: selectedTag,
+        place: selectedPlace,
+        places,
+      }),
+    [sourceFilteredMovedOut, selectedKind, selectedTag, selectedPlace, places],
+  );
 
   const filterResults = useMemo(() => {
     const base = scope === "all" ? sourceFilteredLifetime : sourceFilteredMonth;
@@ -170,6 +176,7 @@ export function useDashboardControls({
     sourceFilteredMonth,
     sourceFilteredLifetime,
     monthList,
+    movedOutList,
     filterResults,
     activityDates,
     reminderDates,
