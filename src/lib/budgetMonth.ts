@@ -1,4 +1,7 @@
-import { EXTERNAL_ID_PREFIX } from "@/lib/externalIds";
+import {
+  EXTERNAL_ID_PREFIX,
+  TRANSFER_FEE_DEST_SUFFIX,
+} from "@/lib/externalIds";
 
 import {
   pairedTransactionIds,
@@ -21,7 +24,8 @@ function withdrawalGroupFrom(externalId: string | null): string | null {
 
 function transferFeeGroupFrom(externalId: string | null): string | null {
   if (!externalId?.startsWith(EXTERNAL_ID_PREFIX.transferFee)) return null;
-  const group = externalId.slice(EXTERNAL_ID_PREFIX.transferFee.length);
+  const rest = externalId.slice(EXTERNAL_ID_PREFIX.transferFee.length);
+  const group = rest.split(":")[0];
   return group || null;
 }
 
@@ -49,6 +53,7 @@ export function linkedExternalIds(group: string): string[] {
   return [
     `${EXTERNAL_ID_PREFIX.transfer}${group}`,
     `${EXTERNAL_ID_PREFIX.transferFee}${group}`,
+    `${EXTERNAL_ID_PREFIX.transferFee}${group}${TRANSFER_FEE_DEST_SUFFIX}`,
     `${EXTERNAL_ID_PREFIX.withdrawal}${group}`,
     `${EXTERNAL_ID_PREFIX.withdrawal}${group}:out`,
     `${EXTERNAL_ID_PREFIX.withdrawal}${group}:in`,

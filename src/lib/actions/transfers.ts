@@ -2,6 +2,9 @@
 
 import { and, eq, inArray, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
+import { isSupportedCurrency } from "@/lib/constants/currencies";
 
 import {
   BUDGET_MONTH_LOCK_ERROR,
@@ -10,20 +13,30 @@ import {
 } from "@/lib/budgetMonth";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
-import { kindOfSource } from "@/lib/constants/sources";
+import { kindOfSource, normalizeSource } from "@/lib/constants/sources";
 import {
-  feeAmountError,
+  amountValidationError,
   relativeUsdDiff,
   roundForCurrency,
   toUsdPair,
 } from "@/lib/currency";
 import { getTransferSources } from "@/lib/data/sources";
 import { shiftYearMonth } from "@/lib/dates";
+import {
+  aggregateFeesBySide,
+  inTransitAmount,
+  transferFeeAmountsError,
+  transferFeeSpecs,
+  transferLegsAreNet,
+  type ReceivedAmount,
+  type TransferFeeEntry,
+} from "@/lib/transfer";
 import { getUser } from "@/lib/session";
 import {
-  buildFeeRow,
   buildTransactionRow,
+  buildTransferFeeRows,
   EXTERNAL_ID_PREFIX,
+  TRANSFER_FEE_DEST_SUFFIX,
 } from "@/lib/transactions";
 import type { FxRates, TransactionInsert } from "@/types/db";
 
@@ -56,10 +69,189 @@ export async function getTransferAccountOptions(
   return { ok: true, data: { sources } };
 }
 
+export interface TransferFeeInput {
+  origin?: number;
+  destination?: number;
+}
+
+export interface MarkTransferOptions {
+  fees?: TransferFeeInput;
+  received?: ReceivedAmount;
+}
+
+
+const transferFeeSchema = z.object({
+  amount: z.number().finite().nonnegative(),
+  payer: z.enum(["origin", "destination"]),
+});
+
+const recordTransferSchema = z.object({
+  amount: z.number().finite().positive(),
+  currency: z.string().refine(isSupportedCurrency),
+  source: z.string().trim().min(1).max(32),
+  destinationSource: z.string().trim().min(1).max(32),
+  occurredOn: z.iso.date("Invalid date (yyyy-MM-dd)"),
+  note: z.string().trim().max(280).nullable().optional(),
+  tags: z.array(z.string().trim().min(1).max(40)).max(10).optional(),
+  fees: z.array(transferFeeSchema).max(2).optional(),
+  received: z
+    .object({
+      amount: z.number().finite().positive(),
+      currency: z.string().refine(isSupportedCurrency),
+    })
+    .optional(),
+});
+
+export type RecordTransferInput = z.infer<typeof recordTransferSchema>;
+
+export async function recordTransfer(
+  input: RecordTransferInput,
+): Promise<ActionResult> {
+  const parsed = recordTransferSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid data" };
+  const { amount, currency, occurredOn, tags, received } = parsed.data;
+
+  const source = normalizeSource(parsed.data.source);
+  const destinationSource = normalizeSource(parsed.data.destinationSource);
+  if (!source || !destinationSource) {
+    return { ok: false, error: "Invalid account name" };
+  }
+  if (source === destinationSource) {
+    return { ok: false, error: "Pick a different account" };
+  }
+  if (kindOfSource(source) === "api") {
+    return { ok: false, error: "Can't transfer from a synced account" };
+  }
+  if (kindOfSource(destinationSource) === "api") {
+    return { ok: false, error: "Can't mirror into a synced account" };
+  }
+  if (received && received.currency === currency) {
+    return {
+      ok: false,
+      error: "The received amount must be in a different currency",
+    };
+  }
+
+  const amountError = amountValidationError(amount, currency);
+  if (amountError) return { ok: false, error: amountError };
+
+  const destinationCurrency = received?.currency ?? currency;
+  const fees = aggregateFeesBySide(
+    (parsed.data.fees ?? []) as TransferFeeEntry[],
+    currency,
+    destinationCurrency,
+  );
+  const inTransit = inTransitAmount(amount, fees.origin, currency);
+  if (!(inTransit > 0)) {
+    return { ok: false, error: "Fees leave nothing to transfer" };
+  }
+  const mirrorAmount = received
+    ? roundForCurrency(received.amount + fees.destination, destinationCurrency)
+    : inTransit;
+  const credited = roundForCurrency(
+    mirrorAmount - fees.destination,
+    destinationCurrency,
+  );
+  if (!(credited > 0)) {
+    return { ok: false, error: "Fees leave nothing to transfer" };
+  }
+
+  const feeError = transferFeeAmountsError({
+    originFee: fees.origin,
+    originCurrency: currency,
+    originLegAmount: amount,
+    destinationFee: fees.destination,
+    destinationCurrency,
+    destinationLegAmount: credited,
+  });
+  if (feeError) return { ok: false, error: feeError };
+
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const ctxResult = await withRatesErrorHandling(() =>
+    buildCurrencyContext(user.id),
+  );
+  if (!ctxResult.ok) return ctxResult;
+  const ctx = ctxResult.data;
+  if (!ctx) return { ok: false, error: "Settings not found" };
+
+  const group = crypto.randomUUID();
+  const expense = buildTransactionRow(
+    {
+      userId: user.id,
+      kind: "expense",
+      amount: inTransit,
+      currency,
+      occurredOn,
+      tags,
+      note: parsed.data.note,
+      source,
+    },
+    ctx,
+  );
+  if (!expense) return { ok: false, error: `No rate for ${currency}` };
+
+  const mirror = buildTransactionRow(
+    {
+      userId: user.id,
+      kind: "income",
+      amount: mirrorAmount,
+      currency: destinationCurrency,
+      occurredOn,
+      note: parsed.data.note,
+      source: destinationSource,
+      externalId: `${EXTERNAL_ID_PREFIX.transfer}${group}`,
+    },
+    ctx,
+  );
+  if (!mirror) {
+    return { ok: false, error: `No rate for ${destinationCurrency}` };
+  }
+
+  const feeResult = buildTransferFeeRows({
+    userId: user.id,
+    occurredOn,
+    ctx,
+    specs: transferFeeSpecs({
+      group,
+      originFee: fees.origin,
+      originCurrency: currency,
+      originSource: source,
+      destinationFee: fees.destination,
+      destinationCurrency,
+      destinationSource,
+    }),
+  });
+  if (!feeResult.ok) return feeResult;
+  const feeRows = feeResult.data!;
+
+  try {
+    await db.transaction(async (dbTx) => {
+      await dbTx
+        .insert(transactions)
+        .values({ ...expense, transfer_group: group });
+      await dbTx
+        .insert(transactions)
+        .values({ ...mirror, transfer_group: group });
+      for (const row of feeRows) {
+        await dbTx.insert(transactions).values(row);
+      }
+    });
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Insert failed",
+    };
+  }
+}
+
 export async function markAsTransfer(
   txId: string,
   mirrorSource: string,
-  feeAmount?: number,
+  opts?: MarkTransferOptions,
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
@@ -87,17 +279,56 @@ export async function markAsTransfer(
     return { ok: false, error: "Can't mirror into a synced account" };
   }
 
-  const fee =
-    feeAmount && feeAmount > 0
-      ? roundForCurrency(feeAmount, tx.currency_original)
+  const received = opts?.received;
+  if (received && received.currency === tx.currency_original) {
+    return {
+      ok: false,
+      error: "The received amount must be in a different currency",
+    };
+  }
+  if (received && !(received.amount > 0)) {
+    return { ok: false, error: "Enter the amount received" };
+  }
+  const isExpense = tx.kind === "expense";
+  const mirrorCurrency = received?.currency ?? tx.currency_original;
+  const originCurrency = isExpense ? tx.currency_original : mirrorCurrency;
+  const destinationCurrency = isExpense ? mirrorCurrency : tx.currency_original;
+
+  const originFee =
+    opts?.fees?.origin && opts.fees.origin > 0
+      ? roundForCurrency(opts.fees.origin, originCurrency)
       : 0;
-  if (fee > 0) {
-    const feeError = feeAmountError(
-      fee,
-      tx.currency_original,
-      tx.kind === "expense" ? tx.amount_original : undefined,
-    );
-    if (feeError) return { ok: false, error: feeError };
+  const destinationFee =
+    opts?.fees?.destination && opts.fees.destination > 0
+      ? roundForCurrency(opts.fees.destination, destinationCurrency)
+      : 0;
+
+  const inTransit = isExpense
+    ? roundForCurrency(tx.amount_original - originFee, tx.currency_original)
+    : roundForCurrency(
+        tx.amount_original + destinationFee,
+        tx.currency_original,
+      );
+  const mirrorAmount = received
+    ? roundForCurrency(
+        isExpense
+          ? received.amount + destinationFee
+          : received.amount - originFee,
+        mirrorCurrency,
+      )
+    : inTransit;
+
+  const feeError = transferFeeAmountsError({
+    originFee,
+    originCurrency,
+    originLegAmount: isExpense ? tx.amount_original : received?.amount,
+    destinationFee,
+    destinationCurrency,
+    destinationLegAmount: isExpense ? received?.amount : tx.amount_original,
+  });
+  if (feeError) return { ok: false, error: feeError };
+  if (inTransit <= 0 || mirrorAmount <= 0) {
+    return { ok: false, error: "Fees leave nothing to transfer" };
   }
 
   const ctxResult = await withRatesErrorHandling(() =>
@@ -107,17 +338,12 @@ export async function markAsTransfer(
   const ctx = ctxResult.data;
   if (!ctx) return { ok: false, error: "Settings not found" };
 
-  const mirrorAmount =
-    tx.kind === "expense"
-      ? roundForCurrency(tx.amount_original - fee, tx.currency_original)
-      : roundForCurrency(tx.amount_original + fee, tx.currency_original);
-
   const mirror = buildTransactionRow(
     {
       userId: user.id,
-      kind: tx.kind === "expense" ? "income" : "expense",
+      kind: isExpense ? "income" : "expense",
       amount: mirrorAmount,
-      currency: tx.currency_original,
+      currency: mirrorCurrency,
       occurredOn: tx.occurred_on,
       note: tx.note,
       source: mirrorSource,
@@ -126,27 +352,25 @@ export async function markAsTransfer(
     ctx,
   );
   if (!mirror) {
-    return { ok: false, error: `No rate for ${tx.currency_original}` };
+    return { ok: false, error: `No rate for ${mirrorCurrency}` };
   }
 
-  let feeRow: TransactionInsert | null = null;
-  if (fee > 0) {
-    feeRow = buildFeeRow(
-      {
-        userId: user.id,
-        amount: fee,
-        currency: tx.currency_original,
-        occurredOn: tx.occurred_on,
-        note: "Transfer fee",
-        source: tx.kind === "expense" ? tx.source : mirrorSource,
-        externalId: `${EXTERNAL_ID_PREFIX.transferFee}${tx.id}`,
-      },
-      ctx,
-    );
-    if (!feeRow) {
-      return { ok: false, error: `No rate for ${tx.currency_original}` };
-    }
-  }
+  const feeResult = buildTransferFeeRows({
+    userId: user.id,
+    occurredOn: tx.occurred_on,
+    ctx,
+    specs: transferFeeSpecs({
+      group: tx.id,
+      originFee,
+      originCurrency,
+      originSource: isExpense ? tx.source : mirrorSource,
+      destinationFee,
+      destinationCurrency,
+      destinationSource: isExpense ? mirrorSource : tx.source,
+    }),
+  });
+  if (!feeResult.ok) return feeResult;
+  const feeRows = feeResult.data!;
 
   try {
     await db.transaction(async (dbTx) => {
@@ -160,10 +384,10 @@ export async function markAsTransfer(
             transactions.external_id,
           ],
         });
-      if (feeRow) {
+      for (const row of feeRows) {
         await dbTx
           .insert(transactions)
-          .values(feeRow)
+          .values(row)
           .onConflictDoNothing({
             target: [
               transactions.user_id,
@@ -174,7 +398,7 @@ export async function markAsTransfer(
       }
       await dbTx
         .update(transactions)
-        .set({ transfer_group: tx.id })
+        .set({ transfer_group: tx.id, amount_original: inTransit })
         .where(
           and(eq(transactions.id, tx.id), eq(transactions.user_id, user.id)),
         );
@@ -192,7 +416,7 @@ export async function markAsTransfer(
 export async function markPairAsTransfer(
   txId1: string,
   txId2: string,
-  opts?: { recordFeeDelta?: boolean; feeAmount?: number },
+  opts?: { fees?: TransferFeeInput },
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
@@ -251,61 +475,104 @@ export async function markPairAsTransfer(
   const [expenseTx, incomeTx] = txA.kind === "expense" ? [txA, txB] : [txB, txA];
   const sameCurrency = txA.currency_original === txB.currency_original;
 
-  let fee = 0;
-  if (sameCurrency && opts?.recordFeeDelta) {
-    const delta = expenseTx.amount_original - incomeTx.amount_original;
-    if (delta > 0) fee = roundForCurrency(delta, expenseTx.currency_original);
-  } else if (!sameCurrency && opts?.feeAmount && opts.feeAmount > 0) {
-    fee = roundForCurrency(opts.feeAmount, expenseTx.currency_original);
+  const originFee =
+    opts?.fees?.origin && opts.fees.origin > 0
+      ? roundForCurrency(opts.fees.origin, expenseTx.currency_original)
+      : 0;
+  const destinationFee =
+    opts?.fees?.destination && opts.fees.destination > 0
+      ? roundForCurrency(opts.fees.destination, incomeTx.currency_original)
+      : 0;
+
+  if (sameCurrency && (originFee > 0 || destinationFee > 0)) {
+    const delta = roundForCurrency(
+      expenseTx.amount_original - incomeTx.amount_original,
+      expenseTx.currency_original,
+    );
+    const given = roundForCurrency(
+      originFee + destinationFee,
+      expenseTx.currency_original,
+    );
+    if (given !== delta) {
+      return {
+        ok: false,
+        error: "The fees must add up to the difference between the amounts",
+      };
+    }
   }
 
-  let feeRow: TransactionInsert | null = null;
-  if (fee > 0) {
-    const feeError = feeAmountError(
-      fee,
-      expenseTx.currency_original,
-      expenseTx.amount_original,
-    );
-    if (feeError) return { ok: false, error: feeError };
+  const expenseInTransit = roundForCurrency(
+    expenseTx.amount_original - originFee,
+    expenseTx.currency_original,
+  );
+  const incomeInTransit = roundForCurrency(
+    incomeTx.amount_original + destinationFee,
+    incomeTx.currency_original,
+  );
+  if (expenseInTransit <= 0 || incomeInTransit <= 0) {
+    return { ok: false, error: "Fees leave nothing to transfer" };
+  }
+  const feeError = transferFeeAmountsError({
+    originFee,
+    originCurrency: expenseTx.currency_original,
+    originLegAmount: expenseTx.amount_original,
+    destinationFee,
+    destinationCurrency: incomeTx.currency_original,
+    destinationLegAmount: incomeTx.amount_original,
+  });
+  if (feeError) return { ok: false, error: feeError };
 
+  let feeRows: TransactionInsert[] = [];
+  if (originFee > 0 || destinationFee > 0) {
     const ctxResult = await withRatesErrorHandling(() =>
       buildCurrencyContext(user.id),
     );
     if (!ctxResult.ok) return ctxResult;
     if (!ctxResult.data) return { ok: false, error: "Settings not found" };
 
-    feeRow = buildFeeRow(
-      {
-        userId: user.id,
-        amount: fee,
-        currency: expenseTx.currency_original,
-        occurredOn: expenseTx.occurred_on,
-        note: "Transfer fee",
-        source: expenseTx.source,
-        externalId: `${EXTERNAL_ID_PREFIX.transferFee}${txId1}`,
-      },
-      ctxResult.data,
-    );
-    if (!feeRow) {
-      return { ok: false, error: `No rate for ${expenseTx.currency_original}` };
-    }
+    const specs = transferFeeSpecs({
+      group: txId1,
+      originFee,
+      originCurrency: expenseTx.currency_original,
+      originSource: expenseTx.source,
+      destinationFee,
+      destinationCurrency: incomeTx.currency_original,
+      destinationSource: incomeTx.source,
+    });
+    const feeResult = buildTransferFeeRows({
+      userId: user.id,
+      occurredOn: expenseTx.occurred_on,
+      ctx: ctxResult.data,
+      specs,
+    });
+    if (!feeResult.ok) return feeResult;
+    feeRows = feeResult.data;
   }
 
   try {
     await db.transaction(async (dbTx) => {
       await dbTx
         .update(transactions)
-        .set({ transfer_group: txId1 })
+        .set({ transfer_group: txId1, amount_original: expenseInTransit })
         .where(
           and(
             eq(transactions.user_id, user.id),
-            inArray(transactions.id, [txId1, txId2]),
+            eq(transactions.id, expenseTx.id),
           ),
         );
-      if (feeRow) {
+      await dbTx
+        .update(transactions)
+        .set({ transfer_group: txId1, amount_original: incomeInTransit })
+        .where(
+          and(
+            eq(transactions.user_id, user.id),
+            eq(transactions.id, incomeTx.id),
+          ),
+        );
+      for (const row of feeRows) {
         await dbTx
           .insert(transactions)
-          .values(feeRow)
+          .values(row)
           .onConflictDoNothing({
             target: [
               transactions.user_id,
@@ -347,6 +614,54 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
       ),
     );
 
+  const group = tx.transfer_group;
+  const originFeeId = `${EXTERNAL_ID_PREFIX.transferFee}${group}`;
+  const destinationFeeId = `${originFeeId}${TRANSFER_FEE_DEST_SUFFIX}`;
+  const isWithdrawal = linked.some((row) =>
+    row.external_id?.startsWith(EXTERNAL_ID_PREFIX.withdrawal),
+  );
+
+  const feeRows = isWithdrawal
+    ? []
+    : await db
+        .select()
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.user_id, user.id),
+            inArray(transactions.external_id, [originFeeId, destinationFeeId]),
+          ),
+        );
+
+  const kept = linked.filter(
+    (row) => !row.external_id?.startsWith(EXTERNAL_ID_PREFIX.transfer),
+  );
+  const originFeeRow = feeRows.find((row) => row.external_id === originFeeId);
+  const legsAreNet = transferLegsAreNet(
+    linked,
+    originFeeRow?.amount_original ?? 0,
+    feeRows.some((row) => row.external_id === destinationFeeId),
+  );
+  const restored = new Map<string, number>();
+  for (const feeRow of legsAreNet ? feeRows : []) {
+    const isDestination = feeRow.external_id === destinationFeeId;
+    const target = kept.find(
+      (row) =>
+        row.source === feeRow.source &&
+        row.currency_original === feeRow.currency_original &&
+        row.kind === (isDestination ? "income" : "expense"),
+    );
+    if (!target) continue;
+    const current = restored.get(target.id) ?? target.amount_original;
+    restored.set(
+      target.id,
+      roundForCurrency(
+        isDestination ? current - feeRow.amount_original : current + feeRow.amount_original,
+        target.currency_original,
+      ),
+    );
+  }
+
   try {
     await db.transaction(async (dbTx) => {
       for (const row of linked) {
@@ -360,9 +675,14 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
               ),
             );
         } else {
+          const amount = restored.get(row.id);
           await dbTx
             .update(transactions)
-            .set({ transfer_group: null, budget_month: null })
+            .set({
+              transfer_group: null,
+              budget_month: null,
+              ...(amount !== undefined ? { amount_original: amount } : {}),
+            })
             .where(
               and(
                 eq(transactions.id, row.id),
@@ -376,10 +696,7 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
         .where(
           and(
             eq(transactions.user_id, user.id),
-            eq(
-              transactions.external_id,
-              `${EXTERNAL_ID_PREFIX.transferFee}${tx.transfer_group}`,
-            ),
+            inArray(transactions.external_id, [originFeeId, destinationFeeId]),
           ),
         );
     });
