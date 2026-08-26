@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { api_integrations, locations, transactions } from "@/lib/db/schema";
+import { accounts, api_integrations, locations, transactions } from "@/lib/db/schema";
 import { getUserSettings } from "@/lib/data/userSettings";
 import { thisYearMonth } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
@@ -20,15 +20,20 @@ export interface HomePageData {
 export async function getHomePageData(): Promise<HomePageData> {
   const user = await requireUser();
 
-  const [settings, lifetimeTxs, integrationsRows, places] = await Promise.all([
-    getUserSettings(user.id),
-    db.select().from(transactions).where(eq(transactions.user_id, user.id)),
-    db
-      .select({ provider: api_integrations.provider })
-      .from(api_integrations)
-      .where(eq(api_integrations.user_id, user.id)),
-    db.select().from(locations).where(eq(locations.user_id, user.id)),
-  ]);
+  const [settings, lifetimeTxs, integrationsRows, places, accountRows] =
+    await Promise.all([
+      getUserSettings(user.id),
+      db.select().from(transactions).where(eq(transactions.user_id, user.id)),
+      db
+        .select({ provider: api_integrations.provider })
+        .from(api_integrations)
+        .where(eq(api_integrations.user_id, user.id)),
+      db.select().from(locations).where(eq(locations.user_id, user.id)),
+      db
+        .select({ source: accounts.source })
+        .from(accounts)
+        .where(eq(accounts.user_id, user.id)),
+    ]);
 
   const yearMonth = thisYearMonth(settings?.timezone ?? "UTC");
 
@@ -45,7 +50,11 @@ export async function getHomePageData(): Promise<HomePageData> {
     12,
   );
 
-  const sources = collectSources(lifetimeTxs, connectedProviderIds);
+  const sources = collectSources(
+    lifetimeTxs,
+    connectedProviderIds,
+    accountRows.map((row) => row.source),
+  );
 
   return {
     yearMonth,
@@ -68,11 +77,13 @@ function uniqueStrings(
 function collectSources(
   txs: ReadonlyArray<Pick<Transaction, "source">>,
   connectedProviderIds: ReadonlyArray<IntegrationProvider>,
+  accountSources: ReadonlyArray<string>,
 ): string[] {
   const set = new Set<string>();
   for (const tx of txs) {
     if (tx.source) set.add(tx.source);
   }
   for (const id of connectedProviderIds) set.add(id);
+  for (const source of accountSources) set.add(source);
   return Array.from(set).sort();
 }
