@@ -47,7 +47,7 @@ export function useTransactionRow(
   const lockAmountFields = isSynced || isTransfer;
   const canChangeSource =
     !isTransfer && (!isSynced || !isSyncedExternalId(tx.external_id));
-  const canShiftMonth = canShiftBudgetMonth(tx);
+  const canShiftMonth = canShiftBudgetMonth(tx) || hasBudgetMonthOverride(tx);
   const realMonth = tx.occurred_on.slice(0, 7);
   const isMovedOut =
     showBudgetMonthBadges && !showDate && hasBudgetMonthOverride(tx);
@@ -94,7 +94,9 @@ export function useTransactionRow(
   function handleUndoTransfer() {
     runAfterMenuClose(() =>
       transfer.run(() => unmarkTransfer(tx.id), {
-        confirm: "Undo this transfer?",
+        confirm: tx.budget_month
+          ? `Undo this transfer? Its rows keep ${formatMonthShort(tx.budget_month)} as budget month and can be moved back individually.`
+          : "Undo this transfer?",
         success: "Transfer undone",
       }),
     );

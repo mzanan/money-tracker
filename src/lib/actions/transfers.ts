@@ -680,7 +680,6 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
             .update(transactions)
             .set({
               transfer_group: null,
-              budget_month: null,
               ...(amount !== undefined ? { amount_original: amount } : {}),
             })
             .where(
@@ -727,6 +726,23 @@ export async function setBudgetMonthShift(
 
   const group = budgetMonthGroupOf(tx);
   if (!group) {
+    if (shift === 0 && tx.budget_month !== null) {
+      try {
+        await db
+          .update(transactions)
+          .set({ budget_month: null })
+          .where(
+            and(eq(transactions.id, txId), eq(transactions.user_id, user.id)),
+          );
+        revalidatePath("/", "layout");
+        return { ok: true };
+      } catch (error) {
+        return {
+          ok: false,
+          error: error instanceof Error ? error.message : "Update failed",
+        };
+      }
+    }
     return { ok: false, error: "Only transfers and withdrawals can be moved" };
   }
 
@@ -763,6 +779,10 @@ export async function setBudgetMonthShift(
             and(
               eq(transactions.id, row.id),
               eq(transactions.user_id, user.id),
+              or(
+                eq(transactions.transfer_group, group),
+                inArray(transactions.external_id, linkedExternalIds(group)),
+              ),
             ),
           );
       }
