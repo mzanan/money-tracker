@@ -4,11 +4,15 @@ import { useId, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { getCurrency } from "@/lib/constants/currencies";
-import { kindOfSource } from "@/lib/constants/sources";
+import {
+  transferAvailableFor,
+  withdrawalAvailableFor,
+} from "@/lib/constants/sources";
 import { useRates } from "@/hooks/useRates";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
 import { recordWithdrawalExpense } from "@/lib/actions/cash";
+import { recordTransfer } from "@/lib/actions/transfers";
 import { createTransaction } from "@/lib/actions/transactions";
 import {
   convert,
@@ -19,11 +23,21 @@ import {
 } from "@/lib/currency";
 import { todayInTz } from "@/lib/dates";
 import { withdrawalChargedAmount } from "@/lib/withdrawal";
+import {
+  aggregateFeesBySide,
+  creditedPreview,
+  parseFeeDrafts,
+} from "@/lib/transfer";
+
+import { useAccountOptions } from "./useAccountOptions";
 import { useUiStore } from "@/stores/uiStore";
 
+import { quickAddExtrasLabel } from "./quickAddExtras";
+
+import type { FeeDraft } from "./transferFeeFields";
 import type { Kind } from "./kindToggle";
 
-export function useQuickAddForm(source?: string) {
+export function useQuickAddForm(source: string) {
   const settings = useSettings();
   const timezone = useTimezone();
   const ratesQuery = useRates();
@@ -46,6 +60,13 @@ export function useQuickAddForm(source?: string) {
   const [date, setDate] = useState(() => todayInTz(timezone));
   const [showExtras, setShowExtras] = useState(false);
   const [withdrawal, setWithdrawal] = useState(false);
+  const [transfer, setTransfer] = useState(false);
+  const [transferDestination, setTransferDestination] = useState("");
+  const [transferFees, setTransferFees] = useState<FeeDraft[]>([
+    { amount: "", payer: "origin" },
+  ]);
+  const [receivedAmount, setReceivedAmount] = useState("");
+  const [receivedCurrencyState, setReceivedCurrencyState] = useState("");
   const [withdrawalTotal, setWithdrawalTotal] = useState("");
   const [withdrawalFee, setWithdrawalFee] = useState("");
   const [chargedCurrencyState, setChargedCurrencyState] = useState(
@@ -59,6 +80,11 @@ export function useQuickAddForm(source?: string) {
     setWithdrawalTotal("");
     setWithdrawalFee("");
     setChargedCurrencyState(settings.currencies[0]);
+    setTransfer(false);
+    setTransferDestination("");
+    setTransferFees([{ amount: "", payer: "origin" }]);
+    setReceivedAmount("");
+    setReceivedCurrencyState("");
   }
 
   const currency = settings.currencies.includes(currencyState)
@@ -71,11 +97,16 @@ export function useQuickAddForm(source?: string) {
 
   const numericAmount = parseAmountInput(amount);
 
+  const transferAvailable =
+    kind === "expense" &&
+    transferAvailableFor(source, settings.cash_enabled);
+  const transferActive = transfer && transferAvailable;
   const withdrawalAvailable =
     kind === "expense" &&
-    source !== undefined &&
-    kindOfSource(source) === "csv";
+    withdrawalAvailableFor(source) &&
+    !transferActive;
   const withdrawalActive = withdrawal && withdrawalAvailable;
+  const extrasLabel = quickAddExtrasLabel(transferAvailable, withdrawalAvailable);
   const withdrawalTotalFilled = parseAmountInput(withdrawalTotal) !== null;
 
   function setChargedCurrency(value: string) {
@@ -83,6 +114,34 @@ export function useQuickAddForm(source?: string) {
     setWithdrawalTotal("");
     setWithdrawalFee("");
   }
+
+  const transferSources = useAccountOptions(source, transferActive);
+  const receivedCurrency = settings.currencies.includes(receivedCurrencyState)
+    ? receivedCurrencyState
+    : currency;
+  const parsedReceived = parseAmountInput(receivedAmount);
+  const received =
+    parsedReceived !== null && receivedCurrency !== currency
+      ? { amount: parsedReceived, currency: receivedCurrency }
+      : null;
+  const destinationCurrency = received?.currency ?? currency;
+  const transferFeeEntries = parseFeeDrafts(transferFees, parseAmountInput);
+  const transferFeesBySide = aggregateFeesBySide(
+    transferFeeEntries,
+    currency,
+    destinationCurrency,
+  );
+  const transferPreview =
+    numericAmount === null
+      ? null
+      : creditedPreview({
+          debited: numericAmount,
+          fees: transferFeesBySide,
+          sourceCurrency: currency,
+          destinationCurrency,
+          received,
+          rates: ratesQuery.data?.rates ?? null,
+        });
 
   const preview = useMemo(() => {
     if (numericAmount === null) return null;
@@ -112,6 +171,45 @@ export function useQuickAddForm(source?: string) {
     }
     const rounded = parsed.amount;
 
+    if (transferActive) {
+      if (!transferDestination) {
+        toast.error("Pick the destination account");
+        return;
+      }
+      run(
+        () =>
+          recordTransfer({
+            amount: rounded,
+            currency,
+            source,
+            destinationSource: transferDestination,
+            occurredOn: date,
+            note: description.trim() || null,
+            tags: tagsInput
+              .split(",")
+              .map((tag) => tag.trim())
+              .filter(Boolean),
+            fees: transferFeeEntries,
+            ...(received ? { received } : {}),
+          }),
+        {
+          success: `Transfer · ${formatMoney(rounded, currency)}`,
+          onSuccess: () => {
+            setAmount("");
+            setDescription("");
+            setTagsInput("");
+            setTransfer(false);
+            setTransferDestination("");
+            setTransferFees([{ amount: "", payer: "origin" }]);
+            setReceivedAmount("");
+            setReceivedCurrencyState("");
+            setLastCurrency(currency);
+          },
+        },
+      );
+      return;
+    }
+
     if (withdrawalActive) {
       const total = parseAmountInput(withdrawalTotal);
       if (total === null) {
@@ -138,7 +236,7 @@ export function useQuickAddForm(source?: string) {
             chargedCurrency,
             total,
             fee,
-            source: source ?? "",
+            source,
             occurredOn: date,
             note: description.trim() || null,
             tags: tagsInput
@@ -205,6 +303,22 @@ export function useQuickAddForm(source?: string) {
     baseCurrency: settings.base_currency,
     showExtras,
     setShowExtras,
+    extrasLabel,
+    transfer,
+    setTransfer,
+    transferAvailable,
+    transferActive,
+    transferSources,
+    transferDestination,
+    setTransferDestination,
+    transferFees,
+    setTransferFees,
+    receivedAmount,
+    setReceivedAmount,
+    receivedCurrency,
+    setReceivedCurrency: setReceivedCurrencyState,
+    destinationCurrency,
+    transferPreview,
     withdrawal,
     setWithdrawal,
     withdrawalAvailable,

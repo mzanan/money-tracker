@@ -3,7 +3,6 @@
 import { Loader2Icon } from "lucide-react";
 
 import { AccountSelect } from "./accountSelect";
-import { AmountInput } from "@/components/ui/amountInput";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -15,26 +14,49 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Label } from "@/components/ui/label";
-import { getCurrency } from "@/lib/constants/currencies";
+import { useSettings } from "@/hooks/useSettings";
 
+import { TransferFeeSection } from "./transferFeeSection";
 import { useMarkTransferDialog } from "./useMarkTransferDialog";
 
 export function MarkTransferDialog({
   txId,
   txSource,
   txCurrency,
+  txAmount,
   open,
   onOpenChange,
 }: {
   txId: string;
   txSource: string;
   txCurrency: string;
+  txAmount: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { sources, selected, setSelected, fee, setFee, pending, submit } =
-    useMarkTransferDialog({ txId, txSource, open, onOpenChange });
+  const settings = useSettings();
+  const {
+    sources,
+    selected,
+    setSelected,
+    fees,
+    setFees,
+    receivedAmount,
+    setReceivedAmount,
+    receivedCurrency,
+    setReceivedCurrency,
+    destinationCurrency,
+    preview,
+    pending,
+    submit,
+  } = useMarkTransferDialog({
+    txId,
+    txSource,
+    txCurrency,
+    txAmount,
+    open,
+    onOpenChange,
+  });
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -54,16 +76,19 @@ export function MarkTransferDialog({
             onValueChange={setSelected}
             emptyMessage="No other account to pick. Import or add one first."
           />
-          <div className="grid gap-1.5">
-            <Label htmlFor="transfer-fee">Fee ({txCurrency}), optional</Label>
-            <AmountInput
-              id="transfer-fee"
-              value={fee}
-              onChange={setFee}
-              decimals={getCurrency(txCurrency).decimals}
-              placeholder="0"
-            />
-          </div>
+          <TransferFeeSection
+            idPrefix="transfer"
+            fees={fees}
+            onFeesChange={setFees}
+            sourceCurrency={txCurrency}
+            destinationCurrency={destinationCurrency}
+            currencies={settings.currencies}
+            receivedAmount={receivedAmount}
+            onReceivedAmountChange={setReceivedAmount}
+            receivedCurrency={receivedCurrency}
+            onReceivedCurrencyChange={setReceivedCurrency}
+            preview={preview}
+          />
         </DrawerBody>
         <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
           <Button

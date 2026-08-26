@@ -5,6 +5,9 @@ import { useState } from "react";
 import { useServerAction } from "@/hooks/useServerAction";
 import { markPairAsTransfer } from "@/lib/actions/transfers";
 import { parseAmountInput, roundForCurrency } from "@/lib/currency";
+import { aggregateFeesBySide, parseFeeDrafts } from "@/lib/transfer";
+
+import type { FeeDraft } from "./transferFeeFields";
 import type { Transaction } from "@/types/db";
 
 export function useMarkPairTransferDialog({
@@ -17,8 +20,6 @@ export function useMarkPairTransferDialog({
   onSuccess: () => void;
 }) {
   const { run, pending } = useServerAction();
-  const [recordFeeDelta, setRecordFeeDelta] = useState(true);
-  const [feeAmount, setFeeAmount] = useState("");
 
   const sameCurrency =
     expenseTx.currency_original === incomeTx.currency_original;
@@ -28,30 +29,38 @@ export function useMarkPairTransferDialog({
       ? roundForCurrency(rawDelta, expenseTx.currency_original)
       : 0;
 
+  const [fees, setFees] = useState<FeeDraft[]>([
+    { amount: delta > 0 ? String(delta) : "", payer: "origin" },
+  ]);
+
+  const feeEntries = parseFeeDrafts(fees, parseAmountInput);
+
+  const bySide = aggregateFeesBySide(
+    feeEntries,
+    expenseTx.currency_original,
+    incomeTx.currency_original,
+  );
+
+  const total = roundForCurrency(
+    bySide.origin + bySide.destination,
+    expenseTx.currency_original,
+  );
+  const deltaMismatch = sameCurrency && total > 0 && total !== delta;
+
   function submit() {
-    run(
-      () =>
-        markPairAsTransfer(
-          expenseTx.id,
-          incomeTx.id,
-          sameCurrency
-            ? { recordFeeDelta: delta > 0 && recordFeeDelta }
-            : { feeAmount: parseAmountInput(feeAmount) ?? undefined },
-        ),
-      {
-        success: "Marked as a transfer",
-        onSuccess,
-      },
-    );
+    if (deltaMismatch) return;
+    run(() => markPairAsTransfer(expenseTx.id, incomeTx.id, { fees: bySide }), {
+      success: "Marked as a transfer",
+      onSuccess,
+    });
   }
 
   return {
     sameCurrency,
     delta,
-    recordFeeDelta,
-    setRecordFeeDelta,
-    feeAmount,
-    setFeeAmount,
+    fees,
+    setFees,
+    deltaMismatch,
     pending,
     submit,
   };
