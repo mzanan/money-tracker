@@ -779,6 +779,10 @@ export async function setBudgetMonthShift(
             and(
               eq(transactions.id, row.id),
               eq(transactions.user_id, user.id),
+              or(
+                eq(transactions.transfer_group, group),
+                inArray(transactions.external_id, linkedExternalIds(group)),
+              ),
             ),
           );
       }
