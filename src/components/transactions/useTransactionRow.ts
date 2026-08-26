@@ -13,7 +13,7 @@ import { setBudgetMonthShift, unmarkTransfer } from "@/lib/actions/transfers";
 import { canShiftBudgetMonth, hasBudgetMonthOverride } from "@/lib/budgetMonth";
 import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
 import { formatMonthShort } from "@/lib/dates";
-import { isSyncedExternalId } from "@/lib/externalIds";
+import { EXTERNAL_ID_PREFIX, isSyncedExternalId } from "@/lib/externalIds";
 import { isFixedTransaction } from "@/lib/fixedExpenses";
 import { transactionInDisplay } from "@/lib/totals";
 import { useUiStore } from "@/stores/uiStore";
@@ -42,6 +42,9 @@ export function useTransactionRow(
   const duplicate = useDialogState(runAfterMenuClose);
 
   const isTransfer = Boolean(tx.transfer_group);
+  const isWithdrawal = Boolean(
+    tx.external_id?.startsWith(EXTERNAL_ID_PREFIX.withdrawal),
+  );
   const isSynced = kindOfSource(tx.source) === "api";
   const canDelete = !isSynced && !isTransfer;
   const lockAmountFields = isSynced || isTransfer;
@@ -129,6 +132,7 @@ export function useTransactionRow(
     avatarSeed,
     description,
     isTransfer,
+    isWithdrawal,
     sign,
     inDisplay,
     showConverted,
