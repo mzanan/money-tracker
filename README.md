@@ -178,7 +178,12 @@ drizzle/migrations/           # SQL generado por drizzle-kit
   En la vista mensual la fila movida sigue visible en su mes real (badge
   "Moved to {mes}", monto atenuado, no suma en los totales) y aparece
   además en el mes destino dentro de un grupo "Carried over from {mes}"
-  (badge "From {mes}", ese sí suma en los totales).
+  (badge "From {mes}", ese sí suma en los totales, con sus propios totales
+  en la cabecera del grupo). El mes destino se calcula una sola vez desde
+  el `occurred_on` más viejo del grupo, y solo se marcan las patas cuyo mes
+  natural difiera de ese destino. Una fila con `budget_month` queda
+  bloqueada para cambiarle la fecha o mergearla como duplicada hasta que
+  se la devuelva a su mes real.
 - **Auth**: email+password + Google OAuth vía Better Auth.
   `AUTH_DISABLE_SIGNUPS=true` bloquea registros nuevos en ambos métodos
   (single-user). El OTP por email se descartó el 2026-06-11: dependía de
