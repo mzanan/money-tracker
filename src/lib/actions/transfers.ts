@@ -3,7 +3,11 @@
 import { and, eq, inArray, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-import { budgetMonthGroupOf, linkedExternalIds } from "@/lib/budgetMonth";
+import {
+  BUDGET_MONTH_LOCK_ERROR,
+  budgetMonthGroupOf,
+  linkedExternalIds,
+} from "@/lib/budgetMonth";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 import { kindOfSource } from "@/lib/constants/sources";
@@ -73,7 +77,7 @@ export async function markAsTransfer(
   if (tx.budget_month) {
     return {
       ok: false,
-      error: "Move this transaction back to its real month first",
+      error: BUDGET_MONTH_LOCK_ERROR,
     };
   }
   if (mirrorSource === tx.source) {
@@ -212,7 +216,7 @@ export async function markPairAsTransfer(
   if (rows.some((r) => r.budget_month)) {
     return {
       ok: false,
-      error: "Move this transaction back to its real month first",
+      error: BUDGET_MONTH_LOCK_ERROR,
     };
   }
 
@@ -422,11 +426,19 @@ export async function setBudgetMonthShift(
       ),
     );
 
+  const anchorMonth = linked
+    .reduce(
+      (oldest, row) => (row.occurred_on < oldest ? row.occurred_on : oldest),
+      tx.occurred_on,
+    )
+    .slice(0, 7);
+  const target = shift === 1 ? shiftYearMonth(anchorMonth, 1) : null;
+
   try {
     await db.transaction(async (dbTx) => {
       for (const row of linked) {
         const value =
-          shift === 1 ? shiftYearMonth(row.occurred_on.slice(0, 7), 1) : null;
+          target === row.occurred_on.slice(0, 7) ? null : target;
         await dbTx
           .update(transactions)
           .set({ budget_month: value })

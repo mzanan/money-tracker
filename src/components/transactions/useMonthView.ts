@@ -8,6 +8,7 @@ import {
   groupCarriedOverByMonth,
   mergeMovedOutIntoDays,
   partitionCarriedOver,
+  splitCarriedOverPairs,
 } from "@/lib/budgetMonth";
 import {
   MONTH_INITIAL_DAYS,
@@ -33,22 +34,58 @@ export function useMonthView(
   }>({ key: undefined, dates: null });
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const { native, carriedOver } = useMemo(
+  const partitioned = useMemo(
     () => partitionCarriedOver(transactions),
     [transactions],
   );
+  const crossed = useMemo(
+    () =>
+      groupCarriedOver
+        ? splitCarriedOverPairs(
+            partitioned.native,
+            partitioned.carriedOver,
+            movedOut,
+          )
+        : { pairs: [], ...partitioned, displayOnly: movedOut },
+    [partitioned, movedOut, groupCarriedOver],
+  );
+  const native = crossed.native;
+  const carriedOver = crossed.carriedOver;
   const carriedOverGroups = useMemo(
-    () => (groupCarriedOver ? groupCarriedOverByMonth(carriedOver) : []),
-    [carriedOver, groupCarriedOver],
+    () =>
+      groupCarriedOver
+        ? groupCarriedOverByMonth(
+            carriedOver,
+            settings.base_currency,
+            includeTransfers,
+            crossed.pairs,
+          )
+        : [],
+    [
+      carriedOver,
+      crossed.pairs,
+      groupCarriedOver,
+      settings.base_currency,
+      includeTransfers,
+    ],
   );
   const displayOnlyRows = useMemo(
-    () => (groupCarriedOver ? movedOut : [...movedOut, ...carriedOver]),
-    [movedOut, carriedOver, groupCarriedOver],
+    () =>
+      groupCarriedOver
+        ? crossed.displayOnly
+        : [...crossed.displayOnly, ...carriedOver],
+    [crossed.displayOnly, carriedOver, groupCarriedOver],
   );
 
   const nativeDays = useMemo(
-    () => dayTotalsWithPairs(native, settings.base_currency, includeTransfers),
-    [native, settings.base_currency, includeTransfers],
+    () =>
+      dayTotalsWithPairs(
+        native,
+        settings.base_currency,
+        includeTransfers,
+        displayOnlyRows,
+      ),
+    [native, settings.base_currency, includeTransfers, displayOnlyRows],
   );
   const days = useMemo(
     () => mergeMovedOutIntoDays(nativeDays, displayOnlyRows),

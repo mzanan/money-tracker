@@ -36,13 +36,20 @@ export function useDaySpend({
       settings.base_currency,
       includeTransfers,
     )) {
+      if (day.date < monthStart || day.date > monthEnd) continue;
       const expenseCount = day.transactions.filter(
         (t) => t.kind === "expense",
       ).length;
       map.set(day.date, { expense: day.expense, count: expenseCount });
     }
     return map;
-  }, [transactions, settings.base_currency, includeTransfers]);
+  }, [
+    transactions,
+    settings.base_currency,
+    includeTransfers,
+    monthStart,
+    monthEnd,
+  ]);
 
   const daysInMonth = useMemo(() => {
     const out: string[] = [];

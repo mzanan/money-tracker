@@ -12,7 +12,7 @@ import {
 import { setBudgetMonthShift, unmarkTransfer } from "@/lib/actions/transfers";
 import { canShiftBudgetMonth, hasBudgetMonthOverride } from "@/lib/budgetMonth";
 import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
-import { formatMonthShort, shiftYearMonth } from "@/lib/dates";
+import { formatMonthShort } from "@/lib/dates";
 import { isSyncedExternalId } from "@/lib/externalIds";
 import { isFixedTransaction } from "@/lib/fixedExpenses";
 import { transactionInDisplay } from "@/lib/totals";
@@ -102,10 +102,7 @@ export function useTransactionRow(
 
   function handleShiftBudgetMonth() {
     const next = tx.budget_month ? 0 : 1;
-    const successMessage =
-      next === 1
-        ? `Moved to ${formatMonthShort(shiftYearMonth(realMonth, 1))}`
-        : "Moved back";
+    const successMessage = next === 1 ? "Moved to next month" : "Moved back";
     runAfterMenuClose(() =>
       budgetMonthShift.run(() => setBudgetMonthShift(tx.id, next), {
         success: successMessage,

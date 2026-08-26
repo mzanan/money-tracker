@@ -12,10 +12,10 @@ export function CarriedOverGroup({ group }: { group: CarriedOverGroupData }) {
       day={{
         date: `${group.month}-01`,
         transactions: group.transactions,
-        income: 0,
-        expense: 0,
-        net: 0,
-        pairs: [],
+        income: group.income,
+        expense: group.expense,
+        net: group.net,
+        pairs: group.pairs,
       }}
       title={`Carried over from ${formatMonthLong(group.month)}`}
       showRowDate

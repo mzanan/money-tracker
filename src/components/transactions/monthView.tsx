@@ -3,6 +3,7 @@
 import { Loader2Icon, ListChecksIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/emptyState";
 import { Surface } from "@/components/ui/surface";
 
 import type { Transaction } from "@/types/db";
@@ -71,6 +72,9 @@ export function MonthView({
       {carriedOverGroups.map((group) => (
         <CarriedOverGroup key={group.month} group={group} />
       ))}
+      {days.length === 0 && (
+        <EmptyState className="px-3 py-8 text-center">{emptyLabel}</EmptyState>
+      )}
       {shown.map((day) => (
         <DayGroup
           key={day.date}
