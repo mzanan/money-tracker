@@ -60,6 +60,7 @@ export function TransactionRow({
     avatarSeed,
     description,
     isTransfer,
+    isWithdrawal,
     sign,
     inDisplay,
     showConverted,
@@ -234,7 +235,9 @@ export function TransactionRow({
           <span className="text-foreground shrink-0 text-sm leading-tight font-medium">
             {sourceLabel}
           </span>
-          {isTransfer && <TransferBadge />}
+          {(isTransfer || isWithdrawal) && (
+            <TransferBadge>{isWithdrawal ? "Withdrawal" : "Transfer"}</TransferBadge>
+          )}
           {isCarriedOver && (
             <BudgetMonthBadge
               direction="from"
