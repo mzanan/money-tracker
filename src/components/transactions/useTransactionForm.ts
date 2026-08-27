@@ -80,23 +80,28 @@ export function useTransactionForm({
     seed.externalId?.startsWith(EXTERNAL_ID_PREFIX.transferFee),
   );
 
+  const withdrawalToggleAvailableIgnoringTransfer =
+    Boolean(txId) &&
+    kind === "expense" &&
+    !seed.transferGroup &&
+    !isWithdrawalExtId &&
+    !isTransferFeeExtId &&
+    withdrawalAvailableFor(seed.source);
+  const withdrawalWouldBeActive =
+    withdrawal && withdrawalToggleAvailableIgnoringTransfer;
+
   const transferToggleAvailable =
     Boolean(txId) &&
     !seed.transferGroup &&
     !isWithdrawalExtId &&
     !isTransferFeeExtId &&
     kindOfSource(seed.source) !== "api" &&
-    transferAvailableFor(seed.source, settings.cash_enabled);
+    transferAvailableFor(seed.source, settings.cash_enabled) &&
+    !withdrawalWouldBeActive;
   const transferActive = transfer && transferToggleAvailable;
 
   const withdrawalToggleAvailable =
-    Boolean(txId) &&
-    kind === "expense" &&
-    !seed.transferGroup &&
-    !isWithdrawalExtId &&
-    !isTransferFeeExtId &&
-    withdrawalAvailableFor(seed.source) &&
-    !transferActive;
+    withdrawalToggleAvailableIgnoringTransfer && !transferActive;
   const withdrawalActive = withdrawal && withdrawalToggleAvailable;
 
   const transferDraft = useTransferDraft({
