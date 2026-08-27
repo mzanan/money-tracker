@@ -2,12 +2,17 @@
 
 import { CheckIcon, Loader2Icon, MoreVerticalIcon, XIcon } from "lucide-react";
 
-import { removeAccount, upsertAccountLabel } from "@/lib/actions/accounts";
+import {
+  removeAccount,
+  setAccountCurrency,
+  upsertAccountLabel,
+} from "@/lib/actions/accounts";
 import { deleteSource } from "@/lib/actions/sources";
 import { kindOfSource } from "@/lib/constants/sources";
 import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useInlineEdit } from "@/hooks/useInlineEdit";
 import { useServerAction } from "@/hooks/useServerAction";
+import { useSettings } from "@/hooks/useSettings";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,12 +24,22 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ListRow } from "@/components/ui/listRow";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const MULTI_CURRENCY_VALUE = "__multi__";
 
 interface Props {
   source: string;
   label: string;
   count: number;
   hasAccount: boolean;
+  currency: string | null;
 }
 
 export function ImportedAccountRow({
@@ -32,10 +47,20 @@ export function ImportedAccountRow({
   label,
   count,
   hasAccount,
+  currency,
 }: Props) {
+  const settings = useSettings();
   const { run, pending } = useServerAction();
+  const currencyAction = useServerAction();
   const runAfterMenuClose = useDeferredMenuAction();
   const reserved = kindOfSource(source) !== "csv";
+
+  function handleCurrencyChange(value: string) {
+    currencyAction.run(
+      () => setAccountCurrency(source, value === MULTI_CURRENCY_VALUE ? null : value),
+      { success: "Currency updated" },
+    );
+  }
 
   const edit = useInlineEdit((next) => {
     if (!next || next === label) return;
@@ -111,6 +136,29 @@ export function ImportedAccountRow({
           : "No transactions yet"
       }
     >
+      {!reserved && (
+        <Select
+          value={currency ?? MULTI_CURRENCY_VALUE}
+          onValueChange={handleCurrencyChange}
+          disabled={currencyAction.pending}
+        >
+          <SelectTrigger
+            size="sm"
+            className="w-28"
+            aria-label={`${label} currency`}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={MULTI_CURRENCY_VALUE}>Multi-currency</SelectItem>
+            {settings.currencies.map((code) => (
+              <SelectItem key={code} value={code}>
+                {code}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger
           render={

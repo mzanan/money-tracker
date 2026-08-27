@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { accounts } from "@/lib/db/schema";
@@ -36,4 +36,22 @@ export async function getAccountBySource(
 export async function getAccountLabels(userId: string): Promise<AccountLabels> {
   const rows = await listAccounts(userId);
   return Object.fromEntries(rows.map((row) => [row.source, row.label]));
+}
+
+export async function getAccountCurrencies(
+  userId: string,
+  sources: string[],
+): Promise<Map<string, string>> {
+  if (sources.length === 0) return new Map();
+  const rows = await db
+    .select({ source: accounts.source, currency: accounts.currency })
+    .from(accounts)
+    .where(
+      and(eq(accounts.user_id, userId), inArray(accounts.source, sources)),
+    );
+  const map = new Map<string, string>();
+  for (const row of rows) {
+    if (row.currency) map.set(row.source, row.currency);
+  }
+  return map;
 }

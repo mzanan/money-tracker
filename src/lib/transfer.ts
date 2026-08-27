@@ -208,3 +208,18 @@ export function creditedPreview({
     impliedRate: null,
   };
 }
+
+export function transferCurrencyError({
+  legCurrency,
+  accountCurrency,
+  accountLabel,
+  side,
+}: {
+  legCurrency: string;
+  accountCurrency: string | undefined;
+  accountLabel: string;
+  side: "sent" | "received";
+}): string | null {
+  if (!accountCurrency || accountCurrency === legCurrency) return null;
+  return `${accountLabel} uses ${accountCurrency}. Enter the amount ${side} in ${accountCurrency}.`;
+}

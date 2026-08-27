@@ -25,6 +25,9 @@ export async function ImportedAccountsCard() {
   const accountLabels = Object.fromEntries(
     accountRows.map((a) => [a.source, a.label]),
   );
+  const accountCurrencies = new Map(
+    accountRows.map((a) => [a.source, a.currency]),
+  );
   const counts = new Map(sourceRows.map((s) => [s.source, s.count]));
   const sources = new Set([
     ...sourceRows.map((s) => s.source),
@@ -37,6 +40,7 @@ export async function ImportedAccountsCard() {
       count: counts.get(source) ?? 0,
       label: resolveSourceLabel(source, accountLabels),
       hasAccount: source in accountLabels,
+      currency: accountCurrencies.get(source) ?? null,
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
@@ -62,6 +66,7 @@ export async function ImportedAccountsCard() {
             label={row.label}
             count={row.count}
             hasAccount={row.hasAccount}
+            currency={row.currency}
           />
         ))}
         <AddAccountRow />
