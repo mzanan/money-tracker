@@ -13,6 +13,14 @@ export async function listAccounts(userId: string): Promise<Account[]> {
   return db.select().from(accounts).where(eq(accounts.user_id, userId));
 }
 
+export async function listAccountSources(userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ source: accounts.source })
+    .from(accounts)
+    .where(eq(accounts.user_id, userId));
+  return rows.map((row) => row.source);
+}
+
 export async function getAccountBySource(
   userId: string,
   source: string,
