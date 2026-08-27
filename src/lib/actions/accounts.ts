@@ -5,7 +5,11 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
 import { accounts } from "@/lib/db/schema";
-import { kindOfSource, normalizeSource } from "@/lib/constants/sources";
+import {
+  capitalizeLabel,
+  kindOfSource,
+  normalizeSource,
+} from "@/lib/constants/sources";
 import { getUser } from "@/lib/session";
 
 import type { ActionResult } from "./transactions";
@@ -31,7 +35,7 @@ export async function upsertAccountLabel(
   const guardError = guardEditable(normalizedSource);
   if (guardError) return { ok: false, error: guardError };
 
-  const trimmedLabel = label.trim();
+  const trimmedLabel = capitalizeLabel(label.trim());
   if (!trimmedLabel) return { ok: false, error: "Name is required" };
 
   const [row] = await db

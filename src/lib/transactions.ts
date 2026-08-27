@@ -83,6 +83,18 @@ export function transactionLabel(
   return detail ? `${sourceLabel} · ${detail}` : sourceLabel;
 }
 
+export function collectSources(
+  txs: ReadonlyArray<Pick<Transaction, "source">>,
+  extraSources: ReadonlyArray<string>,
+): string[] {
+  const set = new Set<string>();
+  for (const tx of txs) {
+    if (tx.source) set.add(tx.source);
+  }
+  for (const source of extraSources) set.add(source);
+  return Array.from(set).sort();
+}
+
 export function csvSourcesFrom(
   txs: ReadonlyArray<Pick<Transaction, "source" | "external_id">>,
 ): string[] {

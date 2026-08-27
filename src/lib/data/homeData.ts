@@ -2,10 +2,11 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { api_integrations, locations, transactions } from "@/lib/db/schema";
+import { listAccountSources } from "@/lib/data/accounts";
 import { getUserSettings } from "@/lib/data/userSettings";
 import { thisYearMonth } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
-import { csvSourcesFrom } from "@/lib/transactions";
+import { collectSources, csvSourcesFrom } from "@/lib/transactions";
 import type { IntegrationProvider, Location, Transaction } from "@/types/db";
 
 export interface HomePageData {
@@ -20,15 +21,17 @@ export interface HomePageData {
 export async function getHomePageData(): Promise<HomePageData> {
   const user = await requireUser();
 
-  const [settings, lifetimeTxs, integrationsRows, places] = await Promise.all([
-    getUserSettings(user.id),
-    db.select().from(transactions).where(eq(transactions.user_id, user.id)),
-    db
-      .select({ provider: api_integrations.provider })
-      .from(api_integrations)
-      .where(eq(api_integrations.user_id, user.id)),
-    db.select().from(locations).where(eq(locations.user_id, user.id)),
-  ]);
+  const [settings, lifetimeTxs, integrationsRows, places, accountSources] =
+    await Promise.all([
+      getUserSettings(user.id),
+      db.select().from(transactions).where(eq(transactions.user_id, user.id)),
+      db
+        .select({ provider: api_integrations.provider })
+        .from(api_integrations)
+        .where(eq(api_integrations.user_id, user.id)),
+      db.select().from(locations).where(eq(locations.user_id, user.id)),
+      listAccountSources(user.id),
+    ]);
 
   const yearMonth = thisYearMonth(settings?.timezone ?? "UTC");
 
@@ -45,7 +48,10 @@ export async function getHomePageData(): Promise<HomePageData> {
     12,
   );
 
-  const sources = collectSources(lifetimeTxs, connectedProviderIds);
+  const sources = collectSources(lifetimeTxs, [
+    ...connectedProviderIds,
+    ...accountSources,
+  ]);
 
   return {
     yearMonth,
@@ -63,16 +69,4 @@ function uniqueStrings(
   return Array.from(
     new Set(input.filter((v): v is string => Boolean(v && v.length > 0))),
   );
-}
-
-function collectSources(
-  txs: ReadonlyArray<Pick<Transaction, "source">>,
-  connectedProviderIds: ReadonlyArray<IntegrationProvider>,
-): string[] {
-  const set = new Set<string>();
-  for (const tx of txs) {
-    if (tx.source) set.add(tx.source);
-  }
-  for (const id of connectedProviderIds) set.add(id);
-  return Array.from(set).sort();
 }

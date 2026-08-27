@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
 
 import { MonthDashboard } from "@/components/transactions/monthDashboard";
+import { listAccountSources } from "@/lib/data/accounts";
 import { getMonthPageData } from "@/lib/data/monthData";
-import { csvSourcesFrom } from "@/lib/transactions";
+import { collectSources, csvSourcesFrom } from "@/lib/transactions";
 import { getRemindersData } from "@/lib/data/reminders";
 import { isValidYearMonth } from "@/lib/dates";
+import { requireUser } from "@/lib/session";
 
 export default async function MonthPage({
   params,
@@ -16,11 +18,13 @@ export default async function MonthPage({
     notFound();
   }
 
-  const [data, remindersData] = await Promise.all([
+  const user = await requireUser();
+  const [data, remindersData, accountSources] = await Promise.all([
     getMonthPageData(ym),
     getRemindersData(),
+    listAccountSources(user.id),
   ]);
-  const sources = collectSources(data.lifetimeTxs);
+  const sources = collectSources(data.lifetimeTxs, accountSources);
   const csvSources = csvSourcesFrom(data.lifetimeTxs);
 
   return (
@@ -35,12 +39,4 @@ export default async function MonthPage({
       today={remindersData.today}
     />
   );
-}
-
-function collectSources(txs: ReadonlyArray<{ source: string }>): string[] {
-  const set = new Set<string>();
-  for (const tx of txs) {
-    if (tx.source) set.add(tx.source);
-  }
-  return Array.from(set).sort();
 }
