@@ -17,7 +17,7 @@ import { CurrencySelect } from "@/components/ui/currencySelect";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Surface } from "@/components/ui/surface";
-import { Switch } from "@/components/ui/switch";
+import { SwitchRow } from "@/components/ui/switchRow";
 
 import { AccountSelect } from "./accountSelect";
 import { KindToggle } from "./kindToggle";
@@ -215,14 +215,12 @@ export function QuickAddForm({ recentTags, source }: Props) {
             </div>
 
             {transferAvailable && (
-              <div className="flex items-center justify-between">
-                <Label htmlFor="transfer-toggle">Transfer</Label>
-                <Switch
-                  id="transfer-toggle"
-                  checked={transfer}
-                  onCheckedChange={setTransfer}
-                />
-              </div>
+              <SwitchRow
+                id="transfer-toggle"
+                label="Transfer"
+                checked={transfer}
+                onCheckedChange={setTransfer}
+              />
             )}
 
             {transferActive && (
@@ -254,14 +252,12 @@ export function QuickAddForm({ recentTags, source }: Props) {
             )}
 
             {withdrawalAvailable && (
-              <div className="flex items-center justify-between">
-                <Label htmlFor="withdrawal-toggle">Withdrawal</Label>
-                <Switch
-                  id="withdrawal-toggle"
-                  checked={withdrawal}
-                  onCheckedChange={setWithdrawal}
-                />
-              </div>
+              <SwitchRow
+                id="withdrawal-toggle"
+                label="Withdrawal"
+                checked={withdrawal}
+                onCheckedChange={setWithdrawal}
+              />
             )}
 
             {withdrawalActive && (
