@@ -95,6 +95,8 @@ export function TransactionRow({
     note: tx.note,
     tags: tx.tags,
     occurredOn: tx.occurred_on,
+    transferGroup: tx.transfer_group,
+    externalId: tx.external_id,
   };
 
   function openEdit() {
@@ -236,7 +238,9 @@ export function TransactionRow({
             {sourceLabel}
           </span>
           {(isTransfer || isWithdrawal) && (
-            <TransferBadge>{isWithdrawal ? "Withdrawal" : "Transfer"}</TransferBadge>
+            <TransferBadge>
+              {isWithdrawal ? "Withdrawal" : "Transfer"}
+            </TransferBadge>
           )}
           {isCarriedOver && (
             <BudgetMonthBadge

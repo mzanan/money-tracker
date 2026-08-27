@@ -54,7 +54,9 @@ export function TransactionFormStep({
             onClick={form.submit}
             disabled={
               form.pending ||
-              (!txId && (!form.source || form.sourceOptions === null))
+              (!txId && (!form.source || form.sourceOptions === null)) ||
+              (form.transferActive && !form.transferDraft.selected) ||
+              (form.withdrawalActive && !form.withdrawalDraft.totalFilled)
             }
           >
             {form.pending && <Loader2Icon className="animate-spin" />}
