@@ -23,18 +23,14 @@ import {
 } from "@/lib/currency";
 import { todayInTz } from "@/lib/dates";
 import { withdrawalChargedAmount } from "@/lib/withdrawal";
-import {
-  aggregateFeesBySide,
-  creditedPreview,
-  parseFeeDrafts,
-} from "@/lib/transfer";
+import { parseFeeDrafts } from "@/lib/transfer";
 
-import { useAccountOptions } from "./useAccountOptions";
+import { useTransferDraft } from "./useTransferDraft";
+import { useWithdrawalDraft } from "./useWithdrawalDraft";
 import { useUiStore } from "@/stores/uiStore";
 
 import { quickAddExtrasLabel } from "./quickAddExtras";
 
-import type { FeeDraft } from "./transferFeeFields";
 import type { Kind } from "./kindToggle";
 
 export function useQuickAddForm(source: string) {
@@ -61,87 +57,42 @@ export function useQuickAddForm(source: string) {
   const [showExtras, setShowExtras] = useState(false);
   const [withdrawal, setWithdrawal] = useState(false);
   const [transfer, setTransfer] = useState(false);
-  const [transferDestination, setTransferDestination] = useState("");
-  const [transferFees, setTransferFees] = useState<FeeDraft[]>([
-    { amount: "", payer: "origin" },
-  ]);
-  const [receivedAmount, setReceivedAmount] = useState("");
-  const [receivedCurrencyState, setReceivedCurrencyState] = useState("");
-  const [withdrawalTotal, setWithdrawalTotal] = useState("");
-  const [withdrawalFee, setWithdrawalFee] = useState("");
-  const [chargedCurrencyState, setChargedCurrencyState] = useState(
-    settings.currencies[0],
-  );
   const [lastSource, setLastSource] = useState(source);
-
-  if (source !== lastSource) {
-    setLastSource(source);
-    setWithdrawal(false);
-    setWithdrawalTotal("");
-    setWithdrawalFee("");
-    setChargedCurrencyState(settings.currencies[0]);
-    setTransfer(false);
-    setTransferDestination("");
-    setTransferFees([{ amount: "", payer: "origin" }]);
-    setReceivedAmount("");
-    setReceivedCurrencyState("");
-  }
 
   const currency = settings.currencies.includes(currencyState)
     ? currencyState
     : settings.currencies[0];
 
-  const chargedCurrency = settings.currencies.includes(chargedCurrencyState)
-    ? chargedCurrencyState
-    : settings.currencies[0];
-
   const numericAmount = parseAmountInput(amount);
 
   const transferAvailable =
-    kind === "expense" &&
-    transferAvailableFor(source, settings.cash_enabled);
+    kind === "expense" && transferAvailableFor(source, settings.cash_enabled);
   const transferActive = transfer && transferAvailable;
   const withdrawalAvailable =
-    kind === "expense" &&
-    withdrawalAvailableFor(source) &&
-    !transferActive;
+    kind === "expense" && withdrawalAvailableFor(source) && !transferActive;
   const withdrawalActive = withdrawal && withdrawalAvailable;
-  const extrasLabel = quickAddExtrasLabel(transferAvailable, withdrawalAvailable);
-  const withdrawalTotalFilled = parseAmountInput(withdrawalTotal) !== null;
-
-  function setChargedCurrency(value: string) {
-    setChargedCurrencyState(value);
-    setWithdrawalTotal("");
-    setWithdrawalFee("");
-  }
-
-  const transferSources = useAccountOptions(source, transferActive);
-  const receivedCurrency = settings.currencies.includes(receivedCurrencyState)
-    ? receivedCurrencyState
-    : currency;
-  const parsedReceived = parseAmountInput(receivedAmount);
-  const received =
-    parsedReceived !== null && receivedCurrency !== currency
-      ? { amount: parsedReceived, currency: receivedCurrency }
-      : null;
-  const destinationCurrency = received?.currency ?? currency;
-  const transferFeeEntries = parseFeeDrafts(transferFees, parseAmountInput);
-  const transferFeesBySide = aggregateFeesBySide(
-    transferFeeEntries,
-    currency,
-    destinationCurrency,
+  const extrasLabel = quickAddExtrasLabel(
+    transferAvailable,
+    withdrawalAvailable,
   );
-  const transferPreview =
-    numericAmount === null
-      ? null
-      : creditedPreview({
-          debited: numericAmount,
-          fees: transferFeesBySide,
-          sourceCurrency: currency,
-          destinationCurrency,
-          received,
-          rates: ratesQuery.data?.rates ?? null,
-        });
+
+  const transferDraft = useTransferDraft({
+    txSource: source,
+    txCurrency: currency,
+    txAmount: numericAmount ?? 0,
+    active: transferActive,
+  });
+  const withdrawalDraft = useWithdrawalDraft({
+    currencies: settings.currencies,
+  });
+
+  if (source !== lastSource) {
+    setLastSource(source);
+    setWithdrawal(false);
+    withdrawalDraft.reset();
+    setTransfer(false);
+    transferDraft.reset();
+  }
 
   const preview = useMemo(() => {
     if (numericAmount === null) return null;
@@ -172,17 +123,21 @@ export function useQuickAddForm(source: string) {
     const rounded = parsed.amount;
 
     if (transferActive) {
-      if (!transferDestination) {
+      if (!transferDraft.selected) {
         toast.error("Pick the destination account");
         return;
       }
+      const transferFeeEntries = parseFeeDrafts(
+        transferDraft.fees,
+        parseAmountInput,
+      );
       run(
         () =>
           recordTransfer({
             amount: rounded,
             currency,
             source,
-            destinationSource: transferDestination,
+            destinationSource: transferDraft.selected,
             occurredOn: date,
             note: description.trim() || null,
             tags: tagsInput
@@ -190,7 +145,9 @@ export function useQuickAddForm(source: string) {
               .map((tag) => tag.trim())
               .filter(Boolean),
             fees: transferFeeEntries,
-            ...(received ? { received } : {}),
+            ...(transferDraft.received
+              ? { received: transferDraft.received }
+              : {}),
           }),
         {
           success: `Transfer · ${formatMoney(rounded, currency)}`,
@@ -199,10 +156,7 @@ export function useQuickAddForm(source: string) {
             setDescription("");
             setTagsInput("");
             setTransfer(false);
-            setTransferDestination("");
-            setTransferFees([{ amount: "", payer: "origin" }]);
-            setReceivedAmount("");
-            setReceivedCurrencyState("");
+            transferDraft.reset();
             setLastCurrency(currency);
           },
         },
@@ -211,16 +165,16 @@ export function useQuickAddForm(source: string) {
     }
 
     if (withdrawalActive) {
-      const total = parseAmountInput(withdrawalTotal);
+      const total = parseAmountInput(withdrawalDraft.total);
       if (total === null) {
         toast.error("Enter the total charged");
         return;
       }
-      const fee = parseAmountInput(withdrawalFee) ?? undefined;
+      const fee = parseAmountInput(withdrawalDraft.fee) ?? undefined;
       const booked = withdrawalChargedAmount({
         received: rounded,
         receivedCurrency: currency,
-        chargedCurrency,
+        chargedCurrency: withdrawalDraft.chargedCurrency,
         total,
         fee,
       });
@@ -233,7 +187,7 @@ export function useQuickAddForm(source: string) {
           recordWithdrawalExpense({
             cashAmount: rounded,
             cashCurrency: currency,
-            chargedCurrency,
+            chargedCurrency: withdrawalDraft.chargedCurrency,
             total,
             fee,
             source,
@@ -245,13 +199,12 @@ export function useQuickAddForm(source: string) {
               .filter(Boolean),
           }),
         {
-          success: `Withdrawal · ${formatMoney(booked, chargedCurrency)}`,
+          success: `Withdrawal · ${formatMoney(booked, withdrawalDraft.chargedCurrency)}`,
           onSuccess: () => {
             setAmount("");
             setDescription("");
             setTagsInput("");
-            setWithdrawalTotal("");
-            setWithdrawalFee("");
+            withdrawalDraft.reset();
             setWithdrawal(false);
             setLastCurrency(currency);
           },
@@ -308,28 +261,28 @@ export function useQuickAddForm(source: string) {
     setTransfer,
     transferAvailable,
     transferActive,
-    transferSources,
-    transferDestination,
-    setTransferDestination,
-    transferFees,
-    setTransferFees,
-    receivedAmount,
-    setReceivedAmount,
-    receivedCurrency,
-    setReceivedCurrency: setReceivedCurrencyState,
-    destinationCurrency,
-    transferPreview,
+    transferSources: transferDraft.sources,
+    transferDestination: transferDraft.selected,
+    setTransferDestination: transferDraft.setSelected,
+    transferFees: transferDraft.fees,
+    setTransferFees: transferDraft.setFees,
+    receivedAmount: transferDraft.receivedAmount,
+    setReceivedAmount: transferDraft.setReceivedAmount,
+    receivedCurrency: transferDraft.receivedCurrency,
+    setReceivedCurrency: transferDraft.setReceivedCurrency,
+    destinationCurrency: transferDraft.destinationCurrency,
+    transferPreview: transferDraft.preview,
     withdrawal,
     setWithdrawal,
     withdrawalAvailable,
     withdrawalActive,
-    withdrawalTotal,
-    setWithdrawalTotal,
-    withdrawalFee,
-    setWithdrawalFee,
-    withdrawalTotalFilled,
-    chargedCurrency,
-    setChargedCurrency,
+    withdrawalTotal: withdrawalDraft.total,
+    setWithdrawalTotal: withdrawalDraft.setTotal,
+    withdrawalFee: withdrawalDraft.fee,
+    setWithdrawalFee: withdrawalDraft.setFee,
+    withdrawalTotalFilled: withdrawalDraft.totalFilled,
+    chargedCurrency: withdrawalDraft.chargedCurrency,
+    setChargedCurrency: withdrawalDraft.setChargedCurrency,
     description,
     setDescription,
     tagsId,

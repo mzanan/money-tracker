@@ -4,15 +4,24 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useAccountOptions } from "./useAccountOptions";
+import { useTransferDraft } from "./useTransferDraft";
+import { useWithdrawalDraft } from "./useWithdrawalDraft";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
+import { convertToWithdrawal } from "@/lib/actions/cash";
+import { markAsTransfer } from "@/lib/actions/transfers";
 import {
   createTransaction,
   getUsedTags,
   updateTransaction,
 } from "@/lib/actions/transactions";
-import { kindOfSource } from "@/lib/constants/sources";
-import { parseAndRoundAmount } from "@/lib/currency";
+import {
+  kindOfSource,
+  transferAvailableFor,
+  withdrawalAvailableFor,
+} from "@/lib/constants/sources";
+import { parseAmountInput, parseAndRoundAmount } from "@/lib/currency";
+import { EXTERNAL_ID_PREFIX, isWithdrawalExternalId } from "@/lib/externalIds";
 import { canonicalTag, tagKey } from "@/lib/tags";
 
 import type { Kind } from "./kindToggle";
@@ -28,6 +37,8 @@ export interface TransactionSeed {
   note: string | null;
   tags: string[];
   occurredOn: string;
+  transferGroup: string | null;
+  externalId: string | null;
 }
 
 export function useTransactionForm({
@@ -59,8 +70,49 @@ export function useTransactionForm({
   const [tagInput, setTagInput] = useState("");
   const [usedTags, setUsedTags] = useState<string[] | null>(null);
   const [date, setDate] = useState(seed.occurredOn);
+  const [transfer, setTransfer] = useState(false);
+  const [withdrawal, setWithdrawal] = useState(false);
 
   const sources = useAccountOptions("", open && !txId);
+
+  const isWithdrawalExtId = isWithdrawalExternalId(seed.externalId);
+  const isTransferFeeExtId = Boolean(
+    seed.externalId?.startsWith(EXTERNAL_ID_PREFIX.transferFee),
+  );
+
+  const withdrawalToggleAvailableIgnoringTransfer =
+    Boolean(txId) &&
+    kind === "expense" &&
+    !seed.transferGroup &&
+    !isWithdrawalExtId &&
+    !isTransferFeeExtId &&
+    withdrawalAvailableFor(seed.source);
+  const withdrawalWouldBeActive =
+    withdrawal && withdrawalToggleAvailableIgnoringTransfer;
+
+  const transferToggleAvailable =
+    Boolean(txId) &&
+    !seed.transferGroup &&
+    !isWithdrawalExtId &&
+    !isTransferFeeExtId &&
+    kindOfSource(seed.source) !== "api" &&
+    transferAvailableFor(seed.source, settings.cash_enabled) &&
+    !withdrawalWouldBeActive;
+  const transferActive = transfer && transferToggleAvailable;
+
+  const withdrawalToggleAvailable =
+    withdrawalToggleAvailableIgnoringTransfer && !transferActive;
+  const withdrawalActive = withdrawal && withdrawalToggleAvailable;
+
+  const transferDraft = useTransferDraft({
+    txSource: seed.source,
+    txCurrency: currency,
+    txAmount: parseAmountInput(amount) ?? 0,
+    active: transferActive,
+  });
+  const withdrawalDraft = useWithdrawalDraft({
+    currencies: settings.currencies,
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -116,6 +168,14 @@ export function useTransactionForm({
       toast.error("Pick an account");
       return;
     }
+    if (transferActive && !transferDraft.selected) {
+      toast.error("Pick the destination account");
+      return;
+    }
+    if (withdrawalActive && parseAmountInput(withdrawalDraft.total) === null) {
+      toast.error("Enter the total charged");
+      return;
+    }
 
     run<{ id: string } | undefined>(
       async () => {
@@ -129,7 +189,37 @@ export function useTransactionForm({
             note: description.trim() || null,
             occurredOn: date,
           });
-          return result.ok ? { ok: true, data: undefined } : result;
+          if (!result.ok) return result;
+
+          if (transferActive) {
+            const markResult = await markAsTransfer(
+              txId,
+              transferDraft.selected,
+              {
+                fees: transferDraft.bySide,
+                ...(transferDraft.received
+                  ? { received: transferDraft.received }
+                  : {}),
+              },
+            );
+            return markResult.ok ? { ok: true, data: undefined } : markResult;
+          }
+
+          if (withdrawalActive) {
+            const total = parseAmountInput(withdrawalDraft.total)!;
+            const fee = parseAmountInput(withdrawalDraft.fee) ?? undefined;
+            const convertResult = await convertToWithdrawal({
+              id: txId,
+              chargedCurrency: withdrawalDraft.chargedCurrency,
+              total,
+              fee,
+            });
+            return convertResult.ok
+              ? { ok: true, data: undefined }
+              : convertResult;
+          }
+
+          return { ok: true, data: undefined };
         }
         return createTransaction({
           kind,
@@ -142,7 +232,11 @@ export function useTransactionForm({
         });
       },
       {
-        success: successMessage,
+        success: transferActive
+          ? "Saved and marked as a transfer"
+          : withdrawalActive
+            ? "Saved and marked as a withdrawal"
+            : successMessage,
         onSuccess: (data) => {
           onOpenChange(false);
           if (data) onCreated?.(data.id);
@@ -173,6 +267,16 @@ export function useTransactionForm({
     removeTag,
     date,
     setDate,
+    transfer,
+    setTransfer,
+    transferToggleAvailable,
+    transferActive,
+    transferDraft,
+    withdrawal,
+    setWithdrawal,
+    withdrawalToggleAvailable,
+    withdrawalActive,
+    withdrawalDraft,
     pending,
     submit,
   };

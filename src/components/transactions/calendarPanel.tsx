@@ -74,6 +74,8 @@ export function CalendarPanel({
                 note: payFlow.activeReminder.label,
                 tags: [],
                 occurredOn: payFlow.payDay,
+                transferGroup: null,
+                externalId: null,
               }}
               onBack={payFlow.backToCandidates}
               onCreated={payFlow.handleExpenseCreated}

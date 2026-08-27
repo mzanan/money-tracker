@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { and, eq, isNull } from "drizzle-orm";
+
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import {
   kindOfSource,
@@ -13,11 +15,15 @@ import { amountValidationError, formatMoney } from "@/lib/currency";
 import { getAccountLabels } from "@/lib/data/accounts";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
+import {
+  EXTERNAL_ID_PREFIX,
+  isSyncedExternalId,
+  isWithdrawalExternalId,
+} from "@/lib/externalIds";
 import { getUser } from "@/lib/session";
 import {
   buildFeeRow,
   buildTransactionRow,
-  EXTERNAL_ID_PREFIX,
   type BuildContext,
 } from "@/lib/transactions";
 import { resolveWithdrawalCharge } from "@/lib/withdrawal";
@@ -73,6 +79,84 @@ function buildWithdrawalFeeRow(
     },
     ctx,
   );
+}
+
+interface WithdrawalConversionInput {
+  userId: string;
+  source: string;
+  occurredOn: string;
+  tags?: string[];
+  note: string | null;
+  receivedAmount: number;
+  receivedCurrency: string;
+  chargedCurrency: string;
+  total: number;
+  fee?: number;
+  externalId: string;
+  group: string;
+}
+
+function buildWithdrawalConversion(
+  input: WithdrawalConversionInput,
+  ctx: BuildContext,
+):
+  | { ok: true; row: TransactionInsert; feeRow: TransactionInsert | null }
+  | { ok: false; error: string } {
+  const totalAmountError = amountValidationError(
+    input.total,
+    input.chargedCurrency,
+  );
+  if (totalAmountError) return { ok: false, error: totalAmountError };
+
+  const charge = resolveWithdrawalCharge({
+    received: input.receivedAmount,
+    receivedCurrency: input.receivedCurrency,
+    chargedCurrency: input.chargedCurrency,
+    total: input.total,
+    fee: input.fee,
+  });
+  if (!charge.ok) return { ok: false, error: charge.error };
+  const { converted, fee } = charge;
+
+  const base = input.note?.trim() || "ATM withdrawal";
+  const note = `${base} · ${formatMoney(input.receivedAmount, input.receivedCurrency, { showCode: true })}`;
+  const row = buildTransactionRow(
+    {
+      userId: input.userId,
+      kind: "expense",
+      amount: converted,
+      currency: input.chargedCurrency,
+      occurredOn: input.occurredOn,
+      tags: input.tags,
+      note,
+      source: input.source,
+      externalId: input.externalId,
+    },
+    ctx,
+  );
+  if (!row) {
+    return { ok: false, error: `No rate for ${input.chargedCurrency}` };
+  }
+
+  let feeRow: TransactionInsert | null = null;
+  if (fee !== undefined && fee > 0) {
+    feeRow = buildWithdrawalFeeRow(
+      {
+        userId: input.userId,
+        fee,
+        currency: input.chargedCurrency,
+        occurredOn: input.occurredOn,
+        source: input.source,
+        group: input.group,
+      },
+      ctx,
+    );
+    if (!feeRow) {
+      return { ok: false, error: `No rate for ${input.chargedCurrency}` };
+    }
+  }
+
+  return { ok: true, row, feeRow };
 }
 
 export async function recordCashWithdrawal(
@@ -298,19 +382,6 @@ export async function recordWithdrawalExpense(
   if (cashAmountError) {
     return { ok: false, error: cashAmountError };
   }
-  const totalAmountError = amountValidationError(total, chargedCurrency);
-  if (totalAmountError) {
-    return { ok: false, error: totalAmountError };
-  }
-  const charge = resolveWithdrawalCharge({
-    received: cashAmount,
-    receivedCurrency: cashCurrency,
-    chargedCurrency,
-    total,
-    fee: parsed.data.fee,
-  });
-  if (!charge.ok) return { ok: false, error: charge.error };
-  const { converted, fee } = charge;
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
@@ -323,43 +394,25 @@ export async function recordWithdrawalExpense(
   if (!ctx) return { ok: false, error: "Settings not found" };
 
   const group = crypto.randomUUID();
-  const base = parsed.data.note?.trim() || "ATM withdrawal";
-  const note = `${base} · ${formatMoney(cashAmount, cashCurrency, { showCode: true })}`;
-  const expense = buildTransactionRow(
+  const conversion = buildWithdrawalConversion(
     {
       userId: user.id,
-      kind: "expense",
-      amount: converted,
-      currency: chargedCurrency,
+      source,
       occurredOn,
       tags,
-      note,
-      source,
+      note: parsed.data.note ?? null,
+      receivedAmount: cashAmount,
+      receivedCurrency: cashCurrency,
+      chargedCurrency,
+      total,
+      fee: parsed.data.fee,
       externalId: `${EXTERNAL_ID_PREFIX.withdrawal}${group}`,
+      group,
     },
     ctx,
   );
-  if (!expense) {
-    return { ok: false, error: `No rate for ${chargedCurrency}` };
-  }
-
-  let feeRow: TransactionInsert | null = null;
-  if (fee !== undefined && fee > 0) {
-    feeRow = buildWithdrawalFeeRow(
-      {
-        userId: user.id,
-        fee,
-        currency: chargedCurrency,
-        occurredOn,
-        source,
-        group,
-      },
-      ctx,
-    );
-    if (!feeRow) {
-      return { ok: false, error: `No rate for ${chargedCurrency}` };
-    }
-  }
+  if (!conversion.ok) return conversion;
+  const { row: expense, feeRow } = conversion;
 
   try {
     await db
@@ -371,6 +424,121 @@ export async function recordWithdrawalExpense(
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Insert failed",
+    };
+  }
+}
+
+const convertToWithdrawalSchema = z.object({
+  id: z.string().min(1),
+  chargedCurrency: z.string().refine(isSupportedCurrency),
+  total: z.number().finite().positive(),
+  fee: z.number().finite().nonnegative().optional(),
+});
+
+export type ConvertToWithdrawalInput = z.infer<
+  typeof convertToWithdrawalSchema
+>;
+
+export async function convertToWithdrawal(
+  input: ConvertToWithdrawalInput,
+): Promise<ActionResult> {
+  const parsed = convertToWithdrawalSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid data" };
+  const { id, chargedCurrency, total, fee } = parsed.data;
+
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const tx = await db
+    .select()
+    .from(transactions)
+    .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)))
+    .limit(1)
+    .then((rows) => rows[0]);
+  if (!tx) return { ok: false, error: "Transaction not found" };
+
+  if (tx.transfer_group) {
+    return { ok: false, error: "Undo the transfer first" };
+  }
+  if (isWithdrawalExternalId(tx.external_id)) {
+    return { ok: false, error: "Already a withdrawal" };
+  }
+  if (tx.external_id?.startsWith(EXTERNAL_ID_PREFIX.transferFee)) {
+    return { ok: false, error: "A fee row can't be a withdrawal" };
+  }
+  if (tx.kind !== "expense") {
+    return { ok: false, error: "Only an expense can be a withdrawal" };
+  }
+  const sourceError = withdrawableSourceError(tx.source);
+  if (sourceError) return { ok: false, error: sourceError };
+  if (isSyncedExternalId(tx.external_id)) {
+    return { ok: false, error: "Synced rows can't be converted" };
+  }
+
+  const ctxResult = await withRatesErrorHandling(() =>
+    buildCurrencyContext(user.id),
+  );
+  if (!ctxResult.ok) return ctxResult;
+  const ctx = ctxResult.data;
+  if (!ctx) return { ok: false, error: "Settings not found" };
+
+  const group = crypto.randomUUID();
+  const conversion = buildWithdrawalConversion(
+    {
+      userId: user.id,
+      source: tx.source,
+      occurredOn: tx.occurred_on,
+      note: tx.note,
+      receivedAmount: tx.amount_original,
+      receivedCurrency: tx.currency_original,
+      chargedCurrency,
+      total,
+      fee,
+      externalId: `${EXTERNAL_ID_PREFIX.withdrawal}${group}`,
+      group,
+    },
+    ctx,
+  );
+  if (!conversion.ok) return conversion;
+  const { row, feeRow } = conversion;
+
+  const externalIdGuard =
+    tx.external_id === null
+      ? isNull(transactions.external_id)
+      : eq(transactions.external_id, tx.external_id);
+
+  try {
+    await db.transaction(async (dbTx) => {
+      const result = await dbTx
+        .update(transactions)
+        .set({
+          amount_original: row.amount_original,
+          currency_original: row.currency_original,
+          fx_rates_snapshot: row.fx_rates_snapshot,
+          note: row.note,
+          external_id: row.external_id,
+        })
+        .where(
+          and(
+            eq(transactions.id, id),
+            eq(transactions.user_id, user.id),
+            isNull(transactions.transfer_group),
+            externalIdGuard,
+          ),
+        );
+      if (result.rowsAffected === 0) {
+        throw new Error("Transaction changed, reload and retry");
+      }
+      if (feeRow) {
+        await dbTx.insert(transactions).values(feeRow);
+      }
+    });
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Update failed",
     };
   }
 }

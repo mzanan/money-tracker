@@ -25,3 +25,7 @@ export function isSyncedExternalId(id: string | null | undefined): boolean {
     id.startsWith(prefix),
   );
 }
+
+export function isWithdrawalExternalId(id: string | null | undefined): boolean {
+  return id != null && id.startsWith(EXTERNAL_ID_PREFIX.withdrawal);
+}
