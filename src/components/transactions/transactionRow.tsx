@@ -323,10 +323,12 @@ export function TransactionRow({
                 Undo transfer
               </DropdownMenuItem>
             ) : (
-              <DropdownMenuItem onSelect={openMarkTransfer}>
-                <BanknoteIcon />
-                Mark as transfer
-              </DropdownMenuItem>
+              !isWithdrawal && (
+                <DropdownMenuItem onSelect={openMarkTransfer}>
+                  <BanknoteIcon />
+                  Mark as transfer
+                </DropdownMenuItem>
+              )
             )}
             {canShiftMonth && (
               <DropdownMenuItem onSelect={handleShiftBudgetMonth}>

@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -14,7 +14,11 @@ import {
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 import { getAccountCurrencies } from "@/lib/data/accounts";
-import { kindOfSource, labelForSource, normalizeSource } from "@/lib/constants/sources";
+import {
+  kindOfSource,
+  labelForSource,
+  normalizeSource,
+} from "@/lib/constants/sources";
 import {
   amountValidationError,
   relativeUsdDiff,
@@ -33,6 +37,7 @@ import {
   type ReceivedAmount,
   type TransferFeeEntry,
 } from "@/lib/transfer";
+import { isWithdrawalExternalId } from "@/lib/externalIds";
 import { getUser } from "@/lib/session";
 import {
   buildTransactionRow,
@@ -80,7 +85,6 @@ export interface MarkTransferOptions {
   fees?: TransferFeeInput;
   received?: ReceivedAmount;
 }
-
 
 const transferFeeSchema = z.object({
   amount: z.number().finite().nonnegative(),
@@ -290,6 +294,9 @@ export async function markAsTransfer(
   if (tx.transfer_group) {
     return { ok: false, error: "Already marked as a transfer" };
   }
+  if (isWithdrawalExternalId(tx.external_id)) {
+    return { ok: false, error: "A withdrawal can't be marked as a transfer" };
+  }
   if (tx.budget_month) {
     return {
       ok: false,
@@ -433,12 +440,19 @@ export async function markAsTransfer(
             ],
           });
       }
-      await dbTx
+      const result = await dbTx
         .update(transactions)
         .set({ transfer_group: tx.id, amount_original: inTransit })
         .where(
-          and(eq(transactions.id, tx.id), eq(transactions.user_id, user.id)),
+          and(
+            eq(transactions.id, tx.id),
+            eq(transactions.user_id, user.id),
+            isNull(transactions.transfer_group),
+          ),
         );
+      if (result.rowsAffected === 0) {
+        throw new Error("Transaction changed, reload and retry");
+      }
     });
     revalidatePath("/", "layout");
     return { ok: true };
@@ -483,7 +497,10 @@ export async function markPairAsTransfer(
 
   const [txA, txB] = rows;
   if (txA.source === txB.source) {
-    return { ok: false, error: "Pick transactions from two different accounts" };
+    return {
+      ok: false,
+      error: "Pick transactions from two different accounts",
+    };
   }
   if (txA.kind === txB.kind) {
     return { ok: false, error: "Pick one income and one expense" };
@@ -506,10 +523,14 @@ export async function markPairAsTransfer(
       rates,
     )
   ) {
-    return { ok: false, error: "Amounts don't match closely enough for a transfer" };
+    return {
+      ok: false,
+      error: "Amounts don't match closely enough for a transfer",
+    };
   }
 
-  const [expenseTx, incomeTx] = txA.kind === "expense" ? [txA, txB] : [txB, txA];
+  const [expenseTx, incomeTx] =
+    txA.kind === "expense" ? [txA, txB] : [txB, txA];
   const sameCurrency = txA.currency_original === txB.currency_original;
 
   const originFee =
@@ -693,7 +714,9 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
     restored.set(
       target.id,
       roundForCurrency(
-        isDestination ? current - feeRow.amount_original : current + feeRow.amount_original,
+        isDestination
+          ? current - feeRow.amount_original
+          : current + feeRow.amount_original,
         target.currency_original,
       ),
     );
@@ -807,8 +830,7 @@ export async function setBudgetMonthShift(
   try {
     await db.transaction(async (dbTx) => {
       for (const row of linked) {
-        const value =
-          target === row.occurred_on.slice(0, 7) ? null : target;
+        const value = target === row.occurred_on.slice(0, 7) ? null : target;
         await dbTx
           .update(transactions)
           .set({ budget_month: value })
