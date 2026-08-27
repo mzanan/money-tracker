@@ -13,10 +13,12 @@ export const API_SOURCES: ReadonlySet<string> = new Set<IntegrationProvider>([
   "bybit",
 ]);
 
+export function capitalizeLabel(label: string): string {
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 export function labelForSource(source: string): string {
-  return (
-    SOURCE_LABELS[source] ?? source.charAt(0).toUpperCase() + source.slice(1)
-  );
+  return SOURCE_LABELS[source] ?? capitalizeLabel(source);
 }
 
 export type AccountLabels = Record<string, string>;
@@ -71,4 +73,3 @@ export function transferAvailableFor(
 export function withdrawalAvailableFor(source: string): boolean {
   return Boolean(source) && kindOfSource(source) === "csv";
 }
-
