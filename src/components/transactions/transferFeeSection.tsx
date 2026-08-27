@@ -20,6 +20,7 @@ export function TransferFeeSection({
   receivedCurrency,
   onReceivedCurrencyChange,
   preview,
+  txKind = "expense",
 }: {
   idPrefix: string;
   fees: FeeDraft[];
@@ -32,7 +33,9 @@ export function TransferFeeSection({
   receivedCurrency: string;
   onReceivedCurrencyChange: (value: string) => void;
   preview: CreditedPreview | null;
+  txKind?: "expense" | "income";
 }) {
+  const isIncome = txKind === "income";
   return (
     <>
       <TransferFeeFields
@@ -44,17 +47,18 @@ export function TransferFeeSection({
       />
       <AmountCurrencyField
         id={`${idPrefix}-received`}
-        label="Amount received, optional"
+        label={isIncome ? "Amount sent, optional" : "Amount received, optional"}
         value={receivedAmount}
         onChange={onReceivedAmountChange}
         currency={receivedCurrency}
         onCurrencyChange={onReceivedCurrencyChange}
         currencies={currencies}
-        currencyAriaLabel="Received currency"
+        currencyAriaLabel={isIncome ? "Sent currency" : "Received currency"}
       />
       {preview && (
         <p className="text-muted-foreground text-sm">
-          Recipient gets {formatMoney(preview.credited, preview.currency)}
+          {isIncome ? "Sender sent" : "Recipient gets"}{" "}
+          {formatMoney(preview.credited, preview.currency)}
           {preview.impliedRate !== null &&
             `, rate ${preview.impliedRate.toPrecision(6)}`}
         </p>

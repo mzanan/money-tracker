@@ -15,12 +15,14 @@ export function MarkTransferStep({
   txSource,
   txCurrency,
   txAmount,
+  txKind,
   onBack,
 }: {
   txId: string;
   txSource: string;
   txCurrency: string;
   txAmount: number;
+  txKind: "expense" | "income";
   onBack: () => void;
 }) {
   const settings = useSettings();
@@ -84,6 +86,7 @@ export function MarkTransferStep({
         receivedCurrency={receivedCurrency}
         onReceivedCurrencyChange={setReceivedCurrency}
         preview={preview}
+        txKind={txKind}
       />
     </StepShell>
   );
