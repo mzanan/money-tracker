@@ -89,8 +89,8 @@ export function TransactionFormFields({
       </div>
       {locked && (
         <p className="text-muted-foreground -mt-2 text-xs">
-          Amount, currency and kind aren&apos;t editable here (synced or
-          transfer transaction).
+          Amount, currency and kind aren&apos;t editable here (synced, transfer
+          or withdrawal transaction).
         </p>
       )}
 

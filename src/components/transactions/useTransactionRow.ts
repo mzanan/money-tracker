@@ -45,7 +45,7 @@ export function useTransactionRow(
   const isWithdrawal = isWithdrawalExternalId(tx.external_id);
   const isSynced = kindOfSource(tx.source) === "api";
   const canDelete = !isSynced && !isTransfer;
-  const lockAmountFields = isSynced || isTransfer;
+  const lockAmountFields = isSynced || isTransfer || isWithdrawal;
   const canChangeSource =
     !isTransfer && (!isSynced || !isSyncedExternalId(tx.external_id));
   const canShiftMonth = canShiftBudgetMonth(tx) || hasBudgetMonthOverride(tx);

@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { amountValidationError } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
-import { isSyncedExternalId } from "@/lib/externalIds";
+import { isSyncedExternalId, isWithdrawalExternalId } from "@/lib/externalIds";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 import {
   createTransactionSchema,
@@ -174,6 +174,12 @@ export async function updateTransaction(
     return {
       ok: false,
       error: "Undo the transfer before editing amount, currency, or kind",
+    };
+  }
+  if (isWithdrawalExternalId(tx.external_id) && amountFieldsChanged) {
+    return {
+      ok: false,
+      error: "Amount, currency and kind aren't editable on a withdrawal",
     };
   }
   if (kindOfSource(tx.source) === "api" && amountFieldsChanged) {
