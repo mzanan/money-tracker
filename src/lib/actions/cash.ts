@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import {
@@ -502,9 +502,14 @@ export async function convertToWithdrawal(
   if (!conversion.ok) return conversion;
   const { row, feeRow } = conversion;
 
+  const externalIdGuard =
+    tx.external_id === null
+      ? isNull(transactions.external_id)
+      : eq(transactions.external_id, tx.external_id);
+
   try {
     await db.transaction(async (dbTx) => {
-      await dbTx
+      const result = await dbTx
         .update(transactions)
         .set({
           amount_original: row.amount_original,
@@ -513,7 +518,17 @@ export async function convertToWithdrawal(
           note: row.note,
           external_id: row.external_id,
         })
-        .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)));
+        .where(
+          and(
+            eq(transactions.id, id),
+            eq(transactions.user_id, user.id),
+            isNull(transactions.transfer_group),
+            externalIdGuard,
+          ),
+        );
+      if (result.rowsAffected === 0) {
+        throw new Error("Transaction changed, reload and retry");
+      }
       if (feeRow) {
         await dbTx.insert(transactions).values(feeRow);
       }
