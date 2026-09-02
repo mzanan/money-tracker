@@ -15,7 +15,8 @@ import {
   oldestYearMonthFrom,
   shiftYearMonth,
 } from "@/lib/dates";
-import { transactionInDisplay } from "@/lib/totals";
+import { splitFixedVariable } from "@/lib/fixedExpenses";
+import { monthExpenseRows, periodTotals, transactionInDisplay } from "@/lib/totals";
 
 import type { Transaction } from "@/types/db";
 
@@ -133,15 +134,18 @@ export function useDashboardView({
 
   const timezone = useTimezone();
   const monthStats = useMemo(() => {
-    let expense = 0;
-    for (const tx of excludeCanceledPairs(monthTransactions)) {
-      if (tx.kind !== "expense" || tx.transfer_group) continue;
-      try {
-        expense += transactionInDisplay(tx, settings.base_currency);
-      } catch {
-        continue;
-      }
-    }
+    const rows = monthExpenseRows(monthTransactions);
+    const { fixed, variable } = splitFixedVariable(
+      rows,
+      settings.fixed_labels,
+    );
+    const variableExpense = periodTotals(
+      variable,
+      settings.base_currency,
+    ).expense;
+    const fixedExpense = periodTotals(fixed, settings.base_currency).expense;
+    const expense = variableExpense + fixedExpense;
+
     const today = todayInTz(timezone);
     const [, end] = monthBounds(visibleYearMonth);
     const lastCounted = today < end ? today : end;
@@ -149,8 +153,19 @@ export function useDashboardView({
       lastCounted.slice(0, 7) === visibleYearMonth
         ? Number(lastCounted.slice(8, 10))
         : Number(end.slice(8, 10));
-    return { expense, avgPerDay: elapsedDays > 0 ? expense / elapsedDays : 0 };
-  }, [monthTransactions, settings.base_currency, timezone, visibleYearMonth]);
+    return {
+      expense,
+      variableExpense,
+      fixedExpense,
+      avgPerDay: elapsedDays > 0 ? variableExpense / elapsedDays : 0,
+    };
+  }, [
+    monthTransactions,
+    settings.base_currency,
+    settings.fixed_labels,
+    timezone,
+    visibleYearMonth,
+  ]);
 
   const cashBalances = useMemo(() => {
     const byCurrency = new Map<string, number>();
@@ -196,6 +211,7 @@ export function useDashboardView({
     topMerchants,
     monthExpense: monthStats.expense,
     avgPerDay: monthStats.avgPerDay,
+    fixedExpense: monthStats.fixedExpense,
     cashBalances,
     selectedTag,
     setSelectedTag,

@@ -343,7 +343,7 @@ export function TransactionRow({
             {!isTransfer && (
               <DropdownMenuItem onSelect={handleToggleFixed}>
                 <PinIcon />
-                {resolvedFixed ? "Mark as variable" : "Mark as fixed"}
+                {resolvedFixed ? "Mark as regular" : "Mark as one-off"}
               </DropdownMenuItem>
             )}
             {canDelete && (

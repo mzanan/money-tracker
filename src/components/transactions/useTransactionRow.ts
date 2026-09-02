@@ -87,7 +87,7 @@ export function useTransactionRow(
     const next = !resolvedFixed;
     runAfterMenuClose(() =>
       fixedToggle.run(() => setTransactionFixed(tx.id, next), {
-        success: next ? "Marked as fixed" : "Marked as variable",
+        success: next ? "Marked as one-off" : "Marked as regular",
       }),
     );
   }
