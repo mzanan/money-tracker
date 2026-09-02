@@ -75,6 +75,12 @@ export function excludeCanceledPairs(
   return splitCanceledPairs(transactions).rest;
 }
 
+export function monthExpenseRows(txs: Transaction[]): Transaction[] {
+  return excludeCanceledPairs(txs).filter(
+    (tx) => tx.kind === "expense" && !tx.transfer_group,
+  );
+}
+
 export function pairedTransactionIds(
   days: ReadonlyArray<DayTotalsWithPairs>,
 ): Set<string> {

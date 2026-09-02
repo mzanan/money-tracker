@@ -5,7 +5,7 @@ import { format, parse } from "date-fns";
 
 import { useSettings, useTimezone } from "@/hooks/useSettings";
 import { todayInTz } from "@/lib/dates";
-import { excludeCanceledPairs } from "@/lib/cancellations";
+import { excludeCanceledPairs, monthExpenseRows } from "@/lib/cancellations";
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import {
   effectiveYearMonth,
@@ -16,7 +16,7 @@ import {
   shiftYearMonth,
 } from "@/lib/dates";
 import { splitFixedVariable } from "@/lib/fixedExpenses";
-import { monthExpenseRows, periodTotals, transactionInDisplay } from "@/lib/totals";
+import { periodTotals, transactionInDisplay } from "@/lib/totals";
 
 import type { Transaction } from "@/types/db";
 

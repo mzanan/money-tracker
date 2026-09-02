@@ -12,6 +12,7 @@ interface RunOptions<T> {
   confirm?: string;
   success?: string | ((data: T | undefined) => string);
   onSuccess?: (data: T | undefined) => void;
+  onError?: (error: string) => void;
   refresh?: boolean;
 }
 
@@ -38,6 +39,7 @@ export function useServerAction() {
         const result = await action();
         if (!result.ok) {
           toast.error(result.error);
+          options.onError?.(result.error);
           return;
         }
         if (options.success) {

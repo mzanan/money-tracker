@@ -56,11 +56,20 @@ export function useUnusualExpenses(monthTransactions: Transaction[]) {
     );
   }
 
+  function unanswer(txId: string) {
+    setAnswered((current) => {
+      const next = new Set(current);
+      next.delete(txId);
+      return next;
+    });
+  }
+
   function markOneOff(tx: Transaction) {
     setPendingTxId(tx.id);
     setAnswered((current) => new Set(current).add(tx.id));
     oneOffAction.run(() => setTransactionFixed(tx.id, true), {
       success: "Marked as one-off",
+      onError: () => unanswer(tx.id),
     });
   }
 
@@ -69,6 +78,7 @@ export function useUnusualExpenses(monthTransactions: Transaction[]) {
     setAnswered((current) => new Set(current).add(tx.id));
     regularAction.run(() => setTransactionFixed(tx.id, false), {
       success: "Marked as regular",
+      onError: () => unanswer(tx.id),
     });
   }
 

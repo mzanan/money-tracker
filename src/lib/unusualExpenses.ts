@@ -1,5 +1,6 @@
+import { monthExpenseRows } from "@/lib/cancellations";
 import { isFixedTransaction } from "@/lib/fixedExpenses";
-import { monthExpenseRows, transactionInDisplay } from "@/lib/totals";
+import { transactionInDisplay } from "@/lib/totals";
 
 import type { Transaction } from "@/types/db";
 

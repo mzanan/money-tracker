@@ -1,5 +1,4 @@
 import { convert } from "@/lib/currency";
-import { excludeCanceledPairs } from "@/lib/cancellations";
 import type { Transaction } from "@/types/db";
 
 export interface TotalsBreakdown {
@@ -22,12 +21,6 @@ export function transactionInDisplay(
     tx.currency_original,
     displayCurrency,
     tx.fx_rates_snapshot,
-  );
-}
-
-export function monthExpenseRows(txs: Transaction[]): Transaction[] {
-  return excludeCanceledPairs(txs).filter(
-    (tx) => tx.kind === "expense" && !tx.transfer_group,
   );
 }
 
