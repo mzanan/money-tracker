@@ -44,6 +44,7 @@ export function computeSpendProjection({
   monthTransactions,
   unpaidRecurring,
   fixedLabels,
+  recurringNotes,
   baseCurrency,
   rates,
 }: {
@@ -52,6 +53,7 @@ export function computeSpendProjection({
   monthTransactions: Transaction[];
   unpaidRecurring: RecurringPayment[];
   fixedLabels: string[];
+  recurringNotes: Set<string>;
   baseCurrency: string;
   rates: FxRates | null;
 }): SpendProjection {
@@ -60,7 +62,11 @@ export function computeSpendProjection({
   const daysElapsed = Math.max(Number(today.slice(8, 10)), 1);
 
   const elapsed = monthElapsedTransactions(monthTransactions, today);
-  const { fixed, variable } = splitFixedVariable(elapsed, fixedLabels);
+  const { fixed, variable } = splitFixedVariable(
+    elapsed,
+    fixedLabels,
+    recurringNotes,
+  );
 
   const { inMonth, carried } = splitCarriedOver(variable, monthStart);
   const inMonthVariable = periodTotals(inMonth, baseCurrency).expense;

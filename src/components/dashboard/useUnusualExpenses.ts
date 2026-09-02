@@ -12,7 +12,10 @@ import { findUnusualExpenses } from "@/lib/unusualExpenses";
 
 import type { Transaction } from "@/types/db";
 
-export function useUnusualExpenses(monthTransactions: Transaction[]) {
+export function useUnusualExpenses(
+  monthTransactions: Transaction[],
+  recurringNotes: Set<string>,
+) {
   const settings = useSettings();
   const accountLabels = useAccountLabels();
   const [answered, setAnswered] = useState<Set<string>>(new Set());
@@ -25,9 +28,15 @@ export function useUnusualExpenses(monthTransactions: Transaction[]) {
       findUnusualExpenses(
         monthTransactions,
         settings.fixed_labels,
+        recurringNotes,
         settings.base_currency,
       ),
-    [monthTransactions, settings.fixed_labels, settings.base_currency],
+    [
+      monthTransactions,
+      settings.fixed_labels,
+      recurringNotes,
+      settings.base_currency,
+    ],
   );
 
   const rows = useMemo(

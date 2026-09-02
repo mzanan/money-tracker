@@ -18,12 +18,14 @@ export function MonthView({
   emptyLabel = "No transactions this month.",
   includeTransfers = false,
   groupCarriedOver = true,
+  recurringNotes,
 }: {
   transactions: Transaction[];
   movedOut?: Transaction[];
   emptyLabel?: string;
   includeTransfers?: boolean;
   groupCarriedOver?: boolean;
+  recurringNotes?: Set<string>;
 }) {
   const {
     days,
@@ -81,6 +83,7 @@ export function MonthView({
           day={day}
           open={effectiveOpen.includes(day.date)}
           onToggle={() => toggleDay(day.date)}
+          recurringNotes={recurringNotes}
         />
       ))}
       {hasMore && (

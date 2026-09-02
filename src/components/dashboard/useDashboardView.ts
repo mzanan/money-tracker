@@ -17,6 +17,7 @@ import {
 } from "@/lib/dates";
 import { splitFixedVariable } from "@/lib/fixedExpenses";
 import { periodTotals, transactionInDisplay } from "@/lib/totals";
+import { detectRecurringNotes } from "@/lib/unusualExpenses";
 
 import type { Transaction } from "@/types/db";
 
@@ -25,9 +26,11 @@ const TREND_MONTHS = 6;
 export function useDashboardView({
   yearMonth,
   lifetimeTransactions,
+  today,
 }: {
   yearMonth: string;
   lifetimeTransactions: Transaction[];
+  today: string;
 }) {
   const settings = useSettings();
   const [visibleYearMonth, setVisibleYearMonth] = useState(yearMonth);
@@ -132,12 +135,18 @@ export function useDashboardView({
       .slice(0, 10);
   }, [monthTransactions, settings.base_currency]);
 
+  const recurringNotes = useMemo(
+    () => detectRecurringNotes(lifetimeTransactions, today),
+    [lifetimeTransactions, today],
+  );
+
   const timezone = useTimezone();
   const monthStats = useMemo(() => {
     const rows = monthExpenseRows(monthTransactions);
     const { fixed, variable } = splitFixedVariable(
       rows,
       settings.fixed_labels,
+      recurringNotes,
     );
     const variableExpense = periodTotals(
       variable,
@@ -163,6 +172,7 @@ export function useDashboardView({
     monthTransactions,
     settings.base_currency,
     settings.fixed_labels,
+    recurringNotes,
     timezone,
     visibleYearMonth,
   ]);
@@ -212,6 +222,7 @@ export function useDashboardView({
     monthExpense: monthStats.expense,
     avgPerDay: monthStats.avgPerDay,
     fixedExpense: monthStats.fixedExpense,
+    recurringNotes,
     cashBalances,
     selectedTag,
     setSelectedTag,

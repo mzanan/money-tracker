@@ -39,7 +39,7 @@ export function DashboardView({
 }: Props) {
   const settings = useSettings();
   const { hideAmounts } = useHideAmounts();
-  const v = useDashboardView({ yearMonth, lifetimeTransactions });
+  const v = useDashboardView({ yearMonth, lifetimeTransactions, today });
 
   function money(value: number): string {
     return hideAmounts
@@ -156,13 +156,17 @@ export function DashboardView({
         </div>
       </Surface>
 
-      <UnusualExpensesCard monthTransactions={v.monthTransactions} />
+      <UnusualExpensesCard
+        monthTransactions={v.monthTransactions}
+        recurringNotes={v.recurringNotes}
+      />
 
       <SpendProjectionCard
         yearMonth={v.visibleYearMonth}
         today={today}
         monthTransactions={v.monthTransactions}
         reminders={reminders}
+        recurringNotes={v.recurringNotes}
       />
 
       <SpendingBreakdown
@@ -244,6 +248,7 @@ export function DashboardView({
         <MonthView
           transactions={v.filteredList}
           emptyLabel="No transactions."
+          recurringNotes={v.recurringNotes}
         />
       )}
     </div>

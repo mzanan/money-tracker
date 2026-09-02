@@ -19,13 +19,17 @@ import type { Transaction } from "@/types/db";
 
 export function UnusualExpensesCard({
   monthTransactions,
+  recurringNotes,
 }: {
   monthTransactions: Transaction[];
+  recurringNotes: Set<string>;
 }) {
   const settings = useSettings();
   const { hideAmounts } = useHideAmounts();
-  const { rows, isRowPending, markOneOff, markRegular } =
-    useUnusualExpenses(monthTransactions);
+  const { rows, isRowPending, markOneOff, markRegular } = useUnusualExpenses(
+    monthTransactions,
+    recurringNotes,
+  );
 
   function money(value: number) {
     return hideAmounts

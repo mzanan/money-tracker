@@ -18,11 +18,13 @@ export function SpendProjectionCard({
   today,
   monthTransactions,
   reminders,
+  recurringNotes,
 }: {
   yearMonth: string;
   today: string;
   monthTransactions: Transaction[];
   reminders: RecurringPayment[];
+  recurringNotes: Set<string>;
 }) {
   const settings = useSettings();
   const { hideAmounts } = useHideAmounts();
@@ -37,6 +39,7 @@ export function SpendProjectionCard({
     today,
     monthTransactions,
     reminders,
+    recurringNotes,
   });
 
   function money(amount: number) {
