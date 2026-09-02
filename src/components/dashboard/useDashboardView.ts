@@ -26,11 +26,9 @@ const TREND_MONTHS = 6;
 export function useDashboardView({
   yearMonth,
   lifetimeTransactions,
-  today,
 }: {
   yearMonth: string;
   lifetimeTransactions: Transaction[];
-  today: string;
 }) {
   const settings = useSettings();
   const [visibleYearMonth, setVisibleYearMonth] = useState(yearMonth);
@@ -136,8 +134,8 @@ export function useDashboardView({
   }, [monthTransactions, settings.base_currency]);
 
   const recurringNotes = useMemo(
-    () => detectRecurringNotes(lifetimeTransactions, today),
-    [lifetimeTransactions, today],
+    () => detectRecurringNotes(lifetimeTransactions, `${visibleYearMonth}-01`),
+    [lifetimeTransactions, visibleYearMonth],
   );
 
   const timezone = useTimezone();

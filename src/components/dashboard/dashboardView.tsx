@@ -39,7 +39,7 @@ export function DashboardView({
 }: Props) {
   const settings = useSettings();
   const { hideAmounts } = useHideAmounts();
-  const v = useDashboardView({ yearMonth, lifetimeTransactions, today });
+  const v = useDashboardView({ yearMonth, lifetimeTransactions });
 
   function money(value: number): string {
     return hideAmounts

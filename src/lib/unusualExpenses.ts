@@ -20,17 +20,27 @@ function median(values: number[]): number {
 
 export function detectRecurringNotes(
   allTransactions: Transaction[],
-  today: string,
+  referenceDate: string,
 ): Set<string> {
-  const currentMonth = today.slice(0, 7);
+  const currentMonth = referenceDate.slice(0, 7);
   const lookbackMonths = new Set(
     Array.from({ length: UNUSUAL_LOOKBACK_MONTHS }, (_, i) =>
       shiftYearMonth(currentMonth, -(i + 1)),
     ),
   );
 
+  const earliestMonth = shiftYearMonth(
+    currentMonth,
+    -(UNUSUAL_LOOKBACK_MONTHS + 1),
+  );
+  const latestMonth = shiftYearMonth(currentMonth, 1);
+  const windowed = allTransactions.filter((tx) => {
+    const month = effectiveYearMonth(tx);
+    return month >= earliestMonth && month <= latestMonth;
+  });
+
   const monthsByNote = new Map<string, Set<string>>();
-  for (const tx of monthExpenseRows(allTransactions)) {
+  for (const tx of monthExpenseRows(windowed)) {
     const normalized = normalizeFixedLabel(tx.note);
     if (normalized === "") continue;
     const month = effectiveYearMonth(tx);
