@@ -343,7 +343,7 @@ export function TransactionRow({
             {!isTransfer && (
               <DropdownMenuItem onSelect={handleToggleFixed}>
                 <PinIcon />
-                {resolvedFixed ? "Mark as regular" : "Mark as one-off"}
+                {resolvedFixed ? "Mark as daily" : "Mark as non-daily"}
               </DropdownMenuItem>
             )}
             {canDelete && (

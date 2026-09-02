@@ -142,14 +142,14 @@ export function DashboardView({
         </div>
         <div className="-mt-1.5 flex items-center justify-between gap-3 text-sm">
           <span className="text-muted-foreground">
-            Average per day (regular spend)
+            Average per day (non-daily excluded)
           </span>
           <span className="font-semibold tabular-nums">
             {money(v.avgPerDay)}
           </span>
         </div>
         <div className="-mt-1.5 flex items-center justify-between gap-3 text-sm">
-          <span className="text-muted-foreground">Fixed and one-off</span>
+          <span className="text-muted-foreground">Non-daily costs</span>
           <span className="font-semibold tabular-nums">
             {money(v.fixedExpense)}
           </span>

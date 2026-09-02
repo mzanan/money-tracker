@@ -68,7 +68,7 @@ export function useUnusualExpenses(monthTransactions: Transaction[]) {
     setPendingTxId(tx.id);
     setAnswered((current) => new Set(current).add(tx.id));
     oneOffAction.run(() => setTransactionFixed(tx.id, true), {
-      success: "Marked as one-off",
+      success: "Marked as non-daily",
       onError: () => unanswer(tx.id),
     });
   }
@@ -77,7 +77,7 @@ export function useUnusualExpenses(monthTransactions: Transaction[]) {
     setPendingTxId(tx.id);
     setAnswered((current) => new Set(current).add(tx.id));
     regularAction.run(() => setTransactionFixed(tx.id, false), {
-      success: "Marked as regular",
+      success: "Marked as daily",
       onError: () => unanswer(tx.id),
     });
   }

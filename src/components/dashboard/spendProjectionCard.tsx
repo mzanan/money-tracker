@@ -64,7 +64,7 @@ export function SpendProjectionCard({
                 Daily average
               </span>
               <span className="text-muted-foreground block text-[10px]">
-                Variable spend only
+                Daily spend only
               </span>
             </div>
             <span className="text-sm font-semibold tabular-nums">
@@ -73,7 +73,7 @@ export function SpendProjectionCard({
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs">
-              Projected variable
+              Projected daily spend
             </span>
             <span className="text-sm font-semibold tabular-nums">
               {money(projection.projectedVariable)}
@@ -82,7 +82,7 @@ export function SpendProjectionCard({
           <div className="flex items-center justify-between">
             <div>
               <span className="text-muted-foreground text-xs">
-                Fixed this month
+                Non-daily this month
               </span>
               {projection.fixedUpcoming > 0 && (
                 <span className="text-muted-foreground block text-[10px]">

@@ -41,11 +41,11 @@ export function UnusualExpensesCard({
         <IconCircle className="bg-primary/10 text-primary">
           <AlertTriangleIcon className="size-4" />
         </IconCircle>
-        <span className="text-eyebrow">Unusual expenses</span>
+        <span className="text-eyebrow">Daily or not?</span>
       </div>
       <p className="text-muted-foreground text-xs">
-        These are well above your usual spend. One-off purchases are kept out
-        of the daily average.
+        These are well above your usual spend. Non-daily costs like rent or a
+        one-off purchase stay out of the daily average.
       </p>
       <div className="divide-border grid divide-y">
         {rows.map(({ tx, value, title }) => (
@@ -61,7 +61,7 @@ export function UnusualExpensesCard({
                 disabled={isRowPending(tx.id)}
                 onClick={() => markRegular(tx)}
               >
-                Regular
+                Daily
               </Button>
               <Button
                 variant="default"
@@ -69,7 +69,7 @@ export function UnusualExpensesCard({
                 disabled={isRowPending(tx.id)}
                 onClick={() => markOneOff(tx)}
               >
-                One-off
+                Not daily
               </Button>
             </div>
           </ListRow>
