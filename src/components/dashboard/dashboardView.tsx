@@ -165,6 +165,7 @@ export function DashboardView({
         yearMonth={v.visibleYearMonth}
         today={today}
         monthTransactions={v.monthTransactions}
+        lifetimeTransactions={lifetimeTransactions}
         reminders={reminders}
         recurringNotes={v.recurringNotes}
       />

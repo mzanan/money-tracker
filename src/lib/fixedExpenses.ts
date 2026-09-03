@@ -42,6 +42,16 @@ export function splitFixedVariable(
 }
 
 export const REMINDER_AMOUNT_TOLERANCE = 0.1;
+export const REMINDER_MIN_LABEL_LENGTH = 4;
+
+function containsAsWords(note: string, label: string): boolean {
+  const index = note.indexOf(label);
+  if (index === -1) return false;
+  const before = index === 0 ? " " : note[index - 1];
+  const afterIndex = index + label.length;
+  const after = afterIndex === note.length ? " " : note[afterIndex];
+  return before === " " && after === " ";
+}
 
 export function matchesReminderWithoutLink(
   tx: Transaction,
@@ -53,13 +63,11 @@ export function matchesReminderWithoutLink(
   const note = normalizeFixedLabel(tx.note);
   if (label === "" || note === "") return false;
   const exactLabel = note === label;
-  if (!exactLabel && !note.includes(label) && !label.includes(note)) {
-    return false;
-  }
-  if (reminder.amount == null) return exactLabel;
-  if (reminder.currency != null && tx.currency_original !== reminder.currency) {
-    return false;
-  }
+  if (exactLabel) return true;
+  if (reminder.amount == null || reminder.currency == null) return false;
+  if (label.length < REMINDER_MIN_LABEL_LENGTH) return false;
+  if (!containsAsWords(note, label)) return false;
+  if (tx.currency_original !== reminder.currency) return false;
   return (
     Math.abs(tx.amount_original - reminder.amount) <=
     reminder.amount * REMINDER_AMOUNT_TOLERANCE

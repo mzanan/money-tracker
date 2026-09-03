@@ -1,7 +1,10 @@
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { convert } from "@/lib/currency";
 import { monthBounds } from "@/lib/dates";
-import { splitFixedVariable } from "@/lib/fixedExpenses";
+import {
+  matchesReminderWithoutLink,
+  splitFixedVariable,
+} from "@/lib/fixedExpenses";
 import { periodTotals } from "@/lib/totals";
 
 import type { FxRates, RecurringPayment, Transaction } from "@/types/db";
@@ -107,10 +110,20 @@ export function computeSpendProjection({
     }
   }, 0);
 
-  const scheduledFixed = periodTotals(
-    monthScheduledFixed(monthTransactions, today, fixedLabels, recurringNotes),
-    baseCurrency,
-  ).expense;
+  const scheduledRows = monthScheduledFixed(
+    monthTransactions,
+    today,
+    fixedLabels,
+    recurringNotes,
+  ).filter(
+    (tx) =>
+      !unpaidRecurring.some(
+        (reminder) =>
+          tx.recurring_id === reminder.id ||
+          matchesReminderWithoutLink(tx, reminder),
+      ),
+  );
+  const scheduledFixed = periodTotals(scheduledRows, baseCurrency).expense;
 
   const fixedTotal = fixedPaid + fixedUpcoming + scheduledFixed;
   const projectedTotal = projectedVariable + fixedTotal;

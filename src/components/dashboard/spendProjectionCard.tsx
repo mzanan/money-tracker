@@ -17,12 +17,14 @@ export function SpendProjectionCard({
   yearMonth,
   today,
   monthTransactions,
+  lifetimeTransactions,
   reminders,
   recurringNotes,
 }: {
   yearMonth: string;
   today: string;
   monthTransactions: Transaction[];
+  lifetimeTransactions: Transaction[];
   reminders: RecurringPayment[];
   recurringNotes: Set<string>;
 }) {
@@ -38,6 +40,7 @@ export function SpendProjectionCard({
     yearMonth,
     today,
     monthTransactions,
+    lifetimeTransactions,
     reminders,
     recurringNotes,
   });
