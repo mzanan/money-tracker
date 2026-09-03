@@ -58,8 +58,8 @@ export default async function SettingsPage({
               </Section>
             )}
             <Section
-              title="Fixed expenses"
-              hint="Any expense whose merchant matches these names counts as fixed and is kept out of the daily average."
+              title="Non-daily expenses"
+              hint="Any expense whose merchant matches these names counts as non-daily and is kept out of the daily average."
             >
               <FixedLabelsCard />
             </Section>

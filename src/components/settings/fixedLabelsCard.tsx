@@ -19,7 +19,7 @@ export function FixedLabelsCard() {
         <div className="grid divide-y">
           {labels.length === 0 && (
             <p className="text-muted-foreground py-2 text-xs">
-              No fixed labels yet.
+              No non-daily labels yet.
             </p>
           )}
           {labels.map((label) => (

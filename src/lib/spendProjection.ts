@@ -25,7 +25,7 @@ export function monthElapsedTransactions(
   );
 }
 
-export function splitCarriedOver(
+export function splitByMonthStart(
   txs: Transaction[],
   monthStart: string,
 ): { inMonth: Transaction[]; carried: Transaction[] } {
@@ -68,7 +68,7 @@ export function computeSpendProjection({
     recurringNotes,
   );
 
-  const { inMonth, carried } = splitCarriedOver(variable, monthStart);
+  const { inMonth, carried } = splitByMonthStart(variable, monthStart);
   const inMonthVariable = periodTotals(inMonth, baseCurrency).expense;
   const carriedVariable = periodTotals(carried, baseCurrency).expense;
   const fixedPaid = periodTotals(fixed, baseCurrency).expense;
