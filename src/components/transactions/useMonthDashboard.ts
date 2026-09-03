@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useSettings } from "@/hooks/useSettings";
 import { hasBudgetMonthOverride } from "@/lib/budgetMonth";
+import { detectRecurringNotes } from "@/lib/unusualExpenses";
 import {
   effectiveYearMonth,
   forwardMonthCap,
@@ -157,9 +158,20 @@ export function useMonthDashboard({
   }, [panelMounted, panelOpen]);
   const shownPanel = c.panel !== "none" ? c.panel : lastPanel;
 
+  const recurringNotes = useMemo(
+    () =>
+      detectRecurringNotes(
+        lifetimeTransactions,
+        `${visibleYearMonth}-01`,
+        settings.base_currency,
+      ),
+    [lifetimeTransactions, visibleYearMonth, settings.base_currency],
+  );
+
   return {
     baseCurrency: settings.base_currency,
     visibleYearMonth,
+    recurringNotes,
     hasOlder,
     hasNewer,
     shiftMonth,

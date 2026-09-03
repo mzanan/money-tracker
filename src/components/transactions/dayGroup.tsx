@@ -22,6 +22,7 @@ export function DayGroup({
   title,
   showRowDate = false,
   showBudgetMonthBadges = true,
+  recurringNotes,
 }: {
   day: DayTotalsWithPairs;
   defaultOpen?: boolean;
@@ -30,6 +31,7 @@ export function DayGroup({
   title?: string;
   showRowDate?: boolean;
   showBudgetMonthBadges?: boolean;
+  recurringNotes?: Set<string>;
 }) {
   const settings = useSettings();
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
@@ -86,6 +88,7 @@ export function DayGroup({
               tx={tx}
               showDate={showRowDate}
               showBudgetMonthBadges={showBudgetMonthBadges}
+              recurringNotes={recurringNotes}
             />
           ))}
           {day.pairs.map((pair) => (
@@ -93,6 +96,7 @@ export function DayGroup({
               key={pair.expense.id}
               pair={pair}
               showBudgetMonthBadges={showBudgetMonthBadges}
+              recurringNotes={recurringNotes}
             />
           ))}
         </div>

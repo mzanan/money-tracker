@@ -7,7 +7,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { setFixedLabels } from "@/lib/actions/settings";
 import { normalizeFixedLabel } from "@/lib/fixedExpenses";
 
-export function useFixedLabelsCard() {
+export function useNonDailyLabelsCard() {
   const settings = useSettings();
   const { run, pending } = useServerAction();
   const [input, setInput] = useState("");

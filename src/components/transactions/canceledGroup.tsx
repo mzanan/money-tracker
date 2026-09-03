@@ -17,9 +17,11 @@ import { TransactionRow } from "./transactionRow";
 export function CanceledGroup({
   pair,
   showBudgetMonthBadges = true,
+  recurringNotes,
 }: {
   pair: CanceledPair;
   showBudgetMonthBadges?: boolean;
+  recurringNotes?: Set<string>;
 }) {
   const accountLabels = useAccountLabels();
   const [open, setOpen] = useState(false);
@@ -67,10 +69,12 @@ export function CanceledGroup({
           <TransactionRow
             tx={pair.expense}
             showBudgetMonthBadges={showBudgetMonthBadges}
+            recurringNotes={recurringNotes}
           />
           <TransactionRow
             tx={pair.income}
             showBudgetMonthBadges={showBudgetMonthBadges}
+            recurringNotes={recurringNotes}
           />
         </div>
       )}

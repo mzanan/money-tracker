@@ -16,23 +16,26 @@ export function normalizeFixedLabel(note: string | null | undefined): string {
 export function isFixedTransaction(
   tx: Transaction,
   fixedLabels: string[],
+  recurringNotes: Set<string>,
 ): boolean {
   if (tx.is_fixed === false) return false;
   if (tx.is_fixed === true) return true;
   if (tx.recurring_id != null) return true;
   const normalized = normalizeFixedLabel(tx.note);
   if (normalized === "") return false;
-  return fixedLabels.includes(normalized);
+  if (fixedLabels.includes(normalized)) return true;
+  return recurringNotes.has(normalized);
 }
 
 export function splitFixedVariable(
   txs: Transaction[],
   fixedLabels: string[],
+  recurringNotes: Set<string>,
 ): { fixed: Transaction[]; variable: Transaction[] } {
   const fixed: Transaction[] = [];
   const variable: Transaction[] = [];
   for (const tx of txs) {
-    if (isFixedTransaction(tx, fixedLabels)) fixed.push(tx);
+    if (isFixedTransaction(tx, fixedLabels, recurringNotes)) fixed.push(tx);
     else variable.push(tx);
   }
   return { fixed, variable };

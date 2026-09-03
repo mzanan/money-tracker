@@ -1,0 +1,89 @@
+"use client";
+
+import { useMemo, useState } from "react";
+
+import { useAccountLabels } from "@/hooks/useAccountLabels";
+import { useServerAction } from "@/hooks/useServerAction";
+import { useSettings } from "@/hooks/useSettings";
+import { setTransactionFixed } from "@/lib/actions/transactions";
+import { resolveSourceLabel } from "@/lib/constants/sources";
+import { safeTransactionInDisplay } from "@/lib/totals";
+import { findUnusualExpenses } from "@/lib/unusualExpenses";
+
+import type { Transaction } from "@/types/db";
+
+export function useUnusualExpenses(
+  monthTransactions: Transaction[],
+  recurringNotes: Set<string>,
+) {
+  const settings = useSettings();
+  const accountLabels = useAccountLabels();
+  const [answered, setAnswered] = useState<Set<string>>(new Set());
+  const [pendingTxId, setPendingTxId] = useState<string | null>(null);
+  const oneOffAction = useServerAction();
+  const regularAction = useServerAction();
+
+  const candidates = useMemo(
+    () =>
+      findUnusualExpenses(
+        monthTransactions,
+        settings.fixed_labels,
+        recurringNotes,
+        settings.base_currency,
+      ),
+    [
+      monthTransactions,
+      settings.fixed_labels,
+      recurringNotes,
+      settings.base_currency,
+    ],
+  );
+
+  const rows = useMemo(
+    () =>
+      candidates
+        .filter((tx) => !answered.has(tx.id))
+        .map((tx) => {
+          return {
+            tx,
+            value: safeTransactionInDisplay(tx, settings.base_currency) ?? 0,
+            title: tx.tags[0] || resolveSourceLabel(tx.source, accountLabels),
+          };
+        }),
+    [candidates, answered, settings.base_currency, accountLabels],
+  );
+
+  function isRowPending(txId: string): boolean {
+    return (
+      pendingTxId === txId && (oneOffAction.pending || regularAction.pending)
+    );
+  }
+
+  function unanswer(txId: string) {
+    setAnswered((current) => {
+      const next = new Set(current);
+      next.delete(txId);
+      return next;
+    });
+  }
+
+  function markOneOff(tx: Transaction) {
+    setPendingTxId(tx.id);
+    setAnswered((current) => new Set(current).add(tx.id));
+    oneOffAction.run(() => setTransactionFixed(tx.id, true), {
+      success: "Marked as non-daily",
+      onError: () => unanswer(tx.id),
+    });
+  }
+
+  function markRegular(tx: Transaction) {
+    setPendingTxId(tx.id);
+    setAnswered((current) => new Set(current).add(tx.id));
+    regularAction.run(() => setTransactionFixed(tx.id, false), {
+      success: "Marked as daily",
+      onError: () => unanswer(tx.id),
+    });
+  }
+
+  return { rows, isRowPending, markOneOff, markRegular };
+}

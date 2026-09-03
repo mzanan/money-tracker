@@ -47,10 +47,12 @@ export function TransactionRow({
   tx,
   showDate = false,
   showBudgetMonthBadges = true,
+  recurringNotes,
 }: {
   tx: Transaction;
   showDate?: boolean;
   showBudgetMonthBadges?: boolean;
+  recurringNotes?: Set<string>;
 }) {
   const {
     baseCurrency,
@@ -85,7 +87,7 @@ export function TransactionRow({
     handleShiftBudgetMonth,
     stepApi,
     runAfterMenuClose,
-  } = useTransactionRow(tx, showDate, showBudgetMonthBadges);
+  } = useTransactionRow(tx, showDate, showBudgetMonthBadges, recurringNotes);
 
   const editSeed = {
     kind: tx.kind,
@@ -343,7 +345,7 @@ export function TransactionRow({
             {!isTransfer && (
               <DropdownMenuItem onSelect={handleToggleFixed}>
                 <PinIcon />
-                {resolvedFixed ? "Mark as variable" : "Mark as fixed"}
+                {resolvedFixed ? "Mark as daily" : "Mark as non-daily"}
               </DropdownMenuItem>
             )}
             {canDelete && (

@@ -24,6 +24,17 @@ export function transactionInDisplay(
   );
 }
 
+export function safeTransactionInDisplay(
+  tx: Transaction,
+  displayCurrency: string,
+): number | null {
+  try {
+    return transactionInDisplay(tx, displayCurrency);
+  } catch {
+    return null;
+  }
+}
+
 export function periodTotals(
   txs: Transaction[],
   displayCurrency: string,

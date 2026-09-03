@@ -20,11 +20,13 @@ export function useSpendProjection({
   today,
   monthTransactions,
   reminders,
+  recurringNotes,
 }: {
   yearMonth: string;
   today: string;
   monthTransactions: Transaction[];
   reminders: RecurringPayment[];
+  recurringNotes: Set<string>;
 }) {
   const settings = useSettings();
   const ratesQuery = useRates();
@@ -49,6 +51,7 @@ export function useSpendProjection({
       monthTransactions,
       unpaidRecurring,
       fixedLabels,
+      recurringNotes,
       baseCurrency: settings.base_currency,
       rates: ratesQuery.data?.rates ?? null,
     });
@@ -59,6 +62,7 @@ export function useSpendProjection({
     monthTransactions,
     unpaidRecurring,
     fixedLabels,
+    recurringNotes,
     settings.base_currency,
     ratesQuery.data,
   ]);
@@ -74,9 +78,16 @@ export function useSpendProjection({
   const fixedCounts = useMemo(() => {
     if (!isCurrentMonth) return { paid: 0, upcoming: 0 };
     const elapsed = monthElapsedTransactions(monthTransactions, today);
-    const { fixed } = splitFixedVariable(elapsed, fixedLabels);
+    const { fixed } = splitFixedVariable(elapsed, fixedLabels, recurringNotes);
     return { paid: fixed.length, upcoming: unpaidRecurring.length };
-  }, [isCurrentMonth, monthTransactions, today, fixedLabels, unpaidRecurring]);
+  }, [
+    isCurrentMonth,
+    monthTransactions,
+    today,
+    fixedLabels,
+    recurringNotes,
+    unpaidRecurring,
+  ]);
 
   return {
     isCurrentMonth,

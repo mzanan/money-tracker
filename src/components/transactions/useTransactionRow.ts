@@ -22,10 +22,13 @@ import { useDrawerStep } from "./drawerStepContext";
 
 import type { Transaction } from "@/types/db";
 
+const NO_RECURRING_NOTES = new Set<string>();
+
 export function useTransactionRow(
   tx: Transaction,
   showDate = false,
   showBudgetMonthBadges = true,
+  recurringNotes: Set<string> = NO_RECURRING_NOTES,
 ) {
   const settings = useSettings();
   const accountLabels = useAccountLabels();
@@ -77,7 +80,11 @@ export function useTransactionRow(
   const avatarSeed = tx.tags[0] || sourceLabel;
   const reminderTitle = tx.tags[0] || sourceLabel;
   const description = tx.note?.trim();
-  const resolvedFixed = isFixedTransaction(tx, settings.fixed_labels);
+  const resolvedFixed = isFixedTransaction(
+    tx,
+    settings.fixed_labels,
+    recurringNotes,
+  );
 
   function toggleSelected() {
     toggleTxSelected(tx);
@@ -87,7 +94,7 @@ export function useTransactionRow(
     const next = !resolvedFixed;
     runAfterMenuClose(() =>
       fixedToggle.run(() => setTransactionFixed(tx.id, next), {
-        success: next ? "Marked as fixed" : "Marked as variable",
+        success: next ? "Marked as non-daily" : "Marked as daily",
       }),
     );
   }

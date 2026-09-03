@@ -5,7 +5,7 @@ import { format, parse } from "date-fns";
 
 import { useSettings, useTimezone } from "@/hooks/useSettings";
 import { todayInTz } from "@/lib/dates";
-import { excludeCanceledPairs } from "@/lib/cancellations";
+import { monthExpenseRows } from "@/lib/cancellations";
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import {
   effectiveYearMonth,
@@ -15,7 +15,9 @@ import {
   oldestYearMonthFrom,
   shiftYearMonth,
 } from "@/lib/dates";
-import { transactionInDisplay } from "@/lib/totals";
+import { splitFixedVariable } from "@/lib/fixedExpenses";
+import { periodTotals, safeTransactionInDisplay } from "@/lib/totals";
+import { detectRecurringNotes } from "@/lib/unusualExpenses";
 
 import type { Transaction } from "@/types/db";
 
@@ -81,15 +83,10 @@ export function useDashboardView({
       const month = shiftYearMonth(yearMonth, -i);
       const hasData = oldestYearMonth !== null && month >= oldestYearMonth;
       let expense = 0;
-      for (const tx of excludeCanceledPairs(
+      for (const tx of monthExpenseRows(
         lifetimeTransactions.filter((t) => effectiveYearMonth(t) === month),
       )) {
-        if (tx.kind !== "expense" || tx.transfer_group) continue;
-        try {
-          expense += transactionInDisplay(tx, settings.base_currency);
-        } catch {
-          continue;
-        }
+        expense += safeTransactionInDisplay(tx, settings.base_currency) ?? 0;
       }
       months.push({
         month,
@@ -110,16 +107,11 @@ export function useDashboardView({
 
   const topMerchants = useMemo(() => {
     const byMerchant = new Map<string, { total: number; count: number }>();
-    for (const tx of excludeCanceledPairs(monthTransactions)) {
-      if (tx.kind !== "expense" || tx.transfer_group) continue;
+    for (const tx of monthExpenseRows(monthTransactions)) {
       const label = tx.note?.trim();
       if (!label) continue;
-      let value: number;
-      try {
-        value = transactionInDisplay(tx, settings.base_currency);
-      } catch {
-        continue;
-      }
+      const value = safeTransactionInDisplay(tx, settings.base_currency);
+      if (value == null) continue;
       const entry = byMerchant.get(label) ?? { total: 0, count: 0 };
       entry.total += value;
       entry.count += 1;
@@ -131,17 +123,31 @@ export function useDashboardView({
       .slice(0, 10);
   }, [monthTransactions, settings.base_currency]);
 
+  const recurringNotes = useMemo(
+    () =>
+      detectRecurringNotes(
+        lifetimeTransactions,
+        `${visibleYearMonth}-01`,
+        settings.base_currency,
+      ),
+    [lifetimeTransactions, visibleYearMonth, settings.base_currency],
+  );
+
   const timezone = useTimezone();
   const monthStats = useMemo(() => {
-    let expense = 0;
-    for (const tx of excludeCanceledPairs(monthTransactions)) {
-      if (tx.kind !== "expense" || tx.transfer_group) continue;
-      try {
-        expense += transactionInDisplay(tx, settings.base_currency);
-      } catch {
-        continue;
-      }
-    }
+    const rows = monthExpenseRows(monthTransactions);
+    const { fixed, variable } = splitFixedVariable(
+      rows,
+      settings.fixed_labels,
+      recurringNotes,
+    );
+    const variableExpense = periodTotals(
+      variable,
+      settings.base_currency,
+    ).expense;
+    const fixedExpense = periodTotals(fixed, settings.base_currency).expense;
+    const expense = variableExpense + fixedExpense;
+
     const today = todayInTz(timezone);
     const [, end] = monthBounds(visibleYearMonth);
     const lastCounted = today < end ? today : end;
@@ -149,8 +155,20 @@ export function useDashboardView({
       lastCounted.slice(0, 7) === visibleYearMonth
         ? Number(lastCounted.slice(8, 10))
         : Number(end.slice(8, 10));
-    return { expense, avgPerDay: elapsedDays > 0 ? expense / elapsedDays : 0 };
-  }, [monthTransactions, settings.base_currency, timezone, visibleYearMonth]);
+    return {
+      expense,
+      variableExpense,
+      fixedExpense,
+      avgPerDay: elapsedDays > 0 ? variableExpense / elapsedDays : 0,
+    };
+  }, [
+    monthTransactions,
+    settings.base_currency,
+    settings.fixed_labels,
+    recurringNotes,
+    timezone,
+    visibleYearMonth,
+  ]);
 
   const cashBalances = useMemo(() => {
     const byCurrency = new Map<string, number>();
@@ -196,6 +214,8 @@ export function useDashboardView({
     topMerchants,
     monthExpense: monthStats.expense,
     avgPerDay: monthStats.avgPerDay,
+    fixedExpense: monthStats.fixedExpense,
+    recurringNotes,
     cashBalances,
     selectedTag,
     setSelectedTag,

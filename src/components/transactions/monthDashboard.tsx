@@ -56,6 +56,7 @@ export function MonthDashboard({
     panelMounted,
     drawerOpen,
     shownPanel,
+    recurringNotes,
   } = useMonthDashboard({
     yearMonth,
     lifetimeTransactions,
@@ -111,6 +112,7 @@ export function MonthDashboard({
             transactions={feedTransactions}
             movedOut={feedMovedOut}
             includeTransfers={c.includeTransfers}
+            recurringNotes={recurringNotes}
             emptyLabel={
               isDaily
                 ? "No transactions this day."

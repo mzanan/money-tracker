@@ -25,12 +25,26 @@ export function monthElapsedTransactions(
   );
 }
 
+export function splitByMonthStart(
+  txs: Transaction[],
+  monthStart: string,
+): { inMonth: Transaction[]; carried: Transaction[] } {
+  const inMonth: Transaction[] = [];
+  const carried: Transaction[] = [];
+  for (const tx of txs) {
+    if (tx.occurred_on >= monthStart) inMonth.push(tx);
+    else carried.push(tx);
+  }
+  return { inMonth, carried };
+}
+
 export function computeSpendProjection({
   yearMonth,
   today,
   monthTransactions,
   unpaidRecurring,
   fixedLabels,
+  recurringNotes,
   baseCurrency,
   rates,
 }: {
@@ -39,21 +53,30 @@ export function computeSpendProjection({
   monthTransactions: Transaction[];
   unpaidRecurring: RecurringPayment[];
   fixedLabels: string[];
+  recurringNotes: Set<string>;
   baseCurrency: string;
   rates: FxRates | null;
 }): SpendProjection {
-  const [, monthEnd] = monthBounds(yearMonth);
+  const [monthStart, monthEnd] = monthBounds(yearMonth);
   const totalDaysInMonth = Number(monthEnd.slice(8, 10));
   const daysElapsed = Math.max(Number(today.slice(8, 10)), 1);
 
   const elapsed = monthElapsedTransactions(monthTransactions, today);
-  const { fixed, variable } = splitFixedVariable(elapsed, fixedLabels);
+  const { fixed, variable } = splitFixedVariable(
+    elapsed,
+    fixedLabels,
+    recurringNotes,
+  );
 
-  const variableSpendSoFar = periodTotals(variable, baseCurrency).expense;
+  const { inMonth, carried } = splitByMonthStart(variable, monthStart);
+  const inMonthVariable = periodTotals(inMonth, baseCurrency).expense;
+  const carriedVariable = periodTotals(carried, baseCurrency).expense;
   const fixedPaid = periodTotals(fixed, baseCurrency).expense;
 
-  const variableDailyAverage = variableSpendSoFar / daysElapsed;
-  const projectedVariable = variableDailyAverage * totalDaysInMonth;
+  const remainingDays = totalDaysInMonth - daysElapsed;
+  const variableDailyAverage = inMonthVariable / daysElapsed;
+  const projectedVariable =
+    inMonthVariable + carriedVariable + variableDailyAverage * remainingDays;
 
   let recurringIncomplete = false;
   const fixedUpcoming = unpaidRecurring.reduce((sum, reminder) => {

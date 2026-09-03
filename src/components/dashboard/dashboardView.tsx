@@ -17,6 +17,7 @@ import { SpendingBreakdown } from "@/components/transactions/spendingBreakdown";
 import { MonthView } from "@/components/transactions/monthView";
 
 import { SpendProjectionCard } from "./spendProjectionCard";
+import { UnusualExpensesCard } from "./unusualExpensesCard";
 import { useDashboardView } from "./useDashboardView";
 
 import type { Location, RecurringPayment, Transaction } from "@/types/db";
@@ -141,19 +142,31 @@ export function DashboardView({
         </div>
         <div className="-mt-1.5 flex items-center justify-between gap-3 text-sm">
           <span className="text-muted-foreground">
-            Average per day (all spend)
+            Average per day (non-daily excluded)
           </span>
           <span className="font-semibold tabular-nums">
             {money(v.avgPerDay)}
           </span>
         </div>
+        <div className="-mt-1.5 flex items-center justify-between gap-3 text-sm">
+          <span className="text-muted-foreground">Non-daily costs</span>
+          <span className="font-semibold tabular-nums">
+            {money(v.fixedExpense)}
+          </span>
+        </div>
       </Surface>
+
+      <UnusualExpensesCard
+        monthTransactions={v.monthTransactions}
+        recurringNotes={v.recurringNotes}
+      />
 
       <SpendProjectionCard
         yearMonth={v.visibleYearMonth}
         today={today}
         monthTransactions={v.monthTransactions}
         reminders={reminders}
+        recurringNotes={v.recurringNotes}
       />
 
       <SpendingBreakdown
@@ -235,6 +248,7 @@ export function DashboardView({
         <MonthView
           transactions={v.filteredList}
           emptyLabel="No transactions."
+          recurringNotes={v.recurringNotes}
         />
       )}
     </div>
