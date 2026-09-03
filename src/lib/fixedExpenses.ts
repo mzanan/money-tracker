@@ -41,13 +41,40 @@ export function splitFixedVariable(
   return { fixed, variable };
 }
 
+export const REMINDER_AMOUNT_TOLERANCE = 0.1;
+
+export function matchesReminderWithoutLink(
+  tx: Transaction,
+  reminder: RecurringPayment,
+): boolean {
+  if (tx.recurring_id != null) return false;
+  if (tx.kind !== "expense" || tx.transfer_group) return false;
+  const label = normalizeFixedLabel(reminder.label);
+  const note = normalizeFixedLabel(tx.note);
+  if (label === "" || note === "") return false;
+  const exactLabel = note === label;
+  if (!exactLabel && !note.includes(label) && !label.includes(note)) {
+    return false;
+  }
+  if (reminder.amount == null) return exactLabel;
+  if (reminder.currency != null && tx.currency_original !== reminder.currency) {
+    return false;
+  }
+  return (
+    Math.abs(tx.amount_original - reminder.amount) <=
+    reminder.amount * REMINDER_AMOUNT_TOLERANCE
+  );
+}
+
 export function excludePaidReminders(
   reminders: RecurringPayment[],
   monthTransactions: Transaction[],
 ): RecurringPayment[] {
   return reminders.filter((reminder) => {
     const matchingTxs = monthTransactions.filter(
-      (tx) => tx.recurring_id === reminder.id,
+      (tx) =>
+        tx.recurring_id === reminder.id ||
+        matchesReminderWithoutLink(tx, reminder),
     );
     if (matchingTxs.length === 0) return true;
 

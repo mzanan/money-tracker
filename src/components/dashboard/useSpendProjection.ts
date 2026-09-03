@@ -10,6 +10,7 @@ import { excludePaidReminders, splitFixedVariable } from "@/lib/fixedExpenses";
 import {
   computeSpendProjection,
   monthElapsedTransactions,
+  monthScheduledFixed,
 } from "@/lib/spendProjection";
 import { periodTotals } from "@/lib/totals";
 
@@ -36,11 +37,9 @@ export function useSpendProjection({
 
   const unpaidRecurring = useMemo(() => {
     if (!isCurrentMonth) return [];
-    const [monthStart, monthEnd] = monthBounds(yearMonth);
-    const dueThisMonth = reminders.filter(
-      (r) => r.next_due_on >= monthStart && r.next_due_on <= monthEnd,
-    );
-    return excludePaidReminders(dueThisMonth, monthTransactions);
+    const [, monthEnd] = monthBounds(yearMonth);
+    const dueByMonthEnd = reminders.filter((r) => r.next_due_on <= monthEnd);
+    return excludePaidReminders(dueByMonthEnd, monthTransactions);
   }, [reminders, yearMonth, isCurrentMonth, monthTransactions]);
 
   const projection = useMemo(() => {
@@ -79,7 +78,16 @@ export function useSpendProjection({
     if (!isCurrentMonth) return { paid: 0, upcoming: 0 };
     const elapsed = monthElapsedTransactions(monthTransactions, today);
     const { fixed } = splitFixedVariable(elapsed, fixedLabels, recurringNotes);
-    return { paid: fixed.length, upcoming: unpaidRecurring.length };
+    const scheduled = monthScheduledFixed(
+      monthTransactions,
+      today,
+      fixedLabels,
+      recurringNotes,
+    );
+    return {
+      paid: fixed.length,
+      upcoming: unpaidRecurring.length + scheduled.length,
+    };
   }, [
     isCurrentMonth,
     monthTransactions,

@@ -25,6 +25,18 @@ export function monthElapsedTransactions(
   );
 }
 
+export function monthScheduledFixed(
+  monthTransactions: Transaction[],
+  today: string,
+  fixedLabels: string[],
+  recurringNotes: Set<string>,
+): Transaction[] {
+  const upcoming = excludeCanceledPairs(monthTransactions).filter(
+    (tx) => tx.occurred_on > today,
+  );
+  return splitFixedVariable(upcoming, fixedLabels, recurringNotes).fixed;
+}
+
 export function splitByMonthStart(
   txs: Transaction[],
   monthStart: string,
@@ -95,14 +107,19 @@ export function computeSpendProjection({
     }
   }, 0);
 
-  const fixedTotal = fixedPaid + fixedUpcoming;
+  const scheduledFixed = periodTotals(
+    monthScheduledFixed(monthTransactions, today, fixedLabels, recurringNotes),
+    baseCurrency,
+  ).expense;
+
+  const fixedTotal = fixedPaid + fixedUpcoming + scheduledFixed;
   const projectedTotal = projectedVariable + fixedTotal;
 
   return {
     variableDailyAverage,
     projectedVariable,
     fixedPaid,
-    fixedUpcoming,
+    fixedUpcoming: fixedUpcoming + scheduledFixed,
     fixedTotal,
     projectedTotal,
     recurringIncomplete,
