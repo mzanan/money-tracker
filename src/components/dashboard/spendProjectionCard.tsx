@@ -17,12 +17,14 @@ export function SpendProjectionCard({
   yearMonth,
   today,
   monthTransactions,
+  lifetimeTransactions,
   reminders,
   recurringNotes,
 }: {
   yearMonth: string;
   today: string;
   monthTransactions: Transaction[];
+  lifetimeTransactions: Transaction[];
   reminders: RecurringPayment[];
   recurringNotes: Set<string>;
 }) {
@@ -38,6 +40,7 @@ export function SpendProjectionCard({
     yearMonth,
     today,
     monthTransactions,
+    lifetimeTransactions,
     reminders,
     recurringNotes,
   });
@@ -87,7 +90,7 @@ export function SpendProjectionCard({
               <span className="text-muted-foreground text-xs">
                 Non-daily this month
               </span>
-              {projection.fixedUpcoming > 0 && (
+              {projection.fixedUpcoming + projection.fixedScheduled > 0 && (
                 <span className="text-muted-foreground block text-[10px]">
                   {fixedPaidCount} paid, {fixedUpcomingCount} upcoming
                 </span>

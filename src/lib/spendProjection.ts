@@ -1,7 +1,11 @@
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { convert } from "@/lib/currency";
-import { monthBounds } from "@/lib/dates";
-import { splitFixedVariable } from "@/lib/fixedExpenses";
+import { monthBounds, shiftYearMonth } from "@/lib/dates";
+import {
+  excludePaidReminders,
+  matchesReminder,
+  splitFixedVariable,
+} from "@/lib/fixedExpenses";
 import { periodTotals } from "@/lib/totals";
 
 import type { FxRates, RecurringPayment, Transaction } from "@/types/db";
@@ -11,6 +15,7 @@ export interface SpendProjection {
   projectedVariable: number;
   fixedPaid: number;
   fixedUpcoming: number;
+  fixedScheduled: number;
   fixedTotal: number;
   projectedTotal: number;
   recurringIncomplete: boolean;
@@ -23,6 +28,44 @@ export function monthElapsedTransactions(
   return excludeCanceledPairs(monthTransactions).filter(
     (tx) => tx.occurred_on <= today,
   );
+}
+
+export const PROJECTION_OVERDUE_MONTHS = 1;
+
+export function overdueUnpaidReminders({
+  reminders,
+  lifetimeTransactions,
+  yearMonth,
+}: {
+  reminders: RecurringPayment[];
+  lifetimeTransactions: Transaction[];
+  yearMonth: string;
+}): RecurringPayment[] {
+  const [, monthEnd] = monthBounds(yearMonth);
+  const [overdueFrom] = monthBounds(
+    shiftYearMonth(yearMonth, -PROJECTION_OVERDUE_MONTHS),
+  );
+  const dueInWindow = reminders.filter(
+    (r) => r.next_due_on >= overdueFrom && r.next_due_on <= monthEnd,
+  );
+  const paymentHistory = excludeCanceledPairs(
+    lifetimeTransactions.filter(
+      (tx) => tx.occurred_on >= overdueFrom && tx.occurred_on <= monthEnd,
+    ),
+  );
+  return excludePaidReminders(dueInWindow, paymentHistory);
+}
+
+export function monthScheduledFixed(
+  monthTransactions: Transaction[],
+  today: string,
+  fixedLabels: string[],
+  recurringNotes: Set<string>,
+): Transaction[] {
+  const upcoming = excludeCanceledPairs(monthTransactions).filter(
+    (tx) => tx.occurred_on > today,
+  );
+  return splitFixedVariable(upcoming, fixedLabels, recurringNotes).fixed;
 }
 
 export function splitByMonthStart(
@@ -95,7 +138,17 @@ export function computeSpendProjection({
     }
   }, 0);
 
-  const fixedTotal = fixedPaid + fixedUpcoming;
+  const scheduledRows = monthScheduledFixed(
+    monthTransactions,
+    today,
+    fixedLabels,
+    recurringNotes,
+  ).filter(
+    (tx) => !unpaidRecurring.some((reminder) => matchesReminder(tx, reminder)),
+  );
+  const fixedScheduled = periodTotals(scheduledRows, baseCurrency).expense;
+
+  const fixedTotal = fixedPaid + fixedUpcoming + fixedScheduled;
   const projectedTotal = projectedVariable + fixedTotal;
 
   return {
@@ -103,6 +156,7 @@ export function computeSpendProjection({
     projectedVariable,
     fixedPaid,
     fixedUpcoming,
+    fixedScheduled,
     fixedTotal,
     projectedTotal,
     recurringIncomplete,

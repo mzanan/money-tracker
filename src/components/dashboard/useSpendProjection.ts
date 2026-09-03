@@ -5,11 +5,12 @@ import { useMemo } from "react";
 import { useRates } from "@/hooks/useRates";
 import { useSettings } from "@/hooks/useSettings";
 import { excludeCanceledPairs } from "@/lib/cancellations";
-import { monthBounds } from "@/lib/dates";
-import { excludePaidReminders, splitFixedVariable } from "@/lib/fixedExpenses";
+import { splitFixedVariable } from "@/lib/fixedExpenses";
 import {
   computeSpendProjection,
   monthElapsedTransactions,
+  monthScheduledFixed,
+  overdueUnpaidReminders,
 } from "@/lib/spendProjection";
 import { periodTotals } from "@/lib/totals";
 
@@ -19,12 +20,14 @@ export function useSpendProjection({
   yearMonth,
   today,
   monthTransactions,
+  lifetimeTransactions,
   reminders,
   recurringNotes,
 }: {
   yearMonth: string;
   today: string;
   monthTransactions: Transaction[];
+  lifetimeTransactions: Transaction[];
   reminders: RecurringPayment[];
   recurringNotes: Set<string>;
 }) {
@@ -36,12 +39,12 @@ export function useSpendProjection({
 
   const unpaidRecurring = useMemo(() => {
     if (!isCurrentMonth) return [];
-    const [monthStart, monthEnd] = monthBounds(yearMonth);
-    const dueThisMonth = reminders.filter(
-      (r) => r.next_due_on >= monthStart && r.next_due_on <= monthEnd,
-    );
-    return excludePaidReminders(dueThisMonth, monthTransactions);
-  }, [reminders, yearMonth, isCurrentMonth, monthTransactions]);
+    return overdueUnpaidReminders({
+      reminders,
+      lifetimeTransactions,
+      yearMonth,
+    });
+  }, [reminders, yearMonth, isCurrentMonth, lifetimeTransactions]);
 
   const projection = useMemo(() => {
     if (!isCurrentMonth) return null;
@@ -79,7 +82,16 @@ export function useSpendProjection({
     if (!isCurrentMonth) return { paid: 0, upcoming: 0 };
     const elapsed = monthElapsedTransactions(monthTransactions, today);
     const { fixed } = splitFixedVariable(elapsed, fixedLabels, recurringNotes);
-    return { paid: fixed.length, upcoming: unpaidRecurring.length };
+    const scheduled = monthScheduledFixed(
+      monthTransactions,
+      today,
+      fixedLabels,
+      recurringNotes,
+    );
+    return {
+      paid: fixed.length,
+      upcoming: unpaidRecurring.length + scheduled.length,
+    };
   }, [
     isCurrentMonth,
     monthTransactions,
