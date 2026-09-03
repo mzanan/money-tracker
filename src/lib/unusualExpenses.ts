@@ -9,6 +9,7 @@ export const UNUSUAL_MEDIAN_MULTIPLIER = 3;
 export const UNUSUAL_MIN_SAMPLE = 5;
 export const UNUSUAL_LOOKBACK_MONTHS = 3;
 export const UNUSUAL_RECURRING_MIN_MONTHS = 2;
+export const UNUSUAL_RECURRING_MAX_DAYS_PER_MONTH = 2;
 
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -39,20 +40,27 @@ export function detectRecurringNotes(
     return month >= earliestMonth && month <= latestMonth;
   });
 
-  const monthsByNote = new Map<string, Set<string>>();
+  const daysByNoteAndMonth = new Map<string, Map<string, Set<string>>>();
   for (const tx of monthExpenseRows(windowed)) {
     const normalized = normalizeFixedLabel(tx.note);
     if (normalized === "") continue;
     const month = effectiveYearMonth(tx);
     if (!lookbackMonths.has(month)) continue;
-    const months = monthsByNote.get(normalized) ?? new Set<string>();
-    months.add(month);
-    monthsByNote.set(normalized, months);
+    const byMonth =
+      daysByNoteAndMonth.get(normalized) ?? new Map<string, Set<string>>();
+    const days = byMonth.get(month) ?? new Set<string>();
+    days.add(tx.occurred_on);
+    byMonth.set(month, days);
+    daysByNoteAndMonth.set(normalized, byMonth);
   }
 
   const recurring = new Set<string>();
-  for (const [note, months] of monthsByNote) {
-    if (months.size >= UNUSUAL_RECURRING_MIN_MONTHS) recurring.add(note);
+  for (const [note, byMonth] of daysByNoteAndMonth) {
+    if (byMonth.size < UNUSUAL_RECURRING_MIN_MONTHS) continue;
+    const sparseEveryMonth = Array.from(byMonth.values()).every(
+      (days) => days.size <= UNUSUAL_RECURRING_MAX_DAYS_PER_MONTH,
+    );
+    if (sparseEveryMonth) recurring.add(note);
   }
   return recurring;
 }
