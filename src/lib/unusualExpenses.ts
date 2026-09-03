@@ -1,7 +1,7 @@
 import { monthExpenseRows } from "@/lib/cancellations";
 import { effectiveYearMonth, shiftYearMonth } from "@/lib/dates";
 import { isFixedTransaction, normalizeFixedLabel } from "@/lib/fixedExpenses";
-import { transactionInDisplay } from "@/lib/totals";
+import { safeTransactionInDisplay, transactionInDisplay } from "@/lib/totals";
 
 import type { Transaction } from "@/types/db";
 
@@ -22,6 +22,7 @@ function median(values: number[]): number {
 export function detectRecurringNotes(
   allTransactions: Transaction[],
   referenceDate: string,
+  baseCurrency: string,
 ): Set<string> {
   const currentMonth = referenceDate.slice(0, 7);
   const lookbackMonths = new Set(
@@ -41,18 +42,30 @@ export function detectRecurringNotes(
   });
 
   const daysByNoteAndMonth = new Map<string, Map<string, Set<string>>>();
+  const valuesByNote = new Map<string, number[]>();
+  const lookbackValues: number[] = [];
   for (const tx of monthExpenseRows(windowed)) {
-    const normalized = normalizeFixedLabel(tx.note);
-    if (normalized === "") continue;
     const month = effectiveYearMonth(tx);
     if (!lookbackMonths.has(month)) continue;
+    const value = safeTransactionInDisplay(tx, baseCurrency);
+    if (value == null) continue;
+    lookbackValues.push(value);
+    const normalized = normalizeFixedLabel(tx.note);
+    if (normalized === "") continue;
     const byMonth =
       daysByNoteAndMonth.get(normalized) ?? new Map<string, Set<string>>();
     const days = byMonth.get(month) ?? new Set<string>();
     days.add(tx.occurred_on);
     byMonth.set(month, days);
     daysByNoteAndMonth.set(normalized, byMonth);
+    valuesByNote.set(normalized, [
+      ...(valuesByNote.get(normalized) ?? []),
+      value,
+    ]);
   }
+
+  if (lookbackValues.length < UNUSUAL_MIN_SAMPLE) return new Set<string>();
+  const threshold = median(lookbackValues) * UNUSUAL_MEDIAN_MULTIPLIER;
 
   const recurring = new Set<string>();
   for (const [note, byMonth] of daysByNoteAndMonth) {
@@ -60,7 +73,9 @@ export function detectRecurringNotes(
     const sparseEveryMonth = Array.from(byMonth.values()).every(
       (days) => days.size <= UNUSUAL_RECURRING_MAX_DAYS_PER_MONTH,
     );
-    if (sparseEveryMonth) recurring.add(note);
+    if (!sparseEveryMonth) continue;
+    if (median(valuesByNote.get(note) ?? []) < threshold) continue;
+    recurring.add(note);
   }
   return recurring;
 }

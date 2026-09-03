@@ -7,7 +7,7 @@ import { CashCard } from "@/components/settings/cashCard";
 import { CashExchangeForm } from "@/components/settings/cashExchangeForm";
 import { CashWithdrawalForm } from "@/components/settings/cashWithdrawalForm";
 import { CsvImportCard } from "@/components/settings/csvImportCard";
-import { FixedLabelsCard } from "@/components/settings/fixedLabelsCard";
+import { NonDailyLabelsCard } from "@/components/settings/nonDailyLabelsCard";
 import { ImportedAccountsCard } from "@/components/settings/importedAccountsCard";
 import { IntegrationsCard } from "@/components/settings/integrationsCard";
 import { PasswordCard } from "@/components/settings/passwordCard";
@@ -61,7 +61,7 @@ export default async function SettingsPage({
               title="Non-daily expenses"
               hint="Any expense whose merchant matches these names counts as non-daily and is kept out of the daily average."
             >
-              <FixedLabelsCard />
+              <NonDailyLabelsCard />
             </Section>
           </>
         }

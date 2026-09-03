@@ -5,7 +5,7 @@ import { format, parse } from "date-fns";
 
 import { useSettings, useTimezone } from "@/hooks/useSettings";
 import { todayInTz } from "@/lib/dates";
-import { excludeCanceledPairs, monthExpenseRows } from "@/lib/cancellations";
+import { monthExpenseRows } from "@/lib/cancellations";
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import {
   effectiveYearMonth,
@@ -83,10 +83,9 @@ export function useDashboardView({
       const month = shiftYearMonth(yearMonth, -i);
       const hasData = oldestYearMonth !== null && month >= oldestYearMonth;
       let expense = 0;
-      for (const tx of excludeCanceledPairs(
+      for (const tx of monthExpenseRows(
         lifetimeTransactions.filter((t) => effectiveYearMonth(t) === month),
       )) {
-        if (tx.kind !== "expense" || tx.transfer_group) continue;
         expense += safeTransactionInDisplay(tx, settings.base_currency) ?? 0;
       }
       months.push({
@@ -108,8 +107,7 @@ export function useDashboardView({
 
   const topMerchants = useMemo(() => {
     const byMerchant = new Map<string, { total: number; count: number }>();
-    for (const tx of excludeCanceledPairs(monthTransactions)) {
-      if (tx.kind !== "expense" || tx.transfer_group) continue;
+    for (const tx of monthExpenseRows(monthTransactions)) {
       const label = tx.note?.trim();
       if (!label) continue;
       const value = safeTransactionInDisplay(tx, settings.base_currency);
@@ -126,8 +124,13 @@ export function useDashboardView({
   }, [monthTransactions, settings.base_currency]);
 
   const recurringNotes = useMemo(
-    () => detectRecurringNotes(lifetimeTransactions, `${visibleYearMonth}-01`),
-    [lifetimeTransactions, visibleYearMonth],
+    () =>
+      detectRecurringNotes(
+        lifetimeTransactions,
+        `${visibleYearMonth}-01`,
+        settings.base_currency,
+      ),
+    [lifetimeTransactions, visibleYearMonth, settings.base_currency],
   );
 
   const timezone = useTimezone();

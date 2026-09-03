@@ -7,11 +7,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ListRow } from "@/components/ui/listRow";
 
-import { useFixedLabelsCard } from "./useFixedLabelsCard";
+import { useNonDailyLabelsCard } from "./useNonDailyLabelsCard";
 
-export function FixedLabelsCard() {
+export function NonDailyLabelsCard() {
   const { labels, input, setInput, addLabel, removeLabel, pending } =
-    useFixedLabelsCard();
+    useNonDailyLabelsCard();
 
   return (
     <Card>

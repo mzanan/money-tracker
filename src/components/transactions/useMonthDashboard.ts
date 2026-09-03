@@ -159,8 +159,13 @@ export function useMonthDashboard({
   const shownPanel = c.panel !== "none" ? c.panel : lastPanel;
 
   const recurringNotes = useMemo(
-    () => detectRecurringNotes(lifetimeTransactions, `${visibleYearMonth}-01`),
-    [lifetimeTransactions, visibleYearMonth],
+    () =>
+      detectRecurringNotes(
+        lifetimeTransactions,
+        `${visibleYearMonth}-01`,
+        settings.base_currency,
+      ),
+    [lifetimeTransactions, visibleYearMonth, settings.base_currency],
   );
 
   return {
