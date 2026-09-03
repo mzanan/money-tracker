@@ -44,13 +44,22 @@ export function splitFixedVariable(
 export const REMINDER_AMOUNT_TOLERANCE = 0.1;
 export const REMINDER_MIN_LABEL_LENGTH = 4;
 
+function isWordBoundary(char: string | undefined): boolean {
+  return char === undefined || !/[\p{L}\p{N}]/u.test(char);
+}
+
 function containsAsWords(note: string, label: string): boolean {
-  const index = note.indexOf(label);
-  if (index === -1) return false;
-  const before = index === 0 ? " " : note[index - 1];
-  const afterIndex = index + label.length;
-  const after = afterIndex === note.length ? " " : note[afterIndex];
-  return before === " " && after === " ";
+  let index = note.indexOf(label);
+  while (index !== -1) {
+    if (
+      isWordBoundary(note[index - 1]) &&
+      isWordBoundary(note[index + label.length])
+    ) {
+      return true;
+    }
+    index = note.indexOf(label, index + 1);
+  }
+  return false;
 }
 
 export function matchesReminderWithoutLink(
@@ -63,10 +72,12 @@ export function matchesReminderWithoutLink(
   const note = normalizeFixedLabel(tx.note);
   if (label === "" || note === "") return false;
   const exactLabel = note === label;
-  if (exactLabel) return true;
-  if (reminder.amount == null || reminder.currency == null) return false;
-  if (label.length < REMINDER_MIN_LABEL_LENGTH) return false;
-  if (!containsAsWords(note, label)) return false;
+  if (!exactLabel) {
+    if (label.length < REMINDER_MIN_LABEL_LENGTH) return false;
+    if (!containsAsWords(note, label)) return false;
+  }
+  if (reminder.amount == null) return exactLabel;
+  if (reminder.currency == null) return false;
   if (tx.currency_original !== reminder.currency) return false;
   return (
     Math.abs(tx.amount_original - reminder.amount) <=

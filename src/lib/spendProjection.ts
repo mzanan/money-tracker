@@ -48,8 +48,10 @@ export function overdueUnpaidReminders({
   const dueInWindow = reminders.filter(
     (r) => r.next_due_on >= overdueFrom && r.next_due_on <= monthEnd,
   );
-  const paymentHistory = excludeCanceledPairs(lifetimeTransactions).filter(
-    (tx) => tx.occurred_on >= overdueFrom,
+  const paymentHistory = excludeCanceledPairs(
+    lifetimeTransactions.filter(
+      (tx) => tx.occurred_on >= overdueFrom && tx.occurred_on <= monthEnd,
+    ),
   );
   return excludePaidReminders(dueInWindow, paymentHistory);
 }
