@@ -5,18 +5,16 @@ import { useMemo } from "react";
 import { useRates } from "@/hooks/useRates";
 import { useSettings } from "@/hooks/useSettings";
 import { excludeCanceledPairs } from "@/lib/cancellations";
-import { monthBounds, shiftYearMonth } from "@/lib/dates";
-import { excludePaidReminders, splitFixedVariable } from "@/lib/fixedExpenses";
+import { splitFixedVariable } from "@/lib/fixedExpenses";
 import {
   computeSpendProjection,
   monthElapsedTransactions,
   monthScheduledFixed,
+  overdueUnpaidReminders,
 } from "@/lib/spendProjection";
 import { periodTotals } from "@/lib/totals";
 
 import type { RecurringPayment, Transaction } from "@/types/db";
-
-export const PROJECTION_OVERDUE_MONTHS = 1;
 
 export function useSpendProjection({
   yearMonth,
@@ -41,17 +39,11 @@ export function useSpendProjection({
 
   const unpaidRecurring = useMemo(() => {
     if (!isCurrentMonth) return [];
-    const [, monthEnd] = monthBounds(yearMonth);
-    const [overdueFrom] = monthBounds(
-      shiftYearMonth(yearMonth, -PROJECTION_OVERDUE_MONTHS),
-    );
-    const dueInWindow = reminders.filter(
-      (r) => r.next_due_on >= overdueFrom && r.next_due_on <= monthEnd,
-    );
-    const paymentHistory = excludeCanceledPairs(lifetimeTransactions).filter(
-      (tx) => tx.occurred_on >= overdueFrom,
-    );
-    return excludePaidReminders(dueInWindow, paymentHistory);
+    return overdueUnpaidReminders({
+      reminders,
+      lifetimeTransactions,
+      yearMonth,
+    });
   }, [reminders, yearMonth, isCurrentMonth, lifetimeTransactions]);
 
   const projection = useMemo(() => {

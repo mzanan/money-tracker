@@ -90,7 +90,7 @@ export function SpendProjectionCard({
               <span className="text-muted-foreground text-xs">
                 Non-daily this month
               </span>
-              {projection.fixedUpcoming > 0 && (
+              {projection.fixedUpcoming + projection.fixedScheduled > 0 && (
                 <span className="text-muted-foreground block text-[10px]">
                   {fixedPaidCount} paid, {fixedUpcomingCount} upcoming
                 </span>

@@ -1,8 +1,9 @@
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { convert } from "@/lib/currency";
-import { monthBounds } from "@/lib/dates";
+import { monthBounds, shiftYearMonth } from "@/lib/dates";
 import {
-  matchesReminderWithoutLink,
+  excludePaidReminders,
+  matchesReminder,
   splitFixedVariable,
 } from "@/lib/fixedExpenses";
 import { periodTotals } from "@/lib/totals";
@@ -14,6 +15,7 @@ export interface SpendProjection {
   projectedVariable: number;
   fixedPaid: number;
   fixedUpcoming: number;
+  fixedScheduled: number;
   fixedTotal: number;
   projectedTotal: number;
   recurringIncomplete: boolean;
@@ -26,6 +28,30 @@ export function monthElapsedTransactions(
   return excludeCanceledPairs(monthTransactions).filter(
     (tx) => tx.occurred_on <= today,
   );
+}
+
+export const PROJECTION_OVERDUE_MONTHS = 1;
+
+export function overdueUnpaidReminders({
+  reminders,
+  lifetimeTransactions,
+  yearMonth,
+}: {
+  reminders: RecurringPayment[];
+  lifetimeTransactions: Transaction[];
+  yearMonth: string;
+}): RecurringPayment[] {
+  const [, monthEnd] = monthBounds(yearMonth);
+  const [overdueFrom] = monthBounds(
+    shiftYearMonth(yearMonth, -PROJECTION_OVERDUE_MONTHS),
+  );
+  const dueInWindow = reminders.filter(
+    (r) => r.next_due_on >= overdueFrom && r.next_due_on <= monthEnd,
+  );
+  const paymentHistory = excludeCanceledPairs(lifetimeTransactions).filter(
+    (tx) => tx.occurred_on >= overdueFrom,
+  );
+  return excludePaidReminders(dueInWindow, paymentHistory);
 }
 
 export function monthScheduledFixed(
@@ -116,23 +142,19 @@ export function computeSpendProjection({
     fixedLabels,
     recurringNotes,
   ).filter(
-    (tx) =>
-      !unpaidRecurring.some(
-        (reminder) =>
-          tx.recurring_id === reminder.id ||
-          matchesReminderWithoutLink(tx, reminder),
-      ),
+    (tx) => !unpaidRecurring.some((reminder) => matchesReminder(tx, reminder)),
   );
-  const scheduledFixed = periodTotals(scheduledRows, baseCurrency).expense;
+  const fixedScheduled = periodTotals(scheduledRows, baseCurrency).expense;
 
-  const fixedTotal = fixedPaid + fixedUpcoming + scheduledFixed;
+  const fixedTotal = fixedPaid + fixedUpcoming + fixedScheduled;
   const projectedTotal = projectedVariable + fixedTotal;
 
   return {
     variableDailyAverage,
     projectedVariable,
     fixedPaid,
-    fixedUpcoming: fixedUpcoming + scheduledFixed,
+    fixedUpcoming,
+    fixedScheduled,
     fixedTotal,
     projectedTotal,
     recurringIncomplete,

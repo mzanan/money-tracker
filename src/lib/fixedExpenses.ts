@@ -74,15 +74,22 @@ export function matchesReminderWithoutLink(
   );
 }
 
+export function matchesReminder(
+  tx: Transaction,
+  reminder: RecurringPayment,
+): boolean {
+  return (
+    tx.recurring_id === reminder.id || matchesReminderWithoutLink(tx, reminder)
+  );
+}
+
 export function excludePaidReminders(
   reminders: RecurringPayment[],
   monthTransactions: Transaction[],
 ): RecurringPayment[] {
   return reminders.filter((reminder) => {
-    const matchingTxs = monthTransactions.filter(
-      (tx) =>
-        tx.recurring_id === reminder.id ||
-        matchesReminderWithoutLink(tx, reminder),
+    const matchingTxs = monthTransactions.filter((tx) =>
+      matchesReminder(tx, reminder),
     );
     if (matchingTxs.length === 0) return true;
 
