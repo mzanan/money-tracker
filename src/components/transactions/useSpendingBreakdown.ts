@@ -7,7 +7,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import { placeOf } from "@/lib/places";
-import { transactionInDisplay } from "@/lib/totals";
+import { safeTransactionInDisplay } from "@/lib/totals";
 
 import type { Location, Transaction } from "@/types/db";
 
@@ -50,12 +50,8 @@ export function useSpendingBreakdown({
     let total = 0;
     for (const tx of excludeCanceledPairs(transactions)) {
       if (tx.kind !== "expense" || tx.transfer_group) continue;
-      let value: number;
-      try {
-        value = transactionInDisplay(tx, settings.base_currency);
-      } catch {
-        continue;
-      }
+      const value = safeTransactionInDisplay(tx, settings.base_currency);
+      if (value == null) continue;
       const keys =
         mode === "tag"
           ? tx.tags.length > 0

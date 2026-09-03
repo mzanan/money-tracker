@@ -7,7 +7,7 @@ import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { setTransactionFixed } from "@/lib/actions/transactions";
 import { resolveSourceLabel } from "@/lib/constants/sources";
-import { transactionInDisplay } from "@/lib/totals";
+import { safeTransactionInDisplay } from "@/lib/totals";
 import { findUnusualExpenses } from "@/lib/unusualExpenses";
 
 import type { Transaction } from "@/types/db";
@@ -44,15 +44,9 @@ export function useUnusualExpenses(
       candidates
         .filter((tx) => !answered.has(tx.id))
         .map((tx) => {
-          let value = 0;
-          try {
-            value = transactionInDisplay(tx, settings.base_currency);
-          } catch {
-            value = 0;
-          }
           return {
             tx,
-            value,
+            value: safeTransactionInDisplay(tx, settings.base_currency) ?? 0,
             title: tx.tags[0] || resolveSourceLabel(tx.source, accountLabels),
           };
         }),

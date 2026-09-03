@@ -16,7 +16,7 @@ import {
   shiftYearMonth,
 } from "@/lib/dates";
 import { splitFixedVariable } from "@/lib/fixedExpenses";
-import { periodTotals, transactionInDisplay } from "@/lib/totals";
+import { periodTotals, safeTransactionInDisplay } from "@/lib/totals";
 import { detectRecurringNotes } from "@/lib/unusualExpenses";
 
 import type { Transaction } from "@/types/db";
@@ -87,11 +87,7 @@ export function useDashboardView({
         lifetimeTransactions.filter((t) => effectiveYearMonth(t) === month),
       )) {
         if (tx.kind !== "expense" || tx.transfer_group) continue;
-        try {
-          expense += transactionInDisplay(tx, settings.base_currency);
-        } catch {
-          continue;
-        }
+        expense += safeTransactionInDisplay(tx, settings.base_currency) ?? 0;
       }
       months.push({
         month,
@@ -116,12 +112,8 @@ export function useDashboardView({
       if (tx.kind !== "expense" || tx.transfer_group) continue;
       const label = tx.note?.trim();
       if (!label) continue;
-      let value: number;
-      try {
-        value = transactionInDisplay(tx, settings.base_currency);
-      } catch {
-        continue;
-      }
+      const value = safeTransactionInDisplay(tx, settings.base_currency);
+      if (value == null) continue;
       const entry = byMerchant.get(label) ?? { total: 0, count: 0 };
       entry.total += value;
       entry.count += 1;
