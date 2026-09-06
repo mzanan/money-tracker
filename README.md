@@ -112,9 +112,9 @@ En el celular, abrir la app deployada → "Add to Home Screen" → queda como ap
 ```
 src/
   app/
+    page.tsx                  # landing (sin sesión) o dashboard (con sesión)
     (auth)/login/             # email+password + Google (Better Auth)
     (app)/                    # rutas protegidas (auth + onboarding)
-      page.tsx                # dashboard: quick-add + mes actual
       month/[ym]/             # vista mensual
       settings/               # editar monedas, base, huso, integraciones, CSV
     onboarding/               # primer setup (currencies + base)
@@ -122,6 +122,7 @@ src/
     api/rates/                # proxy + cache de open.er-api.com
     layout.tsx, manifest.ts
   components/
+    landing/                  # landing pública (copy en landing.json)
     auth/                     # loginCard + useLogin
     transactions/             # balanceHero (Monthly/Daily tabs), sourceFilter, monthView, amountsToggle, ...
     layout/                   # header, baseCurrencyPicker, themeToggle
@@ -149,7 +150,7 @@ src/
   stores/uiStore.ts           # Zustand (lastCurrency)
   hooks/useHideAmounts.tsx    # mask totals via mt_hide_amounts cookie
   types/db.ts                 # tipos derivados de Drizzle ($inferSelect)
-  proxy.ts                    # ex-middleware (Next 16): cookie check + gate
+  proxy.ts                    # ex-middleware (Next 16): cookie check + gate (/ público)
 drizzle/migrations/           # SQL generado por drizzle-kit
 ```
 
