@@ -36,7 +36,8 @@ portabilidad. Schema y migración one-shot documentados en el vault
   cookie de sesión via `getSessionCookie` (Better Auth) — no valida. La
   validación real corre a nivel page/action con `auth.api.getSession({ headers })`
   o el wrapper `requireUser()` en `src/lib/session.ts`. Edge runtime no puede
-  cargar libSQL, por eso el proxy es fast-path.
+  cargar libSQL, por eso el proxy es fast-path. `/` es público: sirve la
+  landing a visitantes sin sesión y el dashboard a los logueados.
 - **RLS perdida:** Better Auth no tiene equivalente. **Cada** query Drizzle
   debe incluir `eq(table.user_id, user.id)` en el `where`. Un olvido = leak
   cross-user. Pattern obligatorio en server actions / data fetchers.
@@ -51,7 +52,8 @@ portabilidad. Schema y migración one-shot documentados en el vault
   es el preview live en `quickAddForm`.
 - **Preferences server-readable:** preferencias de UI que no deben tener flash
   al recargar (ej. `hide-amounts`) se guardan en cookie (`mt_*`) leída en
-  `(app)/layout.tsx` server-side y pasada a un Provider. Split convención:
+  `components/layout/appShell.tsx` server-side y pasada a un Provider. Split
+  convención:
   `lib/preferences.ts` (constantes client-safe) + `lib/preferences.server.ts`
   (reader con `next/headers`). Nunca importar el `.server.ts` desde client.
 - **Decimales por moneda:** usar `getCurrency(code).decimals` siempre que

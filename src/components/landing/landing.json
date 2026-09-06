@@ -1,0 +1,33 @@
+{
+  "nav": {
+    "cta": "Try it now"
+  },
+  "hero": {
+    "title": "Your money across currencies. In one place.",
+    "subtitle": "For digital nomads, expats, and anyone who lives in more than one currency.",
+    "cta": "Try it now",
+    "badges": [
+      "Used in 30+ countries",
+      "Multi-currency",
+      "Rates locked per day"
+    ]
+  },
+  "features": [
+    {
+      "title": "Rates that never move",
+      "text": "Every expense is saved with the exchange rate of that day. Your numbers never shift."
+    },
+    {
+      "title": "Bring your data in",
+      "text": "Connect your accounts, import from Wise, or upload a photo of a receipt."
+    },
+    {
+      "title": "Live dashboard",
+      "text": "Spending by day, by month, and a monthly estimate in real time."
+    }
+  ],
+  "footer": {
+    "builtBy": "Built by itsmatias",
+    "authorHref": "https://itsmatias.com"
+  }
+}
