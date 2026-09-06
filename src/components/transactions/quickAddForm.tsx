@@ -93,9 +93,9 @@ export function QuickAddForm({ recentTags, source }: Props) {
             {resolveSourceLabel(source, accountLabels)}
           </span>
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <KindToggle kind={kind} onChange={setKind} />
-          <div className="bg-surface-2 relative flex flex-1 items-center rounded-xl pr-1.5">
+          <div className="bg-surface-2 relative flex min-w-0 flex-1 items-center rounded-xl pr-1.5">
             <span className="text-muted-foreground pointer-events-none absolute left-3 text-sm tabular-nums">
               {currencyMeta.symbol}
             </span>
@@ -107,7 +107,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
               onChange={setAmount}
               decimals={currencyMeta.decimals}
               aria-label="Amount"
-              className="h-11 border-none bg-transparent pl-7 text-base focus-visible:ring-0"
+              className="h-11 min-w-0 border-none bg-transparent pl-7 text-base focus-visible:ring-0"
               required
             />
             {currencies.length > 1 && (
@@ -128,7 +128,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
               (withdrawalActive && !withdrawalTotalFilled) ||
               (transferActive && !transferDestination)
             }
-            className="h-11 rounded-xl px-4"
+            className="h-11 w-full rounded-xl px-4 sm:w-auto"
           >
             {pending ? <Loader2Icon className="animate-spin" /> : <PlusIcon />}
             Add
