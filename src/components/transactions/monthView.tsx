@@ -71,9 +71,6 @@ export function MonthView({
           {txSelectMode ? "Done" : "Merge duplicates"}
         </Button>
       </div>
-      {carriedOverGroups.map((group) => (
-        <CarriedOverGroup key={group.month} group={group} />
-      ))}
       {days.length === 0 && (
         <EmptyState className="px-3 py-8 text-center">{emptyLabel}</EmptyState>
       )}
@@ -85,6 +82,9 @@ export function MonthView({
           onToggle={() => toggleDay(day.date)}
           recurringNotes={recurringNotes}
         />
+      ))}
+      {carriedOverGroups.map((group) => (
+        <CarriedOverGroup key={group.month} group={group} />
       ))}
       {hasMore && (
         <div
