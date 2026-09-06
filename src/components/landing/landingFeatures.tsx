@@ -1,3 +1,5 @@
+import { Heading } from "@/components/ui/heading";
+
 import landingCopy from "./landing.json";
 import { LandingContainer } from "./landingContainer";
 
@@ -11,9 +13,7 @@ export function LandingFeatures() {
               key={feature.title}
               className="flex flex-col gap-3 sm:px-8 sm:first:pl-0 sm:last:pr-0"
             >
-              <h2 className="text-xl font-semibold tracking-tight">
-                {feature.title}
-              </h2>
+              <Heading size="section">{feature.title}</Heading>
               <p className="text-muted-foreground text-base leading-relaxed">
                 {feature.text}
               </p>

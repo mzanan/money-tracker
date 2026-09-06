@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { Heading } from "@/components/ui/heading";
 
 import landingCopy from "./landing.json";
 import { LandingContainer } from "./landingContainer";
@@ -9,9 +10,9 @@ export function LandingHero() {
   return (
     <section id="top" className="pt-20 pb-20 sm:pt-28 sm:pb-24">
       <LandingContainer className="flex flex-col items-center gap-8 text-center">
-        <h1 className="max-w-4xl text-5xl font-semibold tracking-tight text-balance sm:text-7xl">
+        <Heading as="h1" size="display" className="max-w-4xl">
           {landingCopy.hero.title}
-        </h1>
+        </Heading>
         <p className="text-muted-foreground max-w-2xl text-lg text-balance sm:text-xl">
           {landingCopy.hero.subtitle}
         </p>
