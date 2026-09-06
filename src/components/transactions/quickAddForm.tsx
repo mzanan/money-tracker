@@ -84,6 +84,22 @@ export function QuickAddForm({ recentTags, source }: Props) {
     handleSubmit,
   } = useQuickAddForm(source);
 
+  const submitButton = (
+    <Button
+      type="submit"
+      disabled={
+        pending ||
+        numericAmount === null ||
+        (withdrawalActive && !withdrawalTotalFilled) ||
+        (transferActive && !transferDestination)
+      }
+      className="h-11 w-full rounded-xl px-4 sm:w-auto"
+    >
+      {pending ? <Loader2Icon className="animate-spin" /> : <PlusIcon />}
+      Add
+    </Button>
+  );
+
   return (
     <Surface asChild radius="lg" padding="sm" className="grid gap-3">
       <form id="quick-add" onSubmit={handleSubmit} className="scroll-mt-20">
@@ -93,7 +109,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
             {resolveSourceLabel(source, accountLabels)}
           </span>
         </p>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           <KindToggle kind={kind} onChange={setKind} />
           <div className="bg-surface-2 relative flex min-w-0 flex-1 items-center rounded-xl pr-1.5">
             <span className="text-muted-foreground pointer-events-none absolute left-3 text-sm tabular-nums">
@@ -120,19 +136,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
               />
             )}
           </div>
-          <Button
-            type="submit"
-            disabled={
-              pending ||
-              numericAmount === null ||
-              (withdrawalActive && !withdrawalTotalFilled) ||
-              (transferActive && !transferDestination)
-            }
-            className="h-11 w-full rounded-xl px-4 sm:w-auto"
-          >
-            {pending ? <Loader2Icon className="animate-spin" /> : <PlusIcon />}
-            Add
-          </Button>
+          <div className="hidden sm:block">{submitButton}</div>
         </div>
 
         <Input
@@ -145,6 +149,8 @@ export function QuickAddForm({ recentTags, source }: Props) {
           aria-label="Description"
           className="bg-surface-2 h-9 rounded-xl border-none"
         />
+
+        <div className="sm:hidden">{submitButton}</div>
 
         {!withdrawalActive &&
           !transferActive &&
