@@ -19,7 +19,6 @@ export function CarriedOverGroup({ group }: { group: CarriedOverGroupData }) {
       }}
       title={`Carried over from ${formatMonthLong(group.month)}`}
       showRowDate
-      defaultOpen
     />
   );
 }
