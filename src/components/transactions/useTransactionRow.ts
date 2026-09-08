@@ -4,7 +4,7 @@ import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useDialogState } from "@/hooks/useDialogState";
 import { useServerAction } from "@/hooks/useServerAction";
-import { useSettings } from "@/hooks/useSettings";
+import { useSettings, useTimezone } from "@/hooks/useSettings";
 import {
   deleteTransaction,
   setTransactionFixed,
@@ -12,7 +12,7 @@ import {
 import { setBudgetMonthShift, unmarkTransfer } from "@/lib/actions/transfers";
 import { canShiftBudgetMonth, hasBudgetMonthOverride } from "@/lib/budgetMonth";
 import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
-import { formatMonthShort } from "@/lib/dates";
+import { formatMonthShort, todayInTz } from "@/lib/dates";
 import { isSyncedExternalId, isWithdrawalExternalId } from "@/lib/externalIds";
 import { isFixedTransaction } from "@/lib/fixedExpenses";
 import { transactionInDisplay } from "@/lib/totals";
@@ -31,6 +31,7 @@ export function useTransactionRow(
   recurringNotes: Set<string> = NO_RECURRING_NOTES,
 ) {
   const settings = useSettings();
+  const timezone = useTimezone();
   const accountLabels = useAccountLabels();
   const remove = useServerAction();
   const transfer = useServerAction();
@@ -85,6 +86,19 @@ export function useTransactionRow(
     settings.fixed_labels,
     recurringNotes,
   );
+
+  const editSeed = {
+    kind: tx.kind,
+    amount: tx.amount_original,
+    currency: tx.currency_original,
+    source: tx.source,
+    note: tx.note,
+    tags: tx.tags,
+    occurredOn: tx.occurred_on,
+    transferGroup: tx.transfer_group,
+    externalId: tx.external_id,
+  };
+  const duplicateSeed = { ...editSeed, occurredOn: todayInTz(timezone) };
 
   function toggleSelected() {
     toggleTxSelected(tx);
@@ -147,6 +161,8 @@ export function useTransactionRow(
     canDelete,
     lockAmountFields,
     resolvedFixed,
+    editSeed,
+    duplicateSeed,
     reminder,
     edit,
     transferDialog,

@@ -72,6 +72,8 @@ export function TransactionRow({
     canDelete,
     lockAmountFields,
     resolvedFixed,
+    editSeed,
+    duplicateSeed,
     reminder,
     edit,
     transferDialog,
@@ -88,18 +90,6 @@ export function TransactionRow({
     stepApi,
     runAfterMenuClose,
   } = useTransactionRow(tx, showDate, showBudgetMonthBadges, recurringNotes);
-
-  const editSeed = {
-    kind: tx.kind,
-    amount: tx.amount_original,
-    currency: tx.currency_original,
-    source: tx.source,
-    note: tx.note,
-    tags: tx.tags,
-    occurredOn: tx.occurred_on,
-    transferGroup: tx.transfer_group,
-    externalId: tx.external_id,
-  };
 
   function openEdit() {
     if (stepApi) {
@@ -132,7 +122,7 @@ export function TransactionRow({
           key: `duplicate-${tx.id}`,
           content: (
             <TransactionFormStep
-              seed={editSeed}
+              seed={duplicateSeed}
               title="Duplicate transaction"
               description="Creates a new transaction prefilled from this one."
               submitLabel="Duplicate"
@@ -413,7 +403,7 @@ export function TransactionRow({
       {duplicate.mounted && (
         <TransactionFormDialog
           key={duplicate.key}
-          seed={editSeed}
+          seed={duplicateSeed}
           open={duplicate.open}
           onOpenChange={duplicate.setOpen}
           title="Duplicate transaction"
