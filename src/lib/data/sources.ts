@@ -1,8 +1,13 @@
 import { asc, desc, eq, sql } from "drizzle-orm";
 
-import { kindOfSource } from "@/lib/constants/sources";
+import { kindOfSource, tabSourcesFrom } from "@/lib/constants/sources";
 import { db } from "@/lib/db";
-import { accounts, transactions, user_settings } from "@/lib/db/schema";
+import {
+  accounts,
+  api_integrations,
+  transactions,
+  user_settings,
+} from "@/lib/db/schema";
 import { isSyncable } from "@/lib/integrations";
 
 export interface ImportedSource {
@@ -70,7 +75,23 @@ export async function getUserSources(userId: string): Promise<string[]> {
 
   const set = new Set(rows.map((r) => r.source).filter(Boolean));
   for (const { source } of accountRows) set.add(source);
-  if (settings?.cash_enabled) set.add("manual");
+  return tabSourcesFrom(
+    Array.from(set),
+    Boolean(settings?.cash_enabled),
+  ).sort();
+}
+
+export async function getSelectableSources(userId: string): Promise<string[]> {
+  const [sources, integrationRows] = await Promise.all([
+    getUserSources(userId),
+    db
+      .select({ provider: api_integrations.provider })
+      .from(api_integrations)
+      .where(eq(api_integrations.user_id, userId)),
+  ]);
+
+  const set = new Set(sources);
+  for (const { provider } of integrationRows) set.add(provider);
   return Array.from(set).sort();
 }
 

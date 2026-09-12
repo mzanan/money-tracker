@@ -3,6 +3,7 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { getSelectableSources } from "@/lib/data/sources";
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
 import { normalizeFixedLabel } from "@/lib/fixedExpenses";
@@ -73,6 +74,34 @@ export async function setCashEnabled(enabled: boolean): Promise<ActionResult> {
     await db
       .update(user_settings)
       .set({ cash_enabled: enabled })
+      .where(eq(user_settings.user_id, user.id));
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Save failed",
+    };
+  }
+}
+
+export async function setDefaultSource(
+  source: string,
+): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  if (source !== "all") {
+    const sources = await getSelectableSources(user.id);
+    if (!sources.includes(source)) {
+      return { ok: false, error: "Unknown source" };
+    }
+  }
+
+  try {
+    await db
+      .update(user_settings)
+      .set({ default_source: source })
       .where(eq(user_settings.user_id, user.id));
     revalidatePath("/", "layout");
     return { ok: true };

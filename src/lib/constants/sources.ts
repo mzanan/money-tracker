@@ -30,6 +30,15 @@ export function resolveSourceLabel(
   return accountLabels[source] ?? labelForSource(source);
 }
 
+export function tabSourcesFrom(
+  sources: ReadonlyArray<string>,
+  cashEnabled: boolean,
+): string[] {
+  return cashEnabled && !sources.includes("manual")
+    ? ["manual", ...sources]
+    : [...sources];
+}
+
 export function kindOfSource(source: string): SourceKind {
   if (source === "manual") return "manual";
   if (API_SOURCES.has(source)) return "api";

@@ -63,6 +63,7 @@ export function MonthDashboard({
     places,
     reminders,
     today,
+    sources,
   });
 
   return (

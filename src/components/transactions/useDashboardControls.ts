@@ -6,7 +6,7 @@ import { useSettings, useTimezone } from "@/hooks/useSettings";
 import { dayTotalsWithPairs } from "@/lib/cancellations";
 import { kindOfSource } from "@/lib/constants/sources";
 import { todayInTz } from "@/lib/dates";
-import { applyListFilters, filterByAmount } from "@/lib/filters";
+import { applyListFilters, filterByAmount, initialSource } from "@/lib/filters";
 
 import type { DayTotalsWithPairs } from "@/lib/cancellations";
 import type { Location, RecurringPayment, Transaction } from "@/types/db";
@@ -31,19 +31,23 @@ export function useDashboardControls({
   lifetimeTransactions,
   reminders,
   places,
+  sources,
 }: {
   monthTransactions: Transaction[];
   monthMovedOut: Transaction[];
   lifetimeTransactions: Transaction[];
   reminders: RecurringPayment[];
   places: Location[];
+  sources: string[];
 }) {
   const settings = useSettings();
   const timezone = useTimezone();
   const today = todayInTz(timezone);
 
   const [panel, setPanel] = useState<PanelMode>("none");
-  const [selectedSource, setSelectedSource] = useState("all");
+  const [selectedSource, setSelectedSource] = useState(() =>
+    initialSource(settings.default_source, sources, settings.cash_enabled),
+  );
   const [selectedKind, setSelectedKind] = useState<KindFilter>("all");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<string | null>(null);

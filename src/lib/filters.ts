@@ -1,3 +1,4 @@
+import { tabSourcesFrom } from "@/lib/constants/sources";
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import { placeOf } from "@/lib/places";
 import { transactionInDisplay } from "@/lib/totals";
@@ -13,6 +14,17 @@ export interface ListFilterOptions {
   tag: string | null;
   place: string | null;
   places: ReadonlyArray<Location>;
+}
+
+export function initialSource(
+  defaultSource: string | null,
+  sources: string[],
+  cashEnabled: boolean,
+): string {
+  if (!defaultSource || defaultSource === "all") return "all";
+  return tabSourcesFrom(sources, cashEnabled).includes(defaultSource)
+    ? defaultSource
+    : "all";
 }
 
 export function applyListFilters(
