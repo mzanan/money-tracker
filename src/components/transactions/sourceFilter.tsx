@@ -13,13 +13,18 @@ import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { syncIntegration } from "@/lib/actions/integrations";
 import { setCashEnabled } from "@/lib/actions/settings";
-import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
+import {
+  kindOfSource,
+  resolveSourceLabel,
+  tabSourcesFrom,
+} from "@/lib/constants/sources";
 import type { IntegrationProvider } from "@/types/db";
 
 import { Button } from "@/components/ui/button";
 
 import { ImportFromImage } from "./importFromImage";
 import { SourceTab } from "./sourceTab";
+import { SourceTabMenu } from "./sourceTabMenu";
 
 interface Props {
   sources: string[];
@@ -39,9 +44,8 @@ export function SourceFilter({
   const { run, pending } = useServerAction();
   const kind = selected === "all" ? null : kindOfSource(selected);
 
-  const hasManual = sources.includes("manual");
-  const showCashTab = settings.cash_enabled || hasManual;
-  const tabSources = showCashTab && !hasManual ? ["manual", ...sources] : sources;
+  const tabSources = tabSourcesFrom(sources, settings.cash_enabled);
+  const showCashTab = tabSources.includes("manual");
 
   function handleSync() {
     if (kind !== "api") return;
@@ -69,6 +73,7 @@ export function SourceFilter({
         <SourceTab
           selected={selected === "all"}
           onClick={() => onChange("all")}
+          menu={<SourceTabMenu source="all" label="All" />}
         >
           All
         </SourceTab>
@@ -77,6 +82,12 @@ export function SourceFilter({
             key={src}
             selected={selected === src}
             onClick={() => onChange(src)}
+            menu={
+              <SourceTabMenu
+                source={src}
+                label={resolveSourceLabel(src, accountLabels)}
+              />
+            }
           >
             {resolveSourceLabel(src, accountLabels)}
           </SourceTab>

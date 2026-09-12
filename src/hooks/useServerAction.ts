@@ -51,6 +51,11 @@ export function useServerAction() {
         }
         options.onSuccess?.(result.data);
         if (options.refresh !== false) router.refresh();
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Something went wrong";
+        toast.error(message);
+        options.onError?.(message);
       } finally {
         runningRef.current = false;
       }

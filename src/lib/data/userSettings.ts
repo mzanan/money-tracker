@@ -15,6 +15,7 @@ export const getUserSettings = cache(
         base_currency: user_settings.base_currency,
         timezone: user_settings.timezone,
         cash_enabled: user_settings.cash_enabled,
+        default_source: user_settings.default_source,
         ai_provider: user_settings.ai_provider,
         ai_model: user_settings.ai_model,
         ai_api_key: user_settings.ai_api_key,

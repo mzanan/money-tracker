@@ -210,6 +210,7 @@ export const user_settings = sqliteTable(
     cash_enabled: integer("cash_enabled", { mode: "boolean" })
       .notNull()
       .default(false),
+    default_source: text("default_source"),
     calendar_token: text("calendar_token"),
     ai_provider: text("ai_provider", { enum: ["google", "groq"] }),
     ai_model: text("ai_model"),

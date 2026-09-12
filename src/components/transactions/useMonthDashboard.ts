@@ -26,12 +26,14 @@ export function useMonthDashboard({
   places,
   reminders,
   today,
+  sources,
 }: {
   yearMonth: string;
   lifetimeTransactions: Transaction[];
   places: Location[];
   reminders: RecurringPayment[];
   today: string;
+  sources: string[];
 }) {
   const settings = useSettings();
   const [selectedYearMonth, setSelectedYearMonth] = useState(yearMonth);
@@ -93,6 +95,7 @@ export function useMonthDashboard({
     lifetimeTransactions,
     reminders,
     places,
+    sources,
   });
 
   const [view, setView] = useState<HeroView>("monthly");

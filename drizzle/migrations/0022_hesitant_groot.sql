@@ -1,0 +1,1 @@
+ALTER TABLE `user_settings` ADD `default_source` text;
