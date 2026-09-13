@@ -1,9 +1,12 @@
 import {
   amountValidationError,
+  convert,
   feeAmountError,
   formatMoney,
   roundForCurrency,
 } from "@/lib/currency";
+
+import type { FxRates } from "@/types/db";
 
 export const RATE_DECIMALS = 4;
 
@@ -22,6 +25,27 @@ export function cashFromWithdrawalNote(
   const amount = Number(match[1].replace(/,/g, ""));
   if (!Number.isFinite(amount) || amount <= 0) return null;
   return { amount, currency: match[2] };
+}
+
+export function impliedCashRate(
+  charged: { amount: number; currency: string; rates: FxRates },
+  cash: { amount: number; currency: string },
+): number | null {
+  if (cash.currency === charged.currency) return null;
+  let chargedInUsd: number;
+  try {
+    chargedInUsd = convert(
+      charged.amount,
+      charged.currency,
+      "USD",
+      charged.rates,
+    );
+  } catch {
+    return null;
+  }
+  if (!(chargedInUsd > 0)) return null;
+  const rate = cash.amount / chargedInUsd;
+  return Number.isFinite(rate) && rate > 0 ? rate : null;
 }
 
 export function withdrawalNote(

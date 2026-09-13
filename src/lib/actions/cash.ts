@@ -28,7 +28,11 @@ import {
   buildTransactionRow,
   type BuildContext,
 } from "@/lib/transactions";
-import { resolveWithdrawalCharge, withdrawalNote } from "@/lib/withdrawal";
+import {
+  impliedCashRate,
+  resolveWithdrawalCharge,
+  withdrawalNote,
+} from "@/lib/withdrawal";
 import type { TransactionInsert } from "@/types/db";
 
 import {
@@ -659,6 +663,14 @@ export async function moveWithdrawalToCash(
   const ctx = ctxResult.data;
   if (!ctx) return { ok: false, error: "Settings not found" };
 
+  const impliedRate = impliedCashRate(
+    {
+      amount: tx.amount_original,
+      currency: tx.currency_original,
+      rates: tx.fx_rates_snapshot,
+    },
+    { amount: cashAmount, currency: cashCurrency },
+  );
   const incoming = buildTransactionRow(
     {
       userId: user.id,
@@ -669,7 +681,14 @@ export async function moveWithdrawalToCash(
       note: withdrawalNote(tx.note, cashAmount, cashCurrency),
       externalId: `${EXTERNAL_ID_PREFIX.withdrawal}${group}:in`,
     },
-    ctx,
+    {
+      rates: {
+        ...ctx.rates,
+        ...tx.fx_rates_snapshot,
+        ...(impliedRate === null ? {} : { [cashCurrency]: impliedRate }),
+      },
+      userCurrencies: ctx.userCurrencies,
+    },
   );
   if (!incoming) return { ok: false, error: `No rate for ${cashCurrency}` };
 
