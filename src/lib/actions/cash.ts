@@ -659,18 +659,19 @@ export async function moveWithdrawalToCash(
   const ctx = ctxResult.data;
   if (!ctx) return { ok: false, error: "Settings not found" };
 
-  const incoming = buildTransactionRow(
-    {
-      userId: user.id,
-      kind: "income",
-      amount: cashAmount,
-      currency: cashCurrency,
-      occurredOn: tx.occurred_on,
-      note: withdrawalNote(tx.note, cashAmount, cashCurrency),
-      externalId: `${EXTERNAL_ID_PREFIX.withdrawal}${group}:in`,
-    },
-    ctx,
-  );
+  const incomingInput = {
+    userId: user.id,
+    kind: "income" as const,
+    amount: cashAmount,
+    currency: cashCurrency,
+    occurredOn: tx.occurred_on,
+    note: withdrawalNote(tx.note, cashAmount, cashCurrency),
+    externalId: `${EXTERNAL_ID_PREFIX.withdrawal}${group}:in`,
+  };
+  const incoming = buildTransactionRow(incomingInput, {
+    rates: { ...ctx.rates, ...tx.fx_rates_snapshot },
+    userCurrencies: ctx.userCurrencies,
+  });
   if (!incoming) return { ok: false, error: `No rate for ${cashCurrency}` };
 
   try {
