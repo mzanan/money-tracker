@@ -4,19 +4,14 @@ import { useMemo } from "react";
 import { ArrowDownRightIcon, ArrowUpRightIcon } from "lucide-react";
 
 import { Surface } from "@/components/ui/surface";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useSettings } from "@/hooks/useSettings";
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { formatMoney } from "@/lib/currency";
 import { formatYearMonthShort } from "@/lib/dates";
 import { HIDDEN_AMOUNT } from "@/lib/preferences";
-import { periodTotals } from "@/lib/totals";
+import { periodTotals, soleCurrencyOf } from "@/lib/totals";
 import { cn } from "@/lib/utils";
 
 import type { Transaction } from "@/types/db";
@@ -62,34 +57,31 @@ export function BalanceHero({
 }: Props) {
   const settings = useSettings();
   const { hideAmounts } = useHideAmounts();
+  const displayCurrency =
+    soleCurrencyOf(lifetimeTransactions) ?? settings.base_currency;
 
   const monthTotals = useMemo(
     () =>
       periodTotals(
         excludeCanceledPairs(transactions),
-        settings.base_currency,
+        displayCurrency,
         includeTransfers,
       ),
-    [transactions, settings.base_currency, includeTransfers],
+    [transactions, displayCurrency, includeTransfers],
   );
 
   const lifetimeTotals = useMemo(
-    () =>
-      periodTotals(
-        lifetimeTransactions,
-        settings.base_currency,
-        includeTransfers,
-      ),
-    [lifetimeTransactions, settings.base_currency, includeTransfers],
+    () => periodTotals(lifetimeTransactions, displayCurrency, includeTransfers),
+    [lifetimeTransactions, displayCurrency, includeTransfers],
   );
 
   const totalPositive = lifetimeTotals.net >= 0;
-  const totalSigned = formatMoney(lifetimeTotals.net, settings.base_currency, {
+  const totalSigned = formatMoney(lifetimeTotals.net, displayCurrency, {
     signed: true,
   });
 
   const monthPositive = monthTotals.net >= 0;
-  const monthSigned = formatMoney(monthTotals.net, settings.base_currency, {
+  const monthSigned = formatMoney(monthTotals.net, displayCurrency, {
     signed: true,
   });
 
@@ -148,7 +140,7 @@ export function BalanceHero({
                 value={
                   hideAmounts
                     ? HIDDEN_AMOUNT
-                    : `+${formatMoney(monthTotals.income, settings.base_currency)}`
+                    : `+${formatMoney(monthTotals.income, displayCurrency)}`
                 }
                 icon={<ArrowDownRightIcon className="size-4" />}
                 tone="income"
@@ -161,7 +153,7 @@ export function BalanceHero({
                 value={
                   hideAmounts
                     ? HIDDEN_AMOUNT
-                    : `-${formatMoney(monthTotals.expense, settings.base_currency)}`
+                    : `-${formatMoney(monthTotals.expense, displayCurrency)}`
                 }
                 icon={<ArrowUpRightIcon className="size-4" />}
                 tone="expense"

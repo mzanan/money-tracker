@@ -6,7 +6,7 @@ import { addDays, format, parseISO } from "date-fns";
 import { useSettings } from "@/hooks/useSettings";
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { monthBounds } from "@/lib/dates";
-import { dayTotalsList } from "@/lib/totals";
+import { dayTotalsList, soleCurrencyOf } from "@/lib/totals";
 
 import type { Transaction } from "@/types/db";
 
@@ -24,6 +24,8 @@ export function useDaySpend({
   includeTransfers = false,
 }: Args) {
   const settings = useSettings();
+  const displayCurrency =
+    soleCurrencyOf(transactions) ?? settings.base_currency;
 
   const [monthStart, monthEnd] = monthBounds(yearMonth);
   const todayInMonth = today >= monthStart && today <= monthEnd;
@@ -31,11 +33,7 @@ export function useDaySpend({
   const byDay = useMemo(() => {
     const map = new Map<string, { expense: number; count: number }>();
     const real = excludeCanceledPairs(transactions);
-    for (const day of dayTotalsList(
-      real,
-      settings.base_currency,
-      includeTransfers,
-    )) {
+    for (const day of dayTotalsList(real, displayCurrency, includeTransfers)) {
       if (day.date < monthStart || day.date > monthEnd) continue;
       const expenseCount = day.transactions.filter(
         (t) => t.kind === "expense",
@@ -43,13 +41,7 @@ export function useDaySpend({
       map.set(day.date, { expense: day.expense, count: expenseCount });
     }
     return map;
-  }, [
-    transactions,
-    settings.base_currency,
-    includeTransfers,
-    monthStart,
-    monthEnd,
-  ]);
+  }, [transactions, displayCurrency, includeTransfers, monthStart, monthEnd]);
 
   const daysInMonth = useMemo(() => {
     const out: string[] = [];
@@ -106,6 +98,7 @@ export function useDaySpend({
     : format(parseISO(selectedDate), "EEE LLL d");
 
   return {
+    displayCurrency,
     selectedDate,
     setSelectedDate,
     expense,

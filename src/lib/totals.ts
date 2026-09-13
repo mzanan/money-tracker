@@ -35,6 +35,20 @@ export function safeTransactionInDisplay(
   }
 }
 
+export function soleCurrencyOf(
+  transactions: Pick<Transaction, "currency_original">[],
+): string | null {
+  let found: string | null = null;
+  for (const tx of transactions) {
+    if (found === null) {
+      found = tx.currency_original;
+    } else if (found !== tx.currency_original) {
+      return null;
+    }
+  }
+  return found;
+}
+
 export function periodTotals(
   txs: Transaction[],
   displayCurrency: string,

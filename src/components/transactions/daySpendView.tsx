@@ -3,7 +3,6 @@
 import { format, parseISO } from "date-fns";
 
 import { useHideAmounts } from "@/hooks/useHideAmounts";
-import { useSettings } from "@/hooks/useSettings";
 import { formatMoney } from "@/lib/currency";
 import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
@@ -20,9 +19,9 @@ interface Props {
 }
 
 export function DaySpendView({ daySpend }: Props) {
-  const settings = useSettings();
   const { hideAmounts } = useHideAmounts();
   const {
+    displayCurrency,
     expense,
     count,
     daysInMonth,
@@ -46,9 +45,7 @@ export function DaySpendView({ daySpend }: Props) {
           expense > 0 ? "text-foreground" : "text-muted-foreground",
         )}
       >
-        {hideAmounts
-          ? HIDDEN_AMOUNT
-          : formatMoney(expense, settings.base_currency)}
+        {hideAmounts ? HIDDEN_AMOUNT : formatMoney(expense, displayCurrency)}
       </p>
       <p className="text-muted-foreground mt-1 text-xs">
         {count === 0
@@ -62,7 +59,8 @@ export function DaySpendView({ daySpend }: Props) {
         <div className="flex gap-px" style={{ height: CHART_HEIGHT }}>
           {daysInMonth.map((date) => {
             const data = byDay.get(date);
-            const ratio = maxExpense > 0 ? (data?.expense ?? 0) / maxExpense : 0;
+            const ratio =
+              maxExpense > 0 ? (data?.expense ?? 0) / maxExpense : 0;
             const height = Math.max(ratio * CHART_HEIGHT, MIN_BAR_HEIGHT);
             const isSelected = date === selectedDate;
             const isAfterToday = todayInMonth && date > today;
@@ -85,7 +83,8 @@ export function DaySpendView({ daySpend }: Props) {
                     isSelected
                       ? "bg-primary"
                       : "bg-muted-foreground/25 group-hover:bg-muted-foreground/50",
-                    isAfterToday && "opacity-40 group-hover:bg-muted-foreground/25",
+                    isAfterToday &&
+                      "group-hover:bg-muted-foreground/25 opacity-40",
                   )}
                 />
               </button>
