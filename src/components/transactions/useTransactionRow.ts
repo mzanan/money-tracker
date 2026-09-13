@@ -9,11 +9,16 @@ import {
   deleteTransaction,
   setTransactionFixed,
 } from "@/lib/actions/transactions";
+import { undoMoveWithdrawalToCash } from "@/lib/actions/cash";
 import { setBudgetMonthShift, unmarkTransfer } from "@/lib/actions/transfers";
 import { canShiftBudgetMonth, hasBudgetMonthOverride } from "@/lib/budgetMonth";
 import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
 import { formatMonthShort, todayInTz } from "@/lib/dates";
-import { isSyncedExternalId, isWithdrawalExternalId } from "@/lib/externalIds";
+import {
+  isSingleLegWithdrawalExternalId,
+  isSyncedExternalId,
+  isWithdrawalExternalId,
+} from "@/lib/externalIds";
 import { isFixedTransaction } from "@/lib/fixedExpenses";
 import { transactionInDisplay } from "@/lib/totals";
 import { useUiStore } from "@/stores/uiStore";
@@ -44,9 +49,15 @@ export function useTransactionRow(
   const transferDialog = useDialogState(runAfterMenuClose);
   const source = useDialogState(runAfterMenuClose);
   const duplicate = useDialogState(runAfterMenuClose);
+  const moveToCash = useDialogState(runAfterMenuClose);
 
   const isTransfer = Boolean(tx.transfer_group);
   const isWithdrawal = isWithdrawalExternalId(tx.external_id);
+  const canMoveToCash =
+    isSingleLegWithdrawalExternalId(tx.external_id) &&
+    !isTransfer &&
+    tx.kind === "expense";
+  const canUndoMoveToCash = isWithdrawal && isTransfer;
   const isSynced = kindOfSource(tx.source) === "api";
   const canDelete = !isSynced && !isTransfer;
   const lockAmountFields = isSynced || isTransfer || isWithdrawal;
@@ -124,6 +135,16 @@ export function useTransactionRow(
     );
   }
 
+  function handleUndoMoveToCash() {
+    runAfterMenuClose(() =>
+      transfer.run(() => undoMoveWithdrawalToCash(tx.id), {
+        confirm:
+          "Undo this? The cash entry is removed and the bank charge counts as spending again.",
+        success: "Cash entry removed",
+      }),
+    );
+  }
+
   function handleShiftBudgetMonth() {
     const next = tx.budget_month ? 0 : 1;
     const successMessage = next === 1 ? "Moved to next month" : "Moved back";
@@ -168,11 +189,15 @@ export function useTransactionRow(
     transferDialog,
     source,
     duplicate,
+    moveToCash,
+    canMoveToCash,
+    canUndoMoveToCash,
     canShiftMonth,
     isMovedOut,
     isCarriedOver,
     budgetMonthLabel,
     handleUndoTransfer,
+    handleUndoMoveToCash,
     handleDelete,
     handleToggleFixed,
     handleShiftBudgetMonth,

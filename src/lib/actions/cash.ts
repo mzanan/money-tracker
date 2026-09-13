@@ -14,11 +14,13 @@ import {
 import { amountValidationError, formatMoney } from "@/lib/currency";
 import { getAccountLabels } from "@/lib/data/accounts";
 import { db } from "@/lib/db";
-import { transactions } from "@/lib/db/schema";
+import { transactions, user_settings } from "@/lib/db/schema";
 import {
   EXTERNAL_ID_PREFIX,
+  isSingleLegWithdrawalExternalId,
   isSyncedExternalId,
   isWithdrawalExternalId,
+  withdrawalGroupFrom,
 } from "@/lib/externalIds";
 import { getUser } from "@/lib/session";
 import {
@@ -26,7 +28,7 @@ import {
   buildTransactionRow,
   type BuildContext,
 } from "@/lib/transactions";
-import { resolveWithdrawalCharge } from "@/lib/withdrawal";
+import { resolveWithdrawalCharge, withdrawalNote } from "@/lib/withdrawal";
 import type { TransactionInsert } from "@/types/db";
 
 import {
@@ -532,6 +534,174 @@ export async function convertToWithdrawal(
       if (feeRow) {
         await dbTx.insert(transactions).values(feeRow);
       }
+    });
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Update failed",
+    };
+  }
+}
+
+export async function undoMoveWithdrawalToCash(
+  id: string,
+): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const tx = await db
+    .select()
+    .from(transactions)
+    .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)))
+    .limit(1)
+    .then((rows) => rows[0]);
+  if (!tx) return { ok: false, error: "Transaction not found" };
+  const group = tx.transfer_group;
+  if (!group || !isWithdrawalExternalId(tx.external_id)) {
+    return { ok: false, error: "Not a withdrawal with a cash entry" };
+  }
+
+  try {
+    await db.transaction(async (dbTx) => {
+      await dbTx
+        .delete(transactions)
+        .where(
+          and(
+            eq(transactions.user_id, user.id),
+            eq(transactions.transfer_group, group),
+            eq(
+              transactions.external_id,
+              `${EXTERNAL_ID_PREFIX.withdrawal}${group}:in`,
+            ),
+          ),
+        );
+      await dbTx
+        .update(transactions)
+        .set({ transfer_group: null })
+        .where(
+          and(
+            eq(transactions.user_id, user.id),
+            eq(transactions.transfer_group, group),
+          ),
+        );
+      await dbTx
+        .update(transactions)
+        .set({ external_id: `${EXTERNAL_ID_PREFIX.withdrawal}${group}` })
+        .where(
+          and(
+            eq(transactions.user_id, user.id),
+            eq(
+              transactions.external_id,
+              `${EXTERNAL_ID_PREFIX.withdrawal}${group}:out`,
+            ),
+          ),
+        );
+    });
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Update failed",
+    };
+  }
+}
+
+const moveToCashSchema = z.object({
+  id: z.string().min(1),
+  cashAmount: z.number().finite().positive(),
+  cashCurrency: z.string().refine(isSupportedCurrency),
+});
+
+export type MoveWithdrawalToCashInput = z.infer<typeof moveToCashSchema>;
+
+export async function moveWithdrawalToCash(
+  input: MoveWithdrawalToCashInput,
+): Promise<ActionResult> {
+  const parsed = moveToCashSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid data" };
+  const { id, cashAmount, cashCurrency } = parsed.data;
+  const cashAmountError = amountValidationError(cashAmount, cashCurrency);
+  if (cashAmountError) return { ok: false, error: cashAmountError };
+
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const tx = await db
+    .select()
+    .from(transactions)
+    .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)))
+    .limit(1)
+    .then((rows) => rows[0]);
+  if (!tx) return { ok: false, error: "Transaction not found" };
+  if (!isWithdrawalExternalId(tx.external_id)) {
+    return { ok: false, error: "Only a withdrawal can move to Cash" };
+  }
+  if (!isSingleLegWithdrawalExternalId(tx.external_id)) {
+    return { ok: false, error: "This withdrawal already has a cash entry" };
+  }
+  if (tx.transfer_group) {
+    return { ok: false, error: "This withdrawal already has a cash entry" };
+  }
+  if (tx.kind !== "expense") {
+    return { ok: false, error: "Only the bank side can move to Cash" };
+  }
+
+  const group = withdrawalGroupFrom(tx.external_id);
+  if (!group) return { ok: false, error: "Withdrawal is missing its group" };
+
+  const ctxResult = await withRatesErrorHandling(() =>
+    buildCurrencyContext(user.id),
+  );
+  if (!ctxResult.ok) return ctxResult;
+  const ctx = ctxResult.data;
+  if (!ctx) return { ok: false, error: "Settings not found" };
+
+  const incoming = buildTransactionRow(
+    {
+      userId: user.id,
+      kind: "income",
+      amount: cashAmount,
+      currency: cashCurrency,
+      occurredOn: tx.occurred_on,
+      note: withdrawalNote(tx.note, cashAmount, cashCurrency),
+      externalId: `${EXTERNAL_ID_PREFIX.withdrawal}${group}:in`,
+    },
+    ctx,
+  );
+  if (!incoming) return { ok: false, error: `No rate for ${cashCurrency}` };
+
+  try {
+    await db.transaction(async (dbTx) => {
+      const result = await dbTx
+        .update(transactions)
+        .set({ transfer_group: group })
+        .where(
+          and(
+            eq(transactions.id, id),
+            eq(transactions.user_id, user.id),
+            isNull(transactions.transfer_group),
+          ),
+        );
+      if (result.rowsAffected === 0) {
+        throw new Error("Transaction changed, reload and retry");
+      }
+      await dbTx.insert(transactions).values({
+        ...incoming,
+        transfer_group: group,
+        budget_month: tx.budget_month,
+      });
+      await dbTx
+        .update(user_settings)
+        .set({ cash_enabled: true })
+        .where(
+          and(
+            eq(user_settings.user_id, user.id),
+            eq(user_settings.cash_enabled, false),
+          ),
+        );
     });
     revalidatePath("/", "layout");
     return { ok: true };

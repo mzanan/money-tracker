@@ -29,3 +29,18 @@ export function isSyncedExternalId(id: string | null | undefined): boolean {
 export function isWithdrawalExternalId(id: string | null | undefined): boolean {
   return id != null && id.startsWith(EXTERNAL_ID_PREFIX.withdrawal);
 }
+
+export function isSingleLegWithdrawalExternalId(
+  id: string | null | undefined,
+): boolean {
+  if (id == null || !isWithdrawalExternalId(id)) return false;
+  return !id.slice(EXTERNAL_ID_PREFIX.withdrawal.length).includes(":");
+}
+
+export function withdrawalGroupFrom(
+  externalId: string | null | undefined,
+): string | null {
+  if (externalId == null || !isWithdrawalExternalId(externalId)) return null;
+  const rest = externalId.slice(EXTERNAL_ID_PREFIX.withdrawal.length);
+  return rest.split(":")[0] || null;
+}

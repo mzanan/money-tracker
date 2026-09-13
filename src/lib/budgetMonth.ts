@@ -1,6 +1,7 @@
 import {
   EXTERNAL_ID_PREFIX,
   TRANSFER_FEE_DEST_SUFFIX,
+  withdrawalGroupFrom,
 } from "@/lib/externalIds";
 
 import {
@@ -14,13 +15,6 @@ import type { TotalsBreakdown } from "@/lib/totals";
 import type { Transaction } from "@/types/db";
 
 type GroupShape = Pick<Transaction, "transfer_group" | "external_id">;
-
-function withdrawalGroupFrom(externalId: string | null): string | null {
-  if (!externalId?.startsWith(EXTERNAL_ID_PREFIX.withdrawal)) return null;
-  const rest = externalId.slice(EXTERNAL_ID_PREFIX.withdrawal.length);
-  const group = rest.split(":")[0];
-  return group || null;
-}
 
 function transferFeeGroupFrom(externalId: string | null): string | null {
   if (!externalId?.startsWith(EXTERNAL_ID_PREFIX.transferFee)) return null;
