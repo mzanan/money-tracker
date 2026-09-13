@@ -11,6 +11,7 @@ import {
   PencilLineIcon,
   PinIcon,
   Trash2Icon,
+  WalletIcon,
 } from "lucide-react";
 
 import { formatMoney } from "@/lib/currency";
@@ -35,6 +36,8 @@ import { TransactionFormDialog } from "./transactionFormDialog";
 import { TransactionFormStep } from "./transactionFormStep";
 import { MarkTransferDialog } from "./markTransferDialog";
 import { MarkTransferStep } from "./markTransferStep";
+import { MoveToCashDialog } from "./moveToCashDialog";
+import { MoveToCashStep } from "./moveToCashStep";
 import { SourceEditor } from "./sourceEditor";
 import { SourceEditorStep } from "./sourceEditorStep";
 import { TagChips } from "./tagChips";
@@ -79,11 +82,15 @@ export function TransactionRow({
     transferDialog,
     source,
     duplicate,
+    moveToCash,
+    canMoveToCash,
+    canUndoMoveToCash,
     canShiftMonth,
     isMovedOut,
     isCarriedOver,
     budgetMonthLabel,
     handleUndoTransfer,
+    handleUndoMoveToCash,
     handleDelete,
     handleToggleFixed,
     handleShiftBudgetMonth,
@@ -206,6 +213,25 @@ export function TransactionRow({
     }
   }
 
+  function openMoveToCash() {
+    if (stepApi) {
+      runAfterMenuClose(() =>
+        stepApi.push({
+          key: `move-to-cash-${tx.id}`,
+          content: (
+            <MoveToCashStep
+              txId={tx.id}
+              txNote={tx.note}
+              onBack={stepApi.pop}
+            />
+          ),
+        }),
+      );
+    } else {
+      moveToCash.openDialog();
+    }
+  }
+
   return (
     <TappableRow
       as="div"
@@ -309,7 +335,12 @@ export function TransactionRow({
               <CopyIcon />
               Duplicate
             </DropdownMenuItem>
-            {isTransfer ? (
+            {canUndoMoveToCash ? (
+              <DropdownMenuItem onSelect={handleUndoMoveToCash}>
+                <WalletIcon />
+                Undo move to Cash
+              </DropdownMenuItem>
+            ) : isTransfer ? (
               <DropdownMenuItem onSelect={handleUndoTransfer}>
                 <BanknoteIcon />
                 Undo transfer
@@ -321,6 +352,12 @@ export function TransactionRow({
                   Mark as transfer
                 </DropdownMenuItem>
               )
+            )}
+            {canMoveToCash && (
+              <DropdownMenuItem onSelect={openMoveToCash}>
+                <WalletIcon />
+                Move to Cash
+              </DropdownMenuItem>
             )}
             {canShiftMonth && (
               <DropdownMenuItem onSelect={handleShiftBudgetMonth}>
@@ -398,6 +435,14 @@ export function TransactionRow({
           txKind={tx.kind}
           open={transferDialog.open}
           onOpenChange={transferDialog.setOpen}
+        />
+      )}
+      {moveToCash.mounted && (
+        <MoveToCashDialog
+          txId={tx.id}
+          txNote={tx.note}
+          open={moveToCash.open}
+          onOpenChange={moveToCash.setOpen}
         />
       )}
       {duplicate.mounted && (

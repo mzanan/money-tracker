@@ -1,10 +1,44 @@
 import {
   amountValidationError,
   feeAmountError,
+  formatMoney,
   roundForCurrency,
 } from "@/lib/currency";
 
 export const RATE_DECIMALS = 4;
+
+const NOTE_CASH_PATTERN = /([\d,]+(?:\.\d+)?)\s+([A-Z]{3})\s*$/;
+
+export interface WithdrawnCash {
+  amount: number;
+  currency: string;
+}
+
+export function cashFromWithdrawalNote(
+  note: string | null | undefined,
+): WithdrawnCash | null {
+  const match = note?.match(NOTE_CASH_PATTERN);
+  if (!match) return null;
+  const amount = Number(match[1].replace(/,/g, ""));
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  return { amount, currency: match[2] };
+}
+
+export function withdrawalNote(
+  note: string | null | undefined,
+  amount: number,
+  currency: string,
+): string {
+  const raw = note?.trim() ?? "";
+  const separator = raw.lastIndexOf("·");
+  const suffix = separator === -1 ? null : raw.slice(separator + 1);
+  const stripped =
+    suffix !== null && cashFromWithdrawalNote(suffix)
+      ? raw.slice(0, separator).trim()
+      : raw;
+  const base = stripped || "ATM withdrawal";
+  return `${base} · ${formatMoney(amount, currency, { showCode: true })}`;
+}
 
 export interface WithdrawalChargedAmountInput {
   received: number;

@@ -750,14 +750,19 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
             );
         }
       }
-      await dbTx
-        .delete(transactions)
-        .where(
-          and(
-            eq(transactions.user_id, user.id),
-            inArray(transactions.external_id, [originFeeId, destinationFeeId]),
-          ),
-        );
+      if (!isWithdrawal) {
+        await dbTx
+          .delete(transactions)
+          .where(
+            and(
+              eq(transactions.user_id, user.id),
+              inArray(transactions.external_id, [
+                originFeeId,
+                destinationFeeId,
+              ]),
+            ),
+          );
+      }
     });
     revalidatePath("/", "layout");
     return { ok: true };

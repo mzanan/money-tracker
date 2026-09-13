@@ -182,6 +182,16 @@ drizzle/migrations/           # SQL generado por drizzle-kit
   "Transfer" del quick-add, o marcando una fila existente desde el menú.
   Disponible en cuentas csv y en cash (solo con cash habilitado), nunca en
   cuentas sincronizadas ni en el tab All.
+- **Withdrawals y efectivo**: un retiro puede vivir como una sola fila de gasto
+  (`withdrawal:<grupo>`, sin `transfer_group`), y entonces el monto entero
+  cuenta como gasto y no queda saldo en efectivo. "Move to Cash" en el menú de
+  la fila agrega la pata que falta (`withdrawal:<grupo>:in`, ingreso en la
+  cuenta Cash, monto pre-rellenado desde la nota y editable) y estampa el
+  `transfer_group` compartido en el gasto existente, que conserva id, nota,
+  comisión y `budget_month`. Habilita `cash_enabled` si estaba apagado, si no
+  la pata nueva sería invisible. "Undo move to Cash" borra la pata de efectivo
+  y devuelve el `external_id` sin sufijo. La comisión del cajero NO se borra al
+  deshacer: es plata efectivamente pagada.
 - **Mes de presupuesto**: transfers y withdrawals (fila con `transfer_group`
   o `external_id` de withdrawal/fee) se pueden mover al mes siguiente desde
   el menú de la fila (`budget_month`, nullable). `occurred_on` nunca se
