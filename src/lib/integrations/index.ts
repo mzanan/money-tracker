@@ -23,6 +23,7 @@ export interface IntegrationAdapter {
     creds: IntegrationCreds,
     since: Date,
   ) => Promise<NormalizedTx[]>;
+  verifyCredentials: (creds: IntegrationCreds) => Promise<void>;
 }
 
 export const ADAPTERS: Record<IntegrationProvider, IntegrationAdapter> = {

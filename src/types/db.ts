@@ -58,6 +58,7 @@ export interface IntegrationSummary {
   importIncome: boolean;
   autoSync: boolean;
   lastSyncedAt: string | null;
+  lastError: string | null;
 }
 
 export type Location = typeof locations.$inferSelect;

@@ -276,6 +276,19 @@ function internalDepositToNormalized(row: InternalDepositRow): NormalizedTx | nu
   };
 }
 
+export async function verifyCredentials(creds: IntegrationCreds): Promise<void> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  await get<FundingHistoryRow>(
+    "/v5/asset/fundinghistory",
+    {
+      createTimeFrom: (nowSec - 24 * 60 * 60).toString(),
+      createTimeTo: nowSec.toString(),
+      limit: "1",
+    },
+    creds,
+  );
+}
+
 export async function fetchTransactions(
   creds: IntegrationCreds,
   since: Date,

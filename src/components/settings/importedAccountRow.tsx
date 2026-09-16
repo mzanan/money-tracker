@@ -9,7 +9,11 @@ import {
 } from "@/lib/actions/accounts";
 import { setSourceArchived } from "@/lib/actions/settings";
 import { deleteSource } from "@/lib/actions/sources";
-import { kindOfSource, syncStatusLabel } from "@/lib/constants/sources";
+import {
+  kindOfSource,
+  SYNC_STATUS_LABELS,
+  syncStatus,
+} from "@/lib/constants/sources";
 import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useInlineEdit } from "@/hooks/useInlineEdit";
 import { useServerAction } from "@/hooks/useServerAction";
@@ -136,11 +140,16 @@ export function ImportedAccountRow({
         <>
           {kindOfSource(source) === "api" && (
             <Badge variant="outline" size="xs">
-              {syncStatusLabel({
-                connected: integration !== null,
-                autoSync: integration?.autoSync ?? false,
-                archived,
-              })}
+              {
+                SYNC_STATUS_LABELS[
+                  syncStatus({
+                    connected: integration !== null,
+                    autoSync: integration?.autoSync ?? false,
+                    archived,
+                    lastError: integration?.lastError ?? null,
+                  })
+                ]
+              }
             </Badge>
           )}
           {archived && (

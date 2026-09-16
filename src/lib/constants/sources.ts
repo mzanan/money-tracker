@@ -46,19 +46,43 @@ export function withoutArchived(
   return sources.filter((source) => !archived.includes(source));
 }
 
-export function syncStatusLabel({
+export type SyncStatus = "not-connected" | "paused" | "failed" | "synced";
+
+export function syncStatus({
   connected,
   autoSync,
   archived,
+  lastError,
 }: {
   connected: boolean;
   autoSync: boolean;
   archived: boolean;
-}): string {
-  if (!connected) return "Not connected";
-  if (archived || !autoSync) return "Paused";
-  return "Synced";
+  lastError: string | null;
+}): SyncStatus {
+  if (!connected) return "not-connected";
+  if (archived || !autoSync) return "paused";
+  if (lastError) return "failed";
+  return "synced";
 }
+
+export const SYNC_STATUS_LABELS: Record<SyncStatus, string> = {
+  "not-connected": "Not connected",
+  paused: "Paused",
+  failed: "Sync failed",
+  synced: "Synced",
+};
+
+export type SyncStatusTone = "secondary" | "outline" | "destructive";
+
+export const SYNC_STATUS_TONES: Record<
+  SyncStatus,
+  { variant: SyncStatusTone; className?: string }
+> = {
+  "not-connected": { variant: "outline" },
+  paused: { variant: "outline" },
+  failed: { variant: "destructive" },
+  synced: { variant: "secondary", className: "text-income" },
+};
 
 export function kindOfSource(source: string): SourceKind {
   if (source === "manual") return "manual";

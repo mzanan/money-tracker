@@ -3,6 +3,8 @@
 import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useDialogState } from "@/hooks/useDialogState";
 import { useServerAction } from "@/hooks/useServerAction";
+import { useSettings } from "@/hooks/useSettings";
+import { syncStatus } from "@/lib/constants/sources";
 import {
   deleteIntegration,
   setIntegrationAutoSync,
@@ -20,7 +22,15 @@ export function useIntegrationRow({ provider, label, integration }: Props) {
   const { run, pending } = useServerAction();
   const runAfterMenuClose = useDeferredMenuAction();
   const dialog = useDialogState(runAfterMenuClose);
+  const settings = useSettings();
   const connected = integration !== null;
+  const archived = (settings.archived_sources ?? []).includes(provider);
+  const status = syncStatus({
+    connected,
+    autoSync: integration?.autoSync ?? false,
+    archived,
+    lastError: archived ? null : (integration?.lastError ?? null),
+  });
 
   function handleSync() {
     run(() => syncIntegration(provider), {
@@ -49,7 +59,10 @@ export function useIntegrationRow({ provider, label, integration }: Props) {
     pending,
     dialog,
     connected,
-    autoSync: integration?.autoSync ?? false,
+    archived,
+    status,
+    autoSync: !archived && (integration?.autoSync ?? false),
+    lastError: integration?.lastError ?? null,
     handleSync,
     handleDisconnect,
     handleAutoSyncChange,
