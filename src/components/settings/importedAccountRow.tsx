@@ -7,12 +7,14 @@ import {
   setAccountCurrency,
   upsertAccountLabel,
 } from "@/lib/actions/accounts";
+import { setSourceArchived } from "@/lib/actions/settings";
 import { deleteSource } from "@/lib/actions/sources";
-import { kindOfSource } from "@/lib/constants/sources";
+import { kindOfSource, syncStatusLabel } from "@/lib/constants/sources";
 import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useInlineEdit } from "@/hooks/useInlineEdit";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
+import type { IntegrationSummary } from "@/types/db";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +42,7 @@ interface Props {
   count: number;
   hasAccount: boolean;
   currency: string | null;
+  integration: IntegrationSummary | null;
 }
 
 export function ImportedAccountRow({
@@ -48,12 +51,18 @@ export function ImportedAccountRow({
   count,
   hasAccount,
   currency,
+  integration,
 }: Props) {
   const settings = useSettings();
   const { run, pending } = useServerAction();
   const currencyAction = useServerAction();
   const runAfterMenuClose = useDeferredMenuAction();
   const reserved = kindOfSource(source) !== "csv";
+  const archived = (settings.archived_sources ?? []).includes(source);
+
+  function handleUnarchive() {
+    run(() => setSourceArchived(source, false), { success: "Tab restored" });
+  }
 
   function handleCurrencyChange(value: string) {
     currencyAction.run(
@@ -124,11 +133,22 @@ export function ImportedAccountRow({
     <ListRow
       title={label}
       badge={
-        kindOfSource(source) === "api" && (
-          <Badge variant="outline" size="xs">
-            Synced
-          </Badge>
-        )
+        <>
+          {kindOfSource(source) === "api" && (
+            <Badge variant="outline" size="xs">
+              {syncStatusLabel({
+                connected: integration !== null,
+                autoSync: integration?.autoSync ?? false,
+                archived,
+              })}
+            </Badge>
+          )}
+          {archived && (
+            <Badge variant="secondary" size="xs">
+              Archived
+            </Badge>
+          )}
+        </>
       }
       meta={
         count > 0
@@ -136,6 +156,16 @@ export function ImportedAccountRow({
           : "No transactions yet"
       }
     >
+      {archived && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleUnarchive}
+          disabled={pending}
+        >
+          Unarchive
+        </Button>
+      )}
       {!reserved && (
         <Select
           value={currency ?? MULTI_CURRENCY_VALUE}

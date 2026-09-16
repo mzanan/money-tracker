@@ -56,6 +56,7 @@ export type IntegrationProvider = ApiIntegration["provider"];
  */
 export interface IntegrationSummary {
   importIncome: boolean;
+  autoSync: boolean;
   lastSyncedAt: string | null;
 }
 

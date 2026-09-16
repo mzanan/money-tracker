@@ -1,4 +1,4 @@
-import { tabSourcesFrom } from "@/lib/constants/sources";
+import { tabSourcesFrom, withoutArchived } from "@/lib/constants/sources";
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import { placeOf } from "@/lib/places";
 import { transactionInDisplay } from "@/lib/totals";
@@ -20,9 +20,13 @@ export function initialSource(
   defaultSource: string | null,
   sources: string[],
   cashEnabled: boolean,
+  archivedSources: ReadonlyArray<string> = [],
 ): string {
   if (!defaultSource || defaultSource === "all") return "all";
-  return tabSourcesFrom(sources, cashEnabled).includes(defaultSource)
+  return withoutArchived(
+    tabSourcesFrom(sources, cashEnabled),
+    archivedSources,
+  ).includes(defaultSource)
     ? defaultSource
     : "all";
 }

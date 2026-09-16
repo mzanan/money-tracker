@@ -1,0 +1,1 @@
+ALTER TABLE `api_integrations` ADD `auto_sync` integer DEFAULT true NOT NULL;

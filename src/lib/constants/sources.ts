@@ -39,6 +39,27 @@ export function tabSourcesFrom(
     : [...sources];
 }
 
+export function withoutArchived(
+  sources: ReadonlyArray<string>,
+  archived: ReadonlyArray<string>,
+): string[] {
+  return sources.filter((source) => !archived.includes(source));
+}
+
+export function syncStatusLabel({
+  connected,
+  autoSync,
+  archived,
+}: {
+  connected: boolean;
+  autoSync: boolean;
+  archived: boolean;
+}): string {
+  if (!connected) return "Not connected";
+  if (archived || !autoSync) return "Paused";
+  return "Synced";
+}
+
 export function kindOfSource(source: string): SourceKind {
   if (source === "manual") return "manual";
   if (API_SOURCES.has(source)) return "api";

@@ -27,7 +27,7 @@ export async function IntegrationsCard() {
       <CardHeader>
         <CardTitle>Integrations</CardTitle>
         <CardDescription>
-          Pull transactions automatically from your accounts. Manual sync only.
+          Pull transactions automatically from your accounts.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid divide-y">

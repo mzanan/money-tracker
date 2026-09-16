@@ -162,6 +162,20 @@
       "when": 1789207193245,
       "tag": "0022_hesitant_groot",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1789539616458,
+      "tag": "0023_daffy_millenium_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1789551920131,
+      "tag": "0024_naive_redwing",
+      "breakpoints": true
     }
   ]
 }

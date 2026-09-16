@@ -216,6 +216,33 @@ export async function deleteIntegration(
   }
 }
 
+export async function setIntegrationAutoSync(
+  provider: IntegrationProvider,
+  enabled: boolean,
+): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  try {
+    await db
+      .update(api_integrations)
+      .set({ auto_sync: enabled })
+      .where(
+        and(
+          eq(api_integrations.user_id, user.id),
+          eq(api_integrations.provider, provider),
+        ),
+      );
+    revalidatePath("/settings");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Save failed",
+    };
+  }
+}
+
 export async function syncIntegration(
   provider: IntegrationProvider,
 ): Promise<ActionResult<{ imported: number; skipped: number; absorbed: number }>> {
@@ -374,21 +401,32 @@ export async function autoSyncIntegrations(): Promise<
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const stale = await db
-    .select({
-      provider: api_integrations.provider,
-      last_synced_at: api_integrations.last_synced_at,
-    })
-    .from(api_integrations)
-    .where(eq(api_integrations.user_id, user.id))
-    .then((rows) =>
-      rows.filter(
-        (row) =>
-          !row.last_synced_at ||
-          Date.now() - new Date(row.last_synced_at).getTime() >
-            AUTO_SYNC_MIN_INTERVAL_MS,
-      ),
-    );
+  const [integrationRows, settingsRow] = await Promise.all([
+    db
+      .select({
+        provider: api_integrations.provider,
+        auto_sync: api_integrations.auto_sync,
+        last_synced_at: api_integrations.last_synced_at,
+      })
+      .from(api_integrations)
+      .where(eq(api_integrations.user_id, user.id)),
+    db
+      .select({ archived_sources: user_settings.archived_sources })
+      .from(user_settings)
+      .where(eq(user_settings.user_id, user.id))
+      .limit(1)
+      .then((rows) => rows[0]),
+  ]);
+
+  const archived = settingsRow?.archived_sources ?? [];
+  const stale = integrationRows.filter(
+    (row) =>
+      row.auto_sync &&
+      !archived.includes(row.provider) &&
+      (!row.last_synced_at ||
+        Date.now() - new Date(row.last_synced_at).getTime() >
+          AUTO_SYNC_MIN_INTERVAL_MS),
+  );
 
   let imported = 0;
   for (const row of stale) {
