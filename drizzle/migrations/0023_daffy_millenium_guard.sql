@@ -1,0 +1,1 @@
+ALTER TABLE `user_settings` ADD `archived_sources` text DEFAULT '[]' NOT NULL;

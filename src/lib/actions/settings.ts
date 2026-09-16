@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { getSelectableSources } from "@/lib/data/sources";
@@ -85,15 +85,24 @@ export async function setCashEnabled(enabled: boolean): Promise<ActionResult> {
   }
 }
 
-export async function setDefaultSource(
-  source: string,
-): Promise<ActionResult> {
+export async function setDefaultSource(source: string): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
   if (source !== "all") {
-    const sources = await getSelectableSources(user.id);
-    if (!sources.includes(source)) {
+    const [sources, archivedRow] = await Promise.all([
+      getSelectableSources(user.id),
+      db
+        .select({ archived_sources: user_settings.archived_sources })
+        .from(user_settings)
+        .where(eq(user_settings.user_id, user.id))
+        .limit(1)
+        .then((rows) => rows[0]),
+    ]);
+    if (
+      !sources.includes(source) ||
+      (archivedRow?.archived_sources ?? []).includes(source)
+    ) {
       return { ok: false, error: "Unknown source" };
     }
   }
@@ -113,6 +122,47 @@ export async function setDefaultSource(
   }
 }
 
+export async function setSourceArchived(
+  source: string,
+  archived: boolean,
+): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  if (source === "all") return { ok: false, error: "Unknown source" };
+  if (archived) {
+    const sources = await getSelectableSources(user.id);
+    if (!sources.includes(source)) {
+      return { ok: false, error: "Unknown source" };
+    }
+  }
+
+  const remaining = sql`(SELECT value FROM json_each(${user_settings.archived_sources}) WHERE value != ${source})`;
+
+  try {
+    await db
+      .update(user_settings)
+      .set(
+        archived
+          ? {
+              archived_sources: sql`(SELECT json_group_array(value) FROM (SELECT value FROM ${remaining} UNION ALL SELECT ${source}))`,
+              default_source: sql`CASE WHEN ${user_settings.default_source} = ${source} THEN NULL ELSE ${user_settings.default_source} END`,
+            }
+          : {
+              archived_sources: sql`(SELECT json_group_array(value) FROM ${remaining})`,
+            },
+      )
+      .where(eq(user_settings.user_id, user.id));
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Save failed",
+    };
+  }
+}
+
 const FIXED_LABELS_MAX_ENTRIES = 50;
 const FIXED_LABELS_MAX_LENGTH = 60;
 
@@ -121,9 +171,7 @@ export async function setFixedLabels(labels: string[]): Promise<ActionResult> {
   if (!user) return { ok: false, error: "Not authenticated" };
 
   const normalized = Array.from(
-    new Set(
-      labels.map((label) => normalizeFixedLabel(label)).filter(Boolean),
-    ),
+    new Set(labels.map((label) => normalizeFixedLabel(label)).filter(Boolean)),
   );
 
   if (normalized.some((label) => label.length > FIXED_LABELS_MAX_LENGTH)) {

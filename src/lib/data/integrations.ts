@@ -11,6 +11,7 @@ export async function getIntegrationSummaries(
     .select({
       provider: api_integrations.provider,
       import_income: api_integrations.import_income,
+      auto_sync: api_integrations.auto_sync,
       last_synced_at: api_integrations.last_synced_at,
     })
     .from(api_integrations)
@@ -19,7 +20,11 @@ export async function getIntegrationSummaries(
   return new Map<IntegrationProvider, IntegrationSummary>(
     integrations.map((i) => [
       i.provider,
-      { importIncome: i.import_income, lastSyncedAt: i.last_synced_at },
+      {
+        importIncome: i.import_income,
+        autoSync: i.auto_sync,
+        lastSyncedAt: i.last_synced_at,
+      },
     ]),
   );
 }

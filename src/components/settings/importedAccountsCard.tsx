@@ -1,6 +1,9 @@
 import { listAccounts, resolveSourceLabel } from "@/lib/data/accounts";
+import { getIntegrationSummaries } from "@/lib/data/integrations";
 import { getImportedSources } from "@/lib/data/sources";
+import { getUserSettings } from "@/lib/data/userSettings";
 import { getUser } from "@/lib/session";
+import type { IntegrationProvider } from "@/types/db";
 
 import {
   Card,
@@ -17,9 +20,11 @@ export async function ImportedAccountsCard() {
   const user = await getUser();
   if (!user) return null;
 
-  const [sourceRows, accountRows] = await Promise.all([
+  const [sourceRows, accountRows, integrations, settings] = await Promise.all([
     getImportedSources(user.id),
     listAccounts(user.id),
+    getIntegrationSummaries(user.id),
+    getUserSettings(user.id),
   ]);
 
   const accountLabels = Object.fromEntries(
@@ -32,6 +37,7 @@ export async function ImportedAccountsCard() {
   const sources = new Set([
     ...sourceRows.map((s) => s.source),
     ...accountRows.map((a) => a.source),
+    ...(settings?.archived_sources ?? []),
   ]);
 
   const rows = Array.from(sources)
@@ -41,6 +47,7 @@ export async function ImportedAccountsCard() {
       label: resolveSourceLabel(source, accountLabels),
       hasAccount: source in accountLabels,
       currency: accountCurrencies.get(source) ?? null,
+      integration: integrations.get(source as IntegrationProvider) ?? null,
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
@@ -67,6 +74,7 @@ export async function ImportedAccountsCard() {
             count={row.count}
             hasAccount={row.hasAccount}
             currency={row.currency}
+            integration={row.integration}
           />
         ))}
         <AddAccountRow />

@@ -5,6 +5,7 @@ import { useDialogState } from "@/hooks/useDialogState";
 import { useServerAction } from "@/hooks/useServerAction";
 import {
   deleteIntegration,
+  setIntegrationAutoSync,
   syncIntegration,
 } from "@/lib/actions/integrations";
 import type { IntegrationProvider, IntegrationSummary } from "@/types/db";
@@ -38,5 +39,19 @@ export function useIntegrationRow({ provider, label, integration }: Props) {
     });
   }
 
-  return { pending, dialog, connected, handleSync, handleDisconnect };
+  function handleAutoSyncChange(enabled: boolean) {
+    run(() => setIntegrationAutoSync(provider, enabled), {
+      success: enabled ? "Auto sync on" : "Auto sync paused",
+    });
+  }
+
+  return {
+    pending,
+    dialog,
+    connected,
+    autoSync: integration?.autoSync ?? false,
+    handleSync,
+    handleDisconnect,
+    handleAutoSyncChange,
+  };
 }

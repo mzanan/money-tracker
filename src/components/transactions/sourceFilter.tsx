@@ -8,6 +8,8 @@ import {
   RefreshCwIcon,
 } from "lucide-react";
 
+import { useEffect } from "react";
+
 import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
@@ -17,6 +19,7 @@ import {
   kindOfSource,
   resolveSourceLabel,
   tabSourcesFrom,
+  withoutArchived,
 } from "@/lib/constants/sources";
 import type { IntegrationProvider } from "@/types/db";
 
@@ -44,8 +47,17 @@ export function SourceFilter({
   const { run, pending } = useServerAction();
   const kind = selected === "all" ? null : kindOfSource(selected);
 
-  const tabSources = tabSourcesFrom(sources, settings.cash_enabled);
-  const showCashTab = tabSources.includes("manual");
+  const archivedSources = settings.archived_sources ?? [];
+  const allTabSources = tabSourcesFrom(sources, settings.cash_enabled);
+  const tabSources = withoutArchived(allTabSources, archivedSources);
+  const showCashTab = allTabSources.includes("manual");
+
+  const selectedArchived =
+    selected !== "all" && archivedSources.includes(selected);
+
+  useEffect(() => {
+    if (selectedArchived) onChange("all");
+  }, [selectedArchived, onChange]);
 
   function handleSync() {
     if (kind !== "api") return;
@@ -103,7 +115,7 @@ export function SourceFilter({
             Cash
           </button>
         )}
-        <ImportFromImage existingSources={tabSources} />
+        <ImportFromImage existingSources={allTabSources} />
       </div>
       {kind === "api" && (
         <Button

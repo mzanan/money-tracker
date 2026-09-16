@@ -18,7 +18,7 @@ export function SourceTabMenu({
   source: string;
   label: string;
 }) {
-  const { isDefault, makeDefault, clearDefault, pending } =
+  const { isDefault, makeDefault, clearDefault, archive, pending } =
     useSourceTabMenu(source);
 
   return (
@@ -45,6 +45,9 @@ export function SourceTabMenu({
           <DropdownMenuItem onSelect={makeDefault}>
             Set as default
           </DropdownMenuItem>
+        )}
+        {source !== "all" && (
+          <DropdownMenuItem onSelect={archive}>Archive tab</DropdownMenuItem>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

@@ -46,7 +46,12 @@ export function useDashboardControls({
 
   const [panel, setPanel] = useState<PanelMode>("none");
   const [selectedSource, setSelectedSource] = useState(() =>
-    initialSource(settings.default_source, sources, settings.cash_enabled),
+    initialSource(
+      settings.default_source,
+      sources,
+      settings.cash_enabled,
+      settings.archived_sources,
+    ),
   );
   const [selectedKind, setSelectedKind] = useState<KindFilter>("all");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);

@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ListRow } from "@/components/ui/listRow";
+import { SwitchRow } from "@/components/ui/switchRow";
 
 import { IntegrationDialog } from "./integrationDialog";
 import { useIntegrationRow } from "./useIntegrationRow";
@@ -26,8 +27,16 @@ interface Props {
 }
 
 export function IntegrationRow({ provider, label, integration }: Props) {
-  const { pending, dialog, connected, handleSync, handleDisconnect } =
-    useIntegrationRow({ provider, label, integration });
+  const {
+    pending,
+    dialog,
+    connected,
+    autoSync,
+    handleSync,
+    handleDisconnect,
+    handleAutoSyncChange,
+  } = useIntegrationRow({ provider, label, integration });
+  const autoSyncId = `${provider}-auto-sync`;
 
   return (
     <ListRow
@@ -50,6 +59,15 @@ export function IntegrationRow({ provider, label, integration }: Props) {
       <div className="flex items-center gap-1">
         {connected ? (
           <>
+            <SwitchRow
+              id={autoSyncId}
+              label="Auto sync"
+              checked={autoSync}
+              onCheckedChange={handleAutoSyncChange}
+              disabled={pending}
+              inline
+              className="mr-2"
+            />
             <Button
               size="sm"
               variant="outline"

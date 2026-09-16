@@ -3,7 +3,7 @@
 import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
-import { setDefaultSource } from "@/lib/actions/settings";
+import { setDefaultSource, setSourceArchived } from "@/lib/actions/settings";
 
 export function useSourceTabMenu(source: string) {
   const settings = useSettings();
@@ -18,10 +18,17 @@ export function useSourceTabMenu(source: string) {
     );
   }
 
+  function archive() {
+    runAfterMenuClose(() =>
+      run(() => setSourceArchived(source, true), { success: "Tab archived" }),
+    );
+  }
+
   return {
     isDefault,
     makeDefault: () => setDefault(source),
     clearDefault: () => setDefault("all"),
+    archive,
     pending,
   };
 }

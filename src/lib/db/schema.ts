@@ -211,6 +211,10 @@ export const user_settings = sqliteTable(
       .notNull()
       .default(false),
     default_source: text("default_source"),
+    archived_sources: text("archived_sources", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
     calendar_token: text("calendar_token"),
     ai_provider: text("ai_provider", { enum: ["google", "groq"] }),
     ai_model: text("ai_model"),
@@ -269,6 +273,9 @@ export const api_integrations = sqliteTable(
     import_income: integer("import_income", { mode: "boolean" })
       .notNull()
       .default(false),
+    auto_sync: integer("auto_sync", { mode: "boolean" })
+      .notNull()
+      .default(true),
     last_synced_at: text("last_synced_at"),
     created_at: text("created_at")
       .notNull()
