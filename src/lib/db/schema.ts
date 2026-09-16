@@ -277,6 +277,7 @@ export const api_integrations = sqliteTable(
       .notNull()
       .default(true),
     last_synced_at: text("last_synced_at"),
+    last_error: text("last_error"),
     created_at: text("created_at")
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),

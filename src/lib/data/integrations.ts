@@ -13,6 +13,7 @@ export async function getIntegrationSummaries(
       import_income: api_integrations.import_income,
       auto_sync: api_integrations.auto_sync,
       last_synced_at: api_integrations.last_synced_at,
+      last_error: api_integrations.last_error,
     })
     .from(api_integrations)
     .where(eq(api_integrations.user_id, userId));
@@ -24,6 +25,7 @@ export async function getIntegrationSummaries(
         importIncome: i.import_income,
         autoSync: i.auto_sync,
         lastSyncedAt: i.last_synced_at,
+        lastError: i.last_error,
       },
     ]),
   );

@@ -1,0 +1,1 @@
+ALTER TABLE `api_integrations` ADD `last_error` text;

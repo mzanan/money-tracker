@@ -124,7 +124,12 @@ export async function saveIntegration(input: {
   if (!user) return { ok: false, error: "Not authenticated" };
 
   const existing = await db
-    .select({ provider: api_integrations.provider })
+    .select({
+      provider: api_integrations.provider,
+      api_key: api_integrations.api_key,
+      api_secret: api_integrations.api_secret,
+      extra: api_integrations.extra,
+    })
     .from(api_integrations)
     .where(
       and(
@@ -148,6 +153,28 @@ export async function saveIntegration(input: {
     }
   }
 
+  const credentialsChanged = apiKey !== null || apiSecret !== null;
+  if (credentialsChanged) {
+    try {
+      const effectiveKey =
+        apiKey ?? (existing ? decryptSecret(existing.api_key, aad) : null);
+      const effectiveSecret =
+        apiSecret ??
+        (existing?.api_secret ? decryptSecret(existing.api_secret, aad) : null);
+      if (!effectiveKey) return { ok: false, error: "API key is required" };
+      await ADAPTERS[input.provider].verifyCredentials({
+        apiKey: effectiveKey,
+        apiSecret: effectiveSecret,
+        extra: input.extra ?? existing?.extra ?? {},
+      });
+    } catch (error) {
+      return {
+        ok: false,
+        error: `Could not verify credentials: ${error instanceof Error ? error.message : "unknown error"}`,
+      };
+    }
+  }
+
   try {
     if (!existing) {
       // Seed last_synced_at to (now - initialSinceDays) so the first sync picks
@@ -168,6 +195,7 @@ export async function saveIntegration(input: {
       });
     } else {
       const set: ApiIntegrationUpdate = { import_income: input.importIncome };
+      if (credentialsChanged) set.last_error = null;
       if (apiKey) set.api_key = encryptSecret(apiKey, aad);
       if (apiSecret) set.api_secret = encryptSecret(apiSecret, aad);
       if (input.extra) set.extra = input.extra;
@@ -302,10 +330,18 @@ export async function syncIntegration(
       since,
     );
   } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Sync failed",
-    };
+    const message = error instanceof Error ? error.message : "Sync failed";
+    await db
+      .update(api_integrations)
+      .set({ last_error: message })
+      .where(
+        and(
+          eq(api_integrations.user_id, user.id),
+          eq(api_integrations.provider, provider),
+        ),
+      );
+    revalidatePath("/settings");
+    return { ok: false, error: message };
   }
 
   let skippedNoRate = 0;
@@ -373,17 +409,20 @@ export async function syncIntegration(
     }
   }
 
-  if (normalized.length > 0) {
-    await db
-      .update(api_integrations)
-      .set({ last_synced_at: new Date().toISOString() })
-      .where(
-        and(
-          eq(api_integrations.user_id, user.id),
-          eq(api_integrations.provider, provider),
-        ),
-      );
-  }
+  await db
+    .update(api_integrations)
+    .set({
+      last_error: null,
+      ...(normalized.length > 0
+        ? { last_synced_at: new Date().toISOString() }
+        : {}),
+    })
+    .where(
+      and(
+        eq(api_integrations.user_id, user.id),
+        eq(api_integrations.provider, provider),
+      ),
+    );
 
   revalidatePath("/", "layout");
 
@@ -407,6 +446,7 @@ export async function autoSyncIntegrations(): Promise<
         provider: api_integrations.provider,
         auto_sync: api_integrations.auto_sync,
         last_synced_at: api_integrations.last_synced_at,
+        last_error: api_integrations.last_error,
       })
       .from(api_integrations)
       .where(eq(api_integrations.user_id, user.id)),
@@ -422,6 +462,7 @@ export async function autoSyncIntegrations(): Promise<
   const stale = integrationRows.filter(
     (row) =>
       row.auto_sync &&
+      !row.last_error &&
       !archived.includes(row.provider) &&
       (!row.last_synced_at ||
         Date.now() - new Date(row.last_synced_at).getTime() >

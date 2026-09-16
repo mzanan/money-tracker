@@ -2,6 +2,7 @@
 
 import { Loader2Icon, MoreVerticalIcon, RefreshCwIcon } from "lucide-react";
 
+import { SYNC_STATUS_LABELS, SYNC_STATUS_TONES } from "@/lib/constants/sources";
 import { timeAgo } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import type { IntegrationProvider, IntegrationSummary } from "@/types/db";
@@ -31,7 +32,10 @@ export function IntegrationRow({ provider, label, integration }: Props) {
     pending,
     dialog,
     connected,
+    archived,
+    status,
     autoSync,
+    lastError,
     handleSync,
     handleDisconnect,
     handleAutoSyncChange,
@@ -43,17 +47,17 @@ export function IntegrationRow({ provider, label, integration }: Props) {
       title={label}
       badge={
         <Badge
-          variant={connected ? "secondary" : "outline"}
+          variant={SYNC_STATUS_TONES[status].variant}
           size="xs"
-          className={cn(connected && "text-income")}
+          className={cn(SYNC_STATUS_TONES[status].className)}
         >
-          {connected ? "Connected" : "Not connected"}
+          {archived ? "Paused (archived)" : SYNC_STATUS_LABELS[status]}
         </Badge>
       }
       meta={
-        integration
-          ? `Last sync · ${timeAgo(integration.lastSyncedAt)}`
-          : "Connect to start syncing"
+        !integration
+          ? "Connect to start syncing"
+          : (lastError ?? `Last sync · ${timeAgo(integration.lastSyncedAt)}`)
       }
     >
       <div className="flex items-center gap-1">
@@ -64,7 +68,7 @@ export function IntegrationRow({ provider, label, integration }: Props) {
               label="Auto sync"
               checked={autoSync}
               onCheckedChange={handleAutoSyncChange}
-              disabled={pending}
+              disabled={pending || archived}
               inline
               className="mr-2"
             />
