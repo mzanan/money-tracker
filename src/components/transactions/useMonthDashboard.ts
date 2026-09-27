@@ -110,6 +110,9 @@ export function useMonthDashboard({
     transactions: c.sourceFilteredMonth,
     today,
     includeTransfers: c.includeTransfers,
+    hasOlderMonth: hasOlder,
+    hasNewerMonth: hasNewer,
+    onShiftMonth: shiftMonth,
   });
   const isDaily = view === "daily";
 
