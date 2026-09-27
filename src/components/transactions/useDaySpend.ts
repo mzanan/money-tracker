@@ -15,6 +15,9 @@ interface Args {
   transactions: Transaction[];
   today: string;
   includeTransfers?: boolean;
+  hasOlderMonth: boolean;
+  hasNewerMonth: boolean;
+  onShiftMonth: (delta: number) => void;
 }
 
 export function useDaySpend({
@@ -22,6 +25,9 @@ export function useDaySpend({
   transactions,
   today,
   includeTransfers = false,
+  hasOlderMonth,
+  hasNewerMonth,
+  onShiftMonth,
 }: Args) {
   const settings = useSettings();
   const displayCurrency =
@@ -81,13 +87,25 @@ export function useDaySpend({
   const expense = selected?.expense ?? 0;
   const count = selected?.count ?? 0;
 
-  const canPrev = selectedDate > monthStart;
-  const canNext =
-    selectedDate < monthEnd && (!todayInMonth || selectedDate < today);
+  const canPrev = selectedDate > monthStart || hasOlderMonth;
+  const canNext = todayInMonth
+    ? selectedDate < today
+    : selectedDate < monthEnd || hasNewerMonth;
 
   function shift(delta: number) {
     const next = format(addDays(parseISO(selectedDate), delta), "yyyy-MM-dd");
-    if (next < monthStart || next > monthEnd) return;
+    if (next < monthStart) {
+      if (!hasOlderMonth) return;
+      setSelectedDate(next);
+      onShiftMonth(-1);
+      return;
+    }
+    if (next > monthEnd) {
+      if (!hasNewerMonth) return;
+      setSelectedDate(next);
+      onShiftMonth(1);
+      return;
+    }
     if (todayInMonth && next > today) return;
     setSelectedDate(next);
   }

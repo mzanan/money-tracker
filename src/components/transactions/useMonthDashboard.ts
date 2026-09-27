@@ -89,6 +89,12 @@ export function useMonthDashboard({
     });
   }
 
+  const isCurrentMonth = visibleYearMonth === todayYearMonth;
+
+  function goToCurrentMonth() {
+    setSelectedYearMonth(todayYearMonth);
+  }
+
   const c = useDashboardControls({
     monthTransactions,
     monthMovedOut,
@@ -104,8 +110,18 @@ export function useMonthDashboard({
     transactions: c.sourceFilteredMonth,
     today,
     includeTransfers: c.includeTransfers,
+    hasOlderMonth: hasOlder,
+    hasNewerMonth: hasNewer,
+    onShiftMonth: shiftMonth,
   });
   const isDaily = view === "daily";
+
+  const isSelectedToday = daySpend.selectedDate === today;
+
+  function goToToday() {
+    setSelectedYearMonth(todayYearMonth);
+    daySpend.setSelectedDate(today);
+  }
 
   const breakdownTransactions = useMemo(
     () =>
@@ -178,6 +194,8 @@ export function useMonthDashboard({
     hasOlder,
     hasNewer,
     shiftMonth,
+    onCurrentMonth: isCurrentMonth ? undefined : goToCurrentMonth,
+    onToday: isSelectedToday ? undefined : goToToday,
     c,
     view,
     setView,

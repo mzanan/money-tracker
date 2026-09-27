@@ -13,6 +13,7 @@ export function PeriodNav({
   prevLabel,
   nextLabel,
   tabular,
+  onToday,
 }: {
   label: string;
   canPrev: boolean;
@@ -21,35 +22,43 @@ export function PeriodNav({
   prevLabel: string;
   nextLabel: string;
   tabular?: boolean;
+  onToday?: () => void;
 }) {
   return (
-    <div className="flex items-center gap-0.5">
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={() => onShift(-1)}
-        disabled={!canPrev}
-        aria-label={prevLabel}
-      >
-        <ChevronLeftIcon />
-      </Button>
-      <span
-        className={cn(
-          "text-foreground min-w-[5.5rem] truncate text-center text-sm font-medium",
-          tabular && "tabular-nums",
-        )}
-      >
-        {label}
-      </span>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={() => onShift(1)}
-        disabled={!canNext}
-        aria-label={nextLabel}
-      >
-        <ChevronRightIcon />
-      </Button>
+    <div className="flex items-center gap-1.5">
+      {onToday && (
+        <Button variant="outline" size="sm" onClick={onToday}>
+          Today
+        </Button>
+      )}
+      <div className="flex items-center gap-0.5">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => onShift(-1)}
+          disabled={!canPrev}
+          aria-label={prevLabel}
+        >
+          <ChevronLeftIcon />
+        </Button>
+        <span
+          className={cn(
+            "text-foreground min-w-[5.5rem] truncate text-center text-sm font-medium",
+            tabular && "tabular-nums",
+          )}
+        >
+          {label}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => onShift(1)}
+          disabled={!canNext}
+          aria-label={nextLabel}
+        >
+          <ChevronRightIcon />
+        </Button>
+      </div>
     </div>
   );
 }
