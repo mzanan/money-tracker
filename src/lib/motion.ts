@@ -15,7 +15,10 @@ export const enterUpClasses =
   "animate-in fade-in-0 slide-in-from-bottom-4 fill-mode-both duration-700 ease-out";
 
 export const STAGGER_STEP_MS = 150;
+export const ROW_STAGGER_MS = 250;
+export const BAR_STAGGER_MS = 60;
+export const SYNC_STAGGER_MS = 400;
 
-export function staggerDelay(step: number) {
-  return { animationDelay: `${step * STAGGER_STEP_MS}ms` };
+export function staggerDelay(step: number, stepMs = STAGGER_STEP_MS) {
+  return { animationDelay: `${step * stepMs}ms` };
 }

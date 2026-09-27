@@ -2,6 +2,7 @@ import { CheckIcon, Loader2Icon } from "lucide-react";
 
 import { Avatar } from "@/components/transactions/avatar";
 import { ListRow } from "@/components/ui/listRow";
+import { SYNC_STAGGER_MS, staggerDelay } from "@/lib/motion";
 
 import landingCopy from "./landing.json";
 
@@ -22,7 +23,7 @@ export function SyncMock() {
             meta={account.meta}
           >
             <span
-              style={{ animationDelay: `${index * 400}ms` }}
+              style={staggerDelay(index, SYNC_STAGGER_MS)}
               className="relative grid size-6 place-items-center *:col-start-1 *:row-start-1 *:[animation-delay:inherit]"
             >
               <span className="animate-sync-pending motion-reduce:hidden">

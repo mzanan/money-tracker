@@ -1,4 +1,5 @@
 import { formatMoney } from "@/lib/currency";
+import { BAR_STAGGER_MS, staggerDelay } from "@/lib/motion";
 
 import landingCopy from "./landing.json";
 
@@ -20,7 +21,7 @@ export function DailyMock() {
             key={index}
             style={{
               height: `${(value / maxBar) * 100}%`,
-              animationDelay: `${index * 60}ms`,
+              ...staggerDelay(index, BAR_STAGGER_MS),
             }}
             className="bg-primary/70 animate-bar-grow flex-1 origin-bottom rounded-t-md motion-reduce:animate-none"
           />

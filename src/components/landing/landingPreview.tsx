@@ -5,7 +5,7 @@ import { MiniStat } from "@/components/transactions/miniStat";
 import { ListRow } from "@/components/ui/listRow";
 import { Surface } from "@/components/ui/surface";
 import { formatMoney } from "@/lib/currency";
-import { enterUpClasses, staggerDelay } from "@/lib/motion";
+import { ROW_STAGGER_MS, enterUpClasses, staggerDelay } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 import landingCopy from "./landing.json";
@@ -81,7 +81,7 @@ export function LandingPreview({ firstStep }: { firstStep: number }) {
           {preview.rows.map((row, index) => (
             <div
               key={row.note}
-              style={{ animationDelay: `${index * 250}ms` }}
+              style={staggerDelay(index, ROW_STAGGER_MS)}
               className="animate-row-in fill-mode-both motion-reduce:animate-none"
             >
               <ListRow
