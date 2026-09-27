@@ -1,17 +1,10 @@
-import { LandingFeatures } from "./landingFeatures";
-import { LandingFooter } from "./landingFooter";
-import { LandingHeader } from "./landingHeader";
 import { LandingHero } from "./landingHero";
+import { LandingShell } from "./landingShell";
 
 export function Landing() {
   return (
-    <div className="bg-background text-foreground flex min-h-svh flex-col">
-      <LandingHeader />
-      <main className="flex-1">
-        <LandingHero />
-        <LandingFeatures />
-      </main>
-      <LandingFooter />
-    </div>
+    <LandingShell>
+      <LandingHero />
+    </LandingShell>
   );
 }

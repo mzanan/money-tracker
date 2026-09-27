@@ -10,7 +10,7 @@ import { getUser } from "@/lib/session";
 const LANDING_TITLE =
   "Money Tracker: your money across currencies, in one place";
 const LANDING_DESCRIPTION =
-  "For digital nomads, expats, and anyone who lives in more than one currency.";
+  "For nomads and expats who earn and spend in more than one currency.";
 
 export async function generateMetadata(): Promise<Metadata> {
   const user = await getUser();

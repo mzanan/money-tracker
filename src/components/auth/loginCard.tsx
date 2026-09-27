@@ -14,6 +14,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/passwordInput";
+import { enterUpClasses } from "@/lib/motion";
+import { cn } from "@/lib/utils";
 
 const COPY = {
   "sign-in": {
@@ -44,7 +46,7 @@ export function LoginCard() {
 
   return (
     <div className="flex flex-1 items-center justify-center p-4">
-      <Card className="w-full max-w-sm gap-6 p-6">
+      <Card className={cn("w-full max-w-sm gap-6 p-6", enterUpClasses)}>
         <CardHeader className="items-center gap-2 p-0 text-center">
           <div className="bg-primary text-primary-foreground mx-auto mb-1 flex size-12 items-center justify-center rounded-2xl">
             <WalletIcon className="size-6" />
@@ -100,7 +102,10 @@ export function LoginCard() {
                 minLength={8}
               />
             </div>
-            <Button type="submit" disabled={loading || !email || password.length < 8}>
+            <Button
+              type="submit"
+              disabled={loading || !email || password.length < 8}
+            >
               {loading && <Loader2Icon className="animate-spin" />}
               {copy.submit}
             </Button>

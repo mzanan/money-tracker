@@ -11,26 +11,30 @@ export function MiniStat({
   value,
   icon,
   tone,
-  active,
-  dimmed,
+  active = false,
+  dimmed = false,
   onClick,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   icon: ReactNode;
   tone: "income" | "expense";
-  active: boolean;
-  dimmed: boolean;
-  onClick: () => void;
+  active?: boolean;
+  dimmed?: boolean;
+  onClick?: () => void;
 }) {
+  const interactive = onClick !== undefined;
+  const Comp = interactive ? "button" : "div";
+
   return (
-    <button
-      type="button"
+    <Comp
+      type={interactive ? "button" : undefined}
       onClick={onClick}
-      aria-pressed={active}
+      aria-pressed={interactive ? active : undefined}
       className={cn(
         "bg-background/60 dark:bg-surface-2 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-all",
-        "hover:bg-background/80 dark:hover:bg-surface-2/80 cursor-pointer",
+        interactive &&
+          "hover:bg-background/80 dark:hover:bg-surface-2/80 cursor-pointer",
         "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
         active &&
           (tone === "income"
@@ -42,7 +46,9 @@ export function MiniStat({
       <IconCircle
         className={cn(
           "size-8",
-          tone === "income" ? "bg-income text-income" : "bg-expense text-expense",
+          tone === "income"
+            ? "bg-income text-income"
+            : "bg-expense text-expense",
         )}
       >
         {icon}
@@ -53,6 +59,6 @@ export function MiniStat({
         </span>
         <span className="text-sm font-semibold tabular-nums">{value}</span>
       </div>
-    </button>
+    </Comp>
   );
 }
