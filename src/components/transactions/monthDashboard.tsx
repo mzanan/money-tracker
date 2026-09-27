@@ -93,26 +93,26 @@ export function MonthDashboard({
           onViewChange={setView}
           daySpend={daySpend}
         />
-        <SourceFilter
-          sources={sources}
-          csvSources={csvSources}
-          selected={c.selectedSource}
-          onChange={c.setSelectedSource}
-        />
-        {c.showQuickAdd && recentTags && (
-          <QuickAddForm recentTags={recentTags} source={c.selectedSource} />
-        )}
-        <SpendingBreakdown
-          transactions={breakdownTransactions}
-          places={places}
-          selectedTag={c.selectedTag}
-          onSelectTag={c.setSelectedTag}
-          selectedPlace={c.selectedPlace}
-          onSelectPlace={c.setSelectedPlace}
-          limit={4}
-          moreHref="/dashboard"
-        />
-        <div className="min-h-[100svh]">
+        <div className="grid min-h-[calc(100svh-3.5rem)] min-w-0 content-start gap-5 *:min-w-0">
+          <SourceFilter
+            sources={sources}
+            csvSources={csvSources}
+            selected={c.selectedSource}
+            onChange={c.setSelectedSource}
+          />
+          {c.showQuickAdd && recentTags && (
+            <QuickAddForm recentTags={recentTags} source={c.selectedSource} />
+          )}
+          <SpendingBreakdown
+            transactions={breakdownTransactions}
+            places={places}
+            selectedTag={c.selectedTag}
+            onSelectTag={c.setSelectedTag}
+            selectedPlace={c.selectedPlace}
+            onSelectPlace={c.setSelectedPlace}
+            limit={4}
+            moreHref="/dashboard"
+          />
           <MonthView
             transactions={feedTransactions}
             movedOut={feedMovedOut}
