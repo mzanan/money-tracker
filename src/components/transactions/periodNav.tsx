@@ -13,6 +13,7 @@ export function PeriodNav({
   prevLabel,
   nextLabel,
   tabular,
+  onToday,
 }: {
   label: string;
   canPrev: boolean;
@@ -21,9 +22,15 @@ export function PeriodNav({
   prevLabel: string;
   nextLabel: string;
   tabular?: boolean;
+  onToday?: () => void;
 }) {
   return (
     <div className="flex items-center gap-0.5">
+      {onToday && (
+        <Button variant="outline" size="sm" onClick={onToday} className="mr-1">
+          Today
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="icon-sm"

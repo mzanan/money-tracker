@@ -36,6 +36,8 @@ interface Props {
   hasOlder: boolean;
   hasNewer: boolean;
   onShiftMonth: (delta: number) => void;
+  onCurrentMonth?: () => void;
+  onToday?: () => void;
   view: HeroView;
   onViewChange: (next: HeroView) => void;
   daySpend: ReturnType<typeof useDaySpend>;
@@ -51,6 +53,8 @@ export function BalanceHero({
   hasOlder,
   hasNewer,
   onShiftMonth,
+  onCurrentMonth,
+  onToday,
   view,
   onViewChange,
   daySpend,
@@ -106,6 +110,7 @@ export function BalanceHero({
               prevLabel="Previous month"
               nextLabel="Next month"
               tabular
+              onToday={onCurrentMonth}
             />
           ) : (
             <PeriodNav
@@ -115,6 +120,7 @@ export function BalanceHero({
               onShift={daySpend.shift}
               prevLabel="Previous day"
               nextLabel="Next day"
+              onToday={onToday}
             />
           )}
         </div>
