@@ -5,6 +5,7 @@ import { MiniStat } from "@/components/transactions/miniStat";
 import { ListRow } from "@/components/ui/listRow";
 import { Surface } from "@/components/ui/surface";
 import { formatMoney } from "@/lib/currency";
+import { enterUpClasses, staggerDelay } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 import landingCopy from "./landing.json";
@@ -12,7 +13,7 @@ import { Ticker } from "./ticker";
 
 const preview = landingCopy.preview;
 
-export function LandingPreview() {
+export function LandingPreview({ firstStep }: { firstStep: number }) {
   return (
     <div
       aria-hidden
@@ -20,7 +21,11 @@ export function LandingPreview() {
     >
       <Surface
         padding="lg"
-        className="ring-border shadow-primary/10 shadow-2xl ring-1"
+        style={staggerDelay(firstStep)}
+        className={cn(
+          "ring-border shadow-primary/10 shadow-2xl ring-1",
+          enterUpClasses,
+        )}
       >
         <div className="mb-6 flex items-center justify-between">
           <span className="text-eyebrow">{preview.balanceLabel}</span>
@@ -65,7 +70,11 @@ export function LandingPreview() {
 
       <Surface
         padding="lg"
-        className="ring-border shadow-primary/10 shadow-2xl ring-1"
+        style={staggerDelay(firstStep + 1)}
+        className={cn(
+          "ring-border shadow-primary/10 shadow-2xl ring-1",
+          enterUpClasses,
+        )}
       >
         <span className="text-eyebrow mb-4 block">{preview.dayLabel}</span>
         <div className="flex flex-col gap-6">

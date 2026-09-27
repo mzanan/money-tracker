@@ -1,4 +1,4 @@
-import { PublicHeader } from "@/components/layout/publicHeader";
+import { LandingShell } from "@/components/landing/landingShell";
 
 export default function AuthLayout({
   children,
@@ -6,9 +6,8 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-svh flex-col">
-      <PublicHeader />
+    <LandingShell showCta={false} mainClassName="bg-glow flex flex-col">
       {children}
-    </div>
+    </LandingShell>
   );
 }

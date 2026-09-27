@@ -3,10 +3,7 @@
     "cta": "Start free"
   },
   "hero": {
-    "title": [
-      "Your money across currencies.",
-      "In one place."
-    ],
+    "title": ["Your money across currencies.", "In one place."],
     "subtitle": "For nomads and expats who earn and spend in more than one currency.",
     "cta": "Start free"
   },
@@ -86,11 +83,7 @@
   "mocks": {
     "currency": {
       "rateLabel": "Live rate",
-      "rates": [
-        "₫26,100",
-        "₫26,342",
-        "₫25,987"
-      ],
+      "rates": ["₫26,100", "₫26,342", "₫25,987"],
       "lockedLabel": "Locked on the day",
       "rows": [
         {
@@ -126,22 +119,7 @@
       "projected": 1842,
       "averageLabel": "Daily average",
       "average": 48.2,
-      "bars": [
-        32,
-        58,
-        41,
-        72,
-        28,
-        64,
-        50,
-        38,
-        90,
-        44,
-        55,
-        36,
-        61,
-        47
-      ]
+      "bars": [32, 58, 41, 72, 28, 64, 50, 38, 90, 44, 55, 36, 61, 47]
     },
     "sync": {
       "syncedLabel": "Synced",

@@ -3,7 +3,7 @@ import { ArrowRightIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Heading } from "@/components/ui/heading";
-import { enterUpClasses } from "@/lib/motion";
+import { enterUpClasses, staggerDelay } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 import landingCopy from "./landing.json";
@@ -11,45 +11,44 @@ import { LandingContainer } from "./landingContainer";
 import { LandingPreview } from "./landingPreview";
 import { LandingShowcase } from "./landingShowcase";
 
+const SUBTITLE_STEP = landingCopy.hero.title.length;
+const PREVIEW_STEP = SUBTITLE_STEP + 1;
+const SHOWCASE_STEP = PREVIEW_STEP + 2;
+const CTA_STEP = SHOWCASE_STEP + landingCopy.showcase.length;
+
 export function LandingHero() {
   return (
-    <section id="top" className="bg-glow pt-20 pb-20 sm:pt-28 sm:pb-28">
+    <section className="bg-glow pt-20 pb-20 sm:pt-28 sm:pb-28">
       <LandingContainer className="flex flex-col items-center gap-8 text-center">
-        <Heading
-          as="h1"
-          size="display"
-          className={cn("sm:text-6xl", enterUpClasses)}
-        >
-          {landingCopy.hero.title.map((line) => (
-            <span key={line} className="block">
+        <Heading as="h1" size="display" className="sm:text-6xl">
+          {landingCopy.hero.title.map((line, index) => (
+            <span
+              key={line}
+              style={staggerDelay(index)}
+              className={cn("block", enterUpClasses)}
+            >
               {line}
             </span>
           ))}
         </Heading>
         <p
+          style={staggerDelay(SUBTITLE_STEP)}
           className={cn(
-            "text-muted-foreground text-lg text-balance delay-100 sm:text-xl lg:text-nowrap",
+            "text-muted-foreground text-lg text-balance sm:text-xl lg:text-nowrap",
             enterUpClasses,
           )}
         >
           {landingCopy.hero.subtitle}
         </p>
-        <div
-          className={cn(
-            "mt-4 flex w-full flex-col gap-4 delay-200 sm:mt-8",
-            enterUpClasses,
-          )}
-        >
-          <LandingPreview />
-          <LandingShowcase />
+        <div className="mt-4 flex w-full flex-col gap-4 sm:mt-8">
+          <LandingPreview firstStep={PREVIEW_STEP} />
+          <LandingShowcase firstStep={SHOWCASE_STEP} />
         </div>
         <Button
           asChild
           size="xl"
-          className={cn(
-            "shadow-primary/30 mt-4 shadow-lg delay-300",
-            enterUpClasses,
-          )}
+          style={staggerDelay(CTA_STEP)}
+          className={cn("shadow-primary/30 mt-4 shadow-lg", enterUpClasses)}
         >
           <Link href="/login">
             {landingCopy.hero.cta}

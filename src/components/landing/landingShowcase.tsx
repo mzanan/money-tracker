@@ -12,13 +12,17 @@ const SHOWCASE_MOCKS: Partial<Record<string, ComponentType>> = {
   sync: SyncMock,
 };
 
-export function LandingShowcase() {
+export function LandingShowcase({ firstStep }: { firstStep: number }) {
   return (
     <div className="grid w-full gap-4 text-left sm:grid-cols-3">
-      {landingCopy.showcase.map((item) => {
+      {landingCopy.showcase.map((item, index) => {
         const Mock = SHOWCASE_MOCKS[item.id];
         return (
-          <ShowcaseCard key={item.id} title={item.title}>
+          <ShowcaseCard
+            key={item.id}
+            title={item.title}
+            step={firstStep + index}
+          >
             {Mock && <Mock />}
           </ShowcaseCard>
         );
