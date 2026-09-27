@@ -45,10 +45,8 @@ export function MonthDashboard({
     hasOlder,
     hasNewer,
     shiftMonth,
-    isCurrentMonth,
-    goToCurrentMonth,
-    goToToday,
-    isSelectedToday,
+    onCurrentMonth,
+    onToday,
     c,
     view,
     setView,
@@ -89,8 +87,8 @@ export function MonthDashboard({
           hasOlder={hasOlder}
           hasNewer={hasNewer}
           onShiftMonth={shiftMonth}
-          onCurrentMonth={isCurrentMonth ? undefined : goToCurrentMonth}
-          onToday={isSelectedToday ? undefined : goToToday}
+          onCurrentMonth={onCurrentMonth}
+          onToday={onToday}
           view={view}
           onViewChange={setView}
           daySpend={daySpend}
