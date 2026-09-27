@@ -1,11 +1,14 @@
 {
   "nav": {
-    "cta": "Try it now"
+    "cta": "Start free"
   },
   "hero": {
-    "title": "Your money across currencies. In one place.",
-    "subtitle": "For digital nomads, expats, and anyone who lives in more than one currency.",
-    "cta": "Try it now"
+    "title": [
+      "Your money across currencies.",
+      "In one place."
+    ],
+    "subtitle": "For nomads and expats who earn and spend in more than one currency.",
+    "cta": "Start free"
   },
   "preview": {
     "currency": "USD",
@@ -69,15 +72,15 @@
   "showcase": [
     {
       "id": "currency",
-      "title": "Rates that never move"
+      "title": "Locked exchange rates"
     },
     {
       "id": "daily",
-      "title": "Live dashboard"
+      "title": "Know your daily spend"
     },
     {
       "id": "sync",
-      "title": "Bring your data in"
+      "title": "Every account, one list"
     }
   ],
   "mocks": {

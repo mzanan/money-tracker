@@ -18,13 +18,17 @@ export function LandingHero() {
         <Heading
           as="h1"
           size="display"
-          className={cn("max-w-4xl", enterUpClasses)}
+          className={cn("sm:text-6xl", enterUpClasses)}
         >
-          {landingCopy.hero.title}
+          {landingCopy.hero.title.map((line) => (
+            <span key={line} className="block">
+              {line}
+            </span>
+          ))}
         </Heading>
         <p
           className={cn(
-            "text-muted-foreground max-w-2xl text-lg text-balance delay-100 sm:text-xl",
+            "text-muted-foreground text-lg text-balance delay-100 sm:text-xl lg:text-nowrap",
             enterUpClasses,
           )}
         >
