@@ -10,3 +10,6 @@ export const presenceClasses = {
 } as const;
 
 export type PresenceVariant = keyof typeof presenceClasses;
+
+export const enterUpClasses =
+  "animate-in fade-in-0 slide-in-from-bottom-4 fill-mode-both duration-700 ease-out";

@@ -5,27 +5,161 @@
   "hero": {
     "title": "Your money across currencies. In one place.",
     "subtitle": "For digital nomads, expats, and anyone who lives in more than one currency.",
-    "cta": "Try it now",
-    "badges": [
-      "Used in 30+ countries",
-      "Multi-currency",
-      "Rates locked per day"
+    "cta": "Try it now"
+  },
+  "preview": {
+    "currency": "USD",
+    "balanceLabel": "Total balance",
+    "dayLabel": "Today",
+    "rows": [
+      {
+        "source": "Wise",
+        "note": "Client invoice",
+        "kind": "income",
+        "amount": 2400,
+        "currency": "USD",
+        "converted": 2400
+      },
+      {
+        "source": "Cash",
+        "note": "Pho and iced coffee",
+        "kind": "expense",
+        "amount": 95000,
+        "currency": "VND",
+        "converted": 3.64
+      },
+      {
+        "source": "Revolut",
+        "note": "Coworking pass",
+        "kind": "expense",
+        "amount": 1200000,
+        "currency": "VND",
+        "converted": 45.98
+      },
+      {
+        "source": "Bybit",
+        "note": "Flight to Bangkok",
+        "kind": "expense",
+        "amount": 3150,
+        "currency": "THB",
+        "converted": 93.2
+      }
+    ],
+    "months": [
+      {
+        "label": "Jul 2026",
+        "balance": 2940.15,
+        "income": 3200,
+        "expense": 1618.3
+      },
+      {
+        "label": "Aug 2026",
+        "balance": 3602.75,
+        "income": 3350,
+        "expense": 1522.9
+      },
+      {
+        "label": "Sep 2026",
+        "balance": 4218.4,
+        "income": 3500,
+        "expense": 1284.6
+      }
     ]
   },
-  "features": [
+  "showcase": [
     {
-      "title": "Rates that never move",
-      "text": "Every expense is saved with the exchange rate of that day. Your numbers never shift."
+      "id": "currency",
+      "title": "Rates that never move"
     },
     {
-      "title": "Bring your data in",
-      "text": "Connect your accounts, import from Wise, or upload a photo of a receipt."
+      "id": "daily",
+      "title": "Live dashboard"
     },
     {
-      "title": "Live dashboard",
-      "text": "Spending by day, by month, and a monthly estimate in real time."
+      "id": "sync",
+      "title": "Bring your data in"
     }
   ],
+  "mocks": {
+    "currency": {
+      "rateLabel": "Live rate",
+      "rates": [
+        "₫26,100",
+        "₫26,342",
+        "₫25,987"
+      ],
+      "lockedLabel": "Locked on the day",
+      "rows": [
+        {
+          "source": "Cash",
+          "note": "Pho and iced coffee",
+          "amount": 95000,
+          "currency": "VND",
+          "converted": 3.64,
+          "rate": "₫26,100 · Sep 12"
+        },
+        {
+          "source": "Revolut",
+          "note": "Coworking pass",
+          "amount": 1200000,
+          "currency": "VND",
+          "converted": 45.98,
+          "rate": "₫26,098 · Sep 3"
+        },
+        {
+          "source": "Bybit",
+          "note": "Flight to Bangkok",
+          "amount": 3150,
+          "currency": "THB",
+          "converted": 93.2,
+          "rate": "฿33.80 · Aug 28"
+        }
+      ]
+    },
+    "daily": {
+      "spentLabel": "Spent this month",
+      "spent": 1284.6,
+      "projectedLabel": "Projected",
+      "projected": 1842,
+      "averageLabel": "Daily average",
+      "average": 48.2,
+      "bars": [
+        32,
+        58,
+        41,
+        72,
+        28,
+        64,
+        50,
+        38,
+        90,
+        44,
+        55,
+        36,
+        61,
+        47
+      ]
+    },
+    "sync": {
+      "syncedLabel": "Synced",
+      "accounts": [
+        {
+          "name": "Wise",
+          "meta": "CSV import"
+        },
+        {
+          "name": "Bybit",
+          "meta": "API sync"
+        },
+        {
+          "name": "Cash",
+          "meta": "Receipt photo"
+        }
+      ],
+      "resultLabel": "new transactions",
+      "result": 12
+    }
+  },
   "footer": {
     "builtBy": "Built by itsmatias",
     "authorHref": "https://itsmatias.com"
