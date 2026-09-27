@@ -93,7 +93,7 @@ export function MonthDashboard({
           onViewChange={setView}
           daySpend={daySpend}
         />
-        <div className="grid min-h-[calc(100svh-3.5rem)] min-w-0 content-start gap-5 *:min-w-0">
+        <div className="grid min-h-[calc(100svh-var(--spacing-header))] min-w-0 content-start gap-5 *:min-w-0">
           <SourceFilter
             sources={sources}
             csvSources={csvSources}
