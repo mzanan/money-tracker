@@ -5,6 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+  --spacing-header: 3.5rem;
   --animate-ticker: ticker 6s ease-in-out infinite;
   --animate-row-in: row-in 6s ease-out infinite;
   --animate-bar-grow: bar-grow 4s ease-out infinite;

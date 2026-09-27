@@ -30,7 +30,7 @@ export function Header() {
   }
 
   return (
-    <header className="bg-background/80 sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 backdrop-blur">
+    <header className="bg-background/80 h-header sticky top-0 z-10 flex items-center justify-between gap-2 px-4 backdrop-blur">
       <Brand />
       <div className="flex items-center gap-0.5">
         <BaseCurrencyPicker />

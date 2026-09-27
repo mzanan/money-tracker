@@ -10,7 +10,7 @@ import { LandingContainer } from "./landingContainer";
 export function LandingHeader({ showCta }: { showCta: boolean }) {
   return (
     <header className="bg-background/80 border-border sticky top-0 z-10 border-b backdrop-blur">
-      <LandingContainer className="flex h-14 items-center justify-between gap-6">
+      <LandingContainer className="h-header flex items-center justify-between gap-6">
         <LandingBrand />
         <div className="flex items-center gap-2">
           <ThemeToggle />
