@@ -4,6 +4,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 
+import { captureServerEvent } from "@/lib/analytics";
 import { logUsageEvent } from "@/lib/data/usageEvents";
 import { db, schema } from "@/lib/db";
 
@@ -31,6 +32,7 @@ export const auth = betterAuth({
       create: {
         after: async (createdUser) => {
           await logUsageEvent({ userId: createdUser.id, event: "signup" });
+          await captureServerEvent("signed_up", createdUser.id);
         },
       },
     },
