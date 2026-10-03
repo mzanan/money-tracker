@@ -4,6 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { ServiceWorkerRegister } from "@/components/pwa/serviceWorkerRegister";
 
+import { SITE_NAME, SITE_URL } from "@/lib/seo";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,7 +19,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Money Tracker",
+  metadataBase: new URL(SITE_URL),
+  title: SITE_NAME,
+  applicationName: SITE_NAME,
+  openGraph: { siteName: SITE_NAME, locale: "en_US" },
   description: "Track income and expenses, multi-currency, simple.",
   appleWebApp: {
     capable: true,

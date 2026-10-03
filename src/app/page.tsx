@@ -3,14 +3,16 @@ import type { Metadata } from "next";
 import { Landing } from "@/components/landing/landing";
 import { AppShell } from "@/components/layout/appShell";
 import { MonthDashboard } from "@/components/transactions/monthDashboard";
+import { JsonLd } from "@/components/ui/jsonLd";
 import { getHomePageData } from "@/lib/data/homeData";
 import { getRemindersData } from "@/lib/data/reminders";
+import {
+  LANDING_DESCRIPTION,
+  LANDING_TITLE,
+  SITE_NAME,
+  landingJsonLd,
+} from "@/lib/seo";
 import { getUser } from "@/lib/session";
-
-const LANDING_TITLE =
-  "Money Tracker: your money across currencies, in one place";
-const LANDING_DESCRIPTION =
-  "For nomads and expats who earn and spend in more than one currency.";
 
 export async function generateMetadata(): Promise<Metadata> {
   const user = await getUser();
@@ -18,13 +20,32 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: LANDING_TITLE,
     description: LANDING_DESCRIPTION,
-    openGraph: { title: LANDING_TITLE, description: LANDING_DESCRIPTION },
+    alternates: { canonical: "/" },
+    openGraph: {
+      type: "website",
+      siteName: SITE_NAME,
+      locale: "en_US",
+      url: "/",
+      title: LANDING_TITLE,
+      description: LANDING_DESCRIPTION,
+    },
+    twitter: {
+      card: "summary",
+      title: LANDING_TITLE,
+      description: LANDING_DESCRIPTION,
+    },
   };
 }
 
 export default async function HomePage() {
   const user = await getUser();
-  if (!user) return <Landing />;
+  if (!user)
+    return (
+      <>
+        <JsonLd data={landingJsonLd} />
+        <Landing />
+      </>
+    );
 
   const [data, remindersData] = await Promise.all([
     getHomePageData(),

@@ -1,0 +1,23 @@
+# Money Tracker
+
+> Money Tracker is a free web app for nomads and expats who earn and spend in more than one currency. Every expense keeps the exchange rate of its day, so balances and totals stay correct over time.
+
+## Who it is for
+
+- Digital nomads, remote workers and expats with income and expenses in several currencies and accounts.
+
+## Features
+
+- Multi-currency income and expenses, each locked to the exchange rate of its date.
+- Daily spend average and a projection of the month's total spend.
+- One list for every account: Wise CSV import, Bybit API sync, and expenses from a receipt photo or screenshot.
+- Installable PWA, built mobile-first.
+
+## Pricing
+
+Free to start.
+
+## Links
+
+- [App and sign up](https://money.itsmatias.com)
+- Built by [Matias Zanan](https://itsmatias.com), contact: hello@itsmatias.com
