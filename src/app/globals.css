@@ -7,7 +7,8 @@
 @theme {
   --spacing-header: 3.5rem;
   --spacing-bottom-nav: 3.5rem;
-  --spacing-consent-gap: 5.25rem;
+  --spacing-consent-gap: 0.5rem;
+  --spacing-install-hint: 5.25rem;
   --animate-ticker: ticker 6s ease-in-out infinite;
   --animate-row-in: row-in 6s ease-out infinite;
   --animate-bar-grow: bar-grow 4s ease-out infinite;
@@ -266,6 +267,9 @@
 @media (width < 64rem) {
   :root:has([data-slot="bottom-nav"]) {
     --consent-offset: calc(var(--spacing-bottom-nav) + var(--spacing-consent-gap));
+  }
+  :root:has([data-slot="install-hint"]) {
+    --consent-offset: calc(var(--spacing-bottom-nav) + var(--spacing-install-hint));
   }
 }
 
