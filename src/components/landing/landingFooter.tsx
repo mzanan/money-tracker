@@ -2,14 +2,12 @@ import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
 import landingCopy from "./landing.json";
-import { LandingBrand } from "./landingBrand";
 import { LandingContainer } from "./landingContainer";
 
 export function LandingFooter() {
   return (
     <footer className="border-border border-t py-10">
-      <LandingContainer className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <LandingBrand />
+      <LandingContainer className="flex justify-center">
         <div className="flex items-center gap-6">
           <Link
             href="/privacy"

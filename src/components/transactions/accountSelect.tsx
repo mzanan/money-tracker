@@ -19,12 +19,14 @@ export function AccountSelect({
   onValueChange,
   id,
   emptyMessage,
+  size,
 }: {
   sources: string[] | null;
   value: string;
   onValueChange: (value: string) => void;
   id?: string;
   emptyMessage?: string;
+  size?: "sm" | "default";
 }) {
   const accountLabels = useAccountLabels();
   if (sources === null) {
@@ -39,7 +41,7 @@ export function AccountSelect({
   }
   return (
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger id={id}>
+      <SelectTrigger id={id} size={size}>
         <SelectValue placeholder="Select account" />
       </SelectTrigger>
       <SelectContent>

@@ -6,7 +6,7 @@
 
 @theme {
   --spacing-header: 3.5rem;
-  --spacing-bottom-nav: 3.5rem;
+  --spacing-bottom-nav: 3.75rem;
   --spacing-consent-gap: 0.5rem;
   --spacing-install-hint: 5.25rem;
   --animate-ticker: ticker 6s ease-in-out infinite;
@@ -226,6 +226,10 @@
   }
 }
 
+@utility bottom-fab {
+  bottom: calc(var(--spacing-bottom-nav) + 1rem + env(safe-area-inset-bottom));
+}
+
 @utility text-income {
   @apply text-emerald-700 dark:text-emerald-300;
 }
@@ -266,10 +270,14 @@
 
 @media (width < 64rem) {
   :root:has([data-slot="bottom-nav"]) {
-    --consent-offset: calc(var(--spacing-bottom-nav) + var(--spacing-consent-gap));
+    --consent-offset: calc(
+      var(--spacing-bottom-nav) + var(--spacing-consent-gap)
+    );
   }
   :root:has([data-slot="install-hint"]) {
-    --consent-offset: calc(var(--spacing-bottom-nav) + var(--spacing-install-hint));
+    --consent-offset: calc(
+      var(--spacing-bottom-nav) + var(--spacing-install-hint)
+    );
   }
 }
 

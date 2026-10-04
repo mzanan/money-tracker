@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { CurrencySelect } from "@/components/ui/currencySelect";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Surface } from "@/components/ui/surface";
 import { SwitchRow } from "@/components/ui/switchRow";
 
 import { AccountSelect } from "./accountSelect";
@@ -27,9 +26,20 @@ import { useQuickAddForm } from "./useQuickAddForm";
 interface Props {
   recentTags: string[];
   source: string;
+  onAdded?: () => void;
+  autoFocusAmount?: boolean;
+  accountOptions?: string[];
+  onSourceChange?: (source: string) => void;
 }
 
-export function QuickAddForm({ recentTags, source }: Props) {
+export function QuickAddForm({
+  recentTags,
+  source,
+  onAdded,
+  autoFocusAmount = false,
+  accountOptions = [],
+  onSourceChange,
+}: Props) {
   const accountLabels = useAccountLabels();
   const {
     extrasLabel,
@@ -76,13 +86,14 @@ export function QuickAddForm({ recentTags, source }: Props) {
     description,
     setDescription,
     tagsId,
+    formId,
     tagsInput,
     setTagsInput,
     date,
     setDate,
     pending,
     handleSubmit,
-  } = useQuickAddForm(source);
+  } = useQuickAddForm(source, onAdded);
 
   const submitButton = (
     <Button
@@ -101,199 +112,218 @@ export function QuickAddForm({ recentTags, source }: Props) {
   );
 
   return (
-    <Surface asChild radius="lg" padding="sm" className="grid gap-3">
-      <form id="quick-add" onSubmit={handleSubmit} className="scroll-mt-20">
+    <form id={formId} onSubmit={handleSubmit} className="grid gap-3">
+      {accountOptions.length > 1 && onSourceChange ? (
+        <div className="flex items-center gap-2 px-1">
+          <Label
+            htmlFor={`${formId}-account`}
+            className="text-muted-foreground text-xs font-normal"
+          >
+            Adding to
+          </Label>
+          <AccountSelect
+            id={`${formId}-account`}
+            size="sm"
+            sources={accountOptions}
+            value={source}
+            onValueChange={onSourceChange}
+          />
+        </div>
+      ) : (
         <p className="text-muted-foreground px-1 text-xs">
           Adding to{" "}
           <span className="text-foreground font-medium">
             {resolveSourceLabel(source, accountLabels)}
           </span>
         </p>
-        <div className="flex items-center gap-2">
-          <KindToggle kind={kind} onChange={setKind} />
-          <div className="bg-surface-2 relative flex min-w-0 flex-1 items-center rounded-xl pr-1.5">
-            <span className="text-muted-foreground pointer-events-none absolute left-3 text-sm tabular-nums">
-              {currencyMeta.symbol}
-            </span>
-            <AmountInput
-              id="amount"
-              autoComplete="off"
-              placeholder="0"
-              value={amount}
-              onChange={setAmount}
-              decimals={currencyMeta.decimals}
-              aria-label="Amount"
-              className="h-11 min-w-0 border-none bg-transparent pl-7 text-base focus-visible:ring-0"
-              required
-            />
-            {currencies.length > 1 && (
-              <CurrencySelect
-                value={currency}
-                onValueChange={setCurrency}
-                currencies={currencies}
-                ariaLabel="Currency"
-                className="bg-background ml-1 h-8 w-[4.5rem] rounded-lg border-none text-xs"
-              />
-            )}
-          </div>
-          <div className="hidden sm:block">{submitButton}</div>
-        </div>
-
-        <Input
-          id="description"
-          autoComplete="off"
-          placeholder="Description (coffee, rent, salary…)"
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          maxLength={120}
-          aria-label="Description"
-          className="bg-surface-2 h-9 rounded-xl border-none"
-        />
-
-        <div className="sm:hidden">{submitButton}</div>
-
-        {!withdrawalActive &&
-          !transferActive &&
-          (preview ||
-            (currency !== baseCurrency &&
-              ratesPending &&
-              numericAmount !== null)) && (
-            <div className="text-muted-foreground -mt-1 px-1 text-xs">
-              {preview ? (
-                <>
-                  ≈ <span className="text-foreground">{preview}</span>{" "}
-                  <span className="opacity-60">today&apos;s rate</span>
-                </>
-              ) : (
-                <span className="inline-flex items-center gap-1">
-                  <Loader2Icon className="size-3 animate-spin" /> Calculating…
-                </span>
-              )}
-            </div>
-          )}
-
-        <button
-          type="button"
-          onClick={() => setShowExtras((value) => !value)}
-          className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 px-1 text-xs transition-colors"
-        >
-          <ChevronDownIcon
-            className={cn(
-              "size-3 transition-transform",
-              showExtras && "rotate-180",
-            )}
+      )}
+      <div className="flex items-center gap-2">
+        <KindToggle kind={kind} onChange={setKind} />
+        <div className="bg-surface-2 relative flex min-w-0 flex-1 items-center rounded-xl pr-1.5">
+          <span className="text-muted-foreground pointer-events-none absolute left-3 text-sm tabular-nums">
+            {currencyMeta.symbol}
+          </span>
+          <AmountInput
+            id={`${formId}-amount`}
+            data-autofocus={autoFocusAmount || undefined}
+            autoComplete="off"
+            placeholder="0"
+            value={amount}
+            onChange={setAmount}
+            decimals={currencyMeta.decimals}
+            aria-label="Amount"
+            className="h-11 min-w-0 border-none bg-transparent pl-7 text-base focus-visible:ring-0"
+            required
           />
-          {showExtras ? "Hide details" : extrasLabel}
-        </button>
+          {currencies.length > 1 && (
+            <CurrencySelect
+              value={currency}
+              onValueChange={setCurrency}
+              currencies={currencies}
+              ariaLabel="Currency"
+              className="bg-background ml-1 h-8 w-[4.5rem] rounded-lg border-none text-xs"
+            />
+          )}
+        </div>
+        <div className="hidden sm:block">{submitButton}</div>
+      </div>
 
-        {showExtras && (
-          <div className="grid gap-2 px-1">
-            <div className="grid gap-1.5">
-              <Label htmlFor="tags">Tags</Label>
-              <Input
-                id="tags"
-                list={tagsId}
-                placeholder="food, transport, rent…"
-                value={tagsInput}
-                onChange={(event) => setTagsInput(event.target.value)}
-                maxLength={120}
-                className="bg-surface-2 h-9 border-none"
-              />
-              {recentTags.length > 0 && (
-                <datalist id={tagsId}>
-                  {recentTags.map((tag) => (
-                    <option key={tag} value={tag} />
-                  ))}
-                </datalist>
-              )}
-            </div>
+      <Input
+        id={`${formId}-description`}
+        autoComplete="off"
+        placeholder="Description (coffee, rent, salary…)"
+        value={description}
+        onChange={(event) => setDescription(event.target.value)}
+        maxLength={120}
+        aria-label="Description"
+        className="bg-surface-2 h-9 rounded-xl border-none"
+      />
 
-            <div className="grid gap-1.5">
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(event) => setDate(event.target.value)}
-                required
-                className="bg-surface-2 h-9 border-none"
-              />
-            </div>
+      <div className="sm:hidden">{submitButton}</div>
 
-            {transferAvailable && (
-              <SwitchRow
-                id="transfer-toggle"
-                label="Transfer"
-                checked={transfer}
-                onCheckedChange={setTransfer}
-              />
-            )}
-
-            {transferActive && (
+      {!withdrawalActive &&
+        !transferActive &&
+        (preview ||
+          (currency !== baseCurrency &&
+            ratesPending &&
+            numericAmount !== null)) && (
+          <div className="text-muted-foreground -mt-1 px-1 text-xs">
+            {preview ? (
               <>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="transfer-destination">To account</Label>
-                  <AccountSelect
-                    id="transfer-destination"
-                    sources={transferSources}
-                    value={transferDestination}
-                    onValueChange={setTransferDestination}
-                    emptyMessage="No other account to pick. Import or add one first."
-                  />
-                </div>
-                <TransferFeeSection
-                  idPrefix="quick-transfer"
-                  fees={transferFees}
-                  onFeesChange={setTransferFees}
-                  sourceCurrency={currency}
-                  destinationCurrency={destinationCurrency}
-                  currencies={currencies}
-                  receivedAmount={receivedAmount}
-                  onReceivedAmountChange={setReceivedAmount}
-                  receivedCurrency={receivedCurrency}
-                  onReceivedCurrencyChange={setReceivedCurrency}
-                  preview={transferPreview}
-                />
+                ≈ <span className="text-foreground">{preview}</span>{" "}
+                <span className="opacity-60">today&apos;s rate</span>
               </>
-            )}
-
-            {withdrawalAvailable && (
-              <SwitchRow
-                id="withdrawal-toggle"
-                label="Withdrawal"
-                checked={withdrawal}
-                onCheckedChange={setWithdrawal}
-              />
-            )}
-
-            {withdrawalActive && (
-              <>
-                <AmountCurrencyField
-                  id="withdrawal-total"
-                  label="Total charged"
-                  value={withdrawalTotal}
-                  onChange={setWithdrawalTotal}
-                  currency={chargedCurrency}
-                  onCurrencyChange={setChargedCurrency}
-                  currencies={currencies}
-                  currencyAriaLabel="Charged currency"
-                />
-                <AmountField
-                  id="withdrawal-fee"
-                  label="Fee (optional)"
-                  value={withdrawalFee}
-                  onChange={setWithdrawalFee}
-                  decimals={getCurrency(chargedCurrency).decimals}
-                />
-                <p className="text-muted-foreground text-xs">
-                  Books total minus fee on the account. Cash received goes in
-                  the note.
-                </p>
-              </>
+            ) : (
+              <span className="inline-flex items-center gap-1">
+                <Loader2Icon className="size-3 animate-spin" /> Calculating…
+              </span>
             )}
           </div>
         )}
-      </form>
-    </Surface>
+
+      <button
+        type="button"
+        onClick={() => setShowExtras((value) => !value)}
+        className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 px-1 text-xs transition-colors"
+      >
+        <ChevronDownIcon
+          className={cn(
+            "size-3 transition-transform",
+            showExtras && "rotate-180",
+          )}
+        />
+        {showExtras ? "Hide details" : extrasLabel}
+      </button>
+
+      {showExtras && (
+        <div className="grid gap-2 px-1">
+          <div className="grid gap-1.5">
+            <Label htmlFor={`${formId}-tags`}>Tags</Label>
+            <Input
+              id={`${formId}-tags`}
+              list={tagsId}
+              placeholder="food, transport, rent…"
+              value={tagsInput}
+              onChange={(event) => setTagsInput(event.target.value)}
+              maxLength={120}
+              className="bg-surface-2 h-9 border-none"
+            />
+            {recentTags.length > 0 && (
+              <datalist id={tagsId}>
+                {recentTags.map((tag) => (
+                  <option key={tag} value={tag} />
+                ))}
+              </datalist>
+            )}
+          </div>
+
+          <div className="grid gap-1.5">
+            <Label htmlFor={`${formId}-date`}>Date</Label>
+            <Input
+              id={`${formId}-date`}
+              type="date"
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+              required
+              className="bg-surface-2 h-9 border-none"
+            />
+          </div>
+
+          {transferAvailable && (
+            <SwitchRow
+              id={`${formId}-transfer-toggle`}
+              label="Transfer"
+              checked={transfer}
+              onCheckedChange={setTransfer}
+            />
+          )}
+
+          {transferActive && (
+            <>
+              <div className="grid gap-1.5">
+                <Label htmlFor={`${formId}-transfer-destination`}>
+                  To account
+                </Label>
+                <AccountSelect
+                  id={`${formId}-transfer-destination`}
+                  sources={transferSources}
+                  value={transferDestination}
+                  onValueChange={setTransferDestination}
+                  emptyMessage="No other account to pick. Import or add one first."
+                />
+              </div>
+              <TransferFeeSection
+                idPrefix={`${formId}-transfer`}
+                fees={transferFees}
+                onFeesChange={setTransferFees}
+                sourceCurrency={currency}
+                destinationCurrency={destinationCurrency}
+                currencies={currencies}
+                receivedAmount={receivedAmount}
+                onReceivedAmountChange={setReceivedAmount}
+                receivedCurrency={receivedCurrency}
+                onReceivedCurrencyChange={setReceivedCurrency}
+                preview={transferPreview}
+              />
+            </>
+          )}
+
+          {withdrawalAvailable && (
+            <SwitchRow
+              id={`${formId}-withdrawal-toggle`}
+              label="Withdrawal"
+              checked={withdrawal}
+              onCheckedChange={setWithdrawal}
+            />
+          )}
+
+          {withdrawalActive && (
+            <>
+              <AmountCurrencyField
+                id={`${formId}-withdrawal-total`}
+                label="Total charged"
+                value={withdrawalTotal}
+                onChange={setWithdrawalTotal}
+                currency={chargedCurrency}
+                onCurrencyChange={setChargedCurrency}
+                currencies={currencies}
+                currencyAriaLabel="Charged currency"
+              />
+              <AmountField
+                id={`${formId}-withdrawal-fee`}
+                label="Fee (optional)"
+                value={withdrawalFee}
+                onChange={setWithdrawalFee}
+                decimals={getCurrency(chargedCurrency).decimals}
+              />
+              <p className="text-muted-foreground text-xs">
+                Books total minus fee on the account. Cash received goes in the
+                note.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+    </form>
   );
 }

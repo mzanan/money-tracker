@@ -4,6 +4,8 @@ import type { Location, RecurringPayment, Transaction } from "@/types/db";
 
 import { UpcomingBanner } from "@/components/reminders/upcomingBanner";
 
+import { AddEntryFab } from "./addEntryFab";
+import { AddEntryPanel } from "./addEntryPanel";
 import { BalanceHero } from "./balanceHero";
 import { BudgetPanel } from "./budgetPanel";
 import { CalendarPanel } from "./calendarPanel";
@@ -12,7 +14,6 @@ import { DashboardPanel } from "./dashboardPanel";
 import { DashboardToolbar } from "./dashboardToolbar";
 import { FiltersPanel } from "./filtersPanel";
 import { MonthView } from "./monthView";
-import { QuickAddForm } from "./quickAddForm";
 import { SourceFilter } from "./sourceFilter";
 import { useMonthDashboard } from "./useMonthDashboard";
 
@@ -59,6 +60,8 @@ export function MonthDashboard({
     drawerOpen,
     shownPanel,
     recurringNotes,
+    panelTitle,
+    addSources,
   } = useMonthDashboard({
     yearMonth,
     lifetimeTransactions,
@@ -69,7 +72,7 @@ export function MonthDashboard({
   });
 
   return (
-    <div className="mx-auto w-full max-w-xl">
+    <div className="mx-auto w-full max-w-xl pb-20 lg:pb-0">
       <div className="grid min-w-0 gap-5 *:min-w-0">
         <UpcomingBanner
           reminders={reminders}
@@ -100,9 +103,6 @@ export function MonthDashboard({
             selected={c.selectedSource}
             onChange={c.setSelectedSource}
           />
-          {c.showQuickAdd && recentTags && (
-            <QuickAddForm recentTags={recentTags} source={c.selectedSource} />
-          )}
           <SpendingBreakdown
             transactions={breakdownTransactions}
             places={places}
@@ -129,13 +129,7 @@ export function MonthDashboard({
 
       {panelMounted && (
         <DashboardPanel
-          title={
-            shownPanel === "filters"
-              ? "Filters"
-              : shownPanel === "calendar"
-                ? "Calendar"
-                : "Budget"
-          }
+          title={panelTitle}
           open={drawerOpen}
           onClose={c.closePanel}
           panelKey={shownPanel}
@@ -170,10 +164,21 @@ export function MonthDashboard({
               completedReminders={completedReminders}
               today={c.today}
             />
+          ) : shownPanel === "add" ? (
+            <AddEntryPanel
+              addSources={addSources}
+              selectedSource={c.selectedSource}
+              recentTags={recentTags ?? []}
+              onAdded={c.closePanel}
+            />
           ) : (
             <BudgetPanel />
           )}
         </DashboardPanel>
+      )}
+
+      {addSources.length > 0 && (
+        <AddEntryFab onClick={() => c.openPanel("add")} />
       )}
     </div>
   );

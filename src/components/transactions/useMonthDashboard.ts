@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useSettings } from "@/hooks/useSettings";
 import { hasBudgetMonthOverride } from "@/lib/budgetMonth";
+import { addableSources } from "@/lib/constants/sources";
 import { detectRecurringNotes } from "@/lib/unusualExpenses";
 import {
   effectiveYearMonth,
@@ -19,6 +20,13 @@ import { useDaySpend } from "./useDaySpend";
 
 import type { HeroView } from "./balanceHero";
 import type { Location, RecurringPayment, Transaction } from "@/types/db";
+
+const PANEL_TITLES: Record<Exclude<PanelMode, "none">, string> = {
+  filters: "Filters",
+  calendar: "Calendar",
+  budget: "Budget",
+  add: "Add transaction",
+};
 
 export function useMonthDashboard({
   yearMonth,
@@ -155,6 +163,16 @@ export function useMonthDashboard({
     [isDaily, c.movedOutList, daySpend.selectedDate],
   );
 
+  const addSources = useMemo(
+    () =>
+      addableSources(
+        sources,
+        settings.cash_enabled,
+        settings.archived_sources ?? [],
+      ),
+    [sources, settings.cash_enabled, settings.archived_sources],
+  );
+
   const panelOpen = c.panel !== "none";
   const [lastPanel, setLastPanel] =
     useState<Exclude<PanelMode, "none">>("filters");
@@ -207,5 +225,7 @@ export function useMonthDashboard({
     panelMounted,
     drawerOpen,
     shownPanel,
+    panelTitle: PANEL_TITLES[shownPanel],
+    addSources,
   };
 }
