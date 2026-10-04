@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/ui/reveal";
 import { Surface } from "@/components/ui/surface";
@@ -23,7 +25,13 @@ export function CookieConsent() {
       >
         <p className="text-muted-foreground text-sm">
           We use first-party cookies for analytics and text-masked session
-          replay, never ads. Decline and we only count visits anonymously.
+          replay, never ads. Decline and we only count visits anonymously.{" "}
+          <Link
+            href="/privacy"
+            className="text-foreground underline underline-offset-4"
+          >
+            Privacy policy
+          </Link>
         </p>
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" size="xl" onClick={decline}>
