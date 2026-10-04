@@ -1,10 +1,13 @@
 import "server-only";
 
+import { after } from "next/server";
+
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 
 import { captureServerEvent } from "@/lib/analytics";
+import { hasAnalyticsConsent } from "@/lib/consentCookie";
 import { logUsageEvent } from "@/lib/data/usageEvents";
 import { db, schema } from "@/lib/db";
 
@@ -30,9 +33,10 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        after: async (createdUser) => {
+        after: async (createdUser, ctx) => {
           await logUsageEvent({ userId: createdUser.id, event: "signup" });
-          await captureServerEvent("signed_up", createdUser.id);
+          const distinctId = hasAnalyticsConsent(ctx?.headers) ? createdUser.id : null;
+          after(() => captureServerEvent("signed_up", distinctId));
         },
       },
     },

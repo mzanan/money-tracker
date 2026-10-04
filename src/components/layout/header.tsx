@@ -6,6 +6,7 @@ import { LogOutIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/authClient";
+import { resetAnalytics } from "@/lib/consent";
 import { ASSISTANT_ENABLED } from "@/lib/featureFlags";
 
 import { AssistantWidget } from "@/components/assistant/assistantWidget";
@@ -25,6 +26,7 @@ export function Header() {
 
   async function handleSignOut() {
     await authClient.signOut();
+    resetAnalytics();
     router.replace("/login");
     router.refresh();
   }

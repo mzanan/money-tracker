@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeftIcon, ChevronDownIcon } from "lucide-react";
 
+import { AnalyticsConsentCard } from "@/components/settings/analyticsConsentCard";
 import { AssistantKeyCard } from "@/components/settings/assistantKeyCard";
 import { CalendarFeedCard } from "@/components/settings/calendarFeedCard";
 import { CashCard } from "@/components/settings/cashCard";
@@ -62,6 +63,9 @@ export default async function SettingsPage({
               hint="Any expense whose merchant matches these names counts as non-daily and is kept out of the daily average."
             >
               <NonDailyLabelsCard />
+            </Section>
+            <Section title="Privacy" hint="Change your cookie choice anytime.">
+              <AnalyticsConsentCard />
             </Section>
           </>
         }

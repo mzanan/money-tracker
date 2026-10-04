@@ -13,6 +13,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
+      data-slot="bottom-nav"
       className="bg-background/90 border-border fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
     >
       <div className="h-bottom-nav mx-auto flex max-w-xs items-stretch justify-around">

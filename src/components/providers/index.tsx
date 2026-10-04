@@ -1,5 +1,6 @@
 "use client";
 
+import { CookieConsent } from "@/components/consent/cookieConsent";
 import { Toaster } from "@/components/ui/sonner";
 
 import { QueryProvider } from "./queryProvider";
@@ -15,6 +16,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <QueryProvider>{children}</QueryProvider>
       <Toaster richColors position="top-center" />
+      <CookieConsent />
     </ThemeProvider>
   );
 }
