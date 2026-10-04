@@ -23,6 +23,7 @@ export function DaySpendView({ daySpend }: Props) {
   const {
     displayCurrency,
     expense,
+    income,
     count,
     daysInMonth,
     byDay,
@@ -53,6 +54,15 @@ export function DaySpendView({ daySpend }: Props) {
           : count === 1
             ? "1 expense"
             : `${count} expenses`}
+        {income > 0 && (
+          <span className="text-income font-medium">
+            {" · "}
+            {hideAmounts
+              ? HIDDEN_AMOUNT
+              : `+${formatMoney(income, displayCurrency)}`}{" "}
+            in
+          </span>
+        )}
       </p>
 
       <div className="border-border mt-6 border-t pt-5">

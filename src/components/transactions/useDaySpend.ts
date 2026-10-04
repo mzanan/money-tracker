@@ -37,14 +37,21 @@ export function useDaySpend({
   const todayInMonth = today >= monthStart && today <= monthEnd;
 
   const byDay = useMemo(() => {
-    const map = new Map<string, { expense: number; count: number }>();
+    const map = new Map<
+      string,
+      { expense: number; income: number; count: number }
+    >();
     const real = excludeCanceledPairs(transactions);
     for (const day of dayTotalsList(real, displayCurrency, includeTransfers)) {
       if (day.date < monthStart || day.date > monthEnd) continue;
       const expenseCount = day.transactions.filter(
         (t) => t.kind === "expense",
       ).length;
-      map.set(day.date, { expense: day.expense, count: expenseCount });
+      map.set(day.date, {
+        expense: day.expense,
+        income: day.income,
+        count: expenseCount,
+      });
     }
     return map;
   }, [transactions, displayCurrency, includeTransfers, monthStart, monthEnd]);
@@ -85,6 +92,7 @@ export function useDaySpend({
 
   const selected = byDay.get(selectedDate);
   const expense = selected?.expense ?? 0;
+  const income = selected?.income ?? 0;
   const count = selected?.count ?? 0;
 
   const canPrev = selectedDate > monthStart || hasOlderMonth;
@@ -120,6 +128,7 @@ export function useDaySpend({
     selectedDate,
     setSelectedDate,
     expense,
+    income,
     count,
     daysInMonth,
     byDay,
