@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 
 import { useSettings, useTimezone } from "@/hooks/useSettings";
 import { dayTotalsWithPairs } from "@/lib/cancellations";
-import { kindOfSource } from "@/lib/constants/sources";
 import { todayInTz } from "@/lib/dates";
 import { applyListFilters, filterByAmount, initialSource } from "@/lib/filters";
 
@@ -64,8 +63,6 @@ export function useDashboardControls({
   const min = parseAmount(minInput);
   const max = parseAmount(maxInput);
   const amountActive = min != null || max != null;
-  const showQuickAdd =
-    selectedSource !== "all" && kindOfSource(selectedSource) !== "api";
 
   function togglePanel(mode: PanelMode) {
     setPanel((current) => (current === mode ? "none" : mode));
@@ -179,7 +176,6 @@ export function useDashboardControls({
     scope,
     setScope,
     amountActive,
-    showQuickAdd,
     selectedDay,
     setSelectedDay,
     sourceFilteredMonth,

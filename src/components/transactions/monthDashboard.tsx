@@ -14,7 +14,6 @@ import { DashboardPanel } from "./dashboardPanel";
 import { DashboardToolbar } from "./dashboardToolbar";
 import { FiltersPanel } from "./filtersPanel";
 import { MonthView } from "./monthView";
-import { QuickAddForm } from "./quickAddForm";
 import { SourceFilter } from "./sourceFilter";
 import { useMonthDashboard } from "./useMonthDashboard";
 
@@ -80,11 +79,7 @@ export function MonthDashboard({
           today={today}
           onOpen={() => c.openPanel("calendar")}
         />
-        <DashboardToolbar
-          panel={c.panel}
-          onToggle={c.togglePanel}
-          canAdd={addSources.length > 0}
-        />
+        <DashboardToolbar panel={c.panel} onToggle={c.togglePanel} />
         <BalanceHero
           yearMonth={visibleYearMonth}
           transactions={c.sourceFilteredMonth}
@@ -108,9 +103,6 @@ export function MonthDashboard({
             selected={c.selectedSource}
             onChange={c.setSelectedSource}
           />
-          {c.showQuickAdd && recentTags && (
-            <QuickAddForm recentTags={recentTags} source={c.selectedSource} />
-          )}
           <SpendingBreakdown
             transactions={breakdownTransactions}
             places={places}

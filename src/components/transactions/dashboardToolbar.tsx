@@ -3,7 +3,6 @@
 import {
   CalendarDaysIcon,
   PiggyBankIcon,
-  PlusIcon,
   SlidersHorizontalIcon,
 } from "lucide-react";
 
@@ -15,11 +14,9 @@ import type { PanelMode } from "./useDashboardControls";
 export function DashboardToolbar({
   panel,
   onToggle,
-  canAdd,
 }: {
   panel: PanelMode;
   onToggle: (mode: PanelMode) => void;
-  canAdd: boolean;
 }) {
   return (
     <div className="flex gap-2">
@@ -50,17 +47,6 @@ export function DashboardToolbar({
         >
           <PiggyBankIcon />
           Budget
-        </Button>
-      )}
-      {canAdd && (
-        <Button
-          size="sm"
-          aria-pressed={panel === "add"}
-          onClick={() => onToggle("add")}
-          className="ml-auto hidden lg:inline-flex"
-        >
-          <PlusIcon />
-          Add
         </Button>
       )}
     </div>

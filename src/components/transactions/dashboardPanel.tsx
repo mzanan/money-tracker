@@ -114,9 +114,15 @@ export function DashboardPanel({
   return (
     <Drawer open={open} onOpenChange={(next) => !next && onClose()}>
       <DrawerContent
+        initialFocus={() =>
+          contentRef.current?.querySelector<HTMLElement>("[data-autofocus]") ??
+          true
+        }
         style={
           drawerHeight
-            ? ({ "--drawer-height": `${drawerHeight}px` } as React.CSSProperties)
+            ? ({
+                "--drawer-height": `${drawerHeight}px`,
+              } as React.CSSProperties)
             : undefined
         }
       >
@@ -142,11 +148,7 @@ export function DashboardPanel({
                 {steps[steps.length - 1].content}
               </div>
             )}
-            <div
-              className={
-                steps.length > 0 ? "hidden" : "grid min-w-0 gap-5"
-              }
-            >
+            <div className={steps.length > 0 ? "hidden" : "grid min-w-0 gap-5"}>
               {children}
             </div>
           </DrawerStepContext.Provider>
