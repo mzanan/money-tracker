@@ -47,6 +47,18 @@ export default function PrivacyPage() {
             encrypted and use them only to sync your data or answer your
             requests.
           </p>
+          <p>
+            <strong className="text-foreground">Usage logs.</strong> Internal
+            records of key actions (sign-up, assistant messages, screenshot
+            extractions) with the date and an approximate country derived from
+            your IP, used to monitor the service.
+          </p>
+          <p>
+            <strong className="text-foreground">Calendar feed.</strong> If you
+            turn on the calendar feed, your reminders are readable by anyone
+            with its private URL and may be cached by the CDN for up to one
+            hour. You can revoke the URL in Settings at any time.
+          </p>
         </LegalSection>
 
         <LegalSection title="How we use it">
@@ -89,8 +101,10 @@ export default function PrivacyPage() {
 
         <LegalSection title="Cookies">
           <p>
-            We use a session cookie to keep you signed in and a cookie that
-            remembers your analytics choice. If you accept analytics, PostHog
+            We use a session cookie to keep you signed in, a cookie that
+            remembers your analytics choice and a short-lived cookie (10
+            minutes) that carries the data extracted from a screenshot you
+            share to the app. If you accept analytics, PostHog
             (EU region) sets first-party cookies for usage analytics and session
             replay with all text masked. If you decline, we only count visits
             anonymously without cookies. No advertising cookies. You can change
