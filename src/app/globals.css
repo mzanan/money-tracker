@@ -6,6 +6,8 @@
 
 @theme {
   --spacing-header: 3.5rem;
+  --spacing-bottom-nav: 3.5rem;
+  --spacing-consent-gap: 5.25rem;
   --animate-ticker: ticker 6s ease-in-out infinite;
   --animate-row-in: row-in 6s ease-out infinite;
   --animate-bar-grow: bar-grow 4s ease-out infinite;
@@ -130,6 +132,7 @@
 }
 
 :root {
+  --consent-offset: 1rem;
   --background: oklch(0.985 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -255,6 +258,15 @@
 }
 @utility text-caption {
   @apply text-[11px];
+}
+@utility bottom-consent {
+  bottom: calc(var(--consent-offset) + env(safe-area-inset-bottom));
+}
+
+@media (width < 64rem) {
+  :root:has([data-slot="bottom-nav"]) {
+    --consent-offset: calc(var(--spacing-bottom-nav) + var(--spacing-consent-gap));
+  }
 }
 
 @layer utilities {

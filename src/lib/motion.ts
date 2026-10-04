@@ -7,6 +7,10 @@ export const presenceClasses = {
     open: `${TRANSITION} animate-in fade-in-0 slide-in-from-top-2`,
     closed: `${TRANSITION} animate-out fade-out-0 slide-out-to-top-2`,
   },
+  bottom: {
+    open: `${TRANSITION} animate-in fade-in-0 slide-in-from-bottom-2`,
+    closed: `${TRANSITION} animate-out fade-out-0 slide-out-to-bottom-2`,
+  },
 } as const;
 
 export type PresenceVariant = keyof typeof presenceClasses;
