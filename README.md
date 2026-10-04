@@ -2,16 +2,22 @@
 
 App web personal para trackear **income + expenses** multi-moneda. Pensada para
 nómade (cargás en VND y ves los totales en USD, por ejemplo). Mobile + desktop,
-instalable como PWA.
+instalable como PWA. Live: [money.itsmatias.com](https://money.itsmatias.com).
+
+Incluye: landing pública en `/`, sync de Bybit, import CSV (Wise, Astropay),
+import desde screenshots (también como share target de la PWA), cuenta de
+efectivo con retiros y cambios, reminders con feed iCal, asistente de chat con
+la API key propia del usuario (Groq o Google), analytics con PostHog EU y
+banner de cookies, y baseline de SEO/AEO (sitemap, robots, JSON-LD, `llms.txt`).
 
 Stack: Next.js 16 + React 19 + TypeScript + Tailwind v4 + shadcn/ui + **Turso
 (libSQL) + Drizzle ORM** + **Better Auth** (email+password + Google OAuth) +
-TanStack React Query + Zustand. Deploy: Vercel.
+TanStack React Query + Zustand + Vercel AI SDK. Deploy: Vercel.
 
 > Migrado desde Supabase a Turso + Better Auth el 2026-05-25 por portabilidad
 > (un único `.db` exportable). El schema de tablas no cambió: `transactions`,
 > `user_settings`, `fx_rates_cache`, `api_integrations`. Lo que perdió:
-> Row-Level Security — todas las queries filtran `user_id` explícito en código.
+> Row-Level Security: todas las queries filtran `user_id` explícito en código.
 
 ---
 
@@ -44,12 +50,15 @@ TURSO_DATABASE_URL=libsql://money-tracker-<org>.turso.io
 TURSO_AUTH_TOKEN=<turso db tokens create output>
 
 BETTER_AUTH_SECRET=$(openssl rand -base64 32)
-BETTER_AUTH_URL=http://localhost:3000
-NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_URL=http://localhost:3020
+NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3020
 
 GOOGLE_CLIENT_ID=...apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-...
 AUTH_DISABLE_SIGNUPS=
+
+# opcional, solo produccion
+NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=
 ```
 
 ### 4. Aplicar el schema
@@ -63,7 +72,7 @@ npm run db:migrate        # corre drizzle/migrations/*.sql contra Turso
 
 ```bash
 nvm use            # node 22
-npm run dev        # http://localhost:3000
+npm run dev        # http://localhost:3020
 ```
 
 Primer ingreso: creás la cuenta con email+password (o Google), y después el
@@ -73,14 +82,14 @@ onboarding pide al menos 1 moneda + la moneda base.
 
 ## Scripts
 
-- `npm run dev` — dev server (Turbopack, default en Next 16)
-- `npm run build` — build de producción
-- `npm run start` — servir el build
-- `npm run lint` — eslint
-- `npm run format` — prettier --write .
-- `npm run db:generate` — generar migration SQL desde `src/lib/db/schema.ts`
-- `npm run db:migrate` — aplicar migrations a Turso
-- `npm run db:studio` — abrir Drizzle Studio en el browser
+- `npm run dev`: dev server (Turbopack, default en Next 16)
+- `npm run build`: build de producción
+- `npm run start`: servir el build
+- `npm run lint`: eslint
+- `npm run format`: prettier --write .
+- `npm run db:generate`: generar migration SQL desde `src/lib/db/schema.ts`
+- `npm run db:migrate`: aplicar migrations a Turso
+- `npm run db:studio`: abrir Drizzle Studio en el browser
 
 ---
 
@@ -113,16 +122,26 @@ En el celular, abrir la app deployada → "Add to Home Screen" → queda como ap
 src/
   app/
     page.tsx                  # landing (sin sesión) o dashboard (con sesión)
+    privacy/                  # política de privacidad (pública)
     (auth)/login/             # email+password + Google (Better Auth)
     (app)/                    # rutas protegidas (auth + onboarding)
+      home/                   # inicio logueado (servido desde el layout de la app)
+      dashboard/              # proyección de gasto y gastos inusuales
       month/[ym]/             # vista mensual
-      settings/               # editar monedas, base, huso, integraciones, CSV
+      screenshot-import/      # import desde screenshot (share target)
+      settings/               # tabs General, Accounts, Cash, Data, Assistant
     onboarding/               # primer setup (currencies + base)
     api/auth/[...all]/        # Better Auth route handler
     api/rates/                # proxy + cache de open.er-api.com
+    api/chat/                 # asistente (Vercel AI SDK, key del usuario)
+    api/calendar/, api/share/ # feed iCal de reminders, share target de screenshots
+    robots.ts, sitemap.ts     # SEO/AEO (ver lib/seo.ts)
     layout.tsx, manifest.ts
   components/
     landing/                  # landing pública (copy en landing.json)
+    assistant/                # widget de chat del asistente
+    consent/                  # banner de cookies (PostHog)
+    dashboard/                # tarjetas de proyección y gastos inusuales
     auth/                     # loginCard + useLogin
     transactions/             # balanceHero (Monthly/Daily tabs), sourceFilter, monthView, amountsToggle, ...
     layout/                   # header, baseCurrencyPicker, themeToggle
@@ -146,6 +165,9 @@ src/
     totals.ts                 # day/month totals
     dates.ts                  # helpers de fecha (date-fns + tz)
     integrations/             # Bybit adapter (funding history)
+    ai/                       # provider, prompt, tools del asistente, extracción de screenshots
+    analytics.ts, consent.ts  # PostHog EU vía /relay, consentimiento
+    seo.ts                    # SITE_URL, crawlers de IA, rutas privadas
     csv/                      # parse + detect + normalize
   stores/uiStore.ts           # Zustand (lastCurrency)
   hooks/useHideAmounts.tsx    # mask totals via mt_hide_amounts cookie
@@ -210,9 +232,15 @@ drizzle/migrations/           # SQL generado por drizzle-kit
   `AUTH_DISABLE_SIGNUPS=true` bloquea registros nuevos en ambos métodos
   (single-user). El OTP por email se descartó el 2026-06-11: dependía de
   Resend y nunca se configuró en prod.
-- **Tasas**: [open.er-api.com](https://open.er-api.com) — gratis sin API key,
+- **Tasas**: [open.er-api.com](https://open.er-api.com): gratis sin API key,
   incluye VND. Cacheada en `fx_rates_cache` (Turso). Si el proveedor cae, se
   sirve la cache stale.
+- **Analytics**: PostHog EU vía el proxy `/relay`, solo en producción. Banner
+  de cookies con `cookieless_mode: "on_reject"` (sin consentimiento no hay
+  cookies) y opción para cambiarlo en Settings. `?notrack=1` en cualquier URL
+  excluye ese navegador (`?notrack=0` lo vuelve a incluir).
+- **Asistente**: chat opcional que corre con la API key propia del usuario
+  (Groq o Google, en Settings → Assistant). Sin key del sistema como fallback.
 - **Categorías**: free-text, opcional, con autocomplete (datalist) de las
   recientes.
 - **Sin RLS**: cada query Drizzle filtra `eq(table.user_id, user.id)` en
