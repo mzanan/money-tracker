@@ -33,12 +33,13 @@ import { quickAddExtrasLabel } from "./quickAddExtras";
 
 import type { Kind } from "./kindToggle";
 
-export function useQuickAddForm(source: string) {
+export function useQuickAddForm(source: string, onAdded?: () => void) {
   const settings = useSettings();
   const timezone = useTimezone();
   const ratesQuery = useRates();
   const { run, pending } = useServerAction();
   const tagsId = useId();
+  const formId = useId();
 
   const lastCurrency = useUiStore((state) => state.lastCurrency);
   const setLastCurrency = useUiStore((state) => state.setLastCurrency);
@@ -158,6 +159,7 @@ export function useQuickAddForm(source: string) {
             setTransfer(false);
             transferDraft.reset();
             setLastCurrency(currency);
+            onAdded?.();
           },
         },
       );
@@ -207,6 +209,7 @@ export function useQuickAddForm(source: string) {
             withdrawalDraft.reset();
             setWithdrawal(false);
             setLastCurrency(currency);
+            onAdded?.();
           },
         },
       );
@@ -234,6 +237,7 @@ export function useQuickAddForm(source: string) {
           setDescription("");
           setTagsInput("");
           setLastCurrency(currency);
+          onAdded?.();
         },
       },
     );
@@ -286,6 +290,7 @@ export function useQuickAddForm(source: string) {
     description,
     setDescription,
     tagsId,
+    formId,
     tagsInput,
     setTagsInput,
     date,

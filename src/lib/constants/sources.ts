@@ -46,6 +46,24 @@ export function withoutArchived(
   return sources.filter((source) => !archived.includes(source));
 }
 
+export function addableSources(
+  sources: ReadonlyArray<string>,
+  cashEnabled: boolean,
+  archived: ReadonlyArray<string>,
+): string[] {
+  return withoutArchived(tabSourcesFrom(sources, cashEnabled), archived).filter(
+    (source) => kindOfSource(source) !== "api",
+  );
+}
+
+export function defaultAddSource(
+  selected: string,
+  addable: ReadonlyArray<string>,
+): string | null {
+  if (addable.includes(selected)) return selected;
+  return addable[0] ?? null;
+}
+
 export type SyncStatus = "not-connected" | "paused" | "failed" | "synced";
 
 export function syncStatus({

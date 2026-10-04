@@ -4,6 +4,8 @@ import type { Location, RecurringPayment, Transaction } from "@/types/db";
 
 import { UpcomingBanner } from "@/components/reminders/upcomingBanner";
 
+import { AddEntryFab } from "./addEntryFab";
+import { AddEntryPanel } from "./addEntryPanel";
 import { BalanceHero } from "./balanceHero";
 import { BudgetPanel } from "./budgetPanel";
 import { CalendarPanel } from "./calendarPanel";
@@ -59,6 +61,8 @@ export function MonthDashboard({
     drawerOpen,
     shownPanel,
     recurringNotes,
+    panelTitle,
+    addSources,
   } = useMonthDashboard({
     yearMonth,
     lifetimeTransactions,
@@ -69,14 +73,18 @@ export function MonthDashboard({
   });
 
   return (
-    <div className="mx-auto w-full max-w-xl">
+    <div className="mx-auto w-full max-w-xl pb-20 lg:pb-0">
       <div className="grid min-w-0 gap-5 *:min-w-0">
         <UpcomingBanner
           reminders={reminders}
           today={today}
           onOpen={() => c.openPanel("calendar")}
         />
-        <DashboardToolbar panel={c.panel} onToggle={c.togglePanel} />
+        <DashboardToolbar
+          panel={c.panel}
+          onToggle={c.togglePanel}
+          canAdd={addSources.length > 0}
+        />
         <BalanceHero
           yearMonth={visibleYearMonth}
           transactions={c.sourceFilteredMonth}
@@ -129,13 +137,7 @@ export function MonthDashboard({
 
       {panelMounted && (
         <DashboardPanel
-          title={
-            shownPanel === "filters"
-              ? "Filters"
-              : shownPanel === "calendar"
-                ? "Calendar"
-                : "Budget"
-          }
+          title={panelTitle}
           open={drawerOpen}
           onClose={c.closePanel}
           panelKey={shownPanel}
@@ -170,10 +172,21 @@ export function MonthDashboard({
               completedReminders={completedReminders}
               today={c.today}
             />
+          ) : shownPanel === "add" ? (
+            <AddEntryPanel
+              addSources={addSources}
+              selectedSource={c.selectedSource}
+              recentTags={recentTags ?? []}
+              onAdded={c.closePanel}
+            />
           ) : (
             <BudgetPanel />
           )}
         </DashboardPanel>
+      )}
+
+      {addSources.length > 0 && (
+        <AddEntryFab onClick={() => c.openPanel("add")} />
       )}
     </div>
   );

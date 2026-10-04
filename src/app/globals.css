@@ -6,6 +6,7 @@
 
 @theme {
   --spacing-header: 3.5rem;
+  --spacing-bottom-nav: 3.75rem;
   --animate-ticker: ticker 6s ease-in-out infinite;
   --animate-row-in: row-in 6s ease-out infinite;
   --animate-bar-grow: bar-grow 4s ease-out infinite;
@@ -220,6 +221,10 @@
   html {
     @apply font-sans;
   }
+}
+
+@utility bottom-fab {
+  bottom: calc(var(--spacing-bottom-nav) + 1rem + env(safe-area-inset-bottom));
 }
 
 @utility text-income {

@@ -27,9 +27,10 @@ import { useQuickAddForm } from "./useQuickAddForm";
 interface Props {
   recentTags: string[];
   source: string;
+  onAdded?: () => void;
 }
 
-export function QuickAddForm({ recentTags, source }: Props) {
+export function QuickAddForm({ recentTags, source, onAdded }: Props) {
   const accountLabels = useAccountLabels();
   const {
     extrasLabel,
@@ -76,13 +77,14 @@ export function QuickAddForm({ recentTags, source }: Props) {
     description,
     setDescription,
     tagsId,
+    formId,
     tagsInput,
     setTagsInput,
     date,
     setDate,
     pending,
     handleSubmit,
-  } = useQuickAddForm(source);
+  } = useQuickAddForm(source, onAdded);
 
   const submitButton = (
     <Button
@@ -102,7 +104,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
 
   return (
     <Surface asChild radius="lg" padding="sm" className="grid gap-3">
-      <form id="quick-add" onSubmit={handleSubmit} className="scroll-mt-20">
+      <form id={formId} onSubmit={handleSubmit} className="scroll-mt-20">
         <p className="text-muted-foreground px-1 text-xs">
           Adding to{" "}
           <span className="text-foreground font-medium">
@@ -116,7 +118,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
               {currencyMeta.symbol}
             </span>
             <AmountInput
-              id="amount"
+              id={`${formId}-amount`}
               autoComplete="off"
               placeholder="0"
               value={amount}
@@ -140,7 +142,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
         </div>
 
         <Input
-          id="description"
+          id={`${formId}-description`}
           autoComplete="off"
           placeholder="Description (coffee, rent, salary…)"
           value={description}
@@ -189,9 +191,9 @@ export function QuickAddForm({ recentTags, source }: Props) {
         {showExtras && (
           <div className="grid gap-2 px-1">
             <div className="grid gap-1.5">
-              <Label htmlFor="tags">Tags</Label>
+              <Label htmlFor={`${formId}-tags`}>Tags</Label>
               <Input
-                id="tags"
+                id={`${formId}-tags`}
                 list={tagsId}
                 placeholder="food, transport, rent…"
                 value={tagsInput}
@@ -209,9 +211,9 @@ export function QuickAddForm({ recentTags, source }: Props) {
             </div>
 
             <div className="grid gap-1.5">
-              <Label htmlFor="date">Date</Label>
+              <Label htmlFor={`${formId}-date`}>Date</Label>
               <Input
-                id="date"
+                id={`${formId}-date`}
                 type="date"
                 value={date}
                 onChange={(event) => setDate(event.target.value)}
@@ -222,7 +224,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
 
             {transferAvailable && (
               <SwitchRow
-                id="transfer-toggle"
+                id={`${formId}-transfer-toggle`}
                 label="Transfer"
                 checked={transfer}
                 onCheckedChange={setTransfer}
@@ -232,9 +234,11 @@ export function QuickAddForm({ recentTags, source }: Props) {
             {transferActive && (
               <>
                 <div className="grid gap-1.5">
-                  <Label htmlFor="transfer-destination">To account</Label>
+                  <Label htmlFor={`${formId}-transfer-destination`}>
+                    To account
+                  </Label>
                   <AccountSelect
-                    id="transfer-destination"
+                    id={`${formId}-transfer-destination`}
                     sources={transferSources}
                     value={transferDestination}
                     onValueChange={setTransferDestination}
@@ -242,7 +246,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
                   />
                 </div>
                 <TransferFeeSection
-                  idPrefix="quick-transfer"
+                  idPrefix={`${formId}-transfer`}
                   fees={transferFees}
                   onFeesChange={setTransferFees}
                   sourceCurrency={currency}
@@ -259,7 +263,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
 
             {withdrawalAvailable && (
               <SwitchRow
-                id="withdrawal-toggle"
+                id={`${formId}-withdrawal-toggle`}
                 label="Withdrawal"
                 checked={withdrawal}
                 onCheckedChange={setWithdrawal}
@@ -269,7 +273,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
             {withdrawalActive && (
               <>
                 <AmountCurrencyField
-                  id="withdrawal-total"
+                  id={`${formId}-withdrawal-total`}
                   label="Total charged"
                   value={withdrawalTotal}
                   onChange={setWithdrawalTotal}
@@ -279,7 +283,7 @@ export function QuickAddForm({ recentTags, source }: Props) {
                   currencyAriaLabel="Charged currency"
                 />
                 <AmountField
-                  id="withdrawal-fee"
+                  id={`${formId}-withdrawal-fee`}
                   label="Fee (optional)"
                   value={withdrawalFee}
                   onChange={setWithdrawalFee}
