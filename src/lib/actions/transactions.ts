@@ -1,8 +1,9 @@
 "use server";
 
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { trackActivation } from "@/lib/activation";
 import { amountValidationError } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
@@ -117,6 +118,11 @@ export async function createTransaction(
       .insert(transactions)
       .values(row)
       .returning({ id: transactions.id });
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(transactions)
+      .where(eq(transactions.user_id, user.id));
+    if (total === 1) await trackActivation(user.id);
     revalidatePath("/", "layout");
     return { ok: true, data: { id: inserted.id } };
   } catch (error) {
