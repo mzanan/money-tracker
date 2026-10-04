@@ -179,7 +179,7 @@ drizzle/migrations/           # SQL generado por drizzle-kit
   transferencias) como en All (que las excluye). Si el destino está en otra
   moneda, el monto recibido se carga en esa moneda y la tasa real queda
   implícita en el par de montos, no se guarda aparte. Se carga desde el toggle
-  "Transfer" del quick-add, o marcando una fila existente desde el menú.
+  "Transfer" del quick-add (panel del botón +), o marcando una fila existente desde el menú.
   Disponible en cuentas csv y en cash (solo con cash habilitado), nunca en
   cuentas sincronizadas ni en el tab All.
 - **Withdrawals y efectivo**: un retiro puede vivir como una sola fila de gasto
