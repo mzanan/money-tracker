@@ -9,6 +9,7 @@ import { getRemindersData } from "@/lib/data/reminders";
 import {
   LANDING_DESCRIPTION,
   LANDING_TITLE,
+  OG_IMAGE,
   SITE_NAME,
   landingJsonLd,
 } from "@/lib/seo";
@@ -28,11 +29,13 @@ export async function generateMetadata(): Promise<Metadata> {
       url: "/",
       title: LANDING_TITLE,
       description: LANDING_DESCRIPTION,
+      images: [OG_IMAGE],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title: LANDING_TITLE,
       description: LANDING_DESCRIPTION,
+      images: [OG_IMAGE],
     },
   };
 }

@@ -6,6 +6,13 @@ export const LANDING_TITLE =
 export const LANDING_DESCRIPTION =
   "For nomads and expats who earn and spend in more than one currency.";
 
+export const OG_IMAGE = {
+  url: "/opengraph-image",
+  width: 1200,
+  height: 630,
+  alt: "Money Tracker: your money across currencies, in one place.",
+};
+
 export const AI_CRAWLERS = [
   "GPTBot",
   "OAI-SearchBot",
