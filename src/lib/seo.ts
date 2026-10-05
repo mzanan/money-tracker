@@ -7,9 +7,9 @@ export const LANDING_DESCRIPTION =
   "For nomads and expats who earn and spend in more than one currency.";
 
 export const OG_IMAGE = {
-  url: "/opengraph-image",
-  width: 1200,
-  height: 630,
+  url: "/opengraph-image.png",
+  width: 2400,
+  height: 1260,
   alt: "Money Tracker: your money across currencies, in one place.",
 };
 
