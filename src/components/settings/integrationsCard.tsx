@@ -2,13 +2,7 @@ import { getIntegrationSummaries } from "@/lib/data/integrations";
 import { getUser } from "@/lib/session";
 import type { IntegrationProvider } from "@/types/db";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 
 import { IntegrationRow } from "./integrationRow";
 
@@ -24,12 +18,6 @@ export async function IntegrationsCard() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Integrations</CardTitle>
-        <CardDescription>
-          Pull transactions automatically from your accounts.
-        </CardDescription>
-      </CardHeader>
       <CardContent className="grid divide-y">
         {PROVIDERS.map(({ id, label }) => (
           <IntegrationRow
