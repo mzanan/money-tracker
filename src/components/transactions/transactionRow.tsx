@@ -14,8 +14,10 @@ import {
   WalletIcon,
 } from "lucide-react";
 
+import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { formatMoney } from "@/lib/currency";
 import { formatDayShort } from "@/lib/dates";
+import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { computeNextDue } from "@/lib/reminders";
 import { cn } from "@/lib/utils";
 
@@ -97,6 +99,7 @@ export function TransactionRow({
     stepApi,
     runAfterMenuClose,
   } = useTransactionRow(tx, showDate, showBudgetMonthBadges, recurringNotes);
+  const { hideAmounts } = useHideAmounts();
 
   function openEdit() {
     if (stepApi) {
@@ -252,8 +255,13 @@ export function TransactionRow({
       </div>
       <div className="min-w-0 flex-1">
         <span className="flex min-w-0 items-center gap-1.5">
-          <span className="text-foreground shrink-0 text-sm leading-tight font-medium">
-            {sourceLabel}
+          <span
+            className={cn(
+              "text-foreground text-sm leading-tight font-medium",
+              description ? "min-w-0 truncate" : "shrink-0",
+            )}
+          >
+            {description || sourceLabel}
           </span>
           {(isTransfer || isWithdrawal) && (
             <TransferBadge>
@@ -275,7 +283,7 @@ export function TransactionRow({
           <span className="text-muted-foreground text-meta mt-0.5 block truncate">
             {showDate && formatDayShort(tx.occurred_on)}
             {showDate && description ? " · " : ""}
-            {description}
+            {description && sourceLabel}
           </span>
         )}
       </div>
@@ -290,12 +298,15 @@ export function TransactionRow({
                 : "text-foreground",
           )}
         >
-          {sign}
-          {inDisplay !== null
-            ? formatMoney(inDisplay, baseCurrency)
-            : formatMoney(tx.amount_original, tx.currency_original)}
+          {hideAmounts
+            ? HIDDEN_AMOUNT
+            : `${sign}${
+                inDisplay !== null
+                  ? formatMoney(inDisplay, baseCurrency)
+                  : formatMoney(tx.amount_original, tx.currency_original)
+              }`}
         </span>
-        {showConverted && (
+        {showConverted && !hideAmounts && (
           <span className="text-muted-foreground text-caption mt-0.5 tabular-nums">
             {formatMoney(tx.amount_original, tx.currency_original)}
           </span>
