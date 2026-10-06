@@ -6,6 +6,7 @@ const BYBIT_API = "https://api.bybit.com";
 const RECV_WINDOW = "5000";
 const WINDOW_DAYS = 6;
 const MAX_PAGES_PER_WINDOW = 20;
+const REQUEST_TIMEOUT_MS = 10_000;
 
 interface FundingHistoryRow {
   memberId?: string;
@@ -124,6 +125,7 @@ async function get<T>(
       "X-BAPI-SIGN": signature,
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!response.ok) {
     const body = await response.text().catch(() => "");
@@ -304,20 +306,21 @@ export async function fetchTransactions(
     const depositFromMs = fromSec * 1000;
     const depositToMs = Math.ceil(to / 1000) * 1000;
 
-    const rows = await fetchWindow(creds, fromSec, toSec);
-
-    const onChain = await fetchPagedRows<DepositRow>(
-      "/v5/asset/deposit/query-record",
-      depositFromMs,
-      depositToMs,
-      creds,
-    );
-    const internal = await fetchPagedRows<InternalDepositRow>(
-      "/v5/asset/deposit/query-internal-record",
-      depositFromMs,
-      depositToMs,
-      creds,
-    );
+    const [rows, onChain, internal] = await Promise.all([
+      fetchWindow(creds, fromSec, toSec),
+      fetchPagedRows<DepositRow>(
+        "/v5/asset/deposit/query-record",
+        depositFromMs,
+        depositToMs,
+        creds,
+      ),
+      fetchPagedRows<InternalDepositRow>(
+        "/v5/asset/deposit/query-internal-record",
+        depositFromMs,
+        depositToMs,
+        creds,
+      ),
+    ]);
     for (const row of onChain) {
       const tx = depositToNormalized(row);
       if (tx) {

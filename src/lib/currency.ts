@@ -1,3 +1,4 @@
+import { ActionError } from "@/lib/actionError";
 import { getCurrency } from "@/lib/constants/currencies";
 import type { FxRates } from "@/types/db";
 
@@ -11,7 +12,7 @@ export function convert(
   const fromRate = rates[from];
   const toRate = rates[to];
   if (!fromRate || !toRate) {
-    throw new Error(`Missing rate for ${!fromRate ? from : to}`);
+    throw new ActionError(`Missing rate for ${!fromRate ? from : to}`);
   }
   return (amount / fromRate) * toRate;
 }

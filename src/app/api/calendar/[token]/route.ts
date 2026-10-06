@@ -28,7 +28,7 @@ export async function GET(
     status: 200,
     headers: {
       "content-type": "text/calendar; charset=utf-8",
-      "cache-control": "public, max-age=3600, s-maxage=3600",
+      "cache-control": "private, max-age=3600",
     },
   });
 }
