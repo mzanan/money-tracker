@@ -7,6 +7,7 @@ import { ActionError, actionErrorMessage } from "@/lib/actionError";
 import { amountValidationError } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { recurring_payments, transactions, user_settings } from "@/lib/db/schema";
+import { resolveTimezone } from "@/lib/preferences.server";
 import { getRates } from "@/lib/rates";
 import { computeNextDue } from "@/lib/reminders";
 import { buildTransactionRow, EXTERNAL_ID_PREFIX } from "@/lib/transactions";
@@ -289,7 +290,7 @@ export async function markReminderPaid(
 
   let day = paidOn;
   if (!day || !isValidCalendarDate(day)) {
-    day = todayInTz(settings?.timezone ?? "UTC");
+    day = todayInTz(await resolveTimezone(settings?.timezone));
   }
 
   try {

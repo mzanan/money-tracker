@@ -2,9 +2,7 @@
 
 import { createContext, useContext, useState } from "react";
 
-import { HIDE_AMOUNTS_COOKIE } from "@/lib/preferences";
-
-const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
+import { HIDE_AMOUNTS_COOKIE, preferenceCookie } from "@/lib/preferences";
 
 interface Ctx {
   hideAmounts: boolean;
@@ -25,7 +23,7 @@ export function HideAmountsProvider({
   function toggleHideAmounts() {
     setHideAmounts((current) => {
       const next = !current;
-      document.cookie = `${HIDE_AMOUNTS_COOKIE}=${next ? "1" : "0"};path=/;max-age=${ONE_YEAR_SECONDS};samesite=lax`;
+      document.cookie = preferenceCookie(HIDE_AMOUNTS_COOKIE, next ? "1" : "0");
       return next;
     });
   }

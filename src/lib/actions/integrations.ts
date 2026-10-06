@@ -13,6 +13,7 @@ import { api_integrations, transactions, user_settings } from "@/lib/db/schema";
 import { EXTERNAL_ID_PREFIX } from "@/lib/externalIds";
 import { ADAPTERS } from "@/lib/integrations";
 import { decryptSecret, encryptSecret } from "@/lib/integrations/crypto";
+import { resolveTimezone } from "@/lib/preferences.server";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 import {
   integrationProviderSchema,
@@ -315,7 +316,7 @@ export async function syncIntegration(
     .limit(1)
     .then((rows) => rows[0]);
   if (!settings) return { ok: false, error: "Settings not found" };
-  const timezone = settings.timezone ?? "UTC";
+  const timezone = await resolveTimezone(settings.timezone);
 
   let rates;
   try {

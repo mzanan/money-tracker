@@ -12,6 +12,7 @@ import { getAssistantSettings } from "@/lib/data/userSettings";
 import { todayInTz } from "@/lib/dates";
 import { ASSISTANT_ENABLED, BUDGET_ENABLED } from "@/lib/featureFlags";
 import { decryptSecret } from "@/lib/integrations/crypto";
+import { resolveTimezone } from "@/lib/preferences.server";
 import { getUser } from "@/lib/session";
 
 export async function POST(req: Request) {
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
   }
 
   const { messages }: { messages: UIMessage[] } = await req.json();
-  const timezone = settings.timezone ?? "UTC";
+  const timezone = await resolveTimezone(settings.timezone);
 
   await logUsageEvent({
     userId: user.id,

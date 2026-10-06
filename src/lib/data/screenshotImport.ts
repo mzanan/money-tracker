@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
 import { todayInTz } from "@/lib/dates";
 import type { CandidateMatch } from "@/lib/imageExtract";
+import { resolveTimezone } from "@/lib/preferences.server";
 import { SHARE_ERROR_CODES, type ShareErrorCode } from "@/lib/screenshotShare";
 
 import { findCrossSourceCandidates } from "./duplicates";
@@ -94,7 +95,7 @@ export async function getScreenshotImportPageData(
       .where(eq(user_settings.user_id, userId))
       .limit(1)
       .then((rows) => rows[0]);
-    const today = todayInTz(settings?.timezone ?? "UTC");
+    const today = todayInTz(await resolveTimezone(settings?.timezone));
     initialCandidates = await buildInitialCandidates(
       userId,
       initial.items,
