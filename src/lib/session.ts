@@ -28,8 +28,10 @@ export const getUser = cache(async (): Promise<SessionUser | null> => {
   };
 });
 
+export const SESSION_EXPIRED_PATH = "/api/session/expired";
+
 export async function requireUser(): Promise<SessionUser> {
   const user = await getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect(SESSION_EXPIRED_PATH);
   return user;
 }
