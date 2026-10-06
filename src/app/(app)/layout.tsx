@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/layout/appShell";
-import { getUser } from "@/lib/session";
+import { getUser, SESSION_EXPIRED_PATH } from "@/lib/session";
 
 export default async function AppLayout({
   children,
@@ -10,7 +10,7 @@ export default async function AppLayout({
 }) {
   const user = await getUser();
   if (!user) {
-    redirect("/login");
+    redirect(SESSION_EXPIRED_PATH);
   }
 
   return <AppShell user={user}>{children}</AppShell>;

@@ -2,12 +2,12 @@ import { redirect } from "next/navigation";
 
 import { OnboardingForm } from "@/components/onboarding/onboardingForm";
 import { getUserSettings } from "@/lib/data/userSettings";
-import { getUser } from "@/lib/session";
+import { getUser, SESSION_EXPIRED_PATH } from "@/lib/session";
 
 export default async function OnboardingPage() {
   const user = await getUser();
   if (!user) {
-    redirect("/login");
+    redirect(SESSION_EXPIRED_PATH);
   }
 
   const settings = await getUserSettings(user.id);
