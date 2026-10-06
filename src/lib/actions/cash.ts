@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { and, eq, isNull } from "drizzle-orm";
 
+import { ActionError, actionErrorMessage } from "@/lib/actionError";
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import {
   kindOfSource,
@@ -22,6 +23,10 @@ import {
   isWithdrawalExternalId,
   withdrawalGroupFrom,
 } from "@/lib/externalIds";
+import {
+  buildCurrencyContext,
+  withRatesErrorHandling,
+} from "@/lib/currencyContext";
 import { getUser } from "@/lib/session";
 import { unlinkWithdrawalGroup } from "@/lib/transferUnlink";
 import {
@@ -36,11 +41,7 @@ import {
 } from "@/lib/withdrawal";
 import type { TransactionInsert } from "@/types/db";
 
-import {
-  buildCurrencyContext,
-  withRatesErrorHandling,
-  type ActionResult,
-} from "./transactions";
+import type { ActionResult } from "./transactions";
 
 const withdrawalSchema = z.object({
   amount: z.number().finite().positive(),
@@ -270,7 +271,7 @@ export async function recordCashWithdrawal(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Insert failed",
+      error: actionErrorMessage(error, "Insert failed"),
     };
   }
 }
@@ -355,7 +356,7 @@ export async function recordCashExchange(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Insert failed",
+      error: actionErrorMessage(error, "Insert failed"),
     };
   }
 }
@@ -430,7 +431,7 @@ export async function recordWithdrawalExpense(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Insert failed",
+      error: actionErrorMessage(error, "Insert failed"),
     };
   }
 }
@@ -534,7 +535,7 @@ export async function convertToWithdrawal(
           ),
         );
       if (result.rowsAffected === 0) {
-        throw new Error("Transaction changed, reload and retry");
+        throw new ActionError("Transaction changed, reload and retry");
       }
       if (feeRow) {
         await dbTx.insert(transactions).values(feeRow);
@@ -545,7 +546,7 @@ export async function convertToWithdrawal(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
+      error: actionErrorMessage(error, "Update failed"),
     };
   }
 }
@@ -577,7 +578,7 @@ export async function undoMoveWithdrawalToCash(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
+      error: actionErrorMessage(error, "Update failed"),
     };
   }
 }
@@ -674,7 +675,7 @@ export async function moveWithdrawalToCash(
           ),
         );
       if (result.rowsAffected === 0) {
-        throw new Error("Transaction changed, reload and retry");
+        throw new ActionError("Transaction changed, reload and retry");
       }
       await dbTx.insert(transactions).values({
         ...incoming,
@@ -696,7 +697,7 @@ export async function moveWithdrawalToCash(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
+      error: actionErrorMessage(error, "Update failed"),
     };
   }
 }

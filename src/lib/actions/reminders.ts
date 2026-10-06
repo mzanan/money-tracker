@@ -3,6 +3,7 @@
 import { and, desc, eq, isNull, notLike, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { ActionError, actionErrorMessage } from "@/lib/actionError";
 import { amountValidationError } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { recurring_payments, transactions, user_settings } from "@/lib/db/schema";
@@ -72,7 +73,7 @@ export async function createReminder(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Save failed",
+      error: actionErrorMessage(error, "Save failed"),
     };
   }
 }
@@ -117,7 +118,7 @@ export async function updateReminder(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
+      error: actionErrorMessage(error, "Update failed"),
     };
   }
 }
@@ -357,7 +358,7 @@ export async function markReminderPaid(
           )
           .returning({ id: transactions.id });
         if (linked.length === 0) {
-          throw new Error(
+          throw new ActionError(
             "This transaction is already linked to another reminder",
           );
         }
@@ -403,7 +404,7 @@ export async function markReminderPaid(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
+      error: actionErrorMessage(error, "Update failed"),
     };
   }
 }
@@ -426,7 +427,7 @@ export async function deleteReminder(id: string): Promise<ActionResult> {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Delete failed",
+      error: actionErrorMessage(error, "Delete failed"),
     };
   }
 }

@@ -4,6 +4,7 @@ import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { ActionError, actionErrorMessage } from "@/lib/actionError";
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 
 import {
@@ -37,6 +38,10 @@ import {
   type TransferFeeEntry,
 } from "@/lib/transfer";
 import { isWithdrawalExternalId } from "@/lib/externalIds";
+import {
+  buildCurrencyContext,
+  withRatesErrorHandling,
+} from "@/lib/currencyContext";
 import { getUser } from "@/lib/session";
 import { unlinkTransferGroup } from "@/lib/transferUnlink";
 import {
@@ -46,11 +51,7 @@ import {
 } from "@/lib/transactions";
 import type { FxRates, TransactionInsert } from "@/types/db";
 
-import {
-  buildCurrencyContext,
-  withRatesErrorHandling,
-  type ActionResult,
-} from "./transactions";
+import type { ActionResult } from "./transactions";
 
 const TRANSFER_AMOUNT_TOLERANCE = 0.05;
 
@@ -267,7 +268,7 @@ export async function recordTransfer(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Insert failed",
+      error: actionErrorMessage(error, "Insert failed"),
     };
   }
 }
@@ -450,7 +451,7 @@ export async function markAsTransfer(
           ),
         );
       if (result.rowsAffected === 0) {
-        throw new Error("Transaction changed, reload and retry");
+        throw new ActionError("Transaction changed, reload and retry");
       }
     });
     revalidatePath("/", "layout");
@@ -458,7 +459,7 @@ export async function markAsTransfer(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
+      error: actionErrorMessage(error, "Update failed"),
     };
   }
 }
@@ -644,7 +645,7 @@ export async function markPairAsTransfer(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
+      error: actionErrorMessage(error, "Update failed"),
     };
   }
 }
@@ -672,7 +673,7 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
+      error: actionErrorMessage(error, "Update failed"),
     };
   }
 }
@@ -707,7 +708,7 @@ export async function setBudgetMonthShift(
       } catch (error) {
         return {
           ok: false,
-          error: error instanceof Error ? error.message : "Update failed",
+          error: actionErrorMessage(error, "Update failed"),
         };
       }
     }
@@ -759,7 +760,7 @@ export async function setBudgetMonthShift(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
+      error: actionErrorMessage(error, "Update failed"),
     };
   }
 }
