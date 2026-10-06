@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { recurring_payments } from "@/lib/db/schema";
 import { getUserSettings } from "@/lib/data/userSettings";
 import { todayInTz } from "@/lib/dates";
+import { resolveTimezone } from "@/lib/preferences.server";
 import { requireUser } from "@/lib/session";
 import type { RecurringPayment } from "@/types/db";
 
@@ -48,6 +49,6 @@ export async function getRemindersData(): Promise<RemindersData> {
   return {
     reminders,
     completedReminders,
-    today: todayInTz(settings?.timezone ?? "UTC"),
+    today: todayInTz(await resolveTimezone(settings?.timezone)),
   };
 }

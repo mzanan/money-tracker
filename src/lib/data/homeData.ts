@@ -5,6 +5,7 @@ import { api_integrations, locations, transactions } from "@/lib/db/schema";
 import { listAccountSources } from "@/lib/data/accounts";
 import { getUserSettings } from "@/lib/data/userSettings";
 import { thisYearMonth } from "@/lib/dates";
+import { resolveTimezone } from "@/lib/preferences.server";
 import { requireUser } from "@/lib/session";
 import { collectSources, csvSourcesFrom } from "@/lib/transactions";
 import type { IntegrationProvider, Location, Transaction } from "@/types/db";
@@ -33,7 +34,7 @@ export async function getHomePageData(): Promise<HomePageData> {
       listAccountSources(user.id),
     ]);
 
-  const yearMonth = thisYearMonth(settings?.timezone ?? "UTC");
+  const yearMonth = thisYearMonth(await resolveTimezone(settings?.timezone));
 
   const connectedProviderIds = integrationsRows.map(
     (i) => i.provider as IntegrationProvider,

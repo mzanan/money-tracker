@@ -4,6 +4,8 @@ import { createContext, useContext } from "react";
 
 import { getDeviceTimezone } from "@/lib/dates";
 
+import { useDeviceTimezoneCookie } from "./useDeviceTimezoneCookie";
+
 import type { ClientSettings } from "@/types/db";
 
 const SettingsContext = createContext<ClientSettings | null>(null);
@@ -15,6 +17,7 @@ export function SettingsProvider({
   value: ClientSettings;
   children: React.ReactNode;
 }) {
+  useDeviceTimezoneCookie();
   return (
     <SettingsContext.Provider value={value}>
       {children}

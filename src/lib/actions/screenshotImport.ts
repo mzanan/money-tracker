@@ -10,6 +10,7 @@ import { isValidAmountForCurrency, roundForCurrency } from "@/lib/currency";
 import { daysBefore, isValidCalendarDate, todayInTz } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
+import { resolveTimezone } from "@/lib/preferences.server";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 import { getUser } from "@/lib/session";
 import {
@@ -114,7 +115,7 @@ export async function importScreenshotRows(input: {
     return { ok: false, error: "Error fetching rates" };
   }
 
-  const today = todayInTz(settings.timezone ?? "UTC");
+  const today = todayInTz(await resolveTimezone(settings.timezone));
   const oldestPlausible = daysBefore(today, 365);
 
   let imported = 0;
@@ -247,7 +248,7 @@ export async function previewCandidatesAction(
     .where(eq(user_settings.user_id, user.id))
     .limit(1)
     .then((rows) => rows[0]);
-  const today = todayInTz(settings?.timezone ?? "UTC");
+  const today = todayInTz(await resolveTimezone(settings?.timezone));
 
   const { findCrossSourceCandidates } = await import("@/lib/data/duplicates");
   const queries = rows.map((row) => ({
