@@ -6,6 +6,7 @@ const BYBIT_API = "https://api.bybit.com";
 const RECV_WINDOW = "5000";
 const WINDOW_DAYS = 6;
 const MAX_PAGES_PER_WINDOW = 20;
+const REQUEST_TIMEOUT_MS = 10_000;
 
 interface FundingHistoryRow {
   memberId?: string;
@@ -124,6 +125,7 @@ async function get<T>(
       "X-BAPI-SIGN": signature,
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!response.ok) {
     const body = await response.text().catch(() => "");
@@ -136,22 +138,14 @@ async function get<T>(
   return data;
 }
 
-function tsToOccurred(secs: string): { occurredOn: string; occurredAt: string } {
+function tsToOccurredAt(secs: string): string {
   const ms = Number(secs) * 1000;
-  const date = Number.isFinite(ms) ? new Date(ms) : new Date();
-  return {
-    occurredOn: date.toISOString().slice(0, 10),
-    occurredAt: date.toISOString(),
-  };
+  return (Number.isFinite(ms) ? new Date(ms) : new Date()).toISOString();
 }
 
-function msToOccurred(ms: string): { occurredOn: string; occurredAt: string } {
+function msToOccurredAt(ms: string): string {
   const n = Number(ms);
-  const date = Number.isFinite(n) && n > 0 ? new Date(n) : new Date();
-  return {
-    occurredOn: date.toISOString().slice(0, 10),
-    occurredAt: date.toISOString(),
-  };
+  return (Number.isFinite(n) && n > 0 ? new Date(n) : new Date()).toISOString();
 }
 
 // Bybit's `showBusiTypeEn` labels we want to rename for clarity. "Airdrop" is
@@ -246,13 +240,12 @@ function depositToNormalized(row: DepositRow): NormalizedTx | null {
   if (row.status !== DEPOSIT_SUCCESS_STATUS) return null;
   const amount = Number(row.amount);
   if (!Number.isFinite(amount) || amount === 0) return null;
-  const { occurredOn, occurredAt } = msToOccurred(row.successAt ?? "");
+  const occurredAt = msToOccurredAt(row.successAt ?? "");
   return {
     externalId: `d:${row.coin}:${row.successAt ?? ""}:${row.txID ?? ""}:${row.amount}`,
     kind: "income",
     amount: Math.abs(amount),
     currency: row.coin,
-    occurredOn,
     occurredAt,
     tags: [],
     note: "Bybit Deposit",
@@ -263,13 +256,12 @@ function internalDepositToNormalized(row: InternalDepositRow): NormalizedTx | nu
   if (row.status !== INTERNAL_DEPOSIT_SUCCESS_STATUS) return null;
   const amount = Number(row.amount);
   if (!Number.isFinite(amount) || amount === 0) return null;
-  const { occurredOn, occurredAt } = msToOccurred(row.createdTime);
+  const occurredAt = msToOccurredAt(row.createdTime);
   return {
     externalId: `di:${row.id}`,
     kind: "income",
     amount: Math.abs(amount),
     currency: row.coin,
-    occurredOn,
     occurredAt,
     tags: [],
     note: "Bybit Transfer In",
@@ -304,20 +296,21 @@ export async function fetchTransactions(
     const depositFromMs = fromSec * 1000;
     const depositToMs = Math.ceil(to / 1000) * 1000;
 
-    const rows = await fetchWindow(creds, fromSec, toSec);
-
-    const onChain = await fetchPagedRows<DepositRow>(
-      "/v5/asset/deposit/query-record",
-      depositFromMs,
-      depositToMs,
-      creds,
-    );
-    const internal = await fetchPagedRows<InternalDepositRow>(
-      "/v5/asset/deposit/query-internal-record",
-      depositFromMs,
-      depositToMs,
-      creds,
-    );
+    const [rows, onChain, internal] = await Promise.all([
+      fetchWindow(creds, fromSec, toSec),
+      fetchPagedRows<DepositRow>(
+        "/v5/asset/deposit/query-record",
+        depositFromMs,
+        depositToMs,
+        creds,
+      ),
+      fetchPagedRows<InternalDepositRow>(
+        "/v5/asset/deposit/query-internal-record",
+        depositFromMs,
+        depositToMs,
+        creds,
+      ),
+    ]);
     for (const row of onChain) {
       const tx = depositToNormalized(row);
       if (tx) {
@@ -341,13 +334,12 @@ export async function fetchTransactions(
         continue;
       }
 
-      const { occurredOn, occurredAt } = tsToOccurred(row.createTime);
+      const occurredAt = tsToOccurredAt(row.createTime);
       out.push({
         externalId: externalIdFor(row),
         kind: row.ioDirection === "I" ? "income" : "expense",
         amount: Math.abs(amount),
         currency: row.currency,
-        occurredOn,
         occurredAt,
         tags: [],
         note: describe(row),

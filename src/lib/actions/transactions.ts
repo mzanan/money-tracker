@@ -1,14 +1,16 @@
 "use server";
 
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { actionErrorMessage } from "@/lib/actionError";
 import { trackActivation } from "@/lib/activation";
 import { amountValidationError } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
 import { isSyncedExternalId, isWithdrawalExternalId } from "@/lib/externalIds";
-import { getRates, RatesUnavailableError } from "@/lib/rates";
+import { withRatesErrorHandling } from "@/lib/currencyContext";
+import { getRates } from "@/lib/rates";
 import {
   createTransactionSchema,
   updateTransactionSchema,
@@ -24,31 +26,6 @@ import { buildTransactionRow, normalizeTags } from "@/lib/transactions";
 export type ActionResult<T = void> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
-
-export async function buildCurrencyContext(userId: string) {
-  const settings = await db
-    .select({ currencies: user_settings.currencies })
-    .from(user_settings)
-    .where(eq(user_settings.user_id, userId))
-    .limit(1)
-    .then((rows) => rows[0]);
-  if (!settings) return null;
-  const rates = (await getRates()).rates;
-  return { rates, userCurrencies: settings.currencies };
-}
-
-export async function withRatesErrorHandling<T>(
-  fn: () => Promise<T>,
-): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
-  try {
-    return { ok: true, data: await fn() };
-  } catch (error) {
-    if (error instanceof RatesUnavailableError) {
-      return { ok: false, error: "Exchange rates unavailable. Try again." };
-    }
-    return { ok: false, error: "Error fetching rates" };
-  }
-}
 
 export async function createTransaction(
   input: CreateTransactionInput,
@@ -118,17 +95,18 @@ export async function createTransaction(
       .insert(transactions)
       .values(row)
       .returning({ id: transactions.id });
-    const [{ total }] = await db
-      .select({ total: count() })
+    const firstRows = await db
+      .select({ id: transactions.id })
       .from(transactions)
-      .where(eq(transactions.user_id, user.id));
-    if (total === 1) await trackActivation(user.id);
+      .where(eq(transactions.user_id, user.id))
+      .limit(2);
+    if (firstRows.length === 1) await trackActivation(user.id);
     revalidatePath("/", "layout");
     return { ok: true, data: { id: inserted.id } };
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Insert failed",
+      error: actionErrorMessage(error, "Insert failed"),
     };
   }
 }
@@ -223,7 +201,7 @@ export async function updateTransaction(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
+      error: actionErrorMessage(error, "Update failed"),
     };
   }
 }
@@ -268,7 +246,7 @@ export async function updateTransactionSource(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
+      error: actionErrorMessage(error, "Update failed"),
     };
   }
 }
@@ -279,6 +257,9 @@ export async function setTransactionFixed(
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  if (isFixed !== null && typeof isFixed !== "boolean") {
+    return { ok: false, error: "Invalid data" };
+  }
 
   const tx = await db
     .select()
@@ -298,7 +279,7 @@ export async function setTransactionFixed(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Update failed",
+      error: actionErrorMessage(error, "Update failed"),
     };
   }
 }
@@ -376,7 +357,7 @@ export async function mergeTransactions(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Merge failed",
+      error: actionErrorMessage(error, "Merge failed"),
     };
   }
 }
@@ -408,7 +389,7 @@ export async function deleteTransaction(id: string): Promise<ActionResult> {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Delete failed",
+      error: actionErrorMessage(error, "Delete failed"),
     };
   }
 }

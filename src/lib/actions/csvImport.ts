@@ -3,6 +3,7 @@
 import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { actionErrorMessage } from "@/lib/actionError";
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import { isValidAmountForCurrency, roundForCurrency } from "@/lib/currency";
 import { isValidCalendarDate } from "@/lib/dates";
@@ -230,9 +231,10 @@ export async function importCsvRows(
     } catch (error) {
       return {
         ok: false,
-        error: `Could not start replace import: ${
-          error instanceof Error ? error.message : "unknown"
-        }`,
+        error: `Could not start replace import: ${actionErrorMessage(
+          error,
+          "unknown error",
+        )}`,
       };
     }
     if (!lockToken) {
@@ -264,9 +266,10 @@ export async function importCsvRows(
       } catch (error) {
         return {
           ok: false,
-          error: `Batch starting at row ${i + 1} failed: ${
-            error instanceof Error ? error.message : "unknown"
-          } (${imported} rows already imported, existing data untouched)`,
+          error: `Batch starting at row ${i + 1} failed: ${actionErrorMessage(
+            error,
+            "unknown error",
+          )} (${imported} rows already imported, existing data untouched)`,
         };
       }
     }
@@ -310,9 +313,10 @@ export async function importCsvRows(
       } catch (error) {
         return {
           ok: false,
-          error: `Import succeeded (${imported} rows) but removing old rows failed, nothing was removed: ${
-            error instanceof Error ? error.message : "unknown"
-          }. Re-run replace to finish cleanup.`,
+          error: `Import succeeded (${imported} rows) but removing old rows failed, nothing was removed: ${actionErrorMessage(
+            error,
+            "unknown error",
+          )}. Re-run replace to finish cleanup.`,
         };
       }
     }

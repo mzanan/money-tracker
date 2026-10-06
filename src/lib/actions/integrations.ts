@@ -1,25 +1,50 @@
 "use server";
 
-import { and, between, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, between, eq, inArray, isNull, like, ne, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { absorbDateRange, findAbsorbMatches } from "@/lib/absorb";
+import { actionErrorMessage } from "@/lib/actionError";
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import { roundForCurrency } from "@/lib/currency";
-import { dayWindow } from "@/lib/dates";
+import { dateInTz } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { api_integrations, transactions, user_settings } from "@/lib/db/schema";
+import { EXTERNAL_ID_PREFIX } from "@/lib/externalIds";
 import { ADAPTERS } from "@/lib/integrations";
 import { decryptSecret, encryptSecret } from "@/lib/integrations/crypto";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
+import {
+  integrationProviderSchema,
+  saveIntegrationSchema,
+  type SaveIntegrationInput,
+} from "@/lib/schemas/integration";
 import { getUser } from "@/lib/session";
 import { buildTransactionRow } from "@/lib/transactions";
 import type { ApiIntegrationUpdate, IntegrationProvider } from "@/types/db";
 
 import type { ActionResult } from "./transactions";
 
-const ABSORB_WINDOW_DAYS = 2;
-const ABSORB_AMOUNT_TOLERANCE = 0.01;
-const ABSORB_REMINDER_TOLERANCE_PCT = 0.05;
+const ABSORBABLE_EXTERNAL_ID = or(
+  isNull(transactions.external_id),
+  like(transactions.external_id, `${EXTERNAL_ID_PREFIX.reminder}%`),
+  like(transactions.external_id, `${EXTERNAL_ID_PREFIX.screenshot}%`),
+);
+
+const absorbColumns = {
+  id: transactions.id,
+  kind: transactions.kind,
+  amount_original: transactions.amount_original,
+  currency_original: transactions.currency_original,
+  occurred_on: transactions.occurred_on,
+  external_id: transactions.external_id,
+  note: transactions.note,
+  comment: transactions.comment,
+  tags: transactions.tags,
+  is_fixed: transactions.is_fixed,
+  recurring_id: transactions.recurring_id,
+  budget_month: transactions.budget_month,
+};
 
 async function absorbMatching(
   userId: string,
@@ -29,97 +54,75 @@ async function absorbMatching(
   if (insertedIds.length === 0) return 0;
 
   const inserted = await db
-    .select({
-      id: transactions.id,
-      kind: transactions.kind,
-      amount: transactions.amount_original,
-      currency: transactions.currency_original,
-      occurred_on: transactions.occurred_on,
-      note: transactions.note,
-      comment: transactions.comment,
-    })
+    .select(absorbColumns)
     .from(transactions)
-    .where(inArray(transactions.id, insertedIds));
+    .where(
+      and(
+        eq(transactions.user_id, userId),
+        inArray(transactions.id, insertedIds),
+      ),
+    );
+  if (inserted.length === 0) return 0;
 
-  let absorbed = 0;
-  for (const row of inserted) {
-    const { start, end } = dayWindow(row.occurred_on, ABSORB_WINDOW_DAYS);
-
-    const baseConditions = and(
-      eq(transactions.user_id, userId),
-      ne(transactions.source, syncSource),
-      eq(transactions.kind, row.kind),
-      eq(transactions.currency_original, row.currency),
-      between(transactions.occurred_on, start, end),
+  const { start, end } = absorbDateRange(inserted);
+  const candidates = await db
+    .select(absorbColumns)
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.user_id, userId),
+        ne(transactions.source, syncSource),
+        isNull(transactions.transfer_group),
+        ABSORBABLE_EXTERNAL_ID,
+        between(transactions.occurred_on, start, end),
+      ),
     );
 
-    let candidates = await db
-      .select({
-        id: transactions.id,
-        note: transactions.note,
-        comment: transactions.comment,
-      })
-      .from(transactions)
-      .where(
-        and(
-          baseConditions,
-          sql`abs(${transactions.amount_original} - ${row.amount}) <= ${ABSORB_AMOUNT_TOLERANCE}`,
-        ),
-      );
+  const matches = findAbsorbMatches(inserted, candidates);
+  if (matches.length === 0) return 0;
 
-    if (candidates.length === 0) {
-      // Reminder-created expenses carry the agreed amount, which can differ
-      // from the synced charge by provider fees — allow a wider match.
-      const tolerance = Math.abs(row.amount) * ABSORB_REMINDER_TOLERANCE_PCT;
-      candidates = await db
-        .select({
-          id: transactions.id,
-          note: transactions.note,
-          comment: transactions.comment,
-        })
-        .from(transactions)
+  await db.transaction(async (tx) => {
+    for (const match of matches) {
+      if (Object.keys(match.patch).length > 0) {
+        await tx
+          .update(transactions)
+          .set(match.patch)
+          .where(
+            and(
+              eq(transactions.user_id, userId),
+              eq(transactions.id, match.syncedId),
+            ),
+          );
+      }
+      await tx
+        .delete(transactions)
         .where(
           and(
-            baseConditions,
-            sql`${transactions.external_id} like 'reminder:%'`,
-            sql`abs(${transactions.amount_original} - ${row.amount}) <= ${tolerance}`,
+            eq(transactions.user_id, userId),
+            eq(transactions.id, match.absorbedId),
+            isNull(transactions.transfer_group),
           ),
         );
     }
+  });
 
-    if (candidates.length !== 1) continue;
-
-    const match = candidates[0];
-    const patch: { comment?: string; note?: string } = {};
-    if (!row.comment && match.comment) patch.comment = match.comment;
-    if (!row.note && match.note) patch.note = match.note;
-
-    await db.transaction(async (tx) => {
-      if (Object.keys(patch).length > 0) {
-        await tx
-          .update(transactions)
-          .set(patch)
-          .where(eq(transactions.id, row.id));
-      }
-      await tx.delete(transactions).where(eq(transactions.id, match.id));
-    });
-
-    absorbed += 1;
-  }
-
-  return absorbed;
+  return matches.length;
 }
 
 const DEFAULT_SINCE_DAYS = 30;
 
-export async function saveIntegration(input: {
-  provider: IntegrationProvider;
-  apiKey?: string | null;
-  apiSecret?: string | null;
-  importIncome: boolean;
-  extra?: Record<string, unknown>;
-  initialSinceDays?: number;
-}): Promise<ActionResult> {
+export async function saveIntegration(
+  rawInput: SaveIntegrationInput,
+): Promise<ActionResult> {
+  const parsed = saveIntegrationSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid data",
+    };
+  }
+  const input = parsed.data;
+
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
@@ -214,7 +217,7 @@ export async function saveIntegration(input: {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Save failed",
+      error: actionErrorMessage(error, "Save failed"),
     };
   }
 }
@@ -224,6 +227,9 @@ export async function deleteIntegration(
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  if (!integrationProviderSchema.safeParse(provider).success) {
+    return { ok: false, error: "Unknown provider" };
+  }
 
   try {
     await db
@@ -239,7 +245,7 @@ export async function deleteIntegration(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Delete failed",
+      error: actionErrorMessage(error, "Delete failed"),
     };
   }
 }
@@ -250,6 +256,12 @@ export async function setIntegrationAutoSync(
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  if (
+    !integrationProviderSchema.safeParse(provider).success ||
+    typeof enabled !== "boolean"
+  ) {
+    return { ok: false, error: "Invalid data" };
+  }
 
   try {
     await db
@@ -266,7 +278,7 @@ export async function setIntegrationAutoSync(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Save failed",
+      error: actionErrorMessage(error, "Save failed"),
     };
   }
 }
@@ -276,6 +288,9 @@ export async function syncIntegration(
 ): Promise<ActionResult<{ imported: number; skipped: number; absorbed: number }>> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  if (!integrationProviderSchema.safeParse(provider).success) {
+    return { ok: false, error: "Unknown provider" };
+  }
 
   const integration = await db
     .select()
@@ -291,12 +306,16 @@ export async function syncIntegration(
   if (!integration) return { ok: false, error: "Integration not connected" };
 
   const settings = await db
-    .select({ currencies: user_settings.currencies })
+    .select({
+      currencies: user_settings.currencies,
+      timezone: user_settings.timezone,
+    })
     .from(user_settings)
     .where(eq(user_settings.user_id, user.id))
     .limit(1)
     .then((rows) => rows[0]);
   if (!settings) return { ok: false, error: "Settings not found" };
+  const timezone = settings.timezone ?? "UTC";
 
   let rates;
   try {
@@ -317,6 +336,7 @@ export async function syncIntegration(
 
   const adapter = ADAPTERS[provider];
   const aad = `${user.id}:${provider}`;
+  const syncStartedAt = new Date().toISOString();
   let normalized;
   try {
     normalized = await adapter.fetchTransactions(
@@ -362,7 +382,7 @@ export async function syncIntegration(
         kind: tx.kind,
         amount: roundForCurrency(tx.amount, tx.currency),
         currency: tx.currency,
-        occurredOn: tx.occurredOn,
+        occurredOn: dateInTz(tx.occurredAt, timezone),
         occurredAt: tx.occurredAt,
         tags: tx.tags,
         note: tx.note,
@@ -404,7 +424,7 @@ export async function syncIntegration(
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error.message : "Insert failed",
+        error: actionErrorMessage(error, "Insert failed"),
       };
     }
   }
@@ -413,9 +433,7 @@ export async function syncIntegration(
     .update(api_integrations)
     .set({
       last_error: null,
-      ...(normalized.length > 0
-        ? { last_synced_at: new Date().toISOString() }
-        : {}),
+      ...(normalized.length > 0 ? { last_synced_at: syncStartedAt } : {}),
     })
     .where(
       and(
