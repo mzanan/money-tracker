@@ -47,10 +47,10 @@ export const auth = betterAuth({
       maxAge: 5 * 60,
     },
   },
-  emailAndPassword: {
-    enabled: true,
-    autoSignIn: true,
-    disableSignUp,
+  account: {
+    accountLinking: {
+      requireLocalEmailVerified: false,
+    },
   },
   socialProviders: {
     google: {

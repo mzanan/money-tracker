@@ -12,7 +12,7 @@ For the general overview read `README.md`. This is what an agent needs to know t
 
 ## Stack
 
-Next 16 (App Router) + React 19 + TS strict + Tailwind v4 + shadcn/ui (`base-nova`: Base UI for `dropdown-menu`, `dialog` and `drawer`, Radix for the rest; `vaul` removed) + **Turso (libSQL) + Drizzle ORM** + **Better Auth** (email+password + Google OAuth) + TanStack React Query v5 + Zustand v5 + react-hook-form + Zod + date-fns / date-fns-tz + sonner + next-themes + lucide-react + Vercel AI SDK (Groq / Google, per-user key). Package manager: npm. Node 22 (`.nvmrc`). Dev server on port 3020.
+Next 16 (App Router) + React 19 + TS strict + Tailwind v4 + shadcn/ui (`base-nova`: Base UI for `dropdown-menu`, `dialog` and `drawer`, Radix for the rest; `vaul` removed) + **Turso (libSQL) + Drizzle ORM** + **Better Auth** (Google OAuth only) + TanStack React Query v5 + Zustand v5 + react-hook-form + Zod + date-fns / date-fns-tz + sonner + next-themes + lucide-react + Vercel AI SDK (Groq / Google, per-user key). Package manager: npm. Node 22 (`.nvmrc`). Dev server on port 3020.
 
 Supabase (Postgres + Auth + RLS) was migrated away on 2026-05-25 for portability. Schema and the one-shot migration are documented in the vault (`01-Projects/02-money-tracker/`).
 

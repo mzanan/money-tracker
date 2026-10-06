@@ -11,7 +11,7 @@ la API key propia del usuario (Groq o Google), analytics con PostHog EU y
 banner de cookies, y baseline de SEO/AEO (sitemap, robots, JSON-LD, `llms.txt`).
 
 Stack: Next.js 16 + React 19 + TypeScript + Tailwind v4 + shadcn/ui + **Turso
-(libSQL) + Drizzle ORM** + **Better Auth** (email+password + Google OAuth) +
+(libSQL) + Drizzle ORM** + **Better Auth** (Google OAuth) +
 TanStack React Query + Zustand + Vercel AI SDK. Deploy: Vercel.
 
 > Migrado desde Supabase a Turso + Better Auth el 2026-05-25 por portabilidad
@@ -39,7 +39,7 @@ turso db tokens create money-tracker       # → TURSO_AUTH_TOKEN
 → Credentials → Create OAuth client ID (Web application). Redirect URIs:
 `http://localhost:3020/api/auth/callback/google` y
 `https://money.itsmatias.com/api/auth/callback/google`. Sin esto, el botón
-"Continue with Google" falla; email+password sigue funcionando.
+"Continue with Google" falla y no hay otra forma de entrar.
 
 ### 3. Variables de entorno
 
@@ -75,7 +75,7 @@ nvm use            # node 22
 npm run dev        # http://localhost:3020
 ```
 
-Primer ingreso: creás la cuenta con email+password (o Google), y después el
+Primer ingreso: creás la cuenta con Google, y después el
 onboarding pide al menos 1 moneda + la moneda base.
 
 ---
@@ -106,10 +106,10 @@ onboarding pide al menos 1 moneda + la moneda base.
    - `GOOGLE_CLIENT_ID`
    - `GOOGLE_CLIENT_SECRET`
 4. Deploy.
-5. Crear tu cuenta una vez (sign-up o Google).
+5. Crear tu cuenta una vez (Google).
 6. **Single-user lockdown:** una vez creada tu cuenta, setear
    `AUTH_DISABLE_SIGNUPS=true` en Vercel y redeployar. Bloquea signups
-   nuevos por email+password y por Google. Sin esto, cualquiera con tu URL
+   nuevos por Google. Sin esto, cualquiera con tu URL
    puede crearse cuenta.
 
 En el celular, abrir la app deployada → "Add to Home Screen" → queda como app.
@@ -123,7 +123,7 @@ src/
   app/
     page.tsx                  # landing (sin sesión) o dashboard (con sesión)
     privacy/                  # política de privacidad (pública)
-    (auth)/login/             # email+password + Google (Better Auth)
+    (auth)/login/             # Google (Better Auth)
     (app)/                    # rutas protegidas (auth + onboarding)
       home/                   # inicio logueado (servido desde el layout de la app)
       dashboard/              # proyección de gasto y gastos inusuales
@@ -228,8 +228,9 @@ drizzle/migrations/           # SQL generado por drizzle-kit
   natural difiera de ese destino. Una fila con `budget_month` queda
   bloqueada para cambiarle la fecha o mergearla como duplicada hasta que
   se la devuelva a su mes real.
-- **Auth**: email+password + Google OAuth vía Better Auth.
-  `AUTH_DISABLE_SIGNUPS=true` bloquea registros nuevos en ambos métodos
+- **Auth**: solo Google OAuth vía Better Auth (email+password apagado el
+  2026-10-06; las cuentas viejas con contraseña entran con Google y se
+  vinculan solas). `AUTH_DISABLE_SIGNUPS=true` bloquea registros nuevos
   (single-user). El OTP por email se descartó el 2026-06-11: dependía de
   Resend y nunca se configuró en prod.
 - **Tasas**: [open.er-api.com](https://open.er-api.com): gratis sin API key,
