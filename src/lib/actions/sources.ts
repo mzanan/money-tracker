@@ -3,6 +3,7 @@
 import { and, eq, isNotNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { actionErrorMessage } from "@/lib/actionError";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 import { isWithdrawalExternalId } from "@/lib/externalIds";
@@ -74,7 +75,6 @@ export async function deleteSource(
     revalidatePath("/", "layout");
     return { ok: true, data: { deleted: deleted.length } };
   } catch (error) {
-    console.error("deleteSource failed", error);
-    return { ok: false, error: "Delete failed" };
+    return { ok: false, error: actionErrorMessage(error, "Delete failed") };
   }
 }
