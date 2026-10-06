@@ -6,7 +6,6 @@ export interface NormalizedTx {
   kind: "income" | "expense";
   amount: number;
   currency: string;
-  occurredOn: string;
   occurredAt: string;
   tags: string[];
   note: string | null;

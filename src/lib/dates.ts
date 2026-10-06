@@ -6,6 +6,10 @@ export function todayInTz(timezone: string): string {
   return formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
 }
 
+export function dateInTz(iso: string, timezone: string): string {
+  return formatInTimeZone(new Date(iso), timezone, "yyyy-MM-dd");
+}
+
 export function thisYearMonth(timezone: string): string {
   return formatInTimeZone(new Date(), timezone, "yyyy-MM");
 }

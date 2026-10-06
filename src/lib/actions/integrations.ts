@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import { roundForCurrency } from "@/lib/currency";
-import { dayWindow } from "@/lib/dates";
+import { dateInTz, dayWindow } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { api_integrations, transactions, user_settings } from "@/lib/db/schema";
 import { ADAPTERS } from "@/lib/integrations";
@@ -291,12 +291,16 @@ export async function syncIntegration(
   if (!integration) return { ok: false, error: "Integration not connected" };
 
   const settings = await db
-    .select({ currencies: user_settings.currencies })
+    .select({
+      currencies: user_settings.currencies,
+      timezone: user_settings.timezone,
+    })
     .from(user_settings)
     .where(eq(user_settings.user_id, user.id))
     .limit(1)
     .then((rows) => rows[0]);
   if (!settings) return { ok: false, error: "Settings not found" };
+  const timezone = settings.timezone ?? "UTC";
 
   let rates;
   try {
@@ -362,7 +366,7 @@ export async function syncIntegration(
         kind: tx.kind,
         amount: roundForCurrency(tx.amount, tx.currency),
         currency: tx.currency,
-        occurredOn: tx.occurredOn,
+        occurredOn: dateInTz(tx.occurredAt, timezone),
         occurredAt: tx.occurredAt,
         tags: tx.tags,
         note: tx.note,
