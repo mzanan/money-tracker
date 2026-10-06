@@ -34,7 +34,8 @@ export default function PrivacyPage() {
         <LegalSection title="Information we collect">
           <p>
             <strong className="text-foreground">Account.</strong> Your email,
-            name and a hashed password, or a Google sign-in identifier.
+            name and Google sign-in identifier. Accounts created before
+            October 2026 may also hold a hashed password.
           </p>
           <p>
             <strong className="text-foreground">Financial records.</strong> The

@@ -11,11 +11,9 @@ import { CsvImportCard } from "@/components/settings/csvImportCard";
 import { NonDailyLabelsCard } from "@/components/settings/nonDailyLabelsCard";
 import { ImportedAccountsCard } from "@/components/settings/importedAccountsCard";
 import { IntegrationsCard } from "@/components/settings/integrationsCard";
-import { PasswordCard } from "@/components/settings/passwordCard";
 import { SettingsForm } from "@/components/settings/settingsForm";
 import { SettingsTabs } from "@/components/settings/settingsTabs";
 import { Button } from "@/components/ui/button";
-import { hasCredentialAccount } from "@/lib/data/account";
 import { getCsvSources, getTransferSources } from "@/lib/data/sources";
 import { requireUser } from "@/lib/session";
 
@@ -26,10 +24,9 @@ export default async function SettingsPage({
 }) {
   const user = await requireUser();
   const { tab } = await searchParams;
-  const [existingSources, withdrawalSources, hasPassword] = await Promise.all([
+  const [existingSources, withdrawalSources] = await Promise.all([
     getCsvSources(user.id),
     getTransferSources(user.id, "manual"),
-    hasCredentialAccount(user.id),
   ]);
 
   return (
@@ -53,11 +50,6 @@ export default async function SettingsPage({
             >
               <SettingsForm />
             </Section>
-            {hasPassword && (
-              <Section title="Security" hint="Change your account password.">
-                <PasswordCard />
-              </Section>
-            )}
             <Section
               title="Non-daily expenses"
               hint="Any expense whose merchant matches these names counts as non-daily and is kept out of the daily average."
