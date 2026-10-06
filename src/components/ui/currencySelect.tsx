@@ -37,7 +37,7 @@ export function CurrencySelect({
       <SelectContent>
         {currencies.map((code) => (
           <SelectItem key={code} value={code}>
-            {showName ? `${getCurrency(code).code} — ${getCurrency(code).name}` : code}
+            {showName ? `${getCurrency(code).code} · ${getCurrency(code).name}` : code}
           </SelectItem>
         ))}
       </SelectContent>

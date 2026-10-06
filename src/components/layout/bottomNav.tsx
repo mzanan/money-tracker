@@ -23,7 +23,7 @@ export function BottomNav() {
             <Link
               key={label}
               href={href}
-              aria-label={label}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors",
                 navLinkTextClass(active),
