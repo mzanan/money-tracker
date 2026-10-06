@@ -133,6 +133,7 @@ export function positionAfterSignificantAmountChars(
 interface FormatOptions {
   showCode?: boolean;
   signed?: boolean;
+  compact?: boolean;
 }
 
 export function formatMoney(
@@ -142,10 +143,12 @@ export function formatMoney(
 ): string {
   const { decimals, symbol } = getCurrency(code);
   const abs = Math.abs(amount);
-  const num = new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  }).format(abs);
+  const num = new Intl.NumberFormat(
+    "en-US",
+    options.compact
+      ? { notation: "compact", maximumFractionDigits: abs >= 1000 ? 1 : 0 }
+      : { minimumFractionDigits: decimals, maximumFractionDigits: decimals },
+  ).format(abs);
   const sign = amount < 0 ? "-" : options.signed ? "+" : "";
   const base = `${sign}${symbol}${num}`;
   return options.showCode ? `${base} ${code}` : base;
