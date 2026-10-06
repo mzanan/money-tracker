@@ -138,22 +138,14 @@ async function get<T>(
   return data;
 }
 
-function tsToOccurred(secs: string): { occurredOn: string; occurredAt: string } {
+function tsToOccurredAt(secs: string): string {
   const ms = Number(secs) * 1000;
-  const date = Number.isFinite(ms) ? new Date(ms) : new Date();
-  return {
-    occurredOn: date.toISOString().slice(0, 10),
-    occurredAt: date.toISOString(),
-  };
+  return (Number.isFinite(ms) ? new Date(ms) : new Date()).toISOString();
 }
 
-function msToOccurred(ms: string): { occurredOn: string; occurredAt: string } {
+function msToOccurredAt(ms: string): string {
   const n = Number(ms);
-  const date = Number.isFinite(n) && n > 0 ? new Date(n) : new Date();
-  return {
-    occurredOn: date.toISOString().slice(0, 10),
-    occurredAt: date.toISOString(),
-  };
+  return (Number.isFinite(n) && n > 0 ? new Date(n) : new Date()).toISOString();
 }
 
 // Bybit's `showBusiTypeEn` labels we want to rename for clarity. "Airdrop" is
@@ -248,13 +240,12 @@ function depositToNormalized(row: DepositRow): NormalizedTx | null {
   if (row.status !== DEPOSIT_SUCCESS_STATUS) return null;
   const amount = Number(row.amount);
   if (!Number.isFinite(amount) || amount === 0) return null;
-  const { occurredOn, occurredAt } = msToOccurred(row.successAt ?? "");
+  const occurredAt = msToOccurredAt(row.successAt ?? "");
   return {
     externalId: `d:${row.coin}:${row.successAt ?? ""}:${row.txID ?? ""}:${row.amount}`,
     kind: "income",
     amount: Math.abs(amount),
     currency: row.coin,
-    occurredOn,
     occurredAt,
     tags: [],
     note: "Bybit Deposit",
@@ -265,13 +256,12 @@ function internalDepositToNormalized(row: InternalDepositRow): NormalizedTx | nu
   if (row.status !== INTERNAL_DEPOSIT_SUCCESS_STATUS) return null;
   const amount = Number(row.amount);
   if (!Number.isFinite(amount) || amount === 0) return null;
-  const { occurredOn, occurredAt } = msToOccurred(row.createdTime);
+  const occurredAt = msToOccurredAt(row.createdTime);
   return {
     externalId: `di:${row.id}`,
     kind: "income",
     amount: Math.abs(amount),
     currency: row.coin,
-    occurredOn,
     occurredAt,
     tags: [],
     note: "Bybit Transfer In",
@@ -344,13 +334,12 @@ export async function fetchTransactions(
         continue;
       }
 
-      const { occurredOn, occurredAt } = tsToOccurred(row.createTime);
+      const occurredAt = tsToOccurredAt(row.createTime);
       out.push({
         externalId: externalIdFor(row),
         kind: row.ioDirection === "I" ? "income" : "expense",
         amount: Math.abs(amount),
         currency: row.currency,
-        occurredOn,
         occurredAt,
         tags: [],
         note: describe(row),
