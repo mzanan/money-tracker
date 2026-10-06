@@ -3,6 +3,7 @@
 import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { actionErrorMessage } from "@/lib/actionError";
 import { getSelectableSources } from "@/lib/data/sources";
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
@@ -61,7 +62,7 @@ export async function saveOnboarding(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Save failed",
+      error: actionErrorMessage(error, "Save failed"),
     };
   }
 }
@@ -69,6 +70,7 @@ export async function saveOnboarding(
 export async function setCashEnabled(enabled: boolean): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  if (typeof enabled !== "boolean") return { ok: false, error: "Invalid data" };
 
   try {
     await db
@@ -80,7 +82,7 @@ export async function setCashEnabled(enabled: boolean): Promise<ActionResult> {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Save failed",
+      error: actionErrorMessage(error, "Save failed"),
     };
   }
 }
@@ -117,7 +119,7 @@ export async function setDefaultSource(source: string): Promise<ActionResult> {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Save failed",
+      error: actionErrorMessage(error, "Save failed"),
     };
   }
 }
@@ -158,7 +160,7 @@ export async function setSourceArchived(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Save failed",
+      error: actionErrorMessage(error, "Save failed"),
     };
   }
 }
@@ -169,6 +171,12 @@ const FIXED_LABELS_MAX_LENGTH = 60;
 export async function setFixedLabels(labels: string[]): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  if (
+    !Array.isArray(labels) ||
+    labels.some((label) => typeof label !== "string")
+  ) {
+    return { ok: false, error: "Invalid data" };
+  }
 
   const normalized = Array.from(
     new Set(labels.map((label) => normalizeFixedLabel(label)).filter(Boolean)),
@@ -197,7 +205,7 @@ export async function setFixedLabels(labels: string[]): Promise<ActionResult> {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Save failed",
+      error: actionErrorMessage(error, "Save failed"),
     };
   }
 }
@@ -230,7 +238,7 @@ export async function saveAssistantKey(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Save failed",
+      error: actionErrorMessage(error, "Save failed"),
     };
   }
 }
@@ -249,7 +257,7 @@ export async function removeAssistantKey(): Promise<ActionResult> {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Save failed",
+      error: actionErrorMessage(error, "Save failed"),
     };
   }
 }
@@ -284,7 +292,7 @@ export async function updateSettings(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Save failed",
+      error: actionErrorMessage(error, "Save failed"),
     };
   }
 }

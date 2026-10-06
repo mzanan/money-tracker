@@ -7,6 +7,7 @@ import type { FxRates } from "@/types/db";
 const PROVIDER_URL = "https://open.er-api.com/v6/latest/USD";
 // Used when the provider doesn't return `time_next_update_unix`.
 const FALLBACK_TTL_MS = 12 * 60 * 60 * 1000;
+const PROVIDER_TIMEOUT_MS = 5000;
 
 export class RatesUnavailableError extends Error {
   constructor() {
@@ -35,7 +36,10 @@ export async function fetchRatesFromProvider(): Promise<{
   providerUpdatedAt: string | null;
   nextUpdateAt: string | null;
 }> {
-  const response = await fetch(PROVIDER_URL, { cache: "no-store" });
+  const response = await fetch(PROVIDER_URL, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+  });
   if (!response.ok) {
     throw new Error(`open.er-api.com responded ${response.status}`);
   }
@@ -70,7 +74,10 @@ interface BybitTickerResponse {
 
 async function fetchUsdtUsdRate(): Promise<number> {
   try {
-    const response = await fetch(BYBIT_TICKER_URL, { cache: "no-store" });
+    const response = await fetch(BYBIT_TICKER_URL, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+    });
     if (!response.ok) return 1;
     const data = (await response.json()) as BybitTickerResponse;
     const lastPrice = Number(data.result?.list?.[0]?.lastPrice);
