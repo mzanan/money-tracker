@@ -3,6 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { actionErrorMessage } from "@/lib/actionError";
 import { db } from "@/lib/db";
 import { locations } from "@/lib/db/schema";
 import { isValidCalendarDate } from "@/lib/dates";
@@ -51,7 +52,7 @@ export async function createLocation(input: {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Save failed",
+      error: actionErrorMessage(error, "Save failed"),
     };
   }
 }
@@ -69,7 +70,7 @@ export async function deleteLocation(id: string): Promise<ActionResult> {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Delete failed",
+      error: actionErrorMessage(error, "Delete failed"),
     };
   }
 }
