@@ -33,17 +33,16 @@ import {
   transferCurrencyError,
   transferFeeAmountsError,
   transferFeeSpecs,
-  transferLegsAreNet,
   type ReceivedAmount,
   type TransferFeeEntry,
 } from "@/lib/transfer";
 import { isWithdrawalExternalId } from "@/lib/externalIds";
 import { getUser } from "@/lib/session";
+import { unlinkTransferGroup } from "@/lib/transferUnlink";
 import {
   buildTransactionRow,
   buildTransferFeeRows,
   EXTERNAL_ID_PREFIX,
-  TRANSFER_FEE_DEST_SUFFIX,
 } from "@/lib/transactions";
 import type { FxRates, TransactionInsert } from "@/types/db";
 
@@ -662,108 +661,12 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
     .then((rows) => rows[0]);
   if (!tx?.transfer_group) return { ok: false, error: "Not a transfer" };
 
-  const linked = await db
-    .select()
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.user_id, user.id),
-        eq(transactions.transfer_group, tx.transfer_group),
-      ),
-    );
-
   const group = tx.transfer_group;
-  const originFeeId = `${EXTERNAL_ID_PREFIX.transferFee}${group}`;
-  const destinationFeeId = `${originFeeId}${TRANSFER_FEE_DEST_SUFFIX}`;
-  const isWithdrawal = linked.some((row) =>
-    row.external_id?.startsWith(EXTERNAL_ID_PREFIX.withdrawal),
-  );
-
-  const feeRows = isWithdrawal
-    ? []
-    : await db
-        .select()
-        .from(transactions)
-        .where(
-          and(
-            eq(transactions.user_id, user.id),
-            inArray(transactions.external_id, [originFeeId, destinationFeeId]),
-          ),
-        );
-
-  const kept = linked.filter(
-    (row) => !row.external_id?.startsWith(EXTERNAL_ID_PREFIX.transfer),
-  );
-  const originFeeRow = feeRows.find((row) => row.external_id === originFeeId);
-  const legsAreNet = transferLegsAreNet(
-    linked,
-    originFeeRow?.amount_original ?? 0,
-    feeRows.some((row) => row.external_id === destinationFeeId),
-  );
-  const restored = new Map<string, number>();
-  for (const feeRow of legsAreNet ? feeRows : []) {
-    const isDestination = feeRow.external_id === destinationFeeId;
-    const target = kept.find(
-      (row) =>
-        row.source === feeRow.source &&
-        row.currency_original === feeRow.currency_original &&
-        row.kind === (isDestination ? "income" : "expense"),
-    );
-    if (!target) continue;
-    const current = restored.get(target.id) ?? target.amount_original;
-    restored.set(
-      target.id,
-      roundForCurrency(
-        isDestination
-          ? current - feeRow.amount_original
-          : current + feeRow.amount_original,
-        target.currency_original,
-      ),
-    );
-  }
 
   try {
-    await db.transaction(async (dbTx) => {
-      for (const row of linked) {
-        if (row.external_id?.startsWith(EXTERNAL_ID_PREFIX.transfer)) {
-          await dbTx
-            .delete(transactions)
-            .where(
-              and(
-                eq(transactions.id, row.id),
-                eq(transactions.user_id, user.id),
-              ),
-            );
-        } else {
-          const amount = restored.get(row.id);
-          await dbTx
-            .update(transactions)
-            .set({
-              transfer_group: null,
-              ...(amount !== undefined ? { amount_original: amount } : {}),
-            })
-            .where(
-              and(
-                eq(transactions.id, row.id),
-                eq(transactions.user_id, user.id),
-              ),
-            );
-        }
-      }
-      if (!isWithdrawal) {
-        await dbTx
-          .delete(transactions)
-          .where(
-            and(
-              eq(transactions.user_id, user.id),
-              inArray(transactions.external_id, [
-                originFeeId,
-                destinationFeeId,
-              ]),
-            ),
-          );
-      }
-    });
+    await db.transaction((dbTx) =>
+      unlinkTransferGroup(dbTx, user.id, group),
+    );
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
