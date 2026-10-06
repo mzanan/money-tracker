@@ -4,8 +4,10 @@ import { useState } from "react";
 import { ChevronRightIcon, Undo2Icon } from "lucide-react";
 
 import { useAccountLabels } from "@/hooks/useAccountLabels";
+import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { resolveSourceLabel } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
+import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 import type { CanceledPair } from "@/lib/cancellations";
 
@@ -24,6 +26,7 @@ export function CanceledGroup({
   recurringNotes?: Set<string>;
 }) {
   const accountLabels = useAccountLabels();
+  const { hideAmounts } = useHideAmounts();
   const [open, setOpen] = useState(false);
   const sourceLabel = resolveSourceLabel(pair.expense.source, accountLabels);
   const title =
@@ -50,10 +53,12 @@ export function CanceledGroup({
         </span>
         <span className="flex shrink-0 flex-col items-end">
           <span className="text-muted-foreground text-sm font-medium tabular-nums line-through">
-            {formatMoney(
-              pair.expense.amount_original,
-              pair.expense.currency_original,
-            )}
+            {hideAmounts
+              ? HIDDEN_AMOUNT
+              : formatMoney(
+                  pair.expense.amount_original,
+                  pair.expense.currency_original,
+                )}
           </span>
           <span className="text-muted-foreground mt-0.5 text-meta">net 0</span>
         </span>

@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { ChevronRightIcon } from "lucide-react";
 
+import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useSettings } from "@/hooks/useSettings";
 import { formatMoney } from "@/lib/currency";
 import { formatDayLong } from "@/lib/dates";
+import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 import type { DayTotalsWithPairs } from "@/lib/cancellations";
 
@@ -34,6 +36,7 @@ export function DayGroup({
   recurringNotes?: Set<string>;
 }) {
   const settings = useSettings();
+  const { hideAmounts } = useHideAmounts();
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const open = openProp ?? internalOpen;
   const count = day.transactions.length + day.pairs.length * 2;
@@ -70,12 +73,16 @@ export function DayGroup({
         <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
           {totals.income > 0 && (
             <span className="text-income text-base font-semibold">
-              +{formatMoney(totals.income, settings.base_currency)}
+              {hideAmounts
+                ? HIDDEN_AMOUNT
+                : `+${formatMoney(totals.income, settings.base_currency)}`}
             </span>
           )}
           {totals.expense > 0 && (
             <span className="text-foreground text-base font-semibold">
-              -{formatMoney(totals.expense, settings.base_currency)}
+              {hideAmounts
+                ? HIDDEN_AMOUNT
+                : `-${formatMoney(totals.expense, settings.base_currency)}`}
             </span>
           )}
         </span>
