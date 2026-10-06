@@ -20,6 +20,7 @@ import { AmountsToggle } from "./amountsToggle";
 import { DaySpendView } from "./daySpendView";
 import { MiniStat } from "./miniStat";
 import { PeriodNav } from "./periodNav";
+import { TodayButton } from "./todayButton";
 
 import type { useDaySpend } from "./useDaySpend";
 
@@ -110,7 +111,6 @@ export function BalanceHero({
               prevLabel="Previous month"
               nextLabel="Next month"
               tabular
-              onToday={onCurrentMonth}
             />
           ) : (
             <PeriodNav
@@ -120,15 +120,17 @@ export function BalanceHero({
               onShift={daySpend.shift}
               prevLabel="Previous day"
               nextLabel="Next day"
-              onToday={onToday}
             />
           )}
         </div>
 
         <TabsContent value="monthly">
-          <div className="flex items-center gap-1.5">
-            <span className="text-eyebrow">Total balance</span>
-            <AmountsToggle />
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-eyebrow">Total balance</span>
+              <AmountsToggle />
+            </div>
+            {onCurrentMonth && <TodayButton onClick={onCurrentMonth} />}
           </div>
           <p
             className={cn(
@@ -186,7 +188,7 @@ export function BalanceHero({
         </TabsContent>
 
         <TabsContent value="daily">
-          <DaySpendView daySpend={daySpend} />
+          <DaySpendView daySpend={daySpend} onToday={onToday} />
         </TabsContent>
       </Tabs>
     </Surface>
