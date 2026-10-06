@@ -140,7 +140,7 @@ export function SourceFilter({
           asChild
           className="rounded-full"
         >
-          <Link href="/settings">
+          <Link href="/settings?tab=data">
             <ExternalLinkIcon />
             Re-import
           </Link>

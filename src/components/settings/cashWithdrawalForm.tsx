@@ -55,7 +55,7 @@ export function CashWithdrawalForm({ sources }: { sources: string[] }) {
   if (sources.length === 0) return null;
 
   return (
-    <Card>
+    <Card id="withdraw-cash" className="scroll-mt-header">
       <CardContent className="py-4">
         <form onSubmit={handleSubmit} className="grid gap-3">
           <div>
