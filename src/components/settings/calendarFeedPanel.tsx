@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarIcon, Loader2Icon } from "lucide-react";
+import { Loader2Icon } from "lucide-react";
 
 import { useServerAction } from "@/hooks/useServerAction";
 import {
@@ -15,7 +15,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { CopyField } from "@/components/ui/copyField";
 
@@ -43,16 +42,11 @@ export function CalendarFeedPanel({ feedUrl }: Props) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CalendarIcon className="size-4" />
-          Calendar feed
-          <Badge variant={feedUrl ? "secondary" : "outline"} size="xs">
-            {feedUrl ? "Active" : "Off"}
-          </Badge>
-        </CardTitle>
+        <Badge variant={feedUrl ? "secondary" : "outline"} size="xs">
+          {feedUrl ? "Active" : "Off"}
+        </Badge>
         <CardDescription>
-          Subscribe Google Calendar, iOS Calendar or Outlook to your reminders.
-          Read-only — paying a reminder in the app advances the next due date in
+          Read-only: paying a reminder in the app advances the next due date in
           the feed.
         </CardDescription>
       </CardHeader>
