@@ -28,6 +28,7 @@ import {
   withRatesErrorHandling,
 } from "@/lib/currencyContext";
 import { getUser } from "@/lib/session";
+import { unlinkWithdrawalGroup } from "@/lib/transferUnlink";
 import {
   buildFeeRow,
   buildTransactionRow,
@@ -569,41 +570,9 @@ export async function undoMoveWithdrawalToCash(
   }
 
   try {
-    await db.transaction(async (dbTx) => {
-      await dbTx
-        .delete(transactions)
-        .where(
-          and(
-            eq(transactions.user_id, user.id),
-            eq(transactions.transfer_group, group),
-            eq(
-              transactions.external_id,
-              `${EXTERNAL_ID_PREFIX.withdrawal}${group}:in`,
-            ),
-          ),
-        );
-      await dbTx
-        .update(transactions)
-        .set({ transfer_group: null })
-        .where(
-          and(
-            eq(transactions.user_id, user.id),
-            eq(transactions.transfer_group, group),
-          ),
-        );
-      await dbTx
-        .update(transactions)
-        .set({ external_id: `${EXTERNAL_ID_PREFIX.withdrawal}${group}` })
-        .where(
-          and(
-            eq(transactions.user_id, user.id),
-            eq(
-              transactions.external_id,
-              `${EXTERNAL_ID_PREFIX.withdrawal}${group}:out`,
-            ),
-          ),
-        );
-    });
+    await db.transaction((dbTx) =>
+      unlinkWithdrawalGroup(dbTx, user.id, group),
+    );
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
