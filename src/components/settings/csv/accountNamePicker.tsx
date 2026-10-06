@@ -18,7 +18,7 @@ import {
 function validateAccountName(name: string): string | null {
   const n = name.trim().toLowerCase();
   if (!n) return null;
-  if (n === "manual") return "Reserved — used by Cash";
+  if (n === "manual") return "Reserved: used by Cash";
   if (kindOfSource(n) === "api") {
     return `Reserved for ${labelForSource(n)} sync`;
   }

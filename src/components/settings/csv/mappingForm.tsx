@@ -184,7 +184,7 @@ export function MappingForm({
             <SelectContent>
               {CURRENCIES.map((c) => (
                 <SelectItem key={c.code} value={c.code}>
-                  {c.code} — {c.name}
+                  {c.code} · {c.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -209,7 +209,7 @@ export function MappingForm({
 
       <OptionalHeaderSelect
         className="sm:col-span-2"
-        label="Status column (optional — skips cancelled / failed rows)"
+        label="Status column (optional, skips cancelled / failed rows)"
         value={mapping.statusCol}
         headers={headers}
         onChange={(v) => setMapping((m) => ({ ...m, statusCol: v }))}
@@ -217,7 +217,7 @@ export function MappingForm({
 
       <OptionalHeaderSelect
         className="sm:col-span-2"
-        label="Transaction ID column (optional — used as dedup identifier instead of content hash)"
+        label="Transaction ID column (optional, used as dedup identifier instead of content hash)"
         value={mapping.externalIdCol}
         headers={headers}
         onChange={(v) => setMapping((m) => ({ ...m, externalIdCol: v }))}
