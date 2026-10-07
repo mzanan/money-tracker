@@ -10,6 +10,8 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { TextAction } from "@/components/ui/textAction";
+import { CashActionDrawer } from "@/components/cash/cashActionDrawer";
+import { useCashActionDrawer } from "@/components/cash/useCashActionDrawer";
 
 import { AddAccountTab } from "./addAccountTab";
 import { ImportFromImage } from "./importFromImage";
@@ -21,6 +23,7 @@ import { useTabStripOverflow } from "./useTabStripOverflow";
 interface Props {
   sources: string[];
   csvSources: string[];
+  withdrawalSources: string[];
   selected: string;
   onChange: (source: string) => void;
 }
@@ -28,6 +31,7 @@ interface Props {
 export function SourceFilter({
   sources,
   csvSources,
+  withdrawalSources,
   selected,
   onChange,
 }: Props) {
@@ -50,6 +54,11 @@ export function SourceFilter({
     importLabelRef,
     compact,
   } = useTabStripOverflow();
+  const cash = useCashActionDrawer();
+  const cashActions = {
+    onWithdraw: withdrawalSources.length > 0 ? cash.openWithdraw : undefined,
+    onExchange: cash.openExchange,
+  };
 
   return (
     <div className="flex items-center justify-between gap-3">
@@ -74,7 +83,13 @@ export function SourceFilter({
                 key={src}
                 selected={selected === src}
                 onClick={() => onChange(src)}
-                menu={<SourceTabMenu source={src} label={labelOf(src)} />}
+                menu={
+                  <SourceTabMenu
+                    source={src}
+                    label={labelOf(src)}
+                    cashActions={src === "manual" ? cashActions : undefined}
+                  />
+                }
               >
                 {labelOf(src)}
               </SourceTab>
@@ -121,12 +136,18 @@ export function SourceFilter({
       )}
       {csvSources.includes(selected) && (
         <Button size="sm" variant="secondary" asChild className="rounded-full">
-          <Link href="/settings?tab=data">
+          <Link href="/settings?tab=accounts">
             <ExternalLinkIcon />
             Re-import
           </Link>
         </Button>
       )}
+      <CashActionDrawer
+        open={cash.open}
+        action={cash.shownAction}
+        onClose={cash.close}
+        withdrawalSources={withdrawalSources}
+      />
     </div>
   );
 }

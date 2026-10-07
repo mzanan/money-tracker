@@ -14,12 +14,21 @@ import { useSourceTabMenu } from "./useSourceTabMenu";
 export function SourceTabMenu({
   source,
   label,
+  cashActions,
 }: {
   source: string;
   label: string;
+  cashActions?: { onWithdraw?: () => void; onExchange: () => void };
 }) {
-  const { isDefault, makeDefault, clearDefault, archive, pending } =
-    useSourceTabMenu(source);
+  const {
+    isDefault,
+    makeDefault,
+    clearDefault,
+    archive,
+    pending,
+    openWithdraw,
+    openExchange,
+  } = useSourceTabMenu(source, cashActions);
 
   return (
     <DropdownMenu>
@@ -44,6 +53,16 @@ export function SourceTabMenu({
         ) : (
           <DropdownMenuItem onSelect={makeDefault}>
             Set as default
+          </DropdownMenuItem>
+        )}
+        {openWithdraw && (
+          <DropdownMenuItem onSelect={openWithdraw}>
+            Withdraw cash
+          </DropdownMenuItem>
+        )}
+        {openExchange && (
+          <DropdownMenuItem onSelect={openExchange}>
+            Exchange cash
           </DropdownMenuItem>
         )}
         {source !== "all" && (

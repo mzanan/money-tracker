@@ -62,6 +62,7 @@ export default async function HomePage() {
         lifetimeTransactions={data.lifetimeTxs}
         sources={data.sources}
         csvSources={data.csvSources}
+        withdrawalSources={data.withdrawalSources}
         places={data.places}
         reminders={remindersData.reminders}
         completedReminders={remindersData.completedReminders}

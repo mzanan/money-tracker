@@ -2,34 +2,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const TABS = [
   { value: "general", label: "General" },
-  { value: "assistant", label: "Assistant" },
-  { value: "cash", label: "Cash" },
   { value: "accounts", label: "Accounts" },
-  { value: "data", label: "Data" },
 ] as const;
 
 type TabValue = (typeof TABS)[number]["value"];
 
-const TAB_VALUES = TABS.map((tab) => tab.value) as readonly string[];
+const TAB_ALIASES: Record<string, TabValue> = {
+  general: "general",
+  assistant: "general",
+  accounts: "accounts",
+  cash: "accounts",
+  data: "accounts",
+};
 
 export function SettingsTabs({
   defaultTab,
   general,
-  assistant,
-  cash,
   accounts,
-  data,
 }: Record<TabValue, React.ReactNode> & { defaultTab?: string }) {
-  const content: Record<TabValue, React.ReactNode> = {
-    general,
-    assistant,
-    cash,
-    accounts,
-    data,
-  };
-  const initialTab = TAB_VALUES.includes(defaultTab ?? "")
-    ? (defaultTab as TabValue)
-    : "general";
+  const content: Record<TabValue, React.ReactNode> = { general, accounts };
+  const initialTab = TAB_ALIASES[defaultTab ?? ""] ?? "general";
 
   return (
     <Tabs defaultValue={initialTab}>

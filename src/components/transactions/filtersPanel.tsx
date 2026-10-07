@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import type { Transaction } from "@/types/db";
 
+import { ListFilterSelect } from "./listFilterSelect";
 import { MonthView } from "./monthView";
 import type { FilterScope } from "./useDashboardControls";
 
@@ -24,6 +25,12 @@ export function FiltersPanel({
   amountActive,
   results,
   includeTransfers = false,
+  tagOptions,
+  selectedTag,
+  onSelectTag,
+  placeOptions,
+  selectedPlace,
+  onSelectPlace,
 }: {
   baseCurrency: string;
   minInput: string;
@@ -36,9 +43,37 @@ export function FiltersPanel({
   amountActive: boolean;
   results: Transaction[];
   includeTransfers?: boolean;
+  tagOptions: string[];
+  selectedTag: string | null;
+  onSelectTag: (tag: string | null) => void;
+  placeOptions: string[];
+  selectedPlace: string | null;
+  onSelectPlace: (place: string | null) => void;
 }) {
   return (
     <>
+      <Surface className="grid gap-4">
+        <p className="text-muted-foreground text-xs">
+          Tag and place narrow the list on the home screen.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <ListFilterSelect
+            id="filter-tag"
+            label="Tag"
+            options={tagOptions}
+            value={selectedTag}
+            onChange={onSelectTag}
+          />
+          <ListFilterSelect
+            id="filter-place"
+            label="Place"
+            options={placeOptions}
+            value={selectedPlace}
+            onChange={onSelectPlace}
+          />
+        </div>
+      </Surface>
+
       <Surface className="grid gap-4">
         <p className="text-muted-foreground text-xs">
           Find large payments to attach a reminder. Amounts in {baseCurrency}.

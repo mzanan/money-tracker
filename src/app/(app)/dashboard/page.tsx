@@ -15,6 +15,7 @@ export default async function DashboardPage() {
       places={data.places}
       reminders={remindersData.reminders}
       today={remindersData.today}
+      withdrawalSources={data.withdrawalSources}
     />
   );
 }

@@ -9,7 +9,7 @@ import { recordCashWithdrawal } from "@/lib/actions/cash";
 import { parseAmountInput } from "@/lib/currency";
 import { todayInTz } from "@/lib/dates";
 
-export function useCashWithdrawalForm(sources: string[]) {
+export function useCashWithdrawalForm(sources: string[], onDone?: () => void) {
   const settings = useSettings();
   const timezone = useTimezone();
   const { run, pending } = useServerAction();
@@ -82,6 +82,7 @@ export function useCashWithdrawalForm(sources: string[]) {
           setTotal("");
           setRate("");
           setFee("");
+          onDone?.();
         },
       },
     );

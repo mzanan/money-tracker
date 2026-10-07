@@ -8,8 +8,10 @@ export function TextAction({
   label,
   compact = false,
   labelRef,
+  size = "default",
   ...props
 }: ComponentProps<"button"> & {
+  size?: "default" | "xs";
   label?: ReactNode;
   compact?: boolean;
   labelRef?: Ref<HTMLSpanElement>;
@@ -18,7 +20,8 @@ export function TextAction({
     <button
       type="button"
       className={cn(
-        "text-muted-foreground hover:text-foreground inline-flex shrink-0 items-center gap-1 py-3 text-sm font-medium transition-colors disabled:opacity-50",
+        "text-muted-foreground hover:text-foreground inline-flex shrink-0 items-center gap-1 font-medium transition-colors disabled:opacity-50",
+        size === "xs" ? "text-xs" : "py-3 text-sm",
         className,
       )}
       {...props}

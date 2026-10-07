@@ -5,6 +5,7 @@ import { api_integrations, locations, transactions } from "@/lib/db/schema";
 import { listAccountSources } from "@/lib/data/accounts";
 import { getUserSettings } from "@/lib/data/userSettings";
 import { thisYearMonth } from "@/lib/dates";
+import { cashWithdrawalSourcesByUsage } from "@/lib/filters";
 import { resolveTimezone } from "@/lib/preferences.server";
 import { requireUser } from "@/lib/session";
 import { collectSources, csvSourcesFrom } from "@/lib/transactions";
@@ -15,6 +16,7 @@ export interface HomePageData {
   lifetimeTxs: Transaction[];
   sources: string[];
   csvSources: string[];
+  withdrawalSources: string[];
   recentTags: string[];
   places: Location[];
 }
@@ -59,6 +61,7 @@ export async function getHomePageData(): Promise<HomePageData> {
     lifetimeTxs,
     sources,
     csvSources: csvSourcesFrom(lifetimeTxs),
+    withdrawalSources: cashWithdrawalSourcesByUsage(sources, lifetimeTxs),
     recentTags,
     places,
   };
