@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { hasBudgetMonthOverride } from "@/lib/budgetMonth";
 import { addableSources } from "@/lib/constants/sources";
+import { activeListFilterCount, listFilterChoices } from "@/lib/filters";
 import { detectRecurringNotes } from "@/lib/unusualExpenses";
 import {
   effectiveYearMonth,
@@ -131,14 +132,9 @@ export function useMonthDashboard({
     daySpend.setSelectedDate(today);
   }
 
-  const breakdownTransactions = useMemo(
-    () =>
-      isDaily
-        ? c.sourceFilteredMonth.filter(
-            (tx) => tx.occurred_on === daySpend.selectedDate,
-          )
-        : c.sourceFilteredMonth,
-    [isDaily, c.sourceFilteredMonth, daySpend.selectedDate],
+  const filterChoices = useMemo(
+    () => listFilterChoices(c.sourceFilteredMonth, places),
+    [c.sourceFilteredMonth, places],
   );
 
   const feedTransactions = useMemo(
@@ -219,7 +215,8 @@ export function useMonthDashboard({
     setView,
     daySpend,
     isDaily,
-    breakdownTransactions,
+    filterChoices,
+    activeFilters: activeListFilterCount(c.selectedTag, c.selectedPlace),
     feedTransactions,
     feedMovedOut,
     panelMounted,

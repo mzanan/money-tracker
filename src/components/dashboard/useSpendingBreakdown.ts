@@ -20,7 +20,6 @@ interface Params {
   onSelectTag: (tag: string | null) => void;
   selectedPlace: string | null;
   onSelectPlace: (place: string | null) => void;
-  limit?: number;
 }
 
 export function useSpendingBreakdown({
@@ -30,7 +29,6 @@ export function useSpendingBreakdown({
   onSelectTag,
   selectedPlace,
   onSelectPlace,
-  limit,
 }: Params) {
   const settings = useSettings();
   const money = useMoney();
@@ -70,13 +68,8 @@ export function useSpendingBreakdown({
         pct: total > 0 ? (amount / total) * 100 : 0,
       }))
       .sort((a, b) => b.amount - a.amount);
-    const visible = limit ? list.slice(0, limit) : list;
-    return {
-      list: visible,
-      hidden: list.length - visible.length,
-      max: list[0]?.amount ?? 0,
-    };
-  }, [transactions, settings.base_currency, mode, places, limit]);
+    return { list, max: list[0]?.amount ?? 0 };
+  }, [transactions, settings.base_currency, mode, places]);
 
   return {
     mode,

@@ -9,7 +9,6 @@ import { AddEntryPanel } from "./addEntryPanel";
 import { BalanceHero } from "./balanceHero";
 import { BudgetPanel } from "./budgetPanel";
 import { CalendarPanel } from "./calendarPanel";
-import { SpendingBreakdown } from "./spendingBreakdown";
 import { DashboardPanel } from "./dashboardPanel";
 import { DashboardToolbar } from "./dashboardToolbar";
 import { FiltersPanel } from "./filtersPanel";
@@ -53,7 +52,8 @@ export function MonthDashboard({
     setView,
     daySpend,
     isDaily,
-    breakdownTransactions,
+    filterChoices,
+    activeFilters,
     feedTransactions,
     feedMovedOut,
     panelMounted,
@@ -79,7 +79,11 @@ export function MonthDashboard({
           today={today}
           onOpen={() => c.openPanel("calendar")}
         />
-        <DashboardToolbar panel={c.panel} onToggle={c.togglePanel} />
+        <DashboardToolbar
+          panel={c.panel}
+          onToggle={c.togglePanel}
+          activeFilters={activeFilters}
+        />
         <BalanceHero
           yearMonth={visibleYearMonth}
           transactions={c.sourceFilteredMonth}
@@ -102,16 +106,6 @@ export function MonthDashboard({
             csvSources={csvSources}
             selected={c.selectedSource}
             onChange={c.setSelectedSource}
-          />
-          <SpendingBreakdown
-            transactions={breakdownTransactions}
-            places={places}
-            selectedTag={c.selectedTag}
-            onSelectTag={c.setSelectedTag}
-            selectedPlace={c.selectedPlace}
-            onSelectPlace={c.setSelectedPlace}
-            limit={4}
-            moreHref="/dashboard"
           />
           <MonthView
             transactions={feedTransactions}
@@ -146,7 +140,15 @@ export function MonthDashboard({
               onClear={() => {
                 c.setMinInput("");
                 c.setMaxInput("");
+                c.setSelectedTag(null);
+                c.setSelectedPlace(null);
               }}
+              tagOptions={filterChoices.tags}
+              selectedTag={c.selectedTag}
+              onSelectTag={c.setSelectedTag}
+              placeOptions={filterChoices.places}
+              selectedPlace={c.selectedPlace}
+              onSelectPlace={c.setSelectedPlace}
               amountActive={c.amountActive}
               results={c.filterResults}
               includeTransfers={c.includeTransfers}

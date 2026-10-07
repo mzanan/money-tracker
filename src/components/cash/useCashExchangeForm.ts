@@ -9,7 +9,7 @@ import { recordCashExchange } from "@/lib/actions/cash";
 import { parseAmountInput } from "@/lib/currency";
 import { todayInTz } from "@/lib/dates";
 
-export function useCashExchangeForm() {
+export function useCashExchangeForm(onDone?: () => void) {
   const settings = useSettings();
   const timezone = useTimezone();
   const { run, pending } = useServerAction();
@@ -44,6 +44,7 @@ export function useCashExchangeForm() {
         onSuccess: () => {
           setOutAmount("");
           setInAmount("");
+          onDone?.();
         },
       },
     );

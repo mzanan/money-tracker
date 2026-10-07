@@ -5,8 +5,6 @@ import { AnalyticsConsentCard } from "@/components/settings/analyticsConsentCard
 import { AssistantKeyCard } from "@/components/settings/assistantKeyCard";
 import { CalendarFeedCard } from "@/components/settings/calendarFeedCard";
 import { CashCard } from "@/components/settings/cashCard";
-import { CashExchangeForm } from "@/components/settings/cashExchangeForm";
-import { CashWithdrawalForm } from "@/components/settings/cashWithdrawalForm";
 import { CsvImportCard } from "@/components/settings/csvImportCard";
 import { NonDailyLabelsCard } from "@/components/settings/nonDailyLabelsCard";
 import { ImportedAccountsCard } from "@/components/settings/importedAccountsCard";
@@ -14,7 +12,7 @@ import { IntegrationsCard } from "@/components/settings/integrationsCard";
 import { SettingsForm } from "@/components/settings/settingsForm";
 import { SettingsTabs } from "@/components/settings/settingsTabs";
 import { Button } from "@/components/ui/button";
-import { getCsvSources, getTransferSources } from "@/lib/data/sources";
+import { getCsvSources } from "@/lib/data/sources";
 import { requireUser } from "@/lib/session";
 
 export default async function SettingsPage({
@@ -24,10 +22,7 @@ export default async function SettingsPage({
 }) {
   const user = await requireUser();
   const { tab } = await searchParams;
-  const [existingSources, withdrawalSources] = await Promise.all([
-    getCsvSources(user.id),
-    getTransferSources(user.id, "manual"),
-  ]);
+  const existingSources = await getCsvSources(user.id);
 
   return (
     <div className="mx-auto grid w-full max-w-xl gap-6">
@@ -56,54 +51,11 @@ export default async function SettingsPage({
             >
               <NonDailyLabelsCard />
             </Section>
-            <Section title="Privacy" hint="Change your cookie choice anytime.">
-              <AnalyticsConsentCard />
-            </Section>
-          </>
-        }
-        assistant={
-          <Section
-            title="Assistant"
-            hint="Model and API key for the chat assistant."
-          >
-            <AssistantKeyCard />
-          </Section>
-        }
-        cash={
-          <Section
-            title="Cash"
-            hint="A manual account for cash you spend or receive in hand."
-          >
-            <div className="grid gap-3">
-              <CashCard />
-              <CashWithdrawalForm sources={withdrawalSources} />
-              <CashExchangeForm />
-            </div>
-          </Section>
-        }
-        accounts={
-          <>
             <Section
-              title="Integrations"
-              hint="Sync transactions automatically from connected accounts."
+              title="Assistant"
+              hint="Model and API key for the chat assistant."
             >
-              <IntegrationsCard />
-            </Section>
-            <Section
-              title="Accounts"
-              hint="Create, rename, remove or wipe an account."
-            >
-              <ImportedAccountsCard />
-            </Section>
-          </>
-        }
-        data={
-          <>
-            <Section
-              title="Data import"
-              hint="One-off CSV import from any bank or wallet."
-            >
-              <CsvImportCard existingSources={existingSources} />
+              <AssistantKeyCard />
             </Section>
             <CollapsedSection
               title="Calendar feed"
@@ -111,6 +63,37 @@ export default async function SettingsPage({
             >
               <CalendarFeedCard />
             </CollapsedSection>
+            <Section title="Privacy" hint="Change your cookie choice anytime.">
+              <AnalyticsConsentCard />
+            </Section>
+          </>
+        }
+        accounts={
+          <>
+            <Section
+              title="Accounts"
+              hint="Create, rename, remove or wipe an account."
+            >
+              <ImportedAccountsCard />
+            </Section>
+            <Section
+              title="Cash"
+              hint="A manual account for cash you spend or receive in hand. Withdraw and exchange from the Cash tab menu."
+            >
+              <CashCard />
+            </Section>
+            <Section
+              title="Integrations"
+              hint="Sync transactions automatically from connected accounts."
+            >
+              <IntegrationsCard />
+            </Section>
+            <Section
+              title="Data import"
+              hint="One-off CSV import from any bank or wallet."
+            >
+              <CsvImportCard existingSources={existingSources} />
+            </Section>
           </>
         }
       />

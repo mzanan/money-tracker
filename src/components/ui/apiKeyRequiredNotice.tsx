@@ -64,7 +64,7 @@ export function ApiKeyRequiredDialog({
         </DialogHeader>
         <DialogFooter>
           <Button asChild>
-            <Link href="/settings?tab=assistant">Go to Settings</Link>
+            <Link href="/settings?tab=general">Go to Settings</Link>
           </Button>
         </DialogFooter>
       </DialogContent>

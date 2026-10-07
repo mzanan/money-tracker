@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { MapPinIcon } from "lucide-react";
 
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
@@ -10,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { PlacesDialog } from "./placesDialog";
+import { PlacesDialog } from "@/components/transactions/placesDialog";
 import { useSpendingBreakdown, type Mode } from "./useSpendingBreakdown";
 
 import type { Location, Transaction } from "@/types/db";
@@ -22,12 +21,10 @@ interface Props {
   onSelectTag: (tag: string | null) => void;
   selectedPlace: string | null;
   onSelectPlace: (place: string | null) => void;
-  limit?: number;
-  moreHref?: string;
 }
 
 export function SpendingBreakdown(props: Props) {
-  const { places, moreHref } = props;
+  const { places } = props;
   const { mode, changeMode, selected, onSelect, breakdown, money } =
     useSpendingBreakdown(props);
 
@@ -114,14 +111,6 @@ export function SpendingBreakdown(props: Props) {
               </span>
             </button>
           ))}
-          {moreHref && breakdown.hidden > 0 && (
-            <Link
-              href={moreHref}
-              className="text-muted-foreground hover:text-foreground pt-1 text-xs font-medium transition-colors"
-            >
-              View all in Dashboard →
-            </Link>
-          )}
         </div>
       )}
     </Surface>

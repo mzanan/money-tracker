@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 import { useMoney } from "@/hooks/useMoney";
@@ -10,9 +9,12 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/emptyState";
 import { Surface } from "@/components/ui/surface";
-import { SpendingBreakdown } from "@/components/transactions/spendingBreakdown";
+import { TextAction } from "@/components/ui/textAction";
+import { CashActionDrawer } from "@/components/cash/cashActionDrawer";
+import { useCashActionDrawer } from "@/components/cash/useCashActionDrawer";
 import { MonthView } from "@/components/transactions/monthView";
 
+import { SpendingBreakdown } from "./spendingBreakdown";
 import { SpendProjectionCard } from "./spendProjectionCard";
 import { UnusualExpensesCard } from "./unusualExpensesCard";
 import { useDashboardView } from "./useDashboardView";
@@ -25,6 +27,7 @@ interface Props {
   places: Location[];
   reminders: RecurringPayment[];
   today: string;
+  withdrawalSources: string[];
 }
 
 export function DashboardView({
@@ -33,8 +36,10 @@ export function DashboardView({
   places,
   reminders,
   today,
+  withdrawalSources,
 }: Props) {
   const money = useMoney();
+  const cash = useCashActionDrawer();
   const v = useDashboardView({ yearMonth, lifetimeTransactions });
 
   return (
@@ -146,11 +151,6 @@ export function DashboardView({
         </div>
       </Surface>
 
-      <UnusualExpensesCard
-        monthTransactions={v.monthTransactions}
-        recurringNotes={v.recurringNotes}
-      />
-
       <SpendProjectionCard
         yearMonth={v.visibleYearMonth}
         today={today}
@@ -168,46 +168,6 @@ export function DashboardView({
         selectedPlace={v.selectedPlace}
         onSelectPlace={v.setSelectedPlace}
       />
-
-      {v.cashBalances.length > 0 && (
-        <Surface padding="md" className="grid gap-3">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-eyebrow">Cash on hand</span>
-            <div className="flex items-center gap-3">
-              <Link
-                href="/settings?tab=cash#withdraw-cash"
-                className="text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
-              >
-                Withdraw cash →
-              </Link>
-              <Link
-                href="/settings?tab=cash#exchange-cash"
-                className="text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
-              >
-                Exchange cash →
-              </Link>
-            </div>
-          </div>
-          <ul className="grid gap-2">
-            {v.cashBalances.map(({ currency, balance }) => (
-              <li
-                key={currency}
-                className="flex items-baseline justify-between gap-3 text-sm"
-              >
-                <span className="font-medium">{currency}</span>
-                <span
-                  className={cn(
-                    "font-semibold tabular-nums",
-                    balance < 0 && "text-destructive",
-                  )}
-                >
-                  {money(balance, { currency })}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Surface>
-      )}
 
       <Surface padding="md" className="grid gap-3">
         <span className="text-eyebrow">Top merchants</span>
@@ -235,6 +195,45 @@ export function DashboardView({
         )}
       </Surface>
 
+      <UnusualExpensesCard
+        monthTransactions={v.monthTransactions}
+        recurringNotes={v.recurringNotes}
+      />
+
+      {v.cashBalances.length > 0 && (
+        <Surface padding="md" className="grid gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-eyebrow">Cash on hand</span>
+            <div className="flex items-center gap-3">
+              <TextAction onClick={cash.openWithdraw} className="py-0 text-xs">
+                Withdraw cash
+              </TextAction>
+              <TextAction onClick={cash.openExchange} className="py-0 text-xs">
+                Exchange cash
+              </TextAction>
+            </div>
+          </div>
+          <ul className="grid gap-2">
+            {v.cashBalances.map(({ currency, balance }) => (
+              <li
+                key={currency}
+                className="flex items-baseline justify-between gap-3 text-sm"
+              >
+                <span className="font-medium">{currency}</span>
+                <span
+                  className={cn(
+                    "font-semibold tabular-nums",
+                    balance < 0 && "text-destructive",
+                  )}
+                >
+                  {money(balance, { currency })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Surface>
+      )}
+
       {v.filteredList.length > 0 && (
         <MonthView
           transactions={v.filteredList}
@@ -242,6 +241,11 @@ export function DashboardView({
           recurringNotes={v.recurringNotes}
         />
       )}
+      <CashActionDrawer
+        action={cash.action}
+        onClose={cash.close}
+        withdrawalSources={withdrawalSources}
+      />
     </div>
   );
 }

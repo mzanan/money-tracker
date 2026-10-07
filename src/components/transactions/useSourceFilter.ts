@@ -8,6 +8,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { syncIntegration } from "@/lib/actions/integrations";
 import { setCashEnabled } from "@/lib/actions/settings";
 import {
+  cashWithdrawalSources,
   kindOfSource,
   resolveSourceLabel,
   tabSourcesFrom,
@@ -34,6 +35,7 @@ export function useSourceFilter({
   const allTabSources = tabSourcesFrom(sources, settings.cash_enabled);
   const tabSources = withoutArchived(allTabSources, archivedSources);
   const showCashTab = allTabSources.includes("manual");
+  const withdrawalSources = cashWithdrawalSources(sources);
 
   const selectedArchived =
     selected !== "all" && archivedSources.includes(selected);
@@ -64,6 +66,7 @@ export function useSourceFilter({
     allTabSources,
     tabSources,
     showCashTab,
+    withdrawalSources,
     labelOf,
     handleSync,
     handleEnableCash,

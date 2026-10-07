@@ -1,4 +1,5 @@
 import { DashboardView } from "@/components/dashboard/dashboardView";
+import { cashWithdrawalSources } from "@/lib/constants/sources";
 import { getHomePageData } from "@/lib/data/homeData";
 import { getRemindersData } from "@/lib/data/reminders";
 
@@ -15,6 +16,7 @@ export default async function DashboardPage() {
       places={data.places}
       reminders={remindersData.reminders}
       today={remindersData.today}
+      withdrawalSources={cashWithdrawalSources(data.sources)}
     />
   );
 }

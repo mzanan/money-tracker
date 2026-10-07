@@ -25,7 +25,13 @@ import {
 
 import { useCashWithdrawalForm } from "./useCashWithdrawalForm";
 
-export function CashWithdrawalForm({ sources }: { sources: string[] }) {
+export function CashWithdrawalForm({
+  sources,
+  onDone,
+}: {
+  sources: string[];
+  onDone?: () => void;
+}) {
   const accountLabels = useAccountLabels();
   const {
     currencies,
@@ -50,12 +56,12 @@ export function CashWithdrawalForm({ sources }: { sources: string[] }) {
     setDate,
     pending,
     handleSubmit,
-  } = useCashWithdrawalForm(sources);
+  } = useCashWithdrawalForm(sources, onDone);
 
   if (sources.length === 0) return null;
 
   return (
-    <Card id="withdraw-cash" className="scroll-mt-header">
+    <Card>
       <CardContent className="py-4">
         <form onSubmit={handleSubmit} className="grid gap-3">
           <div>

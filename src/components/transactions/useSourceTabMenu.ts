@@ -5,10 +5,13 @@ import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { setDefaultSource, setSourceArchived } from "@/lib/actions/settings";
 
+import { useCashActionDrawer } from "@/components/cash/useCashActionDrawer";
+
 export function useSourceTabMenu(source: string) {
   const settings = useSettings();
   const { run, pending } = useServerAction();
   const runAfterMenuClose = useDeferredMenuAction();
+  const cash = useCashActionDrawer();
 
   const isDefault = (settings.default_source ?? "all") === source;
 
@@ -30,5 +33,9 @@ export function useSourceTabMenu(source: string) {
     clearDefault: () => setDefault("all"),
     archive,
     pending,
+    cashAction: cash.action,
+    openWithdraw: () => runAfterMenuClose(cash.openWithdraw),
+    openExchange: () => runAfterMenuClose(cash.openExchange),
+    closeCashAction: cash.close,
   };
 }

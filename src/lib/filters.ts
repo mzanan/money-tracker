@@ -31,6 +31,37 @@ export function initialSource(
     : "all";
 }
 
+export interface ListFilterChoices {
+  tags: string[];
+  places: string[];
+}
+
+export function listFilterChoices(
+  txs: ReadonlyArray<Transaction>,
+  places: ReadonlyArray<Location>,
+): ListFilterChoices {
+  const tags = new Set<string>();
+  const placeNames = new Set<string>();
+  for (const tx of txs) {
+    if (tx.tags.length === 0) tags.add(UNTAGGED_LABEL);
+    for (const tag of tx.tags) tags.add(tag);
+    placeNames.add(placeOf(tx.occurred_on, places));
+  }
+  const byName = (a: string, b: string) => a.localeCompare(b);
+  const sortedTags = Array.from(tags)
+    .filter((tag) => tag !== UNTAGGED_LABEL)
+    .sort(byName);
+  if (tags.has(UNTAGGED_LABEL)) sortedTags.push(UNTAGGED_LABEL);
+  return { tags: sortedTags, places: Array.from(placeNames).sort(byName) };
+}
+
+export function activeListFilterCount(
+  tag: string | null,
+  place: string | null,
+): number {
+  return (tag === null ? 0 : 1) + (place === null ? 0 : 1);
+}
+
 export function applyListFilters(
   txs: Transaction[],
   { kind, tag, place, places }: ListFilterOptions,

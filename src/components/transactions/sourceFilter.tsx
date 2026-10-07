@@ -37,6 +37,7 @@ export function SourceFilter({
     allTabSources,
     tabSources,
     showCashTab,
+    withdrawalSources,
     labelOf,
     handleSync,
     handleEnableCash,
@@ -74,7 +75,15 @@ export function SourceFilter({
                 key={src}
                 selected={selected === src}
                 onClick={() => onChange(src)}
-                menu={<SourceTabMenu source={src} label={labelOf(src)} />}
+                menu={
+                  <SourceTabMenu
+                    source={src}
+                    label={labelOf(src)}
+                    withdrawalSources={
+                      src === "manual" ? withdrawalSources : undefined
+                    }
+                  />
+                }
               >
                 {labelOf(src)}
               </SourceTab>
@@ -121,7 +130,7 @@ export function SourceFilter({
       )}
       {csvSources.includes(selected) && (
         <Button size="sm" variant="secondary" asChild className="rounded-full">
-          <Link href="/settings?tab=data">
+          <Link href="/settings?tab=accounts">
             <ExternalLinkIcon />
             Re-import
           </Link>

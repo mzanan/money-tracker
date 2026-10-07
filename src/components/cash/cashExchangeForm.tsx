@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 
 import { useCashExchangeForm } from "./useCashExchangeForm";
 
-export function CashExchangeForm() {
+export function CashExchangeForm({ onDone }: { onDone?: () => void }) {
   const {
     currencies,
     outAmount,
@@ -25,10 +25,10 @@ export function CashExchangeForm() {
     setDate,
     pending,
     handleSubmit,
-  } = useCashExchangeForm();
+  } = useCashExchangeForm(onDone);
 
   return (
-    <Card id="exchange-cash" className="scroll-mt-header">
+    <Card>
       <CardContent className="py-4">
         <form onSubmit={handleSubmit} className="grid gap-3">
           <div>

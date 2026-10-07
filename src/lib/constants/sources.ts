@@ -56,6 +56,14 @@ export function addableSources(
   );
 }
 
+export function cashWithdrawalSources(
+  sources: ReadonlyArray<string>,
+): string[] {
+  return sources.filter(
+    (source) => source !== "manual" && kindOfSource(source) !== "api",
+  );
+}
+
 export function defaultAddSource(
   selected: string,
   addable: ReadonlyArray<string>,
