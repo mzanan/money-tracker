@@ -4,7 +4,6 @@ import Link from "next/link";
 import { MapPinIcon } from "lucide-react";
 
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
-import { formatMoney } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -29,15 +28,8 @@ interface Props {
 
 export function SpendingBreakdown(props: Props) {
   const { places, moreHref } = props;
-  const {
-    mode,
-    changeMode,
-    selected,
-    onSelect,
-    breakdown,
-    mask,
-    baseCurrency,
-  } = useSpendingBreakdown(props);
+  const { mode, changeMode, selected, onSelect, breakdown, money } =
+    useSpendingBreakdown(props);
 
   if (breakdown.list.length === 0) return null;
 
@@ -106,7 +98,7 @@ export function SpendingBreakdown(props: Props) {
                   {item.label}
                 </span>
                 <span className="shrink-0 text-sm font-semibold tabular-nums">
-                  {mask(formatMoney(item.amount, baseCurrency))}
+                  {money(item.amount)}
                   <span className="text-muted-foreground text-caption ml-1.5 font-normal">
                     {Math.round(item.pct)}%
                   </span>

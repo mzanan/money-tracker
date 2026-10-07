@@ -4,8 +4,7 @@ import { Loader2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { StepShell } from "@/components/ui/stepShell";
-import { useHideAmounts } from "@/hooks/useHideAmounts";
-import { formatMoney } from "@/lib/currency";
+import { useMoney } from "@/hooks/useMoney";
 
 import { TransactionFormFields } from "./transactionFormFields";
 import { useTransactionForm, type TransactionSeed } from "./useTransactionForm";
@@ -21,7 +20,7 @@ export function PayExpensePanel({
   onBack: () => void;
   onCreated: (id: string) => void;
 }) {
-  const { mask } = useHideAmounts();
+  const money = useMoney();
   const form = useTransactionForm({
     seed,
     open: true,
@@ -36,7 +35,7 @@ export function PayExpensePanel({
       title={`Pay ${reminderLabel}`}
       description={
         <span className="tabular-nums">
-          {mask(formatMoney(seed.amount, seed.currency))}
+          {money(seed.amount, { currency: seed.currency })}
         </span>
       }
       onBack={onBack}

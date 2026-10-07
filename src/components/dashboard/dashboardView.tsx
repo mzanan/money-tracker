@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
-import { useHideAmounts } from "@/hooks/useHideAmounts";
-import { useSettings } from "@/hooks/useSettings";
-import { formatMoney } from "@/lib/currency";
+import { useMoney } from "@/hooks/useMoney";
 import { formatYearMonthLong } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
@@ -36,13 +34,8 @@ export function DashboardView({
   reminders,
   today,
 }: Props) {
-  const settings = useSettings();
-  const { mask } = useHideAmounts();
+  const money = useMoney();
   const v = useDashboardView({ yearMonth, lifetimeTransactions });
-
-  function money(value: number, compact = false): string {
-    return mask(formatMoney(value, settings.base_currency, { compact }));
-  }
 
   return (
     <div className="mx-auto grid w-full max-w-xl gap-5 *:min-w-0">
@@ -94,7 +87,7 @@ export function DashboardView({
                 )}
               >
                 <span className="text-muted-foreground text-micro tabular-nums">
-                  {month.hasData ? money(month.expense, true) : ""}
+                  {month.hasData ? money(month.expense, { compact: true }) : ""}
                 </span>
                 <span className="flex h-24 w-full items-end justify-center">
                   <span
@@ -208,7 +201,7 @@ export function DashboardView({
                     balance < 0 && "text-destructive",
                   )}
                 >
-                  {mask(formatMoney(balance, currency))}
+                  {money(balance, { currency })}
                 </span>
               </li>
             ))}

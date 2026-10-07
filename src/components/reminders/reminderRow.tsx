@@ -10,8 +10,7 @@ import {
 } from "lucide-react";
 
 import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
-import { useHideAmounts } from "@/hooks/useHideAmounts";
-import { formatMoney } from "@/lib/currency";
+import { useMoney } from "@/hooks/useMoney";
 import { dueLabel } from "@/lib/reminders";
 import { cn } from "@/lib/utils";
 
@@ -55,7 +54,7 @@ export function ReminderRow({
     stepApi,
   } = useReminderRow(reminder, today);
   const runAfterMenuClose = useDeferredMenuAction();
-  const { mask } = useHideAmounts();
+  const money = useMoney();
 
   function openEdit() {
     if (stepApi) {
@@ -93,7 +92,9 @@ export function ReminderRow({
             </span>
             {reminder.amount != null && (
               <span className="shrink-0 text-sm font-semibold tabular-nums">
-                {mask(formatMoney(reminder.amount, reminder.currency ?? "USD"))}
+                {money(reminder.amount, {
+                  currency: reminder.currency ?? "USD",
+                })}
               </span>
             )}
           </div>

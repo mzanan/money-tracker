@@ -2,9 +2,7 @@
 
 import { AlertTriangleIcon } from "lucide-react";
 
-import { useHideAmounts } from "@/hooks/useHideAmounts";
-import { useSettings } from "@/hooks/useSettings";
-import { formatMoney } from "@/lib/currency";
+import { useMoney } from "@/hooks/useMoney";
 import { formatDayShort } from "@/lib/dates";
 
 import { Button } from "@/components/ui/button";
@@ -23,16 +21,11 @@ export function UnusualExpensesCard({
   monthTransactions: Transaction[];
   recurringNotes: Set<string>;
 }) {
-  const settings = useSettings();
-  const { mask } = useHideAmounts();
+  const money = useMoney();
   const { rows, isRowPending, markOneOff, markRegular } = useUnusualExpenses(
     monthTransactions,
     recurringNotes,
   );
-
-  function money(value: number) {
-    return mask(formatMoney(value, settings.base_currency));
-  }
 
   if (rows.length === 0) return null;
 

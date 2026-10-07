@@ -130,7 +130,7 @@ export function positionAfterSignificantAmountChars(
   return text.length;
 }
 
-interface FormatOptions {
+export interface FormatOptions {
   showCode?: boolean;
   signed?: boolean;
   compact?: boolean;
