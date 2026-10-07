@@ -205,10 +205,12 @@ export function DashboardView({
           <div className="flex items-center justify-between gap-2">
             <span className="text-eyebrow">Cash on hand</span>
             <div className="flex items-center gap-3">
-              <TextAction onClick={cash.openWithdraw} className="py-0 text-xs">
-                Withdraw cash
-              </TextAction>
-              <TextAction onClick={cash.openExchange} className="py-0 text-xs">
+              {withdrawalSources.length > 0 && (
+                <TextAction size="xs" onClick={cash.openWithdraw}>
+                  Withdraw cash
+                </TextAction>
+              )}
+              <TextAction size="xs" onClick={cash.openExchange}>
                 Exchange cash
               </TextAction>
             </div>
@@ -242,7 +244,8 @@ export function DashboardView({
         />
       )}
       <CashActionDrawer
-        action={cash.action}
+        open={cash.open}
+        action={cash.shownAction}
         onClose={cash.close}
         withdrawalSources={withdrawalSources}
       />

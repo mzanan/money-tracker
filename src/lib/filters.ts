@@ -1,4 +1,8 @@
-import { tabSourcesFrom, withoutArchived } from "@/lib/constants/sources";
+import {
+  cashWithdrawalSources,
+  tabSourcesFrom,
+  withoutArchived,
+} from "@/lib/constants/sources";
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import { placeOf } from "@/lib/places";
 import { transactionInDisplay } from "@/lib/totals";
@@ -39,9 +43,15 @@ export interface ListFilterChoices {
 export function listFilterChoices(
   txs: ReadonlyArray<Transaction>,
   places: ReadonlyArray<Location>,
+  selected: { tag: string | null; place: string | null } = {
+    tag: null,
+    place: null,
+  },
 ): ListFilterChoices {
   const tags = new Set<string>();
   const placeNames = new Set<string>();
+  if (selected.tag !== null) tags.add(selected.tag);
+  if (selected.place !== null) placeNames.add(selected.place);
   for (const tx of txs) {
     if (tx.tags.length === 0) tags.add(UNTAGGED_LABEL);
     for (const tag of tx.tags) tags.add(tag);
@@ -60,6 +70,19 @@ export function activeListFilterCount(
   place: string | null,
 ): number {
   return (tag === null ? 0 : 1) + (place === null ? 0 : 1);
+}
+
+export function cashWithdrawalSourcesByUsage(
+  sources: ReadonlyArray<string>,
+  txs: ReadonlyArray<Transaction>,
+): string[] {
+  const counts = new Map<string, number>();
+  for (const tx of txs) {
+    counts.set(tx.source, (counts.get(tx.source) ?? 0) + 1);
+  }
+  return cashWithdrawalSources(sources).sort(
+    (a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0),
+  );
 }
 
 export function applyListFilters(

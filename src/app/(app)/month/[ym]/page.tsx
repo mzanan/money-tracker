@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { MonthDashboard } from "@/components/transactions/monthDashboard";
+import { cashWithdrawalSourcesByUsage } from "@/lib/filters";
 import { listAccountSources } from "@/lib/data/accounts";
 import { getMonthPageData } from "@/lib/data/monthData";
 import { collectSources, csvSourcesFrom } from "@/lib/transactions";
@@ -33,6 +34,10 @@ export default async function MonthPage({
       lifetimeTransactions={data.lifetimeTxs}
       sources={sources}
       csvSources={csvSources}
+      withdrawalSources={cashWithdrawalSourcesByUsage(
+        sources,
+        data.lifetimeTxs,
+      )}
       places={data.places}
       reminders={remindersData.reminders}
       completedReminders={remindersData.completedReminders}

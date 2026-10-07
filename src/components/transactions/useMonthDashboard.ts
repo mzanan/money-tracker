@@ -133,8 +133,24 @@ export function useMonthDashboard({
   }
 
   const filterChoices = useMemo(
-    () => listFilterChoices(c.sourceFilteredMonth, places),
-    [c.sourceFilteredMonth, places],
+    () =>
+      listFilterChoices(
+        isDaily
+          ? c.sourceFilteredMonth.filter(
+              (tx) => tx.occurred_on === daySpend.selectedDate,
+            )
+          : c.sourceFilteredMonth,
+        places,
+        { tag: c.selectedTag, place: c.selectedPlace },
+      ),
+    [
+      isDaily,
+      c.sourceFilteredMonth,
+      daySpend.selectedDate,
+      places,
+      c.selectedTag,
+      c.selectedPlace,
+    ],
   );
 
   const feedTransactions = useMemo(

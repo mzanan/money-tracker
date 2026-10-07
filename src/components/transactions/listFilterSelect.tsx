@@ -28,7 +28,7 @@ export function ListFilterSelect({
       <Select
         value={value ?? ANY}
         onValueChange={(next) => onChange(next === ANY ? null : next)}
-        disabled={options.length === 0}
+        disabled={options.length === 0 && value === null}
       >
         <SelectTrigger id={id} className="w-full">
           <SelectValue />

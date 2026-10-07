@@ -21,6 +21,7 @@ interface Props {
   lifetimeTransactions: Transaction[];
   sources: string[];
   csvSources: string[];
+  withdrawalSources: string[];
   places: Location[];
   reminders?: RecurringPayment[];
   completedReminders?: RecurringPayment[];
@@ -33,6 +34,7 @@ export function MonthDashboard({
   lifetimeTransactions,
   sources,
   csvSources,
+  withdrawalSources,
   places,
   reminders = [],
   completedReminders = [],
@@ -104,6 +106,7 @@ export function MonthDashboard({
           <SourceFilter
             sources={sources}
             csvSources={csvSources}
+            withdrawalSources={withdrawalSources}
             selected={c.selectedSource}
             onChange={c.setSelectedSource}
           />
@@ -113,9 +116,11 @@ export function MonthDashboard({
             includeTransfers={c.includeTransfers}
             recurringNotes={recurringNotes}
             emptyLabel={
-              isDaily
-                ? "No transactions this day."
-                : "No transactions this month."
+              activeFilters > 0
+                ? "No transactions match these filters."
+                : isDaily
+                  ? "No transactions this day."
+                  : "No transactions this month."
             }
           />
         </div>

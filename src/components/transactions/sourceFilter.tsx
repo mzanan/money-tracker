@@ -10,6 +10,8 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { TextAction } from "@/components/ui/textAction";
+import { CashActionDrawer } from "@/components/cash/cashActionDrawer";
+import { useCashActionDrawer } from "@/components/cash/useCashActionDrawer";
 
 import { AddAccountTab } from "./addAccountTab";
 import { ImportFromImage } from "./importFromImage";
@@ -21,6 +23,7 @@ import { useTabStripOverflow } from "./useTabStripOverflow";
 interface Props {
   sources: string[];
   csvSources: string[];
+  withdrawalSources: string[];
   selected: string;
   onChange: (source: string) => void;
 }
@@ -28,6 +31,7 @@ interface Props {
 export function SourceFilter({
   sources,
   csvSources,
+  withdrawalSources,
   selected,
   onChange,
 }: Props) {
@@ -37,7 +41,6 @@ export function SourceFilter({
     allTabSources,
     tabSources,
     showCashTab,
-    withdrawalSources,
     labelOf,
     handleSync,
     handleEnableCash,
@@ -51,6 +54,11 @@ export function SourceFilter({
     importLabelRef,
     compact,
   } = useTabStripOverflow();
+  const cash = useCashActionDrawer();
+  const cashActions = {
+    onWithdraw: withdrawalSources.length > 0 ? cash.openWithdraw : undefined,
+    onExchange: cash.openExchange,
+  };
 
   return (
     <div className="flex items-center justify-between gap-3">
@@ -79,9 +87,7 @@ export function SourceFilter({
                   <SourceTabMenu
                     source={src}
                     label={labelOf(src)}
-                    withdrawalSources={
-                      src === "manual" ? withdrawalSources : undefined
-                    }
+                    cashActions={src === "manual" ? cashActions : undefined}
                   />
                 }
               >
@@ -136,6 +142,12 @@ export function SourceFilter({
           </Link>
         </Button>
       )}
+      <CashActionDrawer
+        open={cash.open}
+        action={cash.shownAction}
+        onClose={cash.close}
+        withdrawalSources={withdrawalSources}
+      />
     </div>
   );
 }

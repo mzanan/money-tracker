@@ -11,8 +11,7 @@ import {
 
 import { CashExchangeForm } from "./cashExchangeForm";
 import { CashWithdrawalForm } from "./cashWithdrawalForm";
-
-export type CashAction = "withdraw" | "exchange";
+import type { CashAction } from "./useCashActionDrawer";
 
 const TITLES: Record<CashAction, string> = {
   withdraw: "Withdraw cash",
@@ -20,32 +19,35 @@ const TITLES: Record<CashAction, string> = {
 };
 
 export function CashActionDrawer({
+  open,
   action,
   onClose,
   withdrawalSources,
 }: {
-  action: CashAction | null;
+  open: boolean;
+  action: CashAction;
   onClose: () => void;
   withdrawalSources: string[];
 }) {
   return (
     <Drawer
-      open={action !== null}
-      onOpenChange={(open) => {
-        if (!open) onClose();
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
       }}
     >
       <DrawerContent>
         <DrawerCloseButton />
         <DrawerHeader className="sr-only">
-          <DrawerTitle>{action ? TITLES[action] : ""}</DrawerTitle>
+          <DrawerTitle>{TITLES[action]}</DrawerTitle>
           <DrawerDescription>Record a cash movement.</DrawerDescription>
         </DrawerHeader>
         <div className="overflow-y-auto px-4 pt-10 pb-8">
-          {action === "withdraw" && (
+          {action === "withdraw" ? (
             <CashWithdrawalForm sources={withdrawalSources} onDone={onClose} />
+          ) : (
+            <CashExchangeForm onDone={onClose} />
           )}
-          {action === "exchange" && <CashExchangeForm onDone={onClose} />}
         </div>
       </DrawerContent>
     </Drawer>

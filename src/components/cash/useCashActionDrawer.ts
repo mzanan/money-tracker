@@ -2,14 +2,22 @@
 
 import { useState } from "react";
 
-import type { CashAction } from "./cashActionDrawer";
+export type CashAction = "withdraw" | "exchange";
 
 export function useCashActionDrawer() {
   const [action, setAction] = useState<CashAction | null>(null);
+  const [lastAction, setLastAction] = useState<CashAction>("withdraw");
+
+  function open(next: CashAction) {
+    setLastAction(next);
+    setAction(next);
+  }
+
   return {
-    action,
-    openWithdraw: () => setAction("withdraw"),
-    openExchange: () => setAction("exchange"),
+    open: action !== null,
+    shownAction: action ?? lastAction,
+    openWithdraw: () => open("withdraw"),
+    openExchange: () => open("exchange"),
     close: () => setAction(null),
   };
 }
