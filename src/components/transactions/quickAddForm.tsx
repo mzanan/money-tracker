@@ -107,7 +107,7 @@ export function QuickAddForm({
         (withdrawalActive && !withdrawalTotalFilled) ||
         (transferActive && !transferDestination)
       }
-      className="h-11 w-full rounded-xl px-4 sm:w-auto"
+      className="h-11 w-full rounded-xl px-4"
     >
       {pending ? <Loader2Icon className="animate-spin" /> : <PlusIcon />}
       Add
@@ -171,7 +171,6 @@ export function QuickAddForm({
             />
           )}
         </div>
-        <div className="hidden sm:block">{submitButton}</div>
       </div>
 
       <Input
@@ -185,7 +184,7 @@ export function QuickAddForm({
         className="bg-surface-2 h-9 rounded-xl border-none"
       />
 
-      <div className="sm:hidden">{submitButton}</div>
+      {submitButton}
 
       {!withdrawalActive &&
         !transferActive &&
