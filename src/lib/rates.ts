@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 
+import { CRYPTO_CODES } from "@/lib/constants/currencies";
 import { db } from "@/lib/db";
 import { fx_rates_cache } from "@/lib/db/schema";
 import type { FxRates } from "@/types/db";
@@ -48,8 +49,8 @@ export async function fetchRatesFromProvider(): Promise<{
     throw new Error("Invalid response from rates provider");
   }
 
-  const usdt = await fetchUsdtUsdRate();
-  const rates: FxRates = { ...data.rates, USDT: usdt };
+  const crypto = await fetchCryptoRates();
+  const rates: FxRates = { ...data.rates, ...crypto };
 
   return {
     rates,
@@ -62,29 +63,47 @@ export async function fetchRatesFromProvider(): Promise<{
   };
 }
 
-// Bybit's USDC/USDT spot ticker. USDC is the closest pegged proxy for USD that
-// Bybit lists, so lastPrice (USDT per USDC) ≈ USDT per USD.
-const BYBIT_TICKER_URL =
-  "https://api.bybit.com/v5/market/tickers?category=spot&symbol=USDCUSDT";
+const BYBIT_TICKERS_URL =
+  "https://api.bybit.com/v5/market/tickers?category=spot";
 
 interface BybitTickerResponse {
   retCode: number;
   result?: { list?: Array<{ symbol: string; lastPrice: string }> };
 }
 
-async function fetchUsdtUsdRate(): Promise<number> {
+export function cryptoRatesFromTickers(
+  tickers: ReadonlyArray<{ symbol: string; lastPrice: string }>,
+): FxRates {
+  const prices = new Map(
+    tickers.map((ticker) => [ticker.symbol, Number(ticker.lastPrice)]),
+  );
+  const usdcPrice = prices.get("USDCUSDT");
+  const usdtPerUsd =
+    usdcPrice !== undefined && Number.isFinite(usdcPrice) && usdcPrice > 0
+      ? usdcPrice
+      : 1;
+  const rates: FxRates = { USDT: usdtPerUsd };
+  for (const code of CRYPTO_CODES) {
+    if (code === "USDT") continue;
+    const price = prices.get(`${code}USDT`);
+    if (price !== undefined && Number.isFinite(price) && price > 0) {
+      rates[code] = usdtPerUsd / price;
+    }
+  }
+  return rates;
+}
+
+async function fetchCryptoRates(): Promise<FxRates> {
   try {
-    const response = await fetch(BYBIT_TICKER_URL, {
+    const response = await fetch(BYBIT_TICKERS_URL, {
       cache: "no-store",
       signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
     });
-    if (!response.ok) return 1;
+    if (!response.ok) return { USDT: 1 };
     const data = (await response.json()) as BybitTickerResponse;
-    const lastPrice = Number(data.result?.list?.[0]?.lastPrice);
-    if (!Number.isFinite(lastPrice) || lastPrice <= 0) return 1;
-    return lastPrice;
+    return cryptoRatesFromTickers(data.result?.list ?? []);
   } catch {
-    return 1;
+    return { USDT: 1 };
   }
 }
 
@@ -99,6 +118,7 @@ export async function getRates(): Promise<RatesResult> {
   const now = Date.now();
   const isFresh =
     cached &&
+    "USDC" in cached.rates &&
     (cached.next_update_at
       ? new Date(cached.next_update_at).getTime() > now
       : now - new Date(cached.fetched_at).getTime() < FALLBACK_TTL_MS);
