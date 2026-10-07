@@ -144,6 +144,11 @@ export function buildFeeRow(
   return buildTransactionRow({ ...input, kind: "expense" }, ctx);
 }
 
+export function manualFeeNote(note: string | null | undefined): string {
+  const base = note?.trim();
+  return base ? `${base} fee` : "Fee";
+}
+
 export function buildTransferFeeRows({
   userId,
   occurredOn,

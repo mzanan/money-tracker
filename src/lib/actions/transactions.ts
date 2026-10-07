@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { actionErrorMessage } from "@/lib/actionError";
 import { trackActivation } from "@/lib/activation";
-import { amountValidationError } from "@/lib/currency";
+import { amountValidationError, feeAmountError } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
 import { isSyncedExternalId, isWithdrawalExternalId } from "@/lib/externalIds";
@@ -21,7 +21,12 @@ import { getUser } from "@/lib/session";
 import { kindOfSource, normalizeSource } from "@/lib/constants/sources";
 import { dedupeTags } from "@/lib/tags";
 import { BUDGET_MONTH_LOCK_ERROR } from "@/lib/budgetMonth";
-import { buildTransactionRow, normalizeTags } from "@/lib/transactions";
+import {
+  buildFeeRow,
+  buildTransactionRow,
+  manualFeeNote,
+  normalizeTags,
+} from "@/lib/transactions";
 
 export type ActionResult<T = void> =
   | { ok: true; data?: T }
@@ -44,6 +49,16 @@ export async function createTransaction(
   );
   if (amountError) {
     return { ok: false, error: amountError };
+  }
+
+  const fee = parsed.data.fee;
+  if (fee !== undefined) {
+    const feeError = feeAmountError(
+      fee,
+      parsed.data.currency,
+      parsed.data.kind === "income" ? parsed.data.amount : undefined,
+    );
+    if (feeError) return { ok: false, error: feeError };
   }
 
   let source: string | undefined;
@@ -83,7 +98,22 @@ export async function createTransaction(
     { rates, userCurrencies: settings.currencies },
   );
 
-  if (!row) {
+  const feeRow =
+    fee === undefined
+      ? null
+      : buildFeeRow(
+          {
+            userId: user.id,
+            amount: fee,
+            currency: parsed.data.currency,
+            occurredOn: parsed.data.occurredOn,
+            note: manualFeeNote(parsed.data.note),
+            source,
+          },
+          { rates, userCurrencies: settings.currencies },
+        );
+
+  if (!row || (fee !== undefined && !feeRow)) {
     return {
       ok: false,
       error: `No rate available for ${parsed.data.currency}`,
@@ -93,7 +123,7 @@ export async function createTransaction(
   try {
     const [inserted] = await db
       .insert(transactions)
-      .values(row)
+      .values([row, ...(feeRow ? [feeRow] : [])])
       .returning({ id: transactions.id });
     const firstRows = await db
       .select({ id: transactions.id })

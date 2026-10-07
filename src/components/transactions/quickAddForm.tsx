@@ -89,6 +89,9 @@ export function QuickAddForm({
     formId,
     tagsInput,
     setTagsInput,
+    fee,
+    setFee,
+    feeAvailable,
     date,
     setDate,
     pending,
@@ -248,6 +251,16 @@ export function QuickAddForm({
               className="bg-surface-2 h-9 border-none"
             />
           </div>
+
+          {feeAvailable && (
+            <AmountField
+              id={`${formId}-fee`}
+              label="Fee (optional)"
+              value={fee}
+              onChange={setFee}
+              decimals={currencyMeta.decimals}
+            />
+          )}
 
           {transferAvailable && (
             <SwitchRow
