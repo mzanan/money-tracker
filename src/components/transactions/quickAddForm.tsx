@@ -142,10 +142,13 @@ export function QuickAddForm({
       )}
       <div className="flex items-center gap-2">
         <KindToggle kind={kind} onChange={setKind} />
-        <div className="bg-surface-2 relative flex min-w-0 flex-1 items-center rounded-xl pr-1.5">
-          <span className="text-muted-foreground pointer-events-none absolute left-3 text-sm tabular-nums">
-            {currencyMeta.symbol}
-          </span>
+        <div className="bg-surface-2 flex min-w-0 flex-1 items-center rounded-xl pr-1.5">
+          <label
+            htmlFor={`${formId}-amount`}
+            className="text-muted-foreground shrink-0 pl-3 text-sm whitespace-nowrap tabular-nums"
+          >
+            {currencyMeta.symbol.trim()}
+          </label>
           <AmountInput
             id={`${formId}-amount`}
             data-autofocus={autoFocusAmount || undefined}
@@ -155,7 +158,7 @@ export function QuickAddForm({
             onChange={setAmount}
             decimals={currencyMeta.decimals}
             aria-label="Amount"
-            className="h-11 min-w-0 border-none bg-transparent pl-7 text-base focus-visible:ring-0"
+            className="h-11 min-w-0 border-none bg-transparent pl-1.5 text-base focus-visible:ring-0"
             required
           />
           {currencies.length > 1 && (
