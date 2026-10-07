@@ -6,7 +6,12 @@ export const EXTERNAL_ID_PREFIX = {
   withdrawal: "withdrawal:",
   reminder: "reminder:",
   transferFee: "transferfee:",
+  manualFee: "manualfee:",
 } as const;
+
+export function manualFeeExternalId(parentId: string): string {
+  return `${EXTERNAL_ID_PREFIX.manualFee}${parentId}`;
+}
 
 export const TRANSFER_FEE_DEST_SUFFIX = ":dest";
 

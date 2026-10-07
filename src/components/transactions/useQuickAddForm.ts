@@ -29,7 +29,7 @@ import { useTransferDraft } from "./useTransferDraft";
 import { useWithdrawalDraft } from "./useWithdrawalDraft";
 import { useUiStore } from "@/stores/uiStore";
 
-import { quickAddExtrasLabel } from "./quickAddExtras";
+import { quickAddExtrasLabel } from "@/lib/quickAddExtras";
 
 import type { Kind } from "./kindToggle";
 
@@ -219,13 +219,12 @@ export function useQuickAddForm(source: string, onAdded?: () => void) {
       return;
     }
 
-    const feeAmount = fee.trim() ? parseAmountInput(fee) : null;
-    if (fee.trim() && feeAmount === null) {
-      toast.error("Enter a valid fee");
+    const feeParsed = fee.trim() ? parseAndRoundAmount(fee, currency) : null;
+    if (feeParsed && !feeParsed.ok) {
+      toast.error(`Fee: ${feeParsed.error}`);
       return;
     }
-    const roundedFee =
-      feeAmount === null ? undefined : roundForCurrency(feeAmount, currency);
+    const roundedFee = feeParsed?.amount;
 
     run(
       () =>

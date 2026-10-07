@@ -144,9 +144,12 @@ export function buildFeeRow(
   return buildTransactionRow({ ...input, kind: "expense" }, ctx);
 }
 
+const NOTE_MAX_LENGTH = 280;
+const FEE_NOTE_SUFFIX = " fee";
+
 export function manualFeeNote(note: string | null | undefined): string {
-  const base = note?.trim();
-  return base ? `${base} fee` : "Fee";
+  const base = note?.trim().slice(0, NOTE_MAX_LENGTH - FEE_NOTE_SUFFIX.length);
+  return base ? `${base}${FEE_NOTE_SUFFIX}` : "Fee";
 }
 
 export function buildTransferFeeRows({
