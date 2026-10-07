@@ -5,7 +5,6 @@ import { MapPinIcon } from "lucide-react";
 
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import { formatMoney } from "@/lib/currency";
-import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,7 @@ export function SpendingBreakdown(props: Props) {
     selected,
     onSelect,
     breakdown,
-    hideAmounts,
+    mask,
     baseCurrency,
   } = useSpendingBreakdown(props);
 
@@ -107,10 +106,8 @@ export function SpendingBreakdown(props: Props) {
                   {item.label}
                 </span>
                 <span className="shrink-0 text-sm font-semibold tabular-nums">
-                  {hideAmounts
-                    ? HIDDEN_AMOUNT
-                    : formatMoney(item.amount, baseCurrency)}
-                  <span className="text-muted-foreground ml-1.5 text-caption font-normal">
+                  {mask(formatMoney(item.amount, baseCurrency))}
+                  <span className="text-muted-foreground text-caption ml-1.5 font-normal">
                     {Math.round(item.pct)}%
                   </span>
                 </span>

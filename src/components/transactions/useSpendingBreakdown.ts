@@ -33,7 +33,7 @@ export function useSpendingBreakdown({
   limit,
 }: Params) {
   const settings = useSettings();
-  const { hideAmounts } = useHideAmounts();
+  const { mask } = useHideAmounts();
   const [mode, setMode] = useState<Mode>("tag");
 
   const selected = mode === "tag" ? selectedTag : selectedPlace;
@@ -84,7 +84,7 @@ export function useSpendingBreakdown({
     selected,
     onSelect,
     breakdown,
-    hideAmounts,
+    mask,
     baseCurrency: settings.base_currency,
   };
 }

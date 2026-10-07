@@ -10,7 +10,6 @@ import { useSettings } from "@/hooks/useSettings";
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { formatMoney } from "@/lib/currency";
 import { formatYearMonthShort } from "@/lib/dates";
-import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { periodTotals, soleCurrencyOf } from "@/lib/totals";
 import { cn } from "@/lib/utils";
 
@@ -61,7 +60,7 @@ export function BalanceHero({
   daySpend,
 }: Props) {
   const settings = useSettings();
-  const { hideAmounts } = useHideAmounts();
+  const { mask } = useHideAmounts();
   const displayCurrency =
     soleCurrencyOf(lifetimeTransactions) ?? settings.base_currency;
 
@@ -138,18 +137,16 @@ export function BalanceHero({
               totalPositive ? "text-foreground" : "text-expense",
             )}
           >
-            {hideAmounts ? HIDDEN_AMOUNT : totalSigned}
+            {mask(totalSigned)}
           </p>
 
           <div className="border-border mt-9 border-t pt-6">
             <div className="grid grid-cols-2 gap-3">
               <MiniStat
                 label="In"
-                value={
-                  hideAmounts
-                    ? HIDDEN_AMOUNT
-                    : `+${formatMoney(monthTotals.income, displayCurrency)}`
-                }
+                value={mask(
+                  `+${formatMoney(monthTotals.income, displayCurrency)}`,
+                )}
                 icon={<ArrowDownRightIcon className="size-4" />}
                 tone="income"
                 active={selectedKind === "income"}
@@ -158,11 +155,9 @@ export function BalanceHero({
               />
               <MiniStat
                 label="Out"
-                value={
-                  hideAmounts
-                    ? HIDDEN_AMOUNT
-                    : `-${formatMoney(monthTotals.expense, displayCurrency)}`
-                }
+                value={mask(
+                  `-${formatMoney(monthTotals.expense, displayCurrency)}`,
+                )}
                 icon={<ArrowUpRightIcon className="size-4" />}
                 tone="expense"
                 active={selectedKind === "expense"}
@@ -181,7 +176,7 @@ export function BalanceHero({
                   monthPositive ? "text-foreground" : "text-expense",
                 )}
               >
-                {hideAmounts ? HIDDEN_AMOUNT : monthSigned}
+                {mask(monthSigned)}
               </span>
             </div>
           </div>

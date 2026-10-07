@@ -6,7 +6,6 @@ import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useSettings } from "@/hooks/useSettings";
 import { formatMoney } from "@/lib/currency";
 import { formatDayShort } from "@/lib/dates";
-import { HIDDEN_AMOUNT } from "@/lib/preferences";
 
 import { Button } from "@/components/ui/button";
 import { IconCircle } from "@/components/ui/iconCircle";
@@ -25,16 +24,14 @@ export function UnusualExpensesCard({
   recurringNotes: Set<string>;
 }) {
   const settings = useSettings();
-  const { hideAmounts } = useHideAmounts();
+  const { mask } = useHideAmounts();
   const { rows, isRowPending, markOneOff, markRegular } = useUnusualExpenses(
     monthTransactions,
     recurringNotes,
   );
 
   function money(value: number) {
-    return hideAmounts
-      ? HIDDEN_AMOUNT
-      : formatMoney(value, settings.base_currency);
+    return mask(formatMoney(value, settings.base_currency));
   }
 
   if (rows.length === 0) return null;

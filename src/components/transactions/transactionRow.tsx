@@ -17,7 +17,6 @@ import {
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { formatMoney } from "@/lib/currency";
 import { formatDayShort } from "@/lib/dates";
-import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { computeNextDue } from "@/lib/reminders";
 import { cn } from "@/lib/utils";
 
@@ -99,7 +98,7 @@ export function TransactionRow({
     stepApi,
     runAfterMenuClose,
   } = useTransactionRow(tx, showDate, showBudgetMonthBadges, recurringNotes);
-  const { hideAmounts } = useHideAmounts();
+  const { hideAmounts, mask } = useHideAmounts();
 
   function openEdit() {
     if (stepApi) {
@@ -298,13 +297,13 @@ export function TransactionRow({
                 : "text-foreground",
           )}
         >
-          {hideAmounts
-            ? HIDDEN_AMOUNT
-            : `${sign}${
-                inDisplay !== null
-                  ? formatMoney(inDisplay, baseCurrency)
-                  : formatMoney(tx.amount_original, tx.currency_original)
-              }`}
+          {mask(
+            `${sign}${
+              inDisplay !== null
+                ? formatMoney(inDisplay, baseCurrency)
+                : formatMoney(tx.amount_original, tx.currency_original)
+            }`,
+          )}
         </span>
         {showConverted && !hideAmounts && (
           <span className="text-muted-foreground text-caption mt-0.5 tabular-nums">

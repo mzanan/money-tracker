@@ -1,6 +1,9 @@
+"use client";
+
 import { CheckIcon } from "lucide-react";
 
 import { IconCircle } from "@/components/ui/iconCircle";
+import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { formatMoney } from "@/lib/currency";
 import { formatDateShort } from "@/lib/dates";
 import { reminderMetaSegments } from "@/lib/reminders";
@@ -13,6 +16,7 @@ export function CompletedReminderRow({
   reminder: RecurringPayment;
 }) {
   const metaSegments = reminderMetaSegments(reminder);
+  const { mask } = useHideAmounts();
 
   return (
     <li className="flex items-center gap-3 rounded-2xl px-3 py-3 opacity-70">
@@ -27,7 +31,7 @@ export function CompletedReminderRow({
           </span>
           {reminder.amount != null && (
             <span className="shrink-0 text-sm font-semibold tabular-nums">
-              {formatMoney(reminder.amount, reminder.currency ?? "USD")}
+              {mask(formatMoney(reminder.amount, reminder.currency ?? "USD"))}
             </span>
           )}
         </div>
@@ -36,7 +40,7 @@ export function CompletedReminderRow({
             {metaSegments.join(" · ")}
           </span>
           {reminder.last_paid_on && (
-            <span className="text-muted-foreground shrink-0 text-caption font-medium tabular-nums">
+            <span className="text-muted-foreground text-caption shrink-0 font-medium tabular-nums">
               Paid {formatDateShort(reminder.last_paid_on)}
             </span>
           )}

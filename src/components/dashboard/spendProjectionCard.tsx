@@ -7,7 +7,6 @@ import { Surface } from "@/components/ui/surface";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useSettings } from "@/hooks/useSettings";
 import { formatMoney } from "@/lib/currency";
-import { HIDDEN_AMOUNT } from "@/lib/preferences";
 
 import { useSpendProjection } from "./useSpendProjection";
 
@@ -29,7 +28,7 @@ export function SpendProjectionCard({
   recurringNotes: Set<string>;
 }) {
   const settings = useSettings();
-  const { hideAmounts } = useHideAmounts();
+  const { mask } = useHideAmounts();
   const {
     isCurrentMonth,
     projection,
@@ -46,9 +45,7 @@ export function SpendProjectionCard({
   });
 
   function money(amount: number) {
-    return hideAmounts
-      ? HIDDEN_AMOUNT
-      : formatMoney(amount, settings.base_currency);
+    return mask(formatMoney(amount, settings.base_currency));
   }
 
   return (
