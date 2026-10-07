@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import type { ImageImportMode } from "@/lib/imageExtract";
+import { cn } from "@/lib/utils";
 
 import { ApiKeyRequiredDialog } from "@/components/ui/apiKeyRequiredNotice";
 import {
@@ -25,6 +26,7 @@ import { ImageExtractLoading } from "@/components/screenshot/imageExtractLoading
 import { ScreenshotImporter } from "@/components/screenshot/screenshotImporter";
 import { useSettings } from "@/hooks/useSettings";
 
+import { SourceTabAction } from "./sourceTabAction";
 import { useImportFromImage } from "./useImportFromImage";
 
 const OPTIONS: Array<{
@@ -49,8 +51,10 @@ const OPTIONS: Array<{
 
 export function ImportFromImage({
   existingSources,
+  compact = false,
 }: {
   existingSources: string[];
+  compact?: boolean;
 }) {
   const settings = useSettings();
   const {
@@ -68,18 +72,16 @@ export function ImportFromImage({
   } = useImportFromImage();
 
   const trigger = (
-    <button
-      type="button"
-      disabled={extracting}
-      className="text-muted-foreground hover:text-foreground inline-flex shrink-0 items-center gap-1 py-3 text-sm font-medium transition-colors disabled:opacity-50"
-    >
+    <SourceTabAction disabled={extracting}>
       {extracting ? (
         <Loader2Icon className="size-3.5 animate-spin" />
       ) : (
         <ImageUpIcon className="size-3.5" />
       )}
-      Import from image
-    </button>
+      <span data-collapsible-label className={cn(compact && "sr-only")}>
+        Import from image
+      </span>
+    </SourceTabAction>
   );
 
   if (!settings.hasAiKey) {

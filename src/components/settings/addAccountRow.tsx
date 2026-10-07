@@ -2,21 +2,13 @@
 
 import { CheckIcon, Loader2Icon, PlusIcon, XIcon } from "lucide-react";
 
-import { upsertAccountLabel } from "@/lib/actions/accounts";
-import { useInlineEdit } from "@/hooks/useInlineEdit";
-import { useServerAction } from "@/hooks/useServerAction";
+import { useAddAccount } from "@/hooks/useAddAccount";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export function AddAccountRow() {
-  const { run, pending } = useServerAction();
-  const edit = useInlineEdit((name) => {
-    if (!name) return;
-    run(() => upsertAccountLabel(name, name), {
-      success: `Added ${name}`,
-    });
-  });
+  const { edit, pending } = useAddAccount();
 
   if (edit.editing) {
     return (
