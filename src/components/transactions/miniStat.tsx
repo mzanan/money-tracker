@@ -54,7 +54,7 @@ export function MiniStat({
         {icon}
       </IconCircle>
       <div className="grid">
-        <span className="text-muted-foreground text-[10px] tracking-wide uppercase">
+        <span className="text-muted-foreground text-micro tracking-wide uppercase">
           {label}
         </span>
         <span className="text-sm font-semibold tabular-nums">{value}</span>

@@ -96,7 +96,7 @@ export function DashboardView({
                   month.hasData ? "cursor-pointer" : "cursor-default",
                 )}
               >
-                <span className="text-muted-foreground text-[10px] tabular-nums">
+                <span className="text-muted-foreground text-micro tabular-nums">
                   {month.hasData ? money(month.expense, true) : ""}
                 </span>
                 <span className="flex h-24 w-full items-end justify-center">
@@ -116,7 +116,7 @@ export function DashboardView({
                 </span>
                 <span
                   className={cn(
-                    "text-[10px] font-medium",
+                    "text-micro font-medium",
                     !month.hasData
                       ? "text-muted-foreground"
                       : month.month === v.visibleYearMonth

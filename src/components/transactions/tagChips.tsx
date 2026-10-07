@@ -50,7 +50,7 @@ export function TagChips({
           />
         ))}
         {rest.length > 4 && (
-          <span className="text-muted-foreground text-[10px] font-medium">
+          <span className="text-muted-foreground text-micro font-medium">
             +{rest.length - 4}
           </span>
         )}

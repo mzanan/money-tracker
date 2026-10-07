@@ -106,7 +106,7 @@ export function DaySpendView({ daySpend, onToday }: Props) {
             );
           })}
         </div>
-        <div className="text-muted-foreground mt-1.5 flex justify-between text-[10px] tabular-nums">
+        <div className="text-muted-foreground mt-1.5 flex justify-between text-micro tabular-nums">
           <span>1</span>
           <span>{daysInMonth.length}</span>
         </div>

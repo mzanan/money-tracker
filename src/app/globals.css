@@ -264,6 +264,9 @@
 @utility text-caption {
   @apply text-[11px];
 }
+@utility text-micro {
+  @apply text-[10px];
+}
 @utility bottom-consent {
   bottom: calc(var(--consent-offset) + env(safe-area-inset-bottom));
 }
