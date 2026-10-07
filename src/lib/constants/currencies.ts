@@ -4,6 +4,7 @@ export interface CurrencyMeta {
   symbol: string;
   /** ISO 4217 minor unit decimals (VND/JPY/KRW/CLP = 0, not 2). */
   decimals: number;
+  crypto?: boolean;
 }
 
 export const CURRENCIES: CurrencyMeta[] = [
@@ -71,38 +72,55 @@ export const CURRENCIES: CurrencyMeta[] = [
   { code: "DOP", name: "Dominican Peso", symbol: "RD$", decimals: 2 },
   { code: "GTQ", name: "Guatemalan Quetzal", symbol: "Q", decimals: 2 },
   { code: "VES", name: "Venezuelan Bolivar", symbol: "Bs.S ", decimals: 2 },
-  { code: "USDT", name: "Tether USD", symbol: "USDT ", decimals: 2 },
-  { code: "USDC", name: "USD Coin", symbol: "USDC ", decimals: 2 },
-  { code: "BTC", name: "Bitcoin", symbol: "BTC ", decimals: 8 },
-  { code: "ETH", name: "Ethereum", symbol: "ETH ", decimals: 8 },
-  { code: "SOL", name: "Solana", symbol: "SOL ", decimals: 6 },
-  { code: "BNB", name: "BNB", symbol: "BNB ", decimals: 6 },
-  { code: "XRP", name: "XRP", symbol: "XRP ", decimals: 6 },
-  { code: "ADA", name: "Cardano", symbol: "ADA ", decimals: 6 },
-  { code: "DOGE", name: "Dogecoin", symbol: "DOGE ", decimals: 6 },
-  { code: "TRX", name: "TRON", symbol: "TRX ", decimals: 6 },
-  { code: "LTC", name: "Litecoin", symbol: "LTC ", decimals: 8 },
-  { code: "AVAX", name: "Avalanche", symbol: "AVAX ", decimals: 6 },
-  { code: "DOT", name: "Polkadot", symbol: "DOT ", decimals: 6 },
-  { code: "LINK", name: "Chainlink", symbol: "LINK ", decimals: 6 },
+  {
+    code: "USDT",
+    name: "Tether USD",
+    symbol: "USDT ",
+    decimals: 2,
+    crypto: true,
+  },
+  {
+    code: "USDC",
+    name: "USD Coin",
+    symbol: "USDC ",
+    decimals: 2,
+    crypto: true,
+  },
+  { code: "BTC", name: "Bitcoin", symbol: "BTC ", decimals: 8, crypto: true },
+  { code: "ETH", name: "Ethereum", symbol: "ETH ", decimals: 8, crypto: true },
+  { code: "SOL", name: "Solana", symbol: "SOL ", decimals: 6, crypto: true },
+  { code: "BNB", name: "BNB", symbol: "BNB ", decimals: 6, crypto: true },
+  { code: "XRP", name: "XRP", symbol: "XRP ", decimals: 6, crypto: true },
+  { code: "ADA", name: "Cardano", symbol: "ADA ", decimals: 6, crypto: true },
+  {
+    code: "DOGE",
+    name: "Dogecoin",
+    symbol: "DOGE ",
+    decimals: 6,
+    crypto: true,
+  },
+  { code: "TRX", name: "TRON", symbol: "TRX ", decimals: 6, crypto: true },
+  { code: "LTC", name: "Litecoin", symbol: "LTC ", decimals: 8, crypto: true },
+  {
+    code: "AVAX",
+    name: "Avalanche",
+    symbol: "AVAX ",
+    decimals: 6,
+    crypto: true,
+  },
+  { code: "DOT", name: "Polkadot", symbol: "DOT ", decimals: 6, crypto: true },
+  {
+    code: "LINK",
+    name: "Chainlink",
+    symbol: "LINK ",
+    decimals: 6,
+    crypto: true,
+  },
 ];
 
-export const CRYPTO_CODES: ReadonlyArray<string> = [
-  "USDT",
-  "USDC",
-  "BTC",
-  "ETH",
-  "SOL",
-  "BNB",
-  "XRP",
-  "ADA",
-  "DOGE",
-  "TRX",
-  "LTC",
-  "AVAX",
-  "DOT",
-  "LINK",
-];
+export const CRYPTO_CODES: ReadonlyArray<string> = CURRENCIES.filter(
+  (currency) => currency.crypto,
+).map((currency) => currency.code);
 
 export const CURRENCY_MAP: Record<string, CurrencyMeta> = Object.fromEntries(
   CURRENCIES.map((currency) => [currency.code, currency]),

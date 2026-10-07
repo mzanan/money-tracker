@@ -4,6 +4,7 @@ import {
   INCOME_DIRECTIONS,
   OK_STATUSES,
 } from "@/lib/csv/constants";
+import { getCurrency } from "@/lib/constants/currencies";
 import { parseAmount, parseDate, parseDateTime } from "@/lib/csv/parsing";
 import type { CsvMapping } from "@/lib/csv/presets";
 
@@ -41,6 +42,7 @@ export function normalizeRowDetailed(
   if (!currency) {
     return { ok: false, reason: "missing currency" };
   }
+  const { decimals } = getCurrency(currency);
 
   const description = mapping.descriptionCol
     ? (raw[mapping.descriptionCol] ?? "").trim() || null
@@ -51,7 +53,7 @@ export function normalizeRowDetailed(
 
   if (mapping.signConvention === "direction-column") {
     const dir = (raw[mapping.directionCol] ?? "").trim().toLowerCase();
-    const parsed = parseAmount(raw[mapping.amountCol]);
+    const parsed = parseAmount(raw[mapping.amountCol], decimals);
     if (parsed === null || parsed === 0) {
       return {
         ok: false,
@@ -65,8 +67,8 @@ export function normalizeRowDetailed(
       return { ok: false, reason: `unrecognized direction: "${dir}"` };
     }
   } else if (mapping.signConvention === "debit-credit-cols") {
-    const debit = parseAmount(raw[mapping.debitCol]);
-    const credit = parseAmount(raw[mapping.creditCol]);
+    const debit = parseAmount(raw[mapping.debitCol], decimals);
+    const credit = parseAmount(raw[mapping.creditCol], decimals);
     if (debit && debit > 0) {
       kind = "expense";
       amount = Math.abs(debit);
@@ -77,7 +79,7 @@ export function normalizeRowDetailed(
       return { ok: false, reason: "both debit and credit empty/zero" };
     }
   } else {
-    const parsed = parseAmount(raw[mapping.amountCol]);
+    const parsed = parseAmount(raw[mapping.amountCol], decimals);
     if (parsed === null || parsed === 0) {
       return {
         ok: false,
@@ -101,7 +103,7 @@ export function normalizeRowDetailed(
     : null;
 
   const feeAmount = mapping.feeCol
-    ? (parseAmount(raw[mapping.feeCol]) ?? undefined)
+    ? (parseAmount(raw[mapping.feeCol], decimals) ?? undefined)
     : undefined;
 
   return {

@@ -1,8 +1,10 @@
-import { eq } from "drizzle-orm";
-
-import { CRYPTO_CODES } from "@/lib/constants/currencies";
-import { db } from "@/lib/db";
-import { fx_rates_cache } from "@/lib/db/schema";
+import { readFxRatesCache, writeFxRatesCache } from "@/lib/data/fxRatesCache";
+import {
+  cryptoRatesFromTickers,
+  cryptoRatesIn,
+  hasMissingCryptoRates,
+  type SpotTicker,
+} from "@/lib/fx/cryptoRates";
 import type { FxRates } from "@/types/db";
 
 const PROVIDER_URL = "https://open.er-api.com/v6/latest/USD";
@@ -32,7 +34,7 @@ interface ProviderResponse {
   time_next_update_unix?: number;
 }
 
-export async function fetchRatesFromProvider(): Promise<{
+export async function fetchRatesFromProvider(previous?: FxRates): Promise<{
   rates: FxRates;
   providerUpdatedAt: string | null;
   nextUpdateAt: string | null;
@@ -50,7 +52,13 @@ export async function fetchRatesFromProvider(): Promise<{
   }
 
   const crypto = await fetchCryptoRates();
-  const rates: FxRates = { ...data.rates, ...crypto };
+  const rates: FxRates = {
+    ...data.rates,
+    USDT: 1,
+    USDC: 1,
+    ...cryptoRatesIn(previous),
+    ...(crypto ?? {}),
+  };
 
   return {
     rates,
@@ -65,94 +73,61 @@ export async function fetchRatesFromProvider(): Promise<{
 
 const BYBIT_TICKERS_URL =
   "https://api.bybit.com/v5/market/tickers?category=spot";
+const CRYPTO_RETRY_MS = 10 * 60 * 1000;
 
 interface BybitTickerResponse {
   retCode: number;
-  result?: { list?: Array<{ symbol: string; lastPrice: string }> };
+  result?: { list?: SpotTicker[] };
 }
 
-export function cryptoRatesFromTickers(
-  tickers: ReadonlyArray<{ symbol: string; lastPrice: string }>,
-): FxRates {
-  const prices = new Map(
-    tickers.map((ticker) => [ticker.symbol, Number(ticker.lastPrice)]),
-  );
-  const usdcPrice = prices.get("USDCUSDT");
-  const usdtPerUsd =
-    usdcPrice !== undefined && Number.isFinite(usdcPrice) && usdcPrice > 0
-      ? usdcPrice
-      : 1;
-  const rates: FxRates = { USDT: usdtPerUsd };
-  for (const code of CRYPTO_CODES) {
-    if (code === "USDT") continue;
-    const price = prices.get(`${code}USDT`);
-    if (price !== undefined && Number.isFinite(price) && price > 0) {
-      rates[code] = usdtPerUsd / price;
-    }
-  }
-  return rates;
-}
-
-async function fetchCryptoRates(): Promise<FxRates> {
+async function fetchCryptoRates(): Promise<FxRates | null> {
   try {
     const response = await fetch(BYBIT_TICKERS_URL, {
       cache: "no-store",
       signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
     });
-    if (!response.ok) return { USDT: 1 };
+    if (!response.ok) return null;
     const data = (await response.json()) as BybitTickerResponse;
-    return cryptoRatesFromTickers(data.result?.list ?? []);
+    const list = data.result?.list;
+    return list && list.length > 0 ? cryptoRatesFromTickers(list) : null;
   } catch {
-    return { USDT: 1 };
+    return null;
   }
 }
 
 export async function getRates(): Promise<RatesResult> {
-  const cached = await db
-    .select()
-    .from(fx_rates_cache)
-    .where(eq(fx_rates_cache.base, "USD"))
-    .limit(1)
-    .then((rows) => rows[0]);
+  const cached = await readFxRatesCache();
 
   const now = Date.now();
-  const isFresh =
+  const fetchedAgo = cached ? now - new Date(cached.fetchedAt).getTime() : 0;
+  const notExpired =
     cached &&
-    "USDC" in cached.rates &&
-    (cached.next_update_at
-      ? new Date(cached.next_update_at).getTime() > now
-      : now - new Date(cached.fetched_at).getTime() < FALLBACK_TTL_MS);
+    (cached.nextUpdateAt
+      ? new Date(cached.nextUpdateAt).getTime() > now
+      : fetchedAgo < FALLBACK_TTL_MS);
+  const cryptoRetryDue =
+    cached !== null &&
+    hasMissingCryptoRates(cached.rates) &&
+    fetchedAgo >= CRYPTO_RETRY_MS;
 
-  if (cached && isFresh) {
+  if (cached && notExpired && !cryptoRetryDue) {
     return {
       base: "USD",
       rates: cached.rates,
-      fetchedAt: cached.fetched_at,
+      fetchedAt: cached.fetchedAt,
       stale: false,
     };
   }
 
   try {
-    const fresh = await fetchRatesFromProvider();
+    const fresh = await fetchRatesFromProvider(cached?.rates);
     const fetchedAt = new Date().toISOString();
-    await db
-      .insert(fx_rates_cache)
-      .values({
-        base: "USD",
-        rates: fresh.rates,
-        fetched_at: fetchedAt,
-        provider_updated_at: fresh.providerUpdatedAt,
-        next_update_at: fresh.nextUpdateAt,
-      })
-      .onConflictDoUpdate({
-        target: fx_rates_cache.base,
-        set: {
-          rates: fresh.rates,
-          fetched_at: fetchedAt,
-          provider_updated_at: fresh.providerUpdatedAt,
-          next_update_at: fresh.nextUpdateAt,
-        },
-      });
+    await writeFxRatesCache({
+      rates: fresh.rates,
+      fetchedAt,
+      providerUpdatedAt: fresh.providerUpdatedAt,
+      nextUpdateAt: fresh.nextUpdateAt,
+    });
     return {
       base: "USD",
       rates: fresh.rates,
@@ -160,13 +135,12 @@ export async function getRates(): Promise<RatesResult> {
       stale: false,
     };
   } catch (error) {
-    // Provider failed: serve stale cache if we have one; otherwise error out.
     if (cached) {
       console.warn("Rates provider down, serving stale cache", error);
       return {
         base: "USD",
         rates: cached.rates,
-        fetchedAt: cached.fetched_at,
+        fetchedAt: cached.fetchedAt,
         stale: true,
       };
     }

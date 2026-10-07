@@ -3,7 +3,10 @@ import { z } from "zod";
 
 import type { VisionModelConfig } from "@/lib/ai/provider";
 import { resolveVisionModel } from "@/lib/ai/provider";
+import { CRYPTO_CODES } from "@/lib/constants/currencies";
 import { isValidCalendarDate } from "@/lib/dates";
+
+const CRYPTO_TICKERS = CRYPTO_CODES.join(", ");
 
 const DetectedTransactionSchema = z.object({
   app: z
@@ -24,7 +27,7 @@ const DetectedTransactionSchema = z.object({
     .min(3)
     .max(5)
     .describe(
-      "ISO 4217 code (USD, EUR, VND, ARS, etc.). For crypto use the ticker (USDT, USDC, BTC, ETH...); USDT if shown as ₮. Infer from symbol when missing.",
+      `ISO 4217 code (USD, EUR, VND, ARS, etc.). For crypto use the ticker (${CRYPTO_TICKERS}); USDT if shown as ₮. Infer from symbol when missing.`,
     ),
   occurredOn: z
     .string()
@@ -69,7 +72,7 @@ Rules:
 - A single payment often shows a second, converted amount in another currency (in parentheses, on a second line, or as "about X USD"). That is ONE movement: emit exactly ONE item with the amount and currency the merchant actually charged (the primary amount in the notification). Never emit a separate item for the converted amount.
 - Ignore non-financial notifications (chat, social, calendar, weather). Count them in "ignored".
 - amount must be positive, no sign. Use kind=expense for outgoing money, kind=income for incoming.
-- currency must be an ISO 4217 code, or a crypto ticker (USDT, USDC, BTC, ETH...). If only a symbol is shown, infer (e.g. $ in a Wise notif = USD unless context says otherwise, € = EUR, ₫ = VND, ₮ = USDT, ¥ = JPY).
+- currency must be an ISO 4217 code, or a crypto ticker (${CRYPTO_TICKERS}). If only a symbol is shown, infer (e.g. $ in a Wise notif = USD unless context says otherwise, € = EUR, ₫ = VND, ₮ = USDT, ¥ = JPY).
 - occurredOn and dateText: default is null for BOTH. Only set them when an explicit calendar date (day and month, e.g. "Jul 6" or "06/07") is printed inside the notification text itself. dateText must be the date copied verbatim from the image; occurredOn is that same date converted to YYYY-MM-DD. Never derive a date from a clock time, a relative phrase ("2h ago", "yesterday", "just now"), the screenshot's status bar, or your own knowledge. If you cannot quote the printed date in dateText, occurredOn must be null.
 - description: short merchant or payee name. Strip prefixes like "at", "to", "from".
 - confidence:

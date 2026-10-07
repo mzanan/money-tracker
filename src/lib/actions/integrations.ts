@@ -286,7 +286,9 @@ export async function setIntegrationAutoSync(
 
 export async function syncIntegration(
   provider: IntegrationProvider,
-): Promise<ActionResult<{ imported: number; skipped: number; absorbed: number }>> {
+): Promise<
+  ActionResult<{ imported: number; skipped: number; absorbed: number }>
+> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
   if (!integrationProviderSchema.safeParse(provider).success) {
@@ -377,11 +379,13 @@ export async function syncIntegration(
       skippedNoRate += 1;
       continue;
     }
+    const amount = roundForCurrency(tx.amount, tx.currency);
+    if (amount <= 0) continue;
     const row = buildTransactionRow(
       {
         userId: user.id,
         kind: tx.kind,
-        amount: roundForCurrency(tx.amount, tx.currency),
+        amount,
         currency: tx.currency,
         occurredOn: dateInTz(tx.occurredAt, timezone),
         occurredAt: tx.occurredAt,

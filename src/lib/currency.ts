@@ -107,7 +107,10 @@ export function formatAmountDisplay(raw: string): string {
     : formattedInteger;
 }
 
-export function countSignificantAmountChars(text: string, upTo: number): number {
+export function countSignificantAmountChars(
+  text: string,
+  upTo: number,
+): number {
   let count = 0;
   for (let i = 0; i < upTo && i < text.length; i++) {
     if (/[\d.]/.test(text[i])) count++;
@@ -146,7 +149,9 @@ export function formatMoney(
   const num = new Intl.NumberFormat(
     "en-US",
     options.compact
-      ? { notation: "compact", maximumFractionDigits: abs >= 1000 ? 1 : 0 }
+      ? abs > 0 && abs < 1
+        ? { maximumSignificantDigits: 2 }
+        : { notation: "compact", maximumFractionDigits: abs >= 1000 ? 1 : 0 }
       : { minimumFractionDigits: decimals, maximumFractionDigits: decimals },
   ).format(abs);
   const sign = amount < 0 ? "-" : options.signed ? "+" : "";
