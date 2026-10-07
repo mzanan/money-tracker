@@ -11,27 +11,41 @@ export interface SessionUser {
   name: string | null;
 }
 
-export const getUser = cache(async (): Promise<SessionUser | null> => {
+export type SessionResult =
+  | { status: "ok"; user: SessionUser }
+  | { status: "none" }
+  | { status: "error" };
+
+export const getSessionResult = cache(async (): Promise<SessionResult> => {
   let session;
   try {
     session = await auth.api.getSession({ headers: await headers() });
   } catch (error) {
     if (isDynamicServerError(error)) throw error;
-    console.error("getUser: auth.api.getSession failed", error);
-    return null;
+    console.error("getSessionResult: auth.api.getSession failed", error);
+    return { status: "error" };
   }
-  if (!session?.user) return null;
+  if (!session?.user) return { status: "none" };
   return {
-    id: session.user.id,
-    email: session.user.email,
-    name: session.user.name ?? null,
+    status: "ok",
+    user: {
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name ?? null,
+    },
   };
 });
+
+export async function getUser(): Promise<SessionUser | null> {
+  const result = await getSessionResult();
+  return result.status === "ok" ? result.user : null;
+}
 
 export const SESSION_EXPIRED_PATH = "/api/session/expired";
 
 export async function requireUser(): Promise<SessionUser> {
-  const user = await getUser();
-  if (!user) redirect(SESSION_EXPIRED_PATH);
-  return user;
+  const result = await getSessionResult();
+  if (result.status === "error") throw new Error("Session lookup failed");
+  if (result.status === "none") redirect(SESSION_EXPIRED_PATH);
+  return result.user;
 }
