@@ -1,4 +1,5 @@
-const VERSION = "v2";
+const VERSION = "v3";
+const STATIC_ASSET = /\.(?:js|css|woff2?|png|jpg|jpeg|gif|webp|svg|ico)$/;
 const SHELL_CACHE = `shell-${VERSION}`;
 
 self.addEventListener("install", (event) => {
@@ -23,10 +24,10 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith("/api/")) return;
   if (
-    url.pathname.startsWith("/api/") ||
-    url.pathname.startsWith("/_next/data/") ||
-    url.pathname.startsWith("/relay/")
+    !url.pathname.startsWith("/_next/static/") &&
+    !STATIC_ASSET.test(url.pathname)
   ) {
     return;
   }
