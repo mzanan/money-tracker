@@ -22,9 +22,11 @@ import {
   roundForCurrency,
 } from "@/lib/currency";
 import { todayInTz } from "@/lib/dates";
+import type { EntrySuggestion } from "@/lib/entrySuggestions";
 import { withdrawalChargedAmount } from "@/lib/withdrawal";
 import { parseFeeDrafts } from "@/lib/transfer";
 
+import { useEntrySuggestions } from "./useEntrySuggestions";
 import { useTransferDraft } from "./useTransferDraft";
 import { useWithdrawalDraft } from "./useWithdrawalDraft";
 import { useUiStore } from "@/stores/uiStore";
@@ -33,7 +35,21 @@ import { quickAddExtrasLabel } from "@/lib/quickAddExtras";
 
 import type { Kind } from "./kindToggle";
 
-export function useQuickAddForm(source: string, onAdded?: () => void) {
+interface QuickAddFormOptions {
+  source: string;
+  onAdded?: () => void;
+  entrySuggestions: EntrySuggestion[];
+  accountOptions: string[];
+  onSourceChange?: (source: string) => void;
+}
+
+export function useQuickAddForm({
+  source,
+  onAdded,
+  entrySuggestions,
+  accountOptions,
+  onSourceChange,
+}: QuickAddFormOptions) {
   const settings = useSettings();
   const timezone = useTimezone();
   const ratesQuery = useRates();
@@ -88,13 +104,40 @@ export function useQuickAddForm(source: string, onAdded?: () => void) {
     currencies: settings.currencies,
   });
 
-  if (source !== lastSource) {
-    setLastSource(source);
+  function resetModes() {
     setWithdrawal(false);
     withdrawalDraft.reset();
     setTransfer(false);
     transferDraft.reset();
   }
+
+  if (source !== lastSource) {
+    setLastSource(source);
+    resetModes();
+  }
+
+  const {
+    suggestions,
+    applySuggestion,
+    inputHandlers: descriptionHandlers,
+  } = useEntrySuggestions({
+    entrySuggestions,
+    description,
+    disabled: transferActive || withdrawalActive,
+    amount,
+    currencies: settings.currencies,
+    source,
+    accountOptions,
+    onSourceChange,
+    fill: {
+      setDescription,
+      setKind,
+      setTagsInput,
+      setCurrency,
+      setAmount,
+      resetModes,
+    },
+  });
 
   const preview = useMemo(() => {
     if (numericAmount === null) return null;
@@ -303,6 +346,9 @@ export function useQuickAddForm(source: string, onAdded?: () => void) {
     setChargedCurrency: withdrawalDraft.setChargedCurrency,
     description,
     setDescription,
+    suggestions,
+    applySuggestion,
+    descriptionHandlers,
     tagsId,
     formId,
     tagsInput,

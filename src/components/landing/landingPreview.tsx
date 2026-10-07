@@ -4,7 +4,7 @@ import { Avatar } from "@/components/transactions/avatar";
 import { MiniStat } from "@/components/transactions/miniStat";
 import { ListRow } from "@/components/ui/listRow";
 import { Surface } from "@/components/ui/surface";
-import { formatMoney } from "@/lib/currency";
+import { formatMoney, kindSign } from "@/lib/currency";
 import { ROW_STAGGER_MS, enterUpClasses, staggerDelay } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -96,7 +96,7 @@ export function LandingPreview({ firstStep }: { firstStep: number }) {
                       row.kind === "income" ? "text-income" : "text-foreground",
                     )}
                   >
-                    {row.kind === "income" ? "+" : "-"}
+                    {kindSign(row.kind)}
                     {formatMoney(row.converted, preview.currency)}
                   </span>
                   {row.currency !== preview.currency && (

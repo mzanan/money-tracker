@@ -14,7 +14,7 @@ import { undoMoveWithdrawalToCash } from "@/lib/actions/cash";
 import { setBudgetMonthShift, unmarkTransfer } from "@/lib/actions/transfers";
 import { canShiftBudgetMonth, hasBudgetMonthOverride } from "@/lib/budgetMonth";
 import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
-import { formatMoney } from "@/lib/currency";
+import { formatMoney, kindSign } from "@/lib/currency";
 import { formatMonthShort, todayInTz } from "@/lib/dates";
 import {
   isSingleLegWithdrawalExternalId,
@@ -88,7 +88,7 @@ export function useTransactionRow(
   }
 
   const sameAsBase = tx.currency_original === settings.base_currency;
-  const sign = tx.kind === "income" ? "+" : "-";
+  const sign = kindSign(tx.kind);
   const { hideAmounts, mask } = useHideAmounts();
   const amountText = mask(
     `${sign}${

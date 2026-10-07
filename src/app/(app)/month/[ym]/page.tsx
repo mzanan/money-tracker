@@ -4,6 +4,7 @@ import { MonthDashboard } from "@/components/transactions/monthDashboard";
 import { cashWithdrawalSourcesByUsage } from "@/lib/filters";
 import { listAccountSources } from "@/lib/data/accounts";
 import { getMonthPageData } from "@/lib/data/monthData";
+import { buildEntrySuggestions } from "@/lib/entrySuggestions";
 import { collectSources, csvSourcesFrom } from "@/lib/transactions";
 import { getRemindersData } from "@/lib/data/reminders";
 import { isValidYearMonth } from "@/lib/dates";
@@ -42,6 +43,7 @@ export default async function MonthPage({
       reminders={remindersData.reminders}
       completedReminders={remindersData.completedReminders}
       today={remindersData.today}
+      entrySuggestions={buildEntrySuggestions(data.lifetimeTxs)}
     />
   );
 }

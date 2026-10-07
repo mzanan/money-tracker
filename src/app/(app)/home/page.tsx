@@ -1,5 +1,6 @@
 import { MonthDashboard } from "@/components/transactions/monthDashboard";
 import { getHomePageData } from "@/lib/data/homeData";
+import { buildEntrySuggestions } from "@/lib/entrySuggestions";
 import { getRemindersData } from "@/lib/data/reminders";
 
 export default async function HomeDashboardPage() {
@@ -20,6 +21,7 @@ export default async function HomeDashboardPage() {
       completedReminders={remindersData.completedReminders}
       today={remindersData.today}
       recentTags={data.recentTags}
+      entrySuggestions={buildEntrySuggestions(data.lifetimeTxs)}
     />
   );
 }

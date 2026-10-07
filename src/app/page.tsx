@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/appShell";
 import { MonthDashboard } from "@/components/transactions/monthDashboard";
 import { JsonLd } from "@/components/ui/jsonLd";
 import { getHomePageData } from "@/lib/data/homeData";
+import { buildEntrySuggestions } from "@/lib/entrySuggestions";
 import { getRemindersData } from "@/lib/data/reminders";
 import {
   LANDING_DESCRIPTION,
@@ -68,6 +69,7 @@ export default async function HomePage() {
         completedReminders={remindersData.completedReminders}
         today={remindersData.today}
         recentTags={data.recentTags}
+        entrySuggestions={buildEntrySuggestions(data.lifetimeTxs)}
       />
     </AppShell>
   );

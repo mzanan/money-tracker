@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const tappableRowVariants = cva(
-  "hover:bg-surface-2/60 flex items-center gap-3 rounded-2xl transition-colors",
+  "hover:bg-surface-2/60 flex items-center gap-3 transition-colors",
   {
     variants: {
       bordered: {
@@ -15,10 +15,15 @@ const tappableRowVariants = cva(
         start: "",
         between: "justify-between",
       },
+      size: {
+        default: "rounded-2xl",
+        compact: "rounded-xl py-2",
+      },
     },
     defaultVariants: {
       bordered: false,
       justify: "start",
+      size: "default",
     },
   },
 );
@@ -38,6 +43,7 @@ export function TappableRow<T extends TappableRowElement = "button">({
   as,
   bordered,
   justify,
+  size,
   className,
   ...props
 }: TappableRowProps<T>) {
@@ -46,7 +52,7 @@ export function TappableRow<T extends TappableRowElement = "button">({
   return (
     <Component
       className={cn(
-        tappableRowVariants({ bordered, justify }),
+        tappableRowVariants({ bordered, justify, size }),
         Component === "button" && "text-left",
         className,
       )}

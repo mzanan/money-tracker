@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { isSupportedCurrency } from "@/lib/constants/currencies";
+import { MAX_TAGS_PER_TRANSACTION } from "@/lib/tags";
 
 const transactionFieldsSchema = z.object({
   kind: z.enum(["income", "expense"]),
@@ -11,7 +12,10 @@ const transactionFieldsSchema = z.object({
   currency: z
     .string()
     .refine(isSupportedCurrency, { message: "Unsupported currency" }),
-  tags: z.array(z.string().trim().min(1).max(40)).max(10).optional(),
+  tags: z
+    .array(z.string().trim().min(1).max(40))
+    .max(MAX_TAGS_PER_TRANSACTION)
+    .optional(),
   note: z.string().trim().max(280).nullable().optional(),
   occurredOn: z.iso.date("Invalid date (yyyy-MM-dd)"),
   source: z.string().trim().min(1).max(32).optional(),
