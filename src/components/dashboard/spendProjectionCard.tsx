@@ -4,10 +4,7 @@ import { TrendingUpIcon } from "lucide-react";
 
 import { IconCircle } from "@/components/ui/iconCircle";
 import { Surface } from "@/components/ui/surface";
-import { useHideAmounts } from "@/hooks/useHideAmounts";
-import { useSettings } from "@/hooks/useSettings";
-import { formatMoney } from "@/lib/currency";
-import { HIDDEN_AMOUNT } from "@/lib/preferences";
+import { useMoney } from "@/hooks/useMoney";
 
 import { useSpendProjection } from "./useSpendProjection";
 
@@ -28,8 +25,7 @@ export function SpendProjectionCard({
   reminders: RecurringPayment[];
   recurringNotes: Set<string>;
 }) {
-  const settings = useSettings();
-  const { hideAmounts } = useHideAmounts();
+  const money = useMoney();
   const {
     isCurrentMonth,
     projection,
@@ -44,12 +40,6 @@ export function SpendProjectionCard({
     reminders,
     recurringNotes,
   });
-
-  function money(amount: number) {
-    return hideAmounts
-      ? HIDDEN_AMOUNT
-      : formatMoney(amount, settings.base_currency);
-  }
 
   return (
     <Surface padding="md">
@@ -69,7 +59,7 @@ export function SpendProjectionCard({
               <span className="text-muted-foreground text-xs">
                 Daily average
               </span>
-              <span className="text-muted-foreground block text-micro">
+              <span className="text-muted-foreground text-micro block">
                 Daily spend only
               </span>
             </div>
@@ -91,7 +81,7 @@ export function SpendProjectionCard({
                 Non-daily this month
               </span>
               {projection.fixedUpcoming + projection.fixedScheduled > 0 && (
-                <span className="text-muted-foreground block text-micro">
+                <span className="text-muted-foreground text-micro block">
                   {fixedPaidCount} paid, {fixedUpcomingCount} upcoming
                 </span>
               )}

@@ -3,11 +3,8 @@
 import Link from "next/link";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
-import { useHideAmounts } from "@/hooks/useHideAmounts";
-import { useSettings } from "@/hooks/useSettings";
-import { formatMoney } from "@/lib/currency";
+import { useMoney } from "@/hooks/useMoney";
 import { formatYearMonthLong } from "@/lib/dates";
-import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -37,15 +34,8 @@ export function DashboardView({
   reminders,
   today,
 }: Props) {
-  const settings = useSettings();
-  const { hideAmounts } = useHideAmounts();
+  const money = useMoney();
   const v = useDashboardView({ yearMonth, lifetimeTransactions });
-
-  function money(value: number, compact = false): string {
-    return hideAmounts
-      ? HIDDEN_AMOUNT
-      : formatMoney(value, settings.base_currency, { compact });
-  }
 
   return (
     <div className="mx-auto grid w-full max-w-xl gap-5 *:min-w-0">
@@ -97,7 +87,7 @@ export function DashboardView({
                 )}
               >
                 <span className="text-muted-foreground text-micro tabular-nums">
-                  {month.hasData ? money(month.expense, true) : ""}
+                  {month.hasData ? money(month.expense, { compact: true }) : ""}
                 </span>
                 <span className="flex h-24 w-full items-end justify-center">
                   <span
@@ -211,7 +201,7 @@ export function DashboardView({
                     balance < 0 && "text-destructive",
                   )}
                 >
-                  {hideAmounts ? HIDDEN_AMOUNT : formatMoney(balance, currency)}
+                  {money(balance, { currency })}
                 </span>
               </li>
             ))}
@@ -233,7 +223,7 @@ export function DashboardView({
                 </span>
                 <span className="shrink-0 font-semibold tabular-nums">
                   {money(merchant.total)}
-                  <span className="text-muted-foreground ml-1.5 text-caption font-normal">
+                  <span className="text-muted-foreground text-caption ml-1.5 font-normal">
                     ×{merchant.count}
                   </span>
                 </span>

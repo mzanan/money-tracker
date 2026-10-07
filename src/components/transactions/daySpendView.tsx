@@ -4,7 +4,6 @@ import { format, parseISO } from "date-fns";
 
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { formatMoney } from "@/lib/currency";
-import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 
 import { AmountsToggle } from "./amountsToggle";
@@ -21,7 +20,7 @@ interface Props {
 }
 
 export function DaySpendView({ daySpend, onToday }: Props) {
-  const { hideAmounts } = useHideAmounts();
+  const { mask } = useHideAmounts();
   const {
     displayCurrency,
     expense,
@@ -51,7 +50,7 @@ export function DaySpendView({ daySpend, onToday }: Props) {
           expense > 0 ? "text-foreground" : "text-muted-foreground",
         )}
       >
-        {hideAmounts ? HIDDEN_AMOUNT : formatMoney(expense, displayCurrency)}
+        {mask(formatMoney(expense, displayCurrency))}
       </p>
       <p className="text-muted-foreground mt-1 text-xs">
         {count === 0
@@ -62,10 +61,7 @@ export function DaySpendView({ daySpend, onToday }: Props) {
         {income > 0 && (
           <span className="text-income font-medium">
             {" · "}
-            {hideAmounts
-              ? HIDDEN_AMOUNT
-              : `+${formatMoney(income, displayCurrency)}`}{" "}
-            in
+            {mask(`+${formatMoney(income, displayCurrency)}`)} in
           </span>
         )}
       </p>

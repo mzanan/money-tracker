@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import { useHideAmounts } from "@/hooks/useHideAmounts";
+import { useMoney } from "@/hooks/useMoney";
 import { useSettings } from "@/hooks/useSettings";
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
@@ -33,7 +33,7 @@ export function useSpendingBreakdown({
   limit,
 }: Params) {
   const settings = useSettings();
-  const { hideAmounts } = useHideAmounts();
+  const money = useMoney();
   const [mode, setMode] = useState<Mode>("tag");
 
   const selected = mode === "tag" ? selectedTag : selectedPlace;
@@ -84,7 +84,6 @@ export function useSpendingBreakdown({
     selected,
     onSelect,
     breakdown,
-    hideAmounts,
-    baseCurrency: settings.base_currency,
+    money,
   };
 }

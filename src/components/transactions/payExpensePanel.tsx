@@ -4,7 +4,7 @@ import { Loader2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { StepShell } from "@/components/ui/stepShell";
-import { formatMoney } from "@/lib/currency";
+import { useMoney } from "@/hooks/useMoney";
 
 import { TransactionFormFields } from "./transactionFormFields";
 import { useTransactionForm, type TransactionSeed } from "./useTransactionForm";
@@ -20,6 +20,7 @@ export function PayExpensePanel({
   onBack: () => void;
   onCreated: (id: string) => void;
 }) {
+  const money = useMoney();
   const form = useTransactionForm({
     seed,
     open: true,
@@ -34,7 +35,7 @@ export function PayExpensePanel({
       title={`Pay ${reminderLabel}`}
       description={
         <span className="tabular-nums">
-          {formatMoney(seed.amount, seed.currency)}
+          {money(seed.amount, { currency: seed.currency })}
         </span>
       }
       onBack={onBack}
@@ -48,7 +49,9 @@ export function PayExpensePanel({
           </Button>
           <Button
             onClick={form.submit}
-            disabled={form.pending || !form.source || form.sourceOptions === null}
+            disabled={
+              form.pending || !form.source || form.sourceOptions === null
+            }
           >
             {form.pending && <Loader2Icon className="animate-spin" />}
             Save and mark paid

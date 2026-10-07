@@ -3,8 +3,8 @@
 import { ChevronLeftIcon } from "lucide-react";
 
 import { useAccountLabels } from "@/hooks/useAccountLabels";
+import { useMoney } from "@/hooks/useMoney";
 import { resolveSourceLabel } from "@/lib/constants/sources";
-import { formatMoney } from "@/lib/currency";
 import { formatDateShort, formatYmd, parseYmd } from "@/lib/dates";
 import type { ReminderPaymentCandidate } from "@/lib/actions/reminders";
 
@@ -25,6 +25,7 @@ function CandidateButton({
   onClick: () => void;
 }) {
   const accountLabels = useAccountLabels();
+  const money = useMoney();
   return (
     <TappableRow
       type="button"
@@ -44,7 +45,7 @@ function CandidateButton({
         </span>
       </span>
       <span className="shrink-0 text-sm font-semibold tabular-nums">
-        -{formatMoney(match.amount, match.currency)}
+        -{money(match.amount, { currency: match.currency })}
       </span>
     </TappableRow>
   );
@@ -94,6 +95,7 @@ export function PayCandidatesPanel({
     dayLabel,
     pickDay,
   } = usePayCandidatesPanel({ day, today, loading, onChooseDay });
+  const money = useMoney();
   const candidates = [...suggested, ...recent];
   const hasAmount = reminder.amount != null;
 
@@ -114,7 +116,7 @@ export function PayCandidatesPanel({
           </p>
           {reminder.amount != null && (
             <p className="text-muted-foreground text-xs tabular-nums">
-              {formatMoney(reminder.amount, reminder.currency ?? "USD")}
+              {money(reminder.amount, { currency: reminder.currency ?? "USD" })}
             </p>
           )}
         </div>

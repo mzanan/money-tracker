@@ -2,11 +2,16 @@
 
 import { createContext, useContext, useState } from "react";
 
-import { HIDE_AMOUNTS_COOKIE, preferenceCookie } from "@/lib/preferences";
+import {
+  HIDE_AMOUNTS_COOKIE,
+  maskAmount,
+  preferenceCookie,
+} from "@/lib/preferences";
 
 interface Ctx {
   hideAmounts: boolean;
   toggleHideAmounts: () => void;
+  mask: (text: string) => string;
 }
 
 const HideAmountsContext = createContext<Ctx | null>(null);
@@ -28,8 +33,14 @@ export function HideAmountsProvider({
     });
   }
 
+  function mask(text: string) {
+    return maskAmount(text, hideAmounts);
+  }
+
   return (
-    <HideAmountsContext.Provider value={{ hideAmounts, toggleHideAmounts }}>
+    <HideAmountsContext.Provider
+      value={{ hideAmounts, toggleHideAmounts, mask }}
+    >
       {children}
     </HideAmountsContext.Provider>
   );

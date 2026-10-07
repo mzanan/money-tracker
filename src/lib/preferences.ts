@@ -3,6 +3,10 @@ export const TIMEZONE_COOKIE = "mt_tz";
 
 export const HIDDEN_AMOUNT = "••••";
 
+export function maskAmount(text: string, hidden: boolean): string {
+  return hidden ? HIDDEN_AMOUNT : text;
+}
+
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 export function readBrowserCookie(name: string): string | null {
