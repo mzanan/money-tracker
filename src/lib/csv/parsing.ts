@@ -1,13 +1,22 @@
 import type { DateFormat } from "@/lib/csv/presets";
 
-export function parseAmount(raw: string | undefined): number | null {
+export function parseAmount(
+  raw: string | undefined,
+  decimals?: number,
+): number | null {
   if (!raw) return null;
   const trimmed = raw.trim();
   if (!trimmed) return null;
   if (/[A-Za-z_]/.test(trimmed)) return null;
-  const cleaned = trimmed
-    .replace(/[^\d.,-]/g, "")
-    .replace(/\.(?=\d{3}\b)/g, "");
+  const digits = trimmed.replace(/[^\d.,-]/g, "");
+  const singleDotIsDecimal =
+    decimals !== undefined &&
+    decimals >= 3 &&
+    !digits.includes(",") &&
+    digits.indexOf(".") === digits.lastIndexOf(".");
+  const cleaned = singleDotIsDecimal
+    ? digits
+    : digits.replace(/\.(?=\d{3}\b)/g, "");
   if (!/\d/.test(cleaned)) return null;
   const normalized = cleaned.replace(",", ".");
   const num = Number(normalized);
