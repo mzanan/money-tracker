@@ -9,9 +9,10 @@ export function useTabStripOverflow() {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
-  const labelRef = useRef<HTMLSpanElement>(null);
+  const accountLabelRef = useRef<HTMLSpanElement>(null);
+  const importLabelRef = useRef<HTMLSpanElement>(null);
   const compactRef = useRef(false);
-  const labelWidthRef = useRef(0);
+  const labelWidthsRef = useRef([0, 0]);
   const [compact, setCompact] = useState(false);
 
   useEffect(() => {
@@ -23,18 +24,22 @@ export function useTabStripOverflow() {
 
     function measure() {
       if (!row || !scroller || !content || !actions) return;
-      const label = labelRef.current;
-      if (label?.parentElement && !compactRef.current) {
-        labelWidthRef.current =
-          label.offsetWidth +
-          (parseFloat(getComputedStyle(label.parentElement).columnGap) || 0);
-      }
+      const labels = [accountLabelRef.current, importLabelRef.current];
+      let hiddenLabelWidth = 0;
+      labels.forEach((label, index) => {
+        if (label?.parentElement && !compactRef.current) {
+          labelWidthsRef.current[index] =
+            label.offsetWidth +
+            (parseFloat(getComputedStyle(label.parentElement).columnGap) || 0);
+        }
+        if (label) hiddenLabelWidth += labelWidthsRef.current[index];
+      });
       const next = tabStripNeedsCompact({
         rowWidth: row.clientWidth,
         leadingPadding: parseFloat(getComputedStyle(scroller).paddingLeft) || 0,
         tabsWidth: content.offsetWidth,
         actionsWidth: actions.offsetWidth,
-        hiddenLabelWidth: compactRef.current ? labelWidthRef.current : 0,
+        hiddenLabelWidth: compactRef.current ? hiddenLabelWidth : 0,
       });
       compactRef.current = next;
       setCompact(next);
@@ -47,5 +52,13 @@ export function useTabStripOverflow() {
     return () => observer.disconnect();
   }, []);
 
-  return { rowRef, scrollerRef, contentRef, actionsRef, labelRef, compact };
+  return {
+    rowRef,
+    scrollerRef,
+    contentRef,
+    actionsRef,
+    accountLabelRef,
+    importLabelRef,
+    compact,
+  };
 }

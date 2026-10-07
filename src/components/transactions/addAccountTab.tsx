@@ -1,6 +1,9 @@
 "use client";
 
 import { Loader2Icon, PlusIcon } from "lucide-react";
+import type { Ref } from "react";
+
+import { cn } from "@/lib/utils";
 
 import { useAddAccount } from "@/hooks/useAddAccount";
 
@@ -9,8 +12,12 @@ import { TextAction } from "@/components/ui/textAction";
 
 export function AddAccountTab({
   onAdded,
+  compact = false,
+  labelRef,
 }: {
   onAdded: (source: string) => void;
+  compact?: boolean;
+  labelRef?: Ref<HTMLSpanElement>;
 }) {
   const { edit, pending } = useAddAccount(onAdded);
 
@@ -29,16 +36,15 @@ export function AddAccountTab({
   }
 
   return (
-    <TextAction
-      aria-label="Add account"
-      onClick={() => edit.start("")}
-      disabled={pending}
-    >
+    <TextAction onClick={() => edit.start("")} disabled={pending}>
       {pending ? (
         <Loader2Icon className="size-3.5 animate-spin" />
       ) : (
-        <PlusIcon className="size-4" />
+        <PlusIcon className="size-3.5" />
       )}
+      <span ref={labelRef} className={cn(compact && "sr-only")}>
+        Account
+      </span>
     </TextAction>
   );
 }
