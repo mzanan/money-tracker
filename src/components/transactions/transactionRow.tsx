@@ -14,8 +14,6 @@ import {
   WalletIcon,
 } from "lucide-react";
 
-import { useHideAmounts } from "@/hooks/useHideAmounts";
-import { formatMoney } from "@/lib/currency";
 import { formatDayShort } from "@/lib/dates";
 import { computeNextDue } from "@/lib/reminders";
 import { cn } from "@/lib/utils";
@@ -59,7 +57,6 @@ export function TransactionRow({
   recurringNotes?: Set<string>;
 }) {
   const {
-    baseCurrency,
     txSelectMode,
     isSelected,
     toggleSelected,
@@ -67,9 +64,8 @@ export function TransactionRow({
     description,
     isTransfer,
     isWithdrawal,
-    sign,
-    inDisplay,
-    showConverted,
+    amountText,
+    convertedText,
     sourceLabel,
     reminderTitle,
     canChangeSource,
@@ -98,7 +94,6 @@ export function TransactionRow({
     stepApi,
     runAfterMenuClose,
   } = useTransactionRow(tx, showDate, showBudgetMonthBadges, recurringNotes);
-  const { hideAmounts, mask } = useHideAmounts();
 
   function openEdit() {
     if (stepApi) {
@@ -297,17 +292,11 @@ export function TransactionRow({
                 : "text-foreground",
           )}
         >
-          {mask(
-            `${sign}${
-              inDisplay !== null
-                ? formatMoney(inDisplay, baseCurrency)
-                : formatMoney(tx.amount_original, tx.currency_original)
-            }`,
-          )}
+          {amountText}
         </span>
-        {showConverted && !hideAmounts && (
+        {convertedText && (
           <span className="text-muted-foreground text-caption mt-0.5 tabular-nums">
-            {formatMoney(tx.amount_original, tx.currency_original)}
+            {convertedText}
           </span>
         )}
       </div>

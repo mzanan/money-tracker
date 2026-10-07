@@ -3,6 +3,7 @@
 import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useDialogState } from "@/hooks/useDialogState";
+import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
 import {
@@ -13,6 +14,7 @@ import { undoMoveWithdrawalToCash } from "@/lib/actions/cash";
 import { setBudgetMonthShift, unmarkTransfer } from "@/lib/actions/transfers";
 import { canShiftBudgetMonth, hasBudgetMonthOverride } from "@/lib/budgetMonth";
 import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
+import { formatMoney } from "@/lib/currency";
 import { formatMonthShort, todayInTz } from "@/lib/dates";
 import {
   isSingleLegWithdrawalExternalId,
@@ -87,7 +89,18 @@ export function useTransactionRow(
 
   const sameAsBase = tx.currency_original === settings.base_currency;
   const sign = tx.kind === "income" ? "+" : "-";
-  const showConverted = !sameAsBase && inDisplay !== null;
+  const { hideAmounts, mask } = useHideAmounts();
+  const amountText = mask(
+    `${sign}${
+      inDisplay !== null
+        ? formatMoney(inDisplay, settings.base_currency)
+        : formatMoney(tx.amount_original, tx.currency_original)
+    }`,
+  );
+  const convertedText =
+    !sameAsBase && inDisplay !== null && !hideAmounts
+      ? formatMoney(tx.amount_original, tx.currency_original)
+      : null;
   const sourceLabel = resolveSourceLabel(tx.source, accountLabels);
   const avatarSeed = tx.tags[0] || sourceLabel;
   const reminderTitle = tx.tags[0] || sourceLabel;
@@ -165,7 +178,6 @@ export function useTransactionRow(
   }
 
   return {
-    baseCurrency: settings.base_currency,
     txSelectMode,
     isSelected,
     toggleSelected,
@@ -173,9 +185,8 @@ export function useTransactionRow(
     description,
     isTransfer,
     isWithdrawal,
-    sign,
-    inDisplay,
-    showConverted,
+    amountText,
+    convertedText,
     sourceLabel,
     reminderTitle,
     canChangeSource,
