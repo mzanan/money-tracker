@@ -68,12 +68,12 @@ export function FiltersPanel({
         </div>
 
         <div className="grid gap-2">
-          <Label>Range</Label>
+          <Label id="filter-range">Range</Label>
           <Tabs
             value={scope}
             onValueChange={(value) => setScope(value as FilterScope)}
           >
-            <TabsList className="w-full">
+            <TabsList aria-labelledby="filter-range" className="w-full">
               <TabsTrigger value="all">All time</TabsTrigger>
               <TabsTrigger value="month">This month</TabsTrigger>
             </TabsList>

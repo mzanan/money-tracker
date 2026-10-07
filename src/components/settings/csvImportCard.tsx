@@ -39,7 +39,7 @@ export function CsvImportCard({
         <CardTitle>Import or paste CSV</CardTitle>
         <CardDescription>
           Upload or paste a statement from any bank or wallet (Wise, Astropay,
-          etc.). You label the source — re-importing the same data does not
+          etc.). You label the source; re-importing the same data does not
           duplicate.
         </CardDescription>
       </CardHeader>

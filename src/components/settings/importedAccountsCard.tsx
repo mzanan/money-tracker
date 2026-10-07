@@ -5,13 +5,7 @@ import { getUserSettings } from "@/lib/data/userSettings";
 import { getUser } from "@/lib/session";
 import type { IntegrationProvider } from "@/types/db";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 
 import { AddAccountRow } from "./addAccountRow";
 import { ImportedAccountRow } from "./importedAccountRow";
@@ -53,13 +47,6 @@ export async function ImportedAccountsCard() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Accounts</CardTitle>
-        <CardDescription>
-          Create, rename or remove accounts, or delete every transaction one
-          holds.
-        </CardDescription>
-      </CardHeader>
       <CardContent className="grid divide-y">
         {rows.length === 0 && (
           <p className="text-muted-foreground py-2 text-xs">

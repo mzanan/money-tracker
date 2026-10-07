@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { isActivePath } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 import { NAV_ITEMS, navLinkTextClass } from "./navItems";
@@ -18,14 +19,14 @@ export function BottomNav() {
     >
       <div className="h-bottom-nav mx-auto flex max-w-xs items-stretch justify-around">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href;
+          const active = isActivePath(pathname, href);
           return (
             <Link
               key={label}
               href={href}
-              aria-label={label}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors",
+                "text-micro flex flex-1 flex-col items-center justify-center gap-0.5 font-medium transition-colors",
                 navLinkTextClass(active),
               )}
             >

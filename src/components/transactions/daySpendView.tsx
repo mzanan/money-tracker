@@ -8,6 +8,7 @@ import { HIDDEN_AMOUNT } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 
 import { AmountsToggle } from "./amountsToggle";
+import { TodayButton } from "./todayButton";
 
 import type { useDaySpend } from "./useDaySpend";
 
@@ -16,9 +17,10 @@ const MIN_BAR_HEIGHT = 2;
 
 interface Props {
   daySpend: ReturnType<typeof useDaySpend>;
+  onToday?: () => void;
 }
 
-export function DaySpendView({ daySpend }: Props) {
+export function DaySpendView({ daySpend, onToday }: Props) {
   const { hideAmounts } = useHideAmounts();
   const {
     displayCurrency,
@@ -36,9 +38,12 @@ export function DaySpendView({ daySpend }: Props) {
 
   return (
     <div>
-      <div className="flex items-center gap-1.5">
-        <span className="text-eyebrow">Total spent</span>
-        <AmountsToggle />
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <span className="text-eyebrow">Total spent</span>
+          <AmountsToggle />
+        </div>
+        {onToday && <TodayButton onClick={onToday} />}
       </div>
       <p
         className={cn(
@@ -101,7 +106,7 @@ export function DaySpendView({ daySpend }: Props) {
             );
           })}
         </div>
-        <div className="text-muted-foreground mt-1.5 flex justify-between text-[10px] tabular-nums">
+        <div className="text-muted-foreground mt-1.5 flex justify-between text-micro tabular-nums">
           <span>1</span>
           <span>{daysInMonth.length}</span>
         </div>

@@ -130,7 +130,9 @@ export function DashboardPanel({
           ref={headerRef}
           className={cn("pb-2", steps.length > 0 && "sr-only")}
         >
-          <DrawerTitle className="text-eyebrow font-sans">{title}</DrawerTitle>
+          <DrawerTitle className="text-eyebrow text-muted-foreground font-sans">
+            {title}
+          </DrawerTitle>
           <DrawerDescription className="sr-only">
             {title} options
           </DrawerDescription>

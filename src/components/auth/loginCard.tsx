@@ -11,6 +11,7 @@ import {
   CardDescription,
   CardHeader,
 } from "@/components/ui/card";
+import { Heading } from "@/components/ui/heading";
 import { enterUpClasses } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ export function LoginCard() {
           <div className="bg-primary text-primary-foreground mx-auto mb-1 flex size-12 items-center justify-center rounded-2xl">
             <WalletIcon className="size-6" />
           </div>
+          <Heading as="h1">Sign in to Money</Heading>
           <CardDescription className="text-sm">
             Track every coin across cash, exchange and bank exports.
           </CardDescription>
@@ -33,6 +35,7 @@ export function LoginCard() {
           <Button
             type="button"
             variant="outline"
+            size="xl"
             disabled={loading}
             onClick={signInWithGoogle}
           >

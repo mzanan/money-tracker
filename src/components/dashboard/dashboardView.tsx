@@ -41,10 +41,10 @@ export function DashboardView({
   const { hideAmounts } = useHideAmounts();
   const v = useDashboardView({ yearMonth, lifetimeTransactions });
 
-  function money(value: number): string {
+  function money(value: number, compact = false): string {
     return hideAmounts
       ? HIDDEN_AMOUNT
-      : formatMoney(value, settings.base_currency);
+      : formatMoney(value, settings.base_currency, { compact });
   }
 
   return (
@@ -96,8 +96,8 @@ export function DashboardView({
                   month.hasData ? "cursor-pointer" : "cursor-default",
                 )}
               >
-                <span className="text-muted-foreground text-[10px] tabular-nums">
-                  {month.hasData ? money(month.expense) : ""}
+                <span className="text-muted-foreground text-micro tabular-nums">
+                  {month.hasData ? money(month.expense, true) : ""}
                 </span>
                 <span className="flex h-24 w-full items-end justify-center">
                   <span
@@ -116,7 +116,7 @@ export function DashboardView({
                 </span>
                 <span
                   className={cn(
-                    "text-[10px] font-medium",
+                    "text-micro font-medium",
                     !month.hasData
                       ? "text-muted-foreground"
                       : month.month === v.visibleYearMonth
@@ -185,13 +185,13 @@ export function DashboardView({
             <span className="text-eyebrow">Cash on hand</span>
             <div className="flex items-center gap-3">
               <Link
-                href="/settings"
+                href="/settings?tab=cash#withdraw-cash"
                 className="text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
               >
                 Withdraw cash →
               </Link>
               <Link
-                href="/settings"
+                href="/settings?tab=cash#exchange-cash"
                 className="text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
               >
                 Exchange cash →

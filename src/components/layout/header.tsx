@@ -1,12 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
 import { LogOutIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils";
-import { authClient } from "@/lib/authClient";
-import { resetAnalytics } from "@/lib/consent";
 import { ASSISTANT_ENABLED } from "@/lib/featureFlags";
 
 import { AssistantWidget } from "@/components/assistant/assistantWidget";
@@ -14,22 +9,16 @@ import { Button } from "@/components/ui/button";
 
 import { BaseCurrencyPicker } from "./baseCurrencyPicker";
 import { Brand } from "./brand";
+import { NavIconLink } from "./navIconLink";
 import { NAV_ITEMS } from "./navItems";
 import { ThemeToggle } from "./themeToggle";
+import { useSignOut } from "./useSignOut";
 
 const DASHBOARD_ITEM = NAV_ITEMS.find((item) => item.href === "/dashboard")!;
 const SETTINGS_ITEM = NAV_ITEMS.find((item) => item.href === "/settings")!;
 
 export function Header() {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  async function handleSignOut() {
-    await authClient.signOut();
-    resetAnalytics();
-    router.replace("/login");
-    router.refresh();
-  }
+  const handleSignOut = useSignOut();
 
   return (
     <header className="bg-background/80 h-header sticky top-0 z-10 flex items-center justify-between gap-2 px-4 backdrop-blur">
@@ -38,31 +27,8 @@ export function Header() {
         <BaseCurrencyPicker />
         {ASSISTANT_ENABLED && <AssistantWidget />}
         <ThemeToggle />
-        <Button
-          asChild
-          variant="ghost"
-          size="icon-sm"
-          aria-label={DASHBOARD_ITEM.label}
-          className={cn(
-            "hidden lg:inline-flex",
-            pathname === DASHBOARD_ITEM.href && "text-foreground",
-          )}
-        >
-          <Link href={DASHBOARD_ITEM.href}>
-            <DASHBOARD_ITEM.icon />
-          </Link>
-        </Button>
-        <Button
-          asChild
-          variant="ghost"
-          size="icon-sm"
-          aria-label={SETTINGS_ITEM.label}
-          className={cn(pathname === SETTINGS_ITEM.href && "text-foreground")}
-        >
-          <Link href={SETTINGS_ITEM.href}>
-            <SETTINGS_ITEM.icon />
-          </Link>
-        </Button>
+        <NavIconLink item={DASHBOARD_ITEM} className="hidden lg:inline-flex" />
+        <NavIconLink item={SETTINGS_ITEM} />
         <Button
           variant="ghost"
           size="icon-sm"

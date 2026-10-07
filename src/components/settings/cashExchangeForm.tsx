@@ -28,7 +28,7 @@ export function CashExchangeForm() {
   } = useCashExchangeForm();
 
   return (
-    <Card>
+    <Card id="exchange-cash" className="scroll-mt-header">
       <CardContent className="py-4">
         <form onSubmit={handleSubmit} className="grid gap-3">
           <div>

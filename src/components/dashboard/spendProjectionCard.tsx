@@ -69,7 +69,7 @@ export function SpendProjectionCard({
               <span className="text-muted-foreground text-xs">
                 Daily average
               </span>
-              <span className="text-muted-foreground block text-[10px]">
+              <span className="text-muted-foreground block text-micro">
                 Daily spend only
               </span>
             </div>
@@ -91,7 +91,7 @@ export function SpendProjectionCard({
                 Non-daily this month
               </span>
               {projection.fixedUpcoming + projection.fixedScheduled > 0 && (
-                <span className="text-muted-foreground block text-[10px]">
+                <span className="text-muted-foreground block text-micro">
                   {fixedPaidCount} paid, {fixedUpcomingCount} upcoming
                 </span>
               )}
@@ -107,7 +107,7 @@ export function SpendProjectionCard({
             </span>
           </div>
           {projection.recurringIncomplete && (
-            <p className="text-muted-foreground text-[10px]">
+            <p className="text-muted-foreground text-micro">
               Some upcoming bills in another currency could not be converted
               right now.
             </p>

@@ -101,9 +101,11 @@ export function OnboardingForm() {
 function StepIndicator({ current }: { current: Step }) {
   return (
     <div className="my-4 flex items-center justify-center gap-1.5">
+      <span className="sr-only">{`Step ${current} of 2`}</span>
       {[1, 2].map((n) => (
         <span
           key={n}
+          aria-hidden
           className={cn(
             "h-1.5 rounded-full transition-all",
             n === current ? "bg-foreground w-6" : "bg-muted w-1.5",
