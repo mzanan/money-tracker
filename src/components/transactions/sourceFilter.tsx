@@ -41,8 +41,15 @@ export function SourceFilter({
     handleSync,
     handleEnableCash,
   } = useSourceFilter({ sources, selected, onChange });
-  const { rowRef, scrollerRef, contentRef, actionsRef, labelRef, compact } =
-    useTabStripOverflow();
+  const {
+    rowRef,
+    scrollerRef,
+    contentRef,
+    actionsRef,
+    accountLabelRef,
+    importLabelRef,
+    compact,
+  } = useTabStripOverflow();
 
   return (
     <div className="flex items-center justify-between gap-3">
@@ -84,11 +91,15 @@ export function SourceFilter({
           ref={actionsRef}
           className="flex shrink-0 items-center gap-5 pr-4 pl-5"
         >
-          <AddAccountTab onAdded={onChange} />
+          <AddAccountTab
+            onAdded={onChange}
+            compact={compact}
+            labelRef={accountLabelRef}
+          />
           <ImportFromImage
             existingSources={allTabSources}
             compact={compact}
-            labelRef={labelRef}
+            labelRef={importLabelRef}
           />
         </div>
       </div>

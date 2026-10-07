@@ -10,7 +10,6 @@ import {
 import type { Ref } from "react";
 
 import type { ImageImportMode } from "@/lib/imageExtract";
-import { cn } from "@/lib/utils";
 
 import { ApiKeyRequiredDialog } from "@/components/ui/apiKeyRequiredNotice";
 import {
@@ -76,15 +75,17 @@ export function ImportFromImage({
   } = useImportFromImage();
 
   const trigger = (
-    <TextAction disabled={extracting}>
+    <TextAction
+      disabled={extracting}
+      label="Import from image"
+      compact={compact}
+      labelRef={labelRef}
+    >
       {extracting ? (
         <Loader2Icon className="size-3.5 animate-spin" />
       ) : (
         <ImageUpIcon className="size-3.5" />
       )}
-      <span ref={labelRef} className={cn(compact && "sr-only")}>
-        Import from image
-      </span>
     </TextAction>
   );
 

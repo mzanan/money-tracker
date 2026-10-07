@@ -1,11 +1,19 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode, Ref } from "react";
 
 import { cn } from "@/lib/utils";
 
 export function TextAction({
   className,
+  children,
+  label,
+  compact = false,
+  labelRef,
   ...props
-}: ComponentProps<"button">) {
+}: ComponentProps<"button"> & {
+  label?: ReactNode;
+  compact?: boolean;
+  labelRef?: Ref<HTMLSpanElement>;
+}) {
   return (
     <button
       type="button"
@@ -14,6 +22,13 @@ export function TextAction({
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+      {label !== undefined && (
+        <span ref={labelRef} className={cn(compact && "sr-only")}>
+          {label}
+        </span>
+      )}
+    </button>
   );
 }
