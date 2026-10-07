@@ -36,7 +36,11 @@ export function AddAccountTab({
   }
 
   return (
-    <TextAction onClick={() => edit.start("")} disabled={pending}>
+    <TextAction
+      aria-label="Add account"
+      onClick={() => edit.start("")}
+      disabled={pending}
+    >
       {pending ? (
         <Loader2Icon className="size-3.5 animate-spin" />
       ) : (
