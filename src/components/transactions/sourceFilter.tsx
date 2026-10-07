@@ -8,21 +8,6 @@ import {
   RefreshCwIcon,
 } from "lucide-react";
 
-import { useEffect } from "react";
-
-import { useAccountLabels } from "@/hooks/useAccountLabels";
-import { useServerAction } from "@/hooks/useServerAction";
-import { useSettings } from "@/hooks/useSettings";
-import { syncIntegration } from "@/lib/actions/integrations";
-import { setCashEnabled } from "@/lib/actions/settings";
-import {
-  kindOfSource,
-  resolveSourceLabel,
-  tabSourcesFrom,
-  withoutArchived,
-} from "@/lib/constants/sources";
-import type { IntegrationProvider } from "@/types/db";
-
 import { Button } from "@/components/ui/button";
 import { TextAction } from "@/components/ui/textAction";
 
@@ -30,6 +15,7 @@ import { AddAccountTab } from "./addAccountTab";
 import { ImportFromImage } from "./importFromImage";
 import { SourceTab } from "./sourceTab";
 import { SourceTabMenu } from "./sourceTabMenu";
+import { useSourceFilter } from "./useSourceFilter";
 import { useTabStripOverflow } from "./useTabStripOverflow";
 
 interface Props {
@@ -45,41 +31,18 @@ export function SourceFilter({
   selected,
   onChange,
 }: Props) {
-  const settings = useSettings();
-  const accountLabels = useAccountLabels();
-  const { run, pending } = useServerAction();
+  const {
+    kind,
+    pending,
+    allTabSources,
+    tabSources,
+    showCashTab,
+    labelOf,
+    handleSync,
+    handleEnableCash,
+  } = useSourceFilter({ sources, selected, onChange });
   const { rowRef, scrollerRef, contentRef, actionsRef, labelRef, compact } =
     useTabStripOverflow();
-  const kind = selected === "all" ? null : kindOfSource(selected);
-
-  const archivedSources = settings.archived_sources ?? [];
-  const allTabSources = tabSourcesFrom(sources, settings.cash_enabled);
-  const tabSources = withoutArchived(allTabSources, archivedSources);
-  const showCashTab = allTabSources.includes("manual");
-
-  const selectedArchived =
-    selected !== "all" && archivedSources.includes(selected);
-
-  useEffect(() => {
-    if (selectedArchived) onChange("all");
-  }, [selectedArchived, onChange]);
-
-  function handleSync() {
-    if (kind !== "api") return;
-    run(() => syncIntegration(selected as IntegrationProvider), {
-      success: (data) =>
-        `${resolveSourceLabel(selected, accountLabels)}: imported ${data?.imported ?? 0}` +
-        ((data?.skipped ?? 0) > 0 ? `, ${data?.skipped} skipped` : "") +
-        ((data?.absorbed ?? 0) > 0
-          ? `, ${data?.absorbed} merged from manual`
-          : ""),
-    });
-  }
-
-  function handleEnableCash() {
-    run(() => setCashEnabled(true), { success: "Cash account enabled" });
-    onChange("manual");
-  }
 
   return (
     <div className="flex items-center justify-between gap-3">
@@ -104,14 +67,9 @@ export function SourceFilter({
                 key={src}
                 selected={selected === src}
                 onClick={() => onChange(src)}
-                menu={
-                  <SourceTabMenu
-                    source={src}
-                    label={resolveSourceLabel(src, accountLabels)}
-                  />
-                }
+                menu={<SourceTabMenu source={src} label={labelOf(src)} />}
               >
-                {resolveSourceLabel(src, accountLabels)}
+                {labelOf(src)}
               </SourceTab>
             ))}
             {!showCashTab && (
