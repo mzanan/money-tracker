@@ -8,10 +8,14 @@ import { accounts } from "@/lib/db/schema";
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import {
   capitalizeLabel,
+  isAccountNameTaken,
   kindOfSource,
   labelForSource,
   normalizeSource,
+  SOURCE_NAME_HINT,
 } from "@/lib/constants/sources";
+import { listAccounts } from "@/lib/data/accounts";
+import { getImportedSources } from "@/lib/data/sources";
 import { getUser } from "@/lib/session";
 
 import type { ActionResult } from "./transactions";
@@ -27,7 +31,7 @@ function guardEditable(source: string): string | null {
 export async function upsertAccountLabel(
   source: string,
   label: string,
-): Promise<ActionResult<{ id: string; source: string }>> {
+): Promise<ActionResult<{ id: string }>> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
@@ -50,7 +54,40 @@ export async function upsertAccountLabel(
     .returning({ id: accounts.id });
 
   revalidatePath("/", "layout");
-  return { ok: true, data: { id: row.id, source: normalizedSource } };
+  return { ok: true, data: { id: row.id } };
+}
+
+export async function createAccount(
+  name: string,
+): Promise<ActionResult<{ source: string }>> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const label = capitalizeLabel(name.trim());
+  if (!label) return { ok: false, error: "Name is required" };
+
+  const source = normalizeSource(label);
+  if (!source) return { ok: false, error: SOURCE_NAME_HINT };
+
+  const [sourceRows, accountRows] = await Promise.all([
+    getImportedSources(user.id),
+    listAccounts(user.id),
+  ]);
+  const existingSources = ["manual", ...sourceRows.map((row) => row.source)];
+  const accountLabels = Object.fromEntries(
+    accountRows.map((row) => [row.source, row.label]),
+  );
+  if (isAccountNameTaken(label, source, existingSources, accountLabels)) {
+    return { ok: false, error: `An account named "${label}" already exists` };
+  }
+
+  await db
+    .insert(accounts)
+    .values({ user_id: user.id, source, label })
+    .onConflictDoNothing();
+
+  revalidatePath("/", "layout");
+  return { ok: true, data: { source } };
 }
 
 export async function setAccountCurrency(
