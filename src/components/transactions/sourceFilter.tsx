@@ -8,26 +8,15 @@ import {
   RefreshCwIcon,
 } from "lucide-react";
 
-import { useEffect } from "react";
-
-import { useAccountLabels } from "@/hooks/useAccountLabels";
-import { useServerAction } from "@/hooks/useServerAction";
-import { useSettings } from "@/hooks/useSettings";
-import { syncIntegration } from "@/lib/actions/integrations";
-import { setCashEnabled } from "@/lib/actions/settings";
-import {
-  kindOfSource,
-  resolveSourceLabel,
-  tabSourcesFrom,
-  withoutArchived,
-} from "@/lib/constants/sources";
-import type { IntegrationProvider } from "@/types/db";
-
 import { Button } from "@/components/ui/button";
+import { TextAction } from "@/components/ui/textAction";
 
+import { AddAccountTab } from "./addAccountTab";
 import { ImportFromImage } from "./importFromImage";
 import { SourceTab } from "./sourceTab";
 import { SourceTabMenu } from "./sourceTabMenu";
+import { useSourceFilter } from "./useSourceFilter";
+import { useTabStripOverflow } from "./useTabStripOverflow";
 
 interface Props {
   sources: string[];
@@ -42,80 +31,66 @@ export function SourceFilter({
   selected,
   onChange,
 }: Props) {
-  const settings = useSettings();
-  const accountLabels = useAccountLabels();
-  const { run, pending } = useServerAction();
-  const kind = selected === "all" ? null : kindOfSource(selected);
-
-  const archivedSources = settings.archived_sources ?? [];
-  const allTabSources = tabSourcesFrom(sources, settings.cash_enabled);
-  const tabSources = withoutArchived(allTabSources, archivedSources);
-  const showCashTab = allTabSources.includes("manual");
-
-  const selectedArchived =
-    selected !== "all" && archivedSources.includes(selected);
-
-  useEffect(() => {
-    if (selectedArchived) onChange("all");
-  }, [selectedArchived, onChange]);
-
-  function handleSync() {
-    if (kind !== "api") return;
-    run(() => syncIntegration(selected as IntegrationProvider), {
-      success: (data) =>
-        `${resolveSourceLabel(selected, accountLabels)}: imported ${data?.imported ?? 0}` +
-        ((data?.skipped ?? 0) > 0 ? `, ${data?.skipped} skipped` : "") +
-        ((data?.absorbed ?? 0) > 0
-          ? `, ${data?.absorbed} merged from manual`
-          : ""),
-    });
-  }
-
-  function handleEnableCash() {
-    run(() => setCashEnabled(true), { success: "Cash account enabled" });
-    onChange("manual");
-  }
+  const {
+    kind,
+    pending,
+    allTabSources,
+    tabSources,
+    showCashTab,
+    labelOf,
+    handleSync,
+    handleEnableCash,
+  } = useSourceFilter({ sources, selected, onChange });
+  const { rowRef, scrollerRef, contentRef, actionsRef, labelRef, compact } =
+    useTabStripOverflow();
 
   return (
     <div className="flex items-center justify-between gap-3">
       <div
-        role="tablist"
-        className="scrollbar-none border-border/60 -mx-4 flex flex-1 gap-5 overflow-x-auto overflow-y-hidden border-b px-4"
+        ref={rowRef}
+        className="border-border/60 -mx-4 flex min-w-0 flex-1 border-b"
       >
-        <SourceTab
-          selected={selected === "all"}
-          onClick={() => onChange("all")}
-          menu={<SourceTabMenu source="all" label="All" />}
+        <div
+          ref={scrollerRef}
+          className="min-w-0 scrollbar-none overflow-x-auto overflow-y-hidden pl-4"
         >
-          All
-        </SourceTab>
-        {tabSources.map((src) => (
-          <SourceTab
-            key={src}
-            selected={selected === src}
-            onClick={() => onChange(src)}
-            menu={
-              <SourceTabMenu
-                source={src}
-                label={resolveSourceLabel(src, accountLabels)}
-              />
-            }
-          >
-            {resolveSourceLabel(src, accountLabels)}
-          </SourceTab>
-        ))}
-        {!showCashTab && (
-          <button
-            type="button"
-            onClick={handleEnableCash}
-            disabled={pending}
-            className="text-muted-foreground hover:text-foreground inline-flex shrink-0 items-center gap-1 py-3 text-sm font-medium transition-colors disabled:opacity-50"
-          >
-            <PlusIcon className="size-3.5" />
-            Cash
-          </button>
-        )}
-        <ImportFromImage existingSources={allTabSources} />
+          <div ref={contentRef} role="tablist" className="flex w-max gap-5">
+            <SourceTab
+              selected={selected === "all"}
+              onClick={() => onChange("all")}
+              menu={<SourceTabMenu source="all" label="All" />}
+            >
+              All
+            </SourceTab>
+            {tabSources.map((src) => (
+              <SourceTab
+                key={src}
+                selected={selected === src}
+                onClick={() => onChange(src)}
+                menu={<SourceTabMenu source={src} label={labelOf(src)} />}
+              >
+                {labelOf(src)}
+              </SourceTab>
+            ))}
+            {!showCashTab && (
+              <TextAction onClick={handleEnableCash} disabled={pending}>
+                <PlusIcon className="size-3.5" />
+                Cash
+              </TextAction>
+            )}
+          </div>
+        </div>
+        <div
+          ref={actionsRef}
+          className="flex shrink-0 items-center gap-5 pr-4 pl-5"
+        >
+          <AddAccountTab onAdded={onChange} />
+          <ImportFromImage
+            existingSources={allTabSources}
+            compact={compact}
+            labelRef={labelRef}
+          />
+        </div>
       </div>
       {kind === "api" && (
         <Button
@@ -134,12 +109,7 @@ export function SourceFilter({
         </Button>
       )}
       {csvSources.includes(selected) && (
-        <Button
-          size="sm"
-          variant="secondary"
-          asChild
-          className="rounded-full"
-        >
+        <Button size="sm" variant="secondary" asChild className="rounded-full">
           <Link href="/settings?tab=data">
             <ExternalLinkIcon />
             Re-import
@@ -149,4 +119,3 @@ export function SourceFilter({
     </div>
   );
 }
-

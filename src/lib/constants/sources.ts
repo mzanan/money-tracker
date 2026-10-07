@@ -126,10 +126,31 @@ export function sourceForApp(app?: string | null): string {
 const SOURCE_RE = /^[a-z0-9][a-z0-9 &_-]{0,31}$/;
 const RESERVED_SOURCES = new Set(["all"]);
 
+export const SOURCE_NAME_HINT =
+  "Use up to 32 letters, numbers, spaces, &, _ or -";
+
 export function normalizeSource(raw: string): string | null {
-  const source = raw.trim().toLowerCase();
+  const source = raw
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .trim()
+    .toLowerCase();
   if (!SOURCE_RE.test(source) || RESERVED_SOURCES.has(source)) return null;
   return source;
+}
+
+export function isAccountNameTaken(
+  name: string,
+  source: string,
+  existingSources: ReadonlyArray<string>,
+  accountLabels: AccountLabels,
+): boolean {
+  const wanted = name.trim().toLowerCase();
+  return existingSources.some(
+    (existing) =>
+      existing === source ||
+      resolveSourceLabel(existing, accountLabels).toLowerCase() === wanted,
+  );
 }
 
 export function transferAvailableFor(

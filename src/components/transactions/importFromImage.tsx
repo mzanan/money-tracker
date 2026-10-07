@@ -7,7 +7,10 @@ import {
   SmartphoneIcon,
 } from "lucide-react";
 
+import type { Ref } from "react";
+
 import type { ImageImportMode } from "@/lib/imageExtract";
+import { cn } from "@/lib/utils";
 
 import { ApiKeyRequiredDialog } from "@/components/ui/apiKeyRequiredNotice";
 import {
@@ -21,6 +24,7 @@ import {
 } from "@/components/ui/drawer";
 import { IconCircle } from "@/components/ui/iconCircle";
 import { TappableRow } from "@/components/ui/tappableRow";
+import { TextAction } from "@/components/ui/textAction";
 import { ImageExtractLoading } from "@/components/screenshot/imageExtractLoading";
 import { ScreenshotImporter } from "@/components/screenshot/screenshotImporter";
 import { useSettings } from "@/hooks/useSettings";
@@ -49,8 +53,12 @@ const OPTIONS: Array<{
 
 export function ImportFromImage({
   existingSources,
+  compact = false,
+  labelRef,
 }: {
   existingSources: string[];
+  compact?: boolean;
+  labelRef?: Ref<HTMLSpanElement>;
 }) {
   const settings = useSettings();
   const {
@@ -68,18 +76,16 @@ export function ImportFromImage({
   } = useImportFromImage();
 
   const trigger = (
-    <button
-      type="button"
-      disabled={extracting}
-      className="text-muted-foreground hover:text-foreground inline-flex shrink-0 items-center gap-1 py-3 text-sm font-medium transition-colors disabled:opacity-50"
-    >
+    <TextAction disabled={extracting}>
       {extracting ? (
         <Loader2Icon className="size-3.5 animate-spin" />
       ) : (
         <ImageUpIcon className="size-3.5" />
       )}
-      Import from image
-    </button>
+      <span ref={labelRef} className={cn(compact && "sr-only")}>
+        Import from image
+      </span>
+    </TextAction>
   );
 
   if (!settings.hasAiKey) {
