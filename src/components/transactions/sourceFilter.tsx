@@ -24,11 +24,11 @@ import {
 import type { IntegrationProvider } from "@/types/db";
 
 import { Button } from "@/components/ui/button";
+import { TextAction } from "@/components/ui/textAction";
 
 import { AddAccountTab } from "./addAccountTab";
 import { ImportFromImage } from "./importFromImage";
 import { SourceTab } from "./sourceTab";
-import { SourceTabAction } from "./sourceTabAction";
 import { SourceTabMenu } from "./sourceTabMenu";
 import { useTabStripOverflow } from "./useTabStripOverflow";
 
@@ -48,7 +48,7 @@ export function SourceFilter({
   const settings = useSettings();
   const accountLabels = useAccountLabels();
   const { run, pending } = useServerAction();
-  const { rowRef, scrollerRef, contentRef, actionsRef, compact } =
+  const { rowRef, scrollerRef, contentRef, actionsRef, labelRef, compact } =
     useTabStripOverflow();
   const kind = selected === "all" ? null : kindOfSource(selected);
 
@@ -115,10 +115,10 @@ export function SourceFilter({
               </SourceTab>
             ))}
             {!showCashTab && (
-              <SourceTabAction onClick={handleEnableCash} disabled={pending}>
+              <TextAction onClick={handleEnableCash} disabled={pending}>
                 <PlusIcon className="size-3.5" />
                 Cash
-              </SourceTabAction>
+              </TextAction>
             )}
           </div>
         </div>
@@ -127,7 +127,11 @@ export function SourceFilter({
           className="flex shrink-0 items-center gap-5 pr-4 pl-5"
         >
           <AddAccountTab onAdded={onChange} />
-          <ImportFromImage existingSources={allTabSources} compact={compact} />
+          <ImportFromImage
+            existingSources={allTabSources}
+            compact={compact}
+            labelRef={labelRef}
+          />
         </div>
       </div>
       {kind === "api" && (

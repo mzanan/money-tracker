@@ -5,8 +5,7 @@ import { Loader2Icon, PlusIcon } from "lucide-react";
 import { useAddAccount } from "@/hooks/useAddAccount";
 
 import { Input } from "@/components/ui/input";
-
-import { SourceTabAction } from "./sourceTabAction";
+import { TextAction } from "@/components/ui/textAction";
 
 export function AddAccountTab({
   onAdded,
@@ -23,14 +22,14 @@ export function AddAccountTab({
           onBlur={edit.cancel}
           placeholder="Account name"
           aria-label="Account name"
-          className="h-8 w-36 text-sm"
+          className="w-36 text-sm"
         />
       </div>
     );
   }
 
   return (
-    <SourceTabAction
+    <TextAction
       aria-label="Add account"
       onClick={() => edit.start("")}
       disabled={pending}
@@ -40,6 +39,6 @@ export function AddAccountTab({
       ) : (
         <PlusIcon className="size-4" />
       )}
-    </SourceTabAction>
+    </TextAction>
   );
 }

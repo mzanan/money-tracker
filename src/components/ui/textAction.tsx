@@ -2,7 +2,7 @@ import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/utils";
 
-export function SourceTabAction({
+export function TextAction({
   className,
   ...props
 }: ComponentProps<"button">) {

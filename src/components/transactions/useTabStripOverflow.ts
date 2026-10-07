@@ -2,11 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { tabStripNeedsCompact } from "@/lib/tabStripOverflow";
+
 export function useTabStripOverflow() {
   const rowRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
+  const labelRef = useRef<HTMLSpanElement>(null);
   const compactRef = useRef(false);
   const labelWidthRef = useRef(0);
   const [compact, setCompact] = useState(false);
@@ -20,21 +23,19 @@ export function useTabStripOverflow() {
 
     function measure() {
       if (!row || !scroller || !content || !actions) return;
-      const label = actions.querySelector<HTMLElement>(
-        "[data-collapsible-label]",
-      );
-      if (label && !compactRef.current && label.parentElement) {
+      const label = labelRef.current;
+      if (label?.parentElement && !compactRef.current) {
         labelWidthRef.current =
           label.offsetWidth +
           (parseFloat(getComputedStyle(label.parentElement).columnGap) || 0);
       }
-      const actionsWidth =
-        actions.offsetWidth + (compactRef.current ? labelWidthRef.current : 0);
-      const needed =
-        (parseFloat(getComputedStyle(scroller).paddingLeft) || 0) +
-        content.offsetWidth +
-        actionsWidth;
-      const next = needed > row.clientWidth;
+      const next = tabStripNeedsCompact({
+        rowWidth: row.clientWidth,
+        leadingPadding: parseFloat(getComputedStyle(scroller).paddingLeft) || 0,
+        tabsWidth: content.offsetWidth,
+        actionsWidth: actions.offsetWidth,
+        hiddenLabelWidth: compactRef.current ? labelWidthRef.current : 0,
+      });
       compactRef.current = next;
       setCompact(next);
     }
@@ -46,5 +47,5 @@ export function useTabStripOverflow() {
     return () => observer.disconnect();
   }, []);
 
-  return { rowRef, scrollerRef, contentRef, actionsRef, compact };
+  return { rowRef, scrollerRef, contentRef, actionsRef, labelRef, compact };
 }

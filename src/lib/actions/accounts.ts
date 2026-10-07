@@ -27,7 +27,7 @@ function guardEditable(source: string): string | null {
 export async function upsertAccountLabel(
   source: string,
   label: string,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<ActionResult<{ id: string; source: string }>> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
@@ -50,7 +50,7 @@ export async function upsertAccountLabel(
     .returning({ id: accounts.id });
 
   revalidatePath("/", "layout");
-  return { ok: true, data: { id: row.id } };
+  return { ok: true, data: { id: row.id, source: normalizedSource } };
 }
 
 export async function setAccountCurrency(

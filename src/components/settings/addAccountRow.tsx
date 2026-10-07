@@ -6,6 +6,7 @@ import { useAddAccount } from "@/hooks/useAddAccount";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TextAction } from "@/components/ui/textAction";
 
 export function AddAccountRow() {
   const { edit, pending } = useAddAccount();
@@ -46,13 +47,12 @@ export function AddAccountRow() {
   }
 
   return (
-    <button
-      type="button"
+    <TextAction
       onClick={() => edit.start("")}
-      className="text-muted-foreground hover:text-foreground flex items-center gap-2 py-3 text-sm font-medium transition-colors first:pt-0"
+      className="flex gap-2 first:pt-0"
     >
       <PlusIcon className="size-3.5" />
       Add account
-    </button>
+    </TextAction>
   );
 }

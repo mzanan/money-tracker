@@ -7,6 +7,8 @@ import {
   SmartphoneIcon,
 } from "lucide-react";
 
+import type { Ref } from "react";
+
 import type { ImageImportMode } from "@/lib/imageExtract";
 import { cn } from "@/lib/utils";
 
@@ -22,11 +24,11 @@ import {
 } from "@/components/ui/drawer";
 import { IconCircle } from "@/components/ui/iconCircle";
 import { TappableRow } from "@/components/ui/tappableRow";
+import { TextAction } from "@/components/ui/textAction";
 import { ImageExtractLoading } from "@/components/screenshot/imageExtractLoading";
 import { ScreenshotImporter } from "@/components/screenshot/screenshotImporter";
 import { useSettings } from "@/hooks/useSettings";
 
-import { SourceTabAction } from "./sourceTabAction";
 import { useImportFromImage } from "./useImportFromImage";
 
 const OPTIONS: Array<{
@@ -52,9 +54,11 @@ const OPTIONS: Array<{
 export function ImportFromImage({
   existingSources,
   compact = false,
+  labelRef,
 }: {
   existingSources: string[];
   compact?: boolean;
+  labelRef?: Ref<HTMLSpanElement>;
 }) {
   const settings = useSettings();
   const {
@@ -72,16 +76,16 @@ export function ImportFromImage({
   } = useImportFromImage();
 
   const trigger = (
-    <SourceTabAction disabled={extracting}>
+    <TextAction disabled={extracting}>
       {extracting ? (
         <Loader2Icon className="size-3.5 animate-spin" />
       ) : (
         <ImageUpIcon className="size-3.5" />
       )}
-      <span data-collapsible-label className={cn(compact && "sr-only")}>
+      <span ref={labelRef} className={cn(compact && "sr-only")}>
         Import from image
       </span>
-    </SourceTabAction>
+    </TextAction>
   );
 
   if (!settings.hasAiKey) {
