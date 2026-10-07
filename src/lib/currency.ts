@@ -193,3 +193,14 @@ export function snapshotRatesFor(
   }
   return out;
 }
+
+export function amountToInputDigits(amount: number, code: string): string {
+  const { decimals } = getCurrency(code);
+  const fixed = amount.toFixed(decimals);
+  const digits = decimals > 0 ? fixed.replace(/\.?0+$/, "") : fixed;
+  return parseAmountInput(digits) === null ? "" : digits;
+}
+
+export function kindSign(kind: string): "+" | "-" {
+  return kind === "income" ? "+" : "-";
+}

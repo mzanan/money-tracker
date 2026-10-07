@@ -1,3 +1,5 @@
+export const MAX_TAGS_PER_TRANSACTION = 10;
+
 function stripAccents(value: string): string {
   return value.normalize("NFD").replace(/[̀-ͯ]/g, "");
 }

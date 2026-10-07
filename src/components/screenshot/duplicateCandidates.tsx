@@ -5,6 +5,7 @@ import { AlertTriangleIcon } from "lucide-react";
 import { labelForSource } from "@/lib/constants/sources";
 import type { CandidateMatch, EditableItem } from "@/lib/imageExtract";
 import { cn } from "@/lib/utils";
+import { kindSign } from "@/lib/currency";
 
 export function DuplicateCandidates({
   candidates,
@@ -34,7 +35,7 @@ export function DuplicateCandidates({
               {match.note ? ` · ${match.note}` : ""}
             </span>
             <span className="shrink-0 font-mono">
-              {match.kind === "expense" ? "-" : "+"}
+              {kindSign(match.kind)}
               {match.amount} {match.currency}
             </span>
           </div>

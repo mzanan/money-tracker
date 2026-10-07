@@ -5,6 +5,7 @@ import { ChevronDownIcon, Loader2Icon, PlusIcon } from "lucide-react";
 import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { getCurrency } from "@/lib/constants/currencies";
 import { resolveSourceLabel } from "@/lib/constants/sources";
+import type { EntrySuggestion } from "@/lib/entrySuggestions";
 import { cn } from "@/lib/utils";
 
 import { AmountInput } from "@/components/ui/amountInput";
@@ -19,12 +20,14 @@ import { Label } from "@/components/ui/label";
 import { SwitchRow } from "@/components/ui/switchRow";
 
 import { AccountSelect } from "./accountSelect";
+import { EntrySuggestionList } from "./entrySuggestionList";
 import { KindToggle } from "./kindToggle";
 import { TransferFeeSection } from "./transferFeeSection";
 import { useQuickAddForm } from "./useQuickAddForm";
 
 interface Props {
   recentTags: string[];
+  entrySuggestions: EntrySuggestion[];
   source: string;
   onAdded?: () => void;
   autoFocusAmount?: boolean;
@@ -34,6 +37,7 @@ interface Props {
 
 export function QuickAddForm({
   recentTags,
+  entrySuggestions,
   source,
   onAdded,
   autoFocusAmount = false,
@@ -85,6 +89,9 @@ export function QuickAddForm({
     setChargedCurrency,
     description,
     setDescription,
+    suggestions,
+    applySuggestion,
+    descriptionHandlers,
     tagsId,
     formId,
     tagsInput,
@@ -96,7 +103,13 @@ export function QuickAddForm({
     setDate,
     pending,
     handleSubmit,
-  } = useQuickAddForm(source, onAdded);
+  } = useQuickAddForm({
+    source,
+    onAdded,
+    entrySuggestions,
+    accountOptions,
+    onSourceChange,
+  });
 
   const submitButton = (
     <Button
@@ -173,16 +186,19 @@ export function QuickAddForm({
         </div>
       </div>
 
-      <Input
-        id={`${formId}-description`}
-        autoComplete="off"
-        placeholder="Description (coffee, rent, salary…)"
-        value={description}
-        onChange={(event) => setDescription(event.target.value)}
-        maxLength={120}
-        aria-label="Description"
-        className="bg-surface-2 h-9 rounded-xl border-none"
-      />
+      <EntrySuggestionList suggestions={suggestions} onSelect={applySuggestion}>
+        <Input
+          id={`${formId}-description`}
+          autoComplete="off"
+          placeholder="Description (coffee, rent, salary…)"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          {...descriptionHandlers}
+          maxLength={120}
+          aria-label="Description"
+          className="bg-surface-2 h-9 rounded-xl border-none"
+        />
+      </EntrySuggestionList>
 
       {submitButton}
 

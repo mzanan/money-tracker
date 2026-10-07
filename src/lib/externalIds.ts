@@ -49,3 +49,19 @@ export function withdrawalGroupFrom(
   const rest = externalId.slice(EXTERNAL_ID_PREFIX.withdrawal.length);
   return rest.split(":")[0] || null;
 }
+
+const NON_ENTRY_PREFIXES = [
+  EXTERNAL_ID_PREFIX.transfer,
+  EXTERNAL_ID_PREFIX.exchange,
+  EXTERNAL_ID_PREFIX.withdrawal,
+  EXTERNAL_ID_PREFIX.transferFee,
+  EXTERNAL_ID_PREFIX.manualFee,
+];
+
+export function isManualEntryExternalId(
+  id: string | null | undefined,
+): boolean {
+  if (id == null) return true;
+  if (isCsvExternalId(id) || isSyncedExternalId(id)) return false;
+  return !NON_ENTRY_PREFIXES.some((prefix) => id.startsWith(prefix));
+}

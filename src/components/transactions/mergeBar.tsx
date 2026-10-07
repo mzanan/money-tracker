@@ -4,7 +4,7 @@ import { Loader2Icon } from "lucide-react";
 
 import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { transactionLabel } from "@/lib/transactions";
-import { formatMoney } from "@/lib/currency";
+import { formatMoney, kindSign } from "@/lib/currency";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -110,13 +110,16 @@ export function MergeBar() {
                       {keepTx.transfer_group && <TransferBadge />}
                     </span>
                     <span className="text-muted-foreground block text-xs">
-                      {keepTx.occurred_on} · keeps this amount, the other one
-                      is deleted and its details are preserved
+                      {keepTx.occurred_on} · keeps this amount, the other one is
+                      deleted and its details are preserved
                     </span>
                   </span>
                   <span className="shrink-0 text-sm font-semibold tabular-nums">
-                    {keepTx.kind === "expense" ? "-" : "+"}
-                    {formatMoney(keepTx.amount_original, keepTx.currency_original)}
+                    {kindSign(keepTx.kind)}
+                    {formatMoney(
+                      keepTx.amount_original,
+                      keepTx.currency_original,
+                    )}
                   </span>
                 </TappableRow>
               ))}
