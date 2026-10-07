@@ -6,6 +6,10 @@ export const NAV_ITEMS = [
   { href: "/settings", label: "Settings", icon: SettingsIcon },
 ] as const;
 
+export type NavItem = (typeof NAV_ITEMS)[number];
+
 export function navLinkTextClass(active: boolean) {
-  return active ? "text-foreground" : "text-muted-foreground hover:text-foreground";
+  return active
+    ? "text-foreground"
+    : "text-muted-foreground hover:text-foreground";
 }

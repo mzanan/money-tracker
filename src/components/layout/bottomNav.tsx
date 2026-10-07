@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { isActivePath } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 import { NAV_ITEMS, navLinkTextClass } from "./navItems";
@@ -18,7 +19,7 @@ export function BottomNav() {
     >
       <div className="h-bottom-nav mx-auto flex max-w-xs items-stretch justify-around">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href;
+          const active = isActivePath(pathname, href);
           return (
             <Link
               key={label}
