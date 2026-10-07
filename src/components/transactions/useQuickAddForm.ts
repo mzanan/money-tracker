@@ -29,7 +29,7 @@ import { useTransferDraft } from "./useTransferDraft";
 import { useWithdrawalDraft } from "./useWithdrawalDraft";
 import { useUiStore } from "@/stores/uiStore";
 
-import { quickAddExtrasLabel } from "./quickAddExtras";
+import { quickAddExtrasLabel } from "@/lib/quickAddExtras";
 
 import type { Kind } from "./kindToggle";
 
@@ -54,6 +54,7 @@ export function useQuickAddForm(source: string, onAdded?: () => void) {
   const [currencyState, setCurrency] = useState(initialCurrency);
   const [description, setDescription] = useState("");
   const [tagsInput, setTagsInput] = useState("");
+  const [fee, setFee] = useState("");
   const [date, setDate] = useState(() => todayInTz(timezone));
   const [showExtras, setShowExtras] = useState(false);
   const [withdrawal, setWithdrawal] = useState(false);
@@ -156,6 +157,7 @@ export function useQuickAddForm(source: string, onAdded?: () => void) {
             setAmount("");
             setDescription("");
             setTagsInput("");
+            setFee("");
             setTransfer(false);
             transferDraft.reset();
             setLastCurrency(currency);
@@ -206,6 +208,7 @@ export function useQuickAddForm(source: string, onAdded?: () => void) {
             setAmount("");
             setDescription("");
             setTagsInput("");
+            setFee("");
             withdrawalDraft.reset();
             setWithdrawal(false);
             setLastCurrency(currency);
@@ -215,6 +218,13 @@ export function useQuickAddForm(source: string, onAdded?: () => void) {
       );
       return;
     }
+
+    const feeParsed = fee.trim() ? parseAndRoundAmount(fee, currency) : null;
+    if (feeParsed && !feeParsed.ok) {
+      toast.error(`Fee: ${feeParsed.error}`);
+      return;
+    }
+    const roundedFee = feeParsed?.amount;
 
     run(
       () =>
@@ -229,13 +239,17 @@ export function useQuickAddForm(source: string, onAdded?: () => void) {
           note: description.trim() || null,
           occurredOn: date,
           source,
+          fee: roundedFee,
         }),
       {
-        success: `${kind === "income" ? "Income" : "Expense"} · ${formatMoney(rounded, currency)}`,
+        success:
+          `${kind === "income" ? "Income" : "Expense"} · ${formatMoney(rounded, currency)}` +
+          (roundedFee ? ` · fee ${formatMoney(roundedFee, currency)}` : ""),
         onSuccess: () => {
           setAmount("");
           setDescription("");
           setTagsInput("");
+          setFee("");
           setLastCurrency(currency);
           onAdded?.();
         },
@@ -293,6 +307,9 @@ export function useQuickAddForm(source: string, onAdded?: () => void) {
     formId,
     tagsInput,
     setTagsInput,
+    fee,
+    setFee,
+    feeAvailable: !transferActive && !withdrawalActive,
     date,
     setDate,
     pending,

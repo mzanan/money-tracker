@@ -1,14 +1,18 @@
 "use server";
 
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { actionErrorMessage } from "@/lib/actionError";
 import { trackActivation } from "@/lib/activation";
-import { amountValidationError } from "@/lib/currency";
+import { amountValidationError, feeAmountError } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
-import { isSyncedExternalId, isWithdrawalExternalId } from "@/lib/externalIds";
+import {
+  isSyncedExternalId,
+  isWithdrawalExternalId,
+  manualFeeExternalId,
+} from "@/lib/externalIds";
 import { withRatesErrorHandling } from "@/lib/currencyContext";
 import { getRates } from "@/lib/rates";
 import {
@@ -17,11 +21,17 @@ import {
   type CreateTransactionInput,
   type UpdateTransactionInput,
 } from "@/lib/schemas/transaction";
+import { repointManualFee } from "@/lib/data/manualFee";
 import { getUser } from "@/lib/session";
 import { kindOfSource, normalizeSource } from "@/lib/constants/sources";
 import { dedupeTags } from "@/lib/tags";
 import { BUDGET_MONTH_LOCK_ERROR } from "@/lib/budgetMonth";
-import { buildTransactionRow, normalizeTags } from "@/lib/transactions";
+import {
+  buildFeeRow,
+  buildTransactionRow,
+  manualFeeNote,
+  normalizeTags,
+} from "@/lib/transactions";
 
 export type ActionResult<T = void> =
   | { ok: true; data?: T }
@@ -44,6 +54,16 @@ export async function createTransaction(
   );
   if (amountError) {
     return { ok: false, error: amountError };
+  }
+
+  const fee = parsed.data.fee;
+  if (fee !== undefined) {
+    const feeError = feeAmountError(
+      fee,
+      parsed.data.currency,
+      parsed.data.kind === "income" ? parsed.data.amount : undefined,
+    );
+    if (feeError) return { ok: false, error: feeError };
   }
 
   let source: string | undefined;
@@ -69,7 +89,8 @@ export async function createTransaction(
   if (!ratesResult.ok) return ratesResult;
   const rates = ratesResult.data.rates;
 
-  const row = buildTransactionRow(
+  const rowId = crypto.randomUUID();
+  const built = buildTransactionRow(
     {
       userId: user.id,
       kind: parsed.data.kind,
@@ -83,7 +104,24 @@ export async function createTransaction(
     { rates, userCurrencies: settings.currencies },
   );
 
-  if (!row) {
+  const feeRow =
+    fee === undefined
+      ? null
+      : buildFeeRow(
+          {
+            userId: user.id,
+            amount: fee,
+            currency: parsed.data.currency,
+            occurredOn: parsed.data.occurredOn,
+            note: manualFeeNote(parsed.data.note),
+            source,
+            externalId: manualFeeExternalId(rowId),
+          },
+          { rates, userCurrencies: settings.currencies },
+        );
+
+  const row = built ? { ...built, id: rowId } : null;
+  if (!row || (fee !== undefined && !feeRow)) {
     return {
       ok: false,
       error: `No rate available for ${parsed.data.currency}`,
@@ -91,18 +129,15 @@ export async function createTransaction(
   }
 
   try {
-    const [inserted] = await db
-      .insert(transactions)
-      .values(row)
-      .returning({ id: transactions.id });
-    const firstRows = await db
+    const priorRows = await db
       .select({ id: transactions.id })
       .from(transactions)
       .where(eq(transactions.user_id, user.id))
-      .limit(2);
-    if (firstRows.length === 1) await trackActivation(user.id);
+      .limit(1);
+    await db.insert(transactions).values([row, ...(feeRow ? [feeRow] : [])]);
+    if (priorRows.length === 0) await trackActivation(user.id);
     revalidatePath("/", "layout");
-    return { ok: true, data: { id: inserted.id } };
+    return { ok: true, data: { id: rowId } };
   } catch (error) {
     return {
       ok: false,
@@ -346,6 +381,7 @@ export async function mergeTransactions(
             and(eq(transactions.id, keepId), eq(transactions.user_id, user.id)),
           );
       }
+      await repointManualFee(user.id, removeId, keepId, dbTx);
       await dbTx
         .delete(transactions)
         .where(
@@ -383,7 +419,15 @@ export async function deleteTransaction(id: string): Promise<ActionResult> {
   try {
     await db
       .delete(transactions)
-      .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)));
+      .where(
+        and(
+          eq(transactions.user_id, user.id),
+          or(
+            eq(transactions.id, id),
+            eq(transactions.external_id, manualFeeExternalId(id)),
+          ),
+        ),
+      );
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {

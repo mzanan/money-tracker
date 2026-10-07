@@ -12,6 +12,7 @@ import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
 import { resolveTimezone } from "@/lib/preferences.server";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
+import { repointManualFee } from "@/lib/data/manualFee";
 import { getUser } from "@/lib/session";
 import {
   buildTransactionRow,
@@ -195,6 +196,7 @@ export async function importScreenshotRows(input: {
       imported += 1;
       results.push({ id: row.id, status: "imported" });
       if (row.replaceId) {
+        await repointManualFee(user.id, row.replaceId, inserted[0].id);
         await db
           .delete(transactions)
           .where(

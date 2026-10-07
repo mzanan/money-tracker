@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 
-export const createTransactionSchema = z.object({
+const transactionFieldsSchema = z.object({
   kind: z.enum(["income", "expense"]),
   amount: z
     .number()
@@ -17,9 +17,17 @@ export const createTransactionSchema = z.object({
   source: z.string().trim().min(1).max(32).optional(),
 });
 
+export const createTransactionSchema = transactionFieldsSchema.extend({
+  fee: z
+    .number()
+    .finite("Invalid fee")
+    .positive("Fee must be greater than 0")
+    .optional(),
+});
+
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 
-export const updateTransactionSchema = createTransactionSchema.extend({
+export const updateTransactionSchema = transactionFieldsSchema.extend({
   id: z.string().uuid("Invalid id"),
 });
 
