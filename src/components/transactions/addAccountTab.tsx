@@ -3,8 +3,6 @@
 import { Loader2Icon, PlusIcon } from "lucide-react";
 import type { Ref } from "react";
 
-import { cn } from "@/lib/utils";
-
 import { useAddAccount } from "@/hooks/useAddAccount";
 
 import { Input } from "@/components/ui/input";
@@ -40,15 +38,15 @@ export function AddAccountTab({
       aria-label="Add account"
       onClick={() => edit.start("")}
       disabled={pending}
+      label="Account"
+      compact={compact}
+      labelRef={labelRef}
     >
       {pending ? (
         <Loader2Icon className="size-3.5 animate-spin" />
       ) : (
         <PlusIcon className="size-3.5" />
       )}
-      <span ref={labelRef} className={cn(compact && "sr-only")}>
-        Account
-      </span>
     </TextAction>
   );
 }
