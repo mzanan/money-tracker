@@ -52,7 +52,6 @@ export function MonthView({
   if (days.length === 0 && carriedOverGroups.length === 0) {
     return (
       <Surface
-        radius="lg"
         padding="none"
         className="text-muted-foreground py-16 text-center text-sm"
       >
@@ -62,7 +61,7 @@ export function MonthView({
   }
 
   return (
-    <Surface radius="lg" padding="list">
+    <Surface padding="list">
       <div className="flex justify-end px-3 pt-2">
         <Button
           variant="ghost"

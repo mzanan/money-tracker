@@ -4,7 +4,7 @@ export function DashboardSkeleton() {
   return (
     <div className="mx-auto grid w-full max-w-xl gap-5">
       <Skeleton className="h-9 w-full" />
-      <Skeleton className="h-52 w-full rounded-2xl" />
+      <Skeleton className="h-52 w-full rounded-card" />
       <div className="flex gap-2">
         {Array.from({ length: 4 }, (_, i) => (
           <Skeleton key={i} className="h-8 w-16 rounded-full" />

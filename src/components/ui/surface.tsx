@@ -4,12 +4,8 @@ import { Slot } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 
-const surfaceVariants = cva("bg-card", {
+const surfaceVariants = cva("bg-card rounded-card", {
   variants: {
-    radius: {
-      lg: "rounded-2xl",
-      xl: "rounded-3xl",
-    },
     padding: {
       none: "",
       list: "px-1 py-1",
@@ -19,14 +15,12 @@ const surfaceVariants = cva("bg-card", {
     },
   },
   defaultVariants: {
-    radius: "xl",
     padding: "md",
   },
 });
 
 function Surface({
   className,
-  radius,
   padding,
   asChild = false,
   ...props
@@ -39,7 +33,7 @@ function Surface({
   return (
     <Comp
       data-slot="surface"
-      className={cn(surfaceVariants({ radius, padding }), className)}
+      className={cn(surfaceVariants({ padding }), className)}
       {...props}
     />
   );

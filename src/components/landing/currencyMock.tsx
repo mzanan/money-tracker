@@ -12,7 +12,7 @@ const mock = landingCopy.mocks.currency;
 export function CurrencyMock() {
   return (
     <div aria-hidden className="flex size-full flex-col gap-6 p-6 select-none">
-      <div className="bg-card flex items-center justify-between rounded-2xl px-4 py-3">
+      <div className="bg-card flex items-center justify-between rounded-card px-4 py-3">
         <span className="text-eyebrow">{mock.rateLabel}</span>
         <Ticker
           items={mock.rates}

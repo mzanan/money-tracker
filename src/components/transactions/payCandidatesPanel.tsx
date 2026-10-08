@@ -53,7 +53,7 @@ function CandidateButton({
 
 function CandidateSkeleton() {
   return (
-    <div className="border-border grid gap-2 rounded-2xl border px-4 py-3">
+    <div className="border-border grid gap-2 rounded-card border px-4 py-3">
       <Skeleton className="h-4 w-2/3" />
       <Skeleton className="h-3 w-1/3" />
     </div>
