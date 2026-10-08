@@ -327,6 +327,7 @@ export function useQuickAddForm({
     numericAmount,
     preview,
     ratesPending: ratesQuery.isPending,
+    ratesStale: ratesQuery.data?.stale ?? false,
     baseCurrency: settings.base_currency,
     showExtras,
     setShowExtras,

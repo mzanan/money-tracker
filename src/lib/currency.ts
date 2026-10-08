@@ -214,8 +214,8 @@ export function formatConverted(
 ): string | null {
   if (from === to || !rates) return null;
   try {
-    const converted = convert(amount, from, to, rates);
-    return formatMoney(roundForCurrency(converted, to), to, options);
+    const rounded = roundForCurrency(convert(amount, from, to, rates), to);
+    return formatMoney(rounded === 0 ? 0 : rounded, to, options);
   } catch {
     return null;
   }
