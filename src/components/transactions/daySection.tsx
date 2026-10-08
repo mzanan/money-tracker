@@ -11,9 +11,11 @@ import { DayGroup } from "./dayGroup";
 
 export function DaySection({
   day,
+  currency,
   onClose,
 }: {
   day: DayTotalsWithPairs;
+  currency?: string;
   onClose: () => void;
 }) {
   return (
@@ -30,7 +32,7 @@ export function DaySection({
         </Button>
       </div>
       {day.transactions.length + day.pairs.length > 0 ? (
-        <DayGroup day={day} showBudgetMonthBadges={false} />
+        <DayGroup day={day} currency={currency} showBudgetMonthBadges={false} />
       ) : (
         <p className="text-muted-foreground px-3 py-6 text-center text-sm">
           No transactions on this day.

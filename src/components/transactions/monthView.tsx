@@ -18,6 +18,7 @@ export function MonthView({
   emptyLabel = "No transactions this month.",
   includeTransfers = false,
   groupCarriedOver = true,
+  dayTotalsCurrency,
   recurringNotes,
 }: {
   transactions: Transaction[];
@@ -25,9 +26,11 @@ export function MonthView({
   emptyLabel?: string;
   includeTransfers?: boolean;
   groupCarriedOver?: boolean;
+  dayTotalsCurrency?: string;
   recurringNotes?: Set<string>;
 }) {
   const {
+    dayCurrency,
     days,
     carriedOverGroups,
     shown,
@@ -38,7 +41,13 @@ export function MonthView({
     toggleDay,
     txSelectMode,
     setTxSelectMode,
-  } = useMonthView(transactions, includeTransfers, movedOut, groupCarriedOver);
+  } = useMonthView(
+    transactions,
+    includeTransfers,
+    movedOut,
+    groupCarriedOver,
+    dayTotalsCurrency,
+  );
 
   if (days.length === 0 && carriedOverGroups.length === 0) {
     return (
@@ -81,10 +90,15 @@ export function MonthView({
           open={effectiveOpen.includes(day.date)}
           onToggle={() => toggleDay(day.date)}
           recurringNotes={recurringNotes}
+          currency={dayCurrency}
         />
       ))}
       {carriedOverGroups.map((group) => (
-        <CarriedOverGroup key={group.month} group={group} />
+        <CarriedOverGroup
+          key={group.month}
+          group={group}
+          currency={dayCurrency}
+        />
       ))}
       {hasMore && (
         <div

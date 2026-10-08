@@ -1,4 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
+import { cache } from "react";
 
 import { db } from "@/lib/db";
 import { accounts } from "@/lib/db/schema";
@@ -42,7 +43,7 @@ export async function getAccountLabels(userId: string): Promise<AccountLabels> {
   return Object.fromEntries(rows.map((row) => [row.source, row.label]));
 }
 
-export async function getAccountCurrencies(
+export const getAccountCurrencies = cache(async function getAccountCurrencies(
   userId: string,
   sources?: string[],
 ): Promise<AccountCurrencies> {
@@ -57,4 +58,4 @@ export async function getAccountCurrencies(
       ),
     );
   return declaredAccountCurrencies(rows);
-}
+});

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 import {
   filterTransactionSummaries,
@@ -12,8 +12,9 @@ import {
 } from "@/lib/assistantStats";
 import { convert } from "@/lib/currency";
 import { db } from "@/lib/db";
-import { recurring_payments, transactions } from "@/lib/db/schema";
+import { recurring_payments } from "@/lib/db/schema";
 import { getRates } from "@/lib/rates";
+import { getValuedTransactions } from "@/lib/data/valuedTransactions";
 import { monthsPerCycle } from "@/lib/reminders";
 import { dayTotalsList, periodTotals } from "@/lib/totals";
 import type { TotalsBreakdown } from "@/lib/totals";
@@ -33,23 +34,22 @@ export interface DaySpend {
   net: number;
 }
 
-function rangeWhere(userId: string, from?: string, to?: string) {
-  const filters = [eq(transactions.user_id, userId)];
-  if (from) filters.push(gte(transactions.occurred_on, from));
-  if (to) filters.push(lte(transactions.occurred_on, to));
-  return and(...filters);
-}
-
 async function fetchRange(
   userId: string,
   from?: string,
   to?: string,
 ): Promise<Transaction[]> {
-  return db
-    .select()
-    .from(transactions)
-    .where(rangeWhere(userId, from, to))
-    .orderBy(desc(transactions.occurred_on), desc(transactions.occurred_at));
+  const { transactions: valued } = await getValuedTransactions(userId);
+  return valued
+    .filter(
+      (tx) =>
+        (!from || tx.occurred_on >= from) && (!to || tx.occurred_on <= to),
+    )
+    .sort(
+      (a, b) =>
+        b.occurred_on.localeCompare(a.occurred_on) ||
+        b.occurred_at.localeCompare(a.occurred_at),
+    );
 }
 
 export async function getBalance(

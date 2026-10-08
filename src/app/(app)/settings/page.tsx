@@ -6,6 +6,7 @@ import { AssistantKeyCard } from "@/components/settings/assistantKeyCard";
 import { CalendarFeedCard } from "@/components/settings/calendarFeedCard";
 import { CashCard } from "@/components/settings/cashCard";
 import { CsvImportCard } from "@/components/settings/csvImportCard";
+import { DayTotalsCard } from "@/components/settings/dayTotalsCard";
 import { NonDailyLabelsCard } from "@/components/settings/nonDailyLabelsCard";
 import { ImportedAccountsCard } from "@/components/settings/importedAccountsCard";
 import { IntegrationsCard } from "@/components/settings/integrationsCard";
@@ -44,6 +45,12 @@ export default async function SettingsPage({
               hint="Currencies and timezone for new entries."
             >
               <SettingsForm />
+            </Section>
+            <Section
+              title="Display"
+              hint="How amounts are shown on account tabs."
+            >
+              <DayTotalsCard />
             </Section>
             <Section
               title="Non-daily expenses"

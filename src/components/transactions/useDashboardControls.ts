@@ -12,6 +12,8 @@ import type { Location, RecurringPayment, Transaction } from "@/types/db";
 
 import type { KindFilter } from "./balanceHero";
 
+import { useDayTotalsCurrency } from "./useDayTotalsCurrency";
+
 export type PanelMode = "none" | "filters" | "calendar" | "budget" | "add";
 export type FilterScope = "month" | "all";
 
@@ -137,11 +139,23 @@ export function useDashboardControls({
     [reminders],
   );
 
+  const selectedDayRows = useMemo(
+    () =>
+      selectedDay
+        ? lifetimeTransactions.filter((tx) => tx.occurred_on === selectedDay)
+        : [],
+    [selectedDay, lifetimeTransactions],
+  );
+  const selectedDayCurrency = useDayTotalsCurrency(
+    selectedSource,
+    selectedDayRows,
+  );
+
   const selectedDayGroup = useMemo<DayTotalsWithPairs | null>(() => {
     if (!selectedDay) return null;
     const group = dayTotalsWithPairs(
       lifetimeTransactions,
-      settings.base_currency,
+      selectedDayCurrency,
     ).find((day) => day.date === selectedDay);
     return (
       group ?? {
@@ -153,9 +167,10 @@ export function useDashboardControls({
         pairs: [],
       }
     );
-  }, [selectedDay, lifetimeTransactions, settings.base_currency]);
+  }, [selectedDay, lifetimeTransactions, selectedDayCurrency]);
 
   return {
+    selectedDayCurrency,
     panel,
     togglePanel,
     openPanel,

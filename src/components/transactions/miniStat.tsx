@@ -9,6 +9,7 @@ import { IconCircle } from "@/components/ui/iconCircle";
 export function MiniStat({
   label,
   value,
+  hint,
   icon,
   tone,
   active = false,
@@ -17,6 +18,7 @@ export function MiniStat({
 }: {
   label: string;
   value: ReactNode;
+  hint?: ReactNode;
   icon: ReactNode;
   tone: "income" | "expense";
   active?: boolean;
@@ -53,11 +55,18 @@ export function MiniStat({
       >
         {icon}
       </IconCircle>
-      <div className="grid">
+      <div className="grid min-w-0">
         <span className="text-muted-foreground text-micro tracking-wide uppercase">
           {label}
         </span>
-        <span className="text-sm font-semibold tabular-nums">{value}</span>
+        <span className="text-sm font-semibold whitespace-nowrap tabular-nums">
+          {value}
+        </span>
+        {hint && (
+          <span className="text-muted-foreground text-xs whitespace-nowrap tabular-nums">
+            {hint}
+          </span>
+        )}
       </div>
     </Comp>
   );

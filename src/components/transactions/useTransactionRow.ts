@@ -1,5 +1,6 @@
 "use client";
 
+import { useAccountCurrencies } from "@/hooks/useAccountCurrencies";
 import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useDialogState } from "@/hooks/useDialogState";
@@ -12,9 +13,10 @@ import {
 } from "@/lib/actions/transactions";
 import { undoMoveWithdrawalToCash } from "@/lib/actions/cash";
 import { setBudgetMonthShift, unmarkTransfer } from "@/lib/actions/transfers";
+import { isAccountCurrency } from "@/lib/accountCurrencies";
 import { canShiftBudgetMonth, hasBudgetMonthOverride } from "@/lib/budgetMonth";
 import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
-import { formatMoney, kindSign } from "@/lib/currency";
+import { kindSign } from "@/lib/currency";
 import { formatMonthShort, todayInTz } from "@/lib/dates";
 import {
   isSingleLegWithdrawalExternalId,
@@ -23,6 +25,7 @@ import {
 } from "@/lib/externalIds";
 import { isFixedTransaction } from "@/lib/fixedExpenses";
 import { transactionInDisplay } from "@/lib/totals";
+import { rowAmountTexts } from "@/lib/transactionDisplay";
 import { useUiStore } from "@/stores/uiStore";
 
 import { useDrawerStep } from "./drawerStepContext";
@@ -38,6 +41,7 @@ export function useTransactionRow(
   recurringNotes: Set<string> = NO_RECURRING_NOTES,
 ) {
   const settings = useSettings();
+  const accountCurrencies = useAccountCurrencies();
   const timezone = useTimezone();
   const accountLabels = useAccountLabels();
   const remove = useServerAction();
@@ -87,20 +91,20 @@ export function useTransactionRow(
     inDisplay = null;
   }
 
-  const sameAsBase = tx.currency_original === settings.base_currency;
   const sign = kindSign(tx.kind);
   const { hideAmounts, mask } = useHideAmounts();
-  const amountText = mask(
-    `${sign}${
-      inDisplay !== null
-        ? formatMoney(inDisplay, settings.base_currency)
-        : formatMoney(tx.amount_original, tx.currency_original)
-    }`,
-  );
-  const convertedText =
-    !sameAsBase && inDisplay !== null && !hideAmounts
-      ? formatMoney(tx.amount_original, tx.currency_original)
-      : null;
+  const amounts = rowAmountTexts({
+    amount: tx.amount_original,
+    currency: tx.currency_original,
+    baseAmount: inDisplay,
+    baseCurrency: settings.base_currency,
+    accountFirst: isAccountCurrency(
+      accountCurrencies[tx.source],
+      tx.currency_original,
+    ),
+  });
+  const amountText = mask(`${sign}${amounts.primary}`);
+  const convertedText = hideAmounts ? null : amounts.secondary;
   const sourceLabel = resolveSourceLabel(tx.source, accountLabels);
   const avatarSeed = tx.tags[0] || sourceLabel;
   const reminderTitle = tx.tags[0] || sourceLabel;

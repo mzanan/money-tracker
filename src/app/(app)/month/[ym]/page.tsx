@@ -40,6 +40,7 @@ export default async function MonthPage({
         data.lifetimeTxs,
       )}
       places={data.places}
+      costBasisSources={data.costBasisSources}
       reminders={remindersData.reminders}
       completedReminders={remindersData.completedReminders}
       today={remindersData.today}

@@ -24,6 +24,7 @@ export function DayGroup({
   showRowDate = false,
   showBudgetMonthBadges = true,
   recurringNotes,
+  currency,
 }: {
   day: DayTotalsWithPairs;
   defaultOpen?: boolean;
@@ -33,8 +34,10 @@ export function DayGroup({
   showRowDate?: boolean;
   showBudgetMonthBadges?: boolean;
   recurringNotes?: Set<string>;
+  currency?: string;
 }) {
   const settings = useSettings();
+  const totalsCurrency = currency ?? settings.base_currency;
   const { mask } = useHideAmounts();
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const open = openProp ?? internalOpen;
@@ -72,12 +75,12 @@ export function DayGroup({
         <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
           {totals.income > 0 && (
             <span className="text-income text-base font-semibold">
-              {mask(`+${formatMoney(totals.income, settings.base_currency)}`)}
+              {mask(`+${formatMoney(totals.income, totalsCurrency)}`)}
             </span>
           )}
           {totals.expense > 0 && (
             <span className="text-foreground text-base font-semibold">
-              {mask(`-${formatMoney(totals.expense, settings.base_currency)}`)}
+              {mask(`-${formatMoney(totals.expense, totalsCurrency)}`)}
             </span>
           )}
         </span>

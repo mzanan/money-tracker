@@ -134,3 +134,10 @@ export function preferredAccountCurrency(
   if (current && allowed?.includes(current)) return current;
   return allowed?.find((code) => available.includes(code)) ?? null;
 }
+
+export function isAccountCurrency(
+  declared: string[] | undefined,
+  currency: string,
+): boolean {
+  return declared?.length === 1 && declared[0] === currency;
+}

@@ -15,6 +15,7 @@ import { DashboardToolbar } from "./dashboardToolbar";
 import { FiltersPanel } from "./filtersPanel";
 import { MonthView } from "./monthView";
 import { SourceFilter } from "./sourceFilter";
+import { useDayTotalsCurrency } from "./useDayTotalsCurrency";
 import { useMonthDashboard } from "./useMonthDashboard";
 
 interface Props {
@@ -24,6 +25,7 @@ interface Props {
   csvSources: string[];
   withdrawalSources: string[];
   places: Location[];
+  costBasisSources?: string[];
   reminders?: RecurringPayment[];
   completedReminders?: RecurringPayment[];
   today: string;
@@ -38,6 +40,7 @@ export function MonthDashboard({
   csvSources,
   withdrawalSources,
   places,
+  costBasisSources = [],
   reminders = [],
   completedReminders = [],
   today,
@@ -75,6 +78,10 @@ export function MonthDashboard({
     today,
     sources,
   });
+  const dayTotalsCurrency = useDayTotalsCurrency(
+    c.selectedSource,
+    feedTransactions,
+  );
 
   return (
     <div className="mx-auto w-full max-w-xl pb-20 lg:pb-0">
@@ -104,6 +111,7 @@ export function MonthDashboard({
           view={view}
           onViewChange={setView}
           daySpend={daySpend}
+          costBasisSources={costBasisSources}
         />
         <div className="grid min-h-[calc(100svh-var(--spacing-header))] min-w-0 content-start gap-5 *:min-w-0">
           <SourceFilter
@@ -115,6 +123,7 @@ export function MonthDashboard({
           />
           <MonthView
             transactions={feedTransactions}
+            dayTotalsCurrency={dayTotalsCurrency}
             movedOut={feedMovedOut}
             includeTransfers={c.includeTransfers}
             recurringNotes={recurringNotes}
@@ -169,6 +178,7 @@ export function MonthDashboard({
               reminderDates={c.reminderDates}
               selectedDay={c.selectedDay}
               selectedDayGroup={c.selectedDayGroup}
+              selectedDayCurrency={c.selectedDayCurrency}
               onSelectDay={c.setSelectedDay}
               reminders={reminders}
               completedReminders={completedReminders}
