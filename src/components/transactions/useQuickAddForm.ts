@@ -16,11 +16,10 @@ import { recordWithdrawalExpense } from "@/lib/actions/cash";
 import { recordTransfer } from "@/lib/actions/transfers";
 import { createTransaction } from "@/lib/actions/transactions";
 import {
-  convert,
+  formatConverted,
   formatMoney,
   parseAmountInput,
   parseAndRoundAmount,
-  roundForCurrency,
 } from "@/lib/currency";
 import { preferredAccountCurrency } from "@/lib/accountCurrencies";
 import { todayInTz } from "@/lib/dates";
@@ -159,24 +158,18 @@ export function useQuickAddForm({
     },
   });
 
-  const preview = useMemo(() => {
-    if (numericAmount === null) return null;
-    if (currency === settings.base_currency) return null;
-    const rates = ratesQuery.data?.rates;
-    if (!rates) return null;
-    try {
-      const converted = convert(
-        numericAmount,
-        currency,
-        settings.base_currency,
-        rates,
-      );
-      const rounded = roundForCurrency(converted, settings.base_currency);
-      return formatMoney(rounded, settings.base_currency);
-    } catch {
-      return null;
-    }
-  }, [numericAmount, currency, settings.base_currency, ratesQuery.data]);
+  const preview = useMemo(
+    () =>
+      numericAmount === null
+        ? null
+        : formatConverted(
+            numericAmount,
+            currency,
+            settings.base_currency,
+            ratesQuery.data?.rates,
+          ),
+    [numericAmount, currency, settings.base_currency, ratesQuery.data],
+  );
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -334,6 +327,7 @@ export function useQuickAddForm({
     numericAmount,
     preview,
     ratesPending: ratesQuery.isPending,
+    ratesStale: ratesQuery.data?.stale ?? false,
     baseCurrency: settings.base_currency,
     showExtras,
     setShowExtras,

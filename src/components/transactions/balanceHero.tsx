@@ -1,15 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
 import { ArrowDownRightIcon, ArrowUpRightIcon } from "lucide-react";
 
+import { RateEstimate } from "@/components/ui/rateEstimate";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
-import { excludeCanceledPairs } from "@/lib/cancellations";
 import { formatMoney } from "@/lib/currency";
 import { formatYearMonthShort } from "@/lib/dates";
-import { periodTotals } from "@/lib/totals";
 import { cn } from "@/lib/utils";
 
 import type { Transaction } from "@/types/db";
@@ -19,7 +17,7 @@ import { DaySpendView } from "./daySpendView";
 import { MiniStat } from "./miniStat";
 import { PeriodNav } from "./periodNav";
 import { TodayButton } from "./todayButton";
-import { useDisplayCurrency } from "./useDisplayCurrency";
+import { useBalanceHero } from "./useBalanceHero";
 
 import type { useDaySpend } from "./useDaySpend";
 
@@ -60,32 +58,17 @@ export function BalanceHero({
   daySpend,
 }: Props) {
   const { mask } = useHideAmounts();
-  const displayCurrency = useDisplayCurrency(lifetimeTransactions);
-
-  const monthTotals = useMemo(
-    () =>
-      periodTotals(
-        excludeCanceledPairs(transactions),
-        displayCurrency,
-        includeTransfers,
-      ),
-    [transactions, displayCurrency, includeTransfers],
-  );
-
-  const lifetimeTotals = useMemo(
-    () => periodTotals(lifetimeTransactions, displayCurrency, includeTransfers),
-    [lifetimeTransactions, displayCurrency, includeTransfers],
-  );
-
-  const totalPositive = lifetimeTotals.net >= 0;
-  const totalSigned = formatMoney(lifetimeTotals.net, displayCurrency, {
-    signed: true,
-  });
-
-  const monthPositive = monthTotals.net >= 0;
-  const monthSigned = formatMoney(monthTotals.net, displayCurrency, {
-    signed: true,
-  });
+  const {
+    displayCurrency,
+    monthTotals,
+    totalPositive,
+    totalSigned,
+    showBaseEstimate,
+    totalInBase,
+    ratesStale,
+    monthPositive,
+    monthSigned,
+  } = useBalanceHero({ transactions, lifetimeTransactions, includeTransfers });
 
   function toggle(kind: "income" | "expense") {
     onKindChange(selectedKind === kind ? "all" : kind);
@@ -137,6 +120,13 @@ export function BalanceHero({
           >
             {mask(totalSigned)}
           </p>
+          {showBaseEstimate && (
+            <p className="text-muted-foreground mt-1 h-4 text-xs">
+              {totalInBase && (
+                <RateEstimate value={mask(totalInBase)} stale={ratesStale} />
+              )}
+            </p>
+          )}
 
           <div className="border-border mt-9 border-t pt-6">
             <div className="grid grid-cols-2 gap-3">

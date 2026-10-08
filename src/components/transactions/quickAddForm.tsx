@@ -14,6 +14,7 @@ import {
   AmountField,
 } from "@/components/ui/amountCurrencyField";
 import { Button } from "@/components/ui/button";
+import { RateEstimate } from "@/components/ui/rateEstimate";
 import { CurrencySelect } from "@/components/ui/currencySelect";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,6 +59,7 @@ export function QuickAddForm({
     numericAmount,
     preview,
     ratesPending,
+    ratesStale,
     baseCurrency,
     showExtras,
     transfer,
@@ -211,10 +213,7 @@ export function QuickAddForm({
             numericAmount !== null)) && (
           <div className="text-muted-foreground -mt-1 px-1 text-xs">
             {preview ? (
-              <>
-                ≈ <span className="text-foreground">{preview}</span>{" "}
-                <span className="opacity-60">today&apos;s rate</span>
-              </>
+              <RateEstimate value={preview} stale={ratesStale} emphasis />
             ) : (
               <span className="inline-flex items-center gap-1">
                 <Loader2Icon className="size-3 animate-spin" /> Calculating…

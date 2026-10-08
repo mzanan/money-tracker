@@ -183,7 +183,9 @@ drizzle/migrations/           # SQL generado por drizzle-kit
 - **Snapshot de FX por fila**: cada `transactions` row guarda un
   `fx_rates_snapshot` (JSON USD-based) al cargar. Los totales siempre se
   calculan con esa snapshot, así no se mueven aunque cambien las tasas o la
-  moneda base. `useRates` queda solo para el preview live en `quickAddForm`.
+  moneda base. `useRates` (tasas de hoy) queda solo para estimados en vivo:
+  el preview de `quickAddForm`, el de transferencias y el "≈" en moneda base
+  bajo "Total balance" cuando la cuenta se muestra en otra moneda.
 - **Privacy toggle**: ojito al lado de "Total balance" / "Total spent"
   enmascara los aggregates. Persistido en cookie `mt_hide_amounts`
   (server-readable, sin flash al recargar).
