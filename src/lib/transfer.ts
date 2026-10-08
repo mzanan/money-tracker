@@ -1,8 +1,5 @@
 import { convert, feeAmountError, roundForCurrency } from "@/lib/currency";
-import {
-  EXTERNAL_ID_PREFIX,
-  TRANSFER_FEE_DEST_SUFFIX,
-} from "@/lib/externalIds";
+import { transferFeeExternalId } from "@/lib/externalIds";
 
 import type { FxRates } from "@/types/db";
 
@@ -35,13 +32,13 @@ export function transferFeeSpecs({
       amount: originFee,
       currency: originCurrency,
       source: originSource,
-      externalId: `${EXTERNAL_ID_PREFIX.transferFee}${group}`,
+      externalId: transferFeeExternalId(group),
     },
     {
       amount: destinationFee,
       currency: destinationCurrency,
       source: destinationSource,
-      externalId: `${EXTERNAL_ID_PREFIX.transferFee}${group}${TRANSFER_FEE_DEST_SUFFIX}`,
+      externalId: transferFeeExternalId(group, "destination"),
     },
   ].filter((spec) => spec.amount > 0);
 }

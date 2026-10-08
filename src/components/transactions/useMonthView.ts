@@ -23,8 +23,10 @@ export function useMonthView(
   includeTransfers = false,
   movedOut: Transaction[] = [],
   groupCarriedOver = true,
+  dayTotalsCurrency?: string,
 ) {
   const settings = useSettings();
+  const dayCurrency = dayTotalsCurrency ?? settings.base_currency;
   const txSelectMode = useUiStore((s) => s.txSelectMode);
   const setTxSelectMode = useUiStore((s) => s.setTxSelectMode);
   const [visibleDays, setVisibleDays] = useState(MONTH_INITIAL_DAYS);
@@ -56,7 +58,7 @@ export function useMonthView(
       groupCarriedOver
         ? groupCarriedOverByMonth(
             carriedOver,
-            settings.base_currency,
+            dayCurrency,
             includeTransfers,
             crossed.pairs,
           )
@@ -65,7 +67,7 @@ export function useMonthView(
       carriedOver,
       crossed.pairs,
       groupCarriedOver,
-      settings.base_currency,
+      dayCurrency,
       includeTransfers,
     ],
   );
@@ -81,11 +83,11 @@ export function useMonthView(
     () =>
       dayTotalsWithPairs(
         native,
-        settings.base_currency,
+        dayCurrency,
         includeTransfers,
         displayOnlyRows,
       ),
-    [native, settings.base_currency, includeTransfers, displayOnlyRows],
+    [native, dayCurrency, includeTransfers, displayOnlyRows],
   );
   const days = useMemo(
     () => mergeMovedOutIntoDays(nativeDays, displayOnlyRows),
@@ -128,6 +130,7 @@ export function useMonthView(
   }, [hasMore, days.length]);
 
   return {
+    dayCurrency,
     days,
     carriedOverGroups,
     shown,

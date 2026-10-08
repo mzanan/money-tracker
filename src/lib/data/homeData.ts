@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { api_integrations, locations, transactions } from "@/lib/db/schema";
+import { api_integrations, locations } from "@/lib/db/schema";
 import { listAccountSources } from "@/lib/data/accounts";
+import { getValuedTransactions } from "@/lib/data/valuedTransactions";
 import { getUserSettings } from "@/lib/data/userSettings";
 import { thisYearMonth } from "@/lib/dates";
 import { cashWithdrawalSourcesByUsage } from "@/lib/filters";
@@ -19,15 +20,16 @@ export interface HomePageData {
   withdrawalSources: string[];
   recentTags: string[];
   places: Location[];
+  costBasisSources: string[];
 }
 
 export async function getHomePageData(): Promise<HomePageData> {
   const user = await requireUser();
 
-  const [settings, lifetimeTxs, integrationsRows, places, accountSources] =
+  const [settings, valued, integrationsRows, places, accountSources] =
     await Promise.all([
       getUserSettings(user.id),
-      db.select().from(transactions).where(eq(transactions.user_id, user.id)),
+      getValuedTransactions(user.id),
       db
         .select({ provider: api_integrations.provider })
         .from(api_integrations)
@@ -35,6 +37,7 @@ export async function getHomePageData(): Promise<HomePageData> {
       db.select().from(locations).where(eq(locations.user_id, user.id)),
       listAccountSources(user.id),
     ]);
+  const lifetimeTxs = valued.transactions;
 
   const yearMonth = thisYearMonth(await resolveTimezone(settings?.timezone));
 
@@ -64,6 +67,7 @@ export async function getHomePageData(): Promise<HomePageData> {
     withdrawalSources: cashWithdrawalSourcesByUsage(sources, lifetimeTxs),
     recentTags,
     places,
+    costBasisSources: valued.fundedSources,
   };
 }
 

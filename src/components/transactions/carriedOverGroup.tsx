@@ -6,7 +6,13 @@ import { DayGroup } from "./dayGroup";
 
 import type { CarriedOverGroup as CarriedOverGroupData } from "@/lib/budgetMonth";
 
-export function CarriedOverGroup({ group }: { group: CarriedOverGroupData }) {
+export function CarriedOverGroup({
+  group,
+  currency,
+}: {
+  group: CarriedOverGroupData;
+  currency?: string;
+}) {
   return (
     <DayGroup
       day={{
@@ -19,6 +25,7 @@ export function CarriedOverGroup({ group }: { group: CarriedOverGroupData }) {
       }}
       title={`Carried over from ${formatMonthLong(group.month)}`}
       showRowDate
+      currency={currency}
     />
   );
 }

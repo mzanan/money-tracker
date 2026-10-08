@@ -1,11 +1,21 @@
 import { cookies } from "next/headers";
 
 import { isValidTimezone } from "./dates";
-import { HIDE_AMOUNTS_COOKIE, TIMEZONE_COOKIE } from "./preferences";
+import {
+  DAY_TOTALS_ACCOUNT,
+  DAY_TOTALS_COOKIE,
+  HIDE_AMOUNTS_COOKIE,
+  TIMEZONE_COOKIE,
+} from "./preferences";
 
 export async function readHideAmountsCookie(): Promise<boolean> {
   const jar = await cookies();
   return jar.get(HIDE_AMOUNTS_COOKIE)?.value === "1";
+}
+
+export async function readDayTotalsInAccountCookie(): Promise<boolean> {
+  const jar = await cookies();
+  return jar.get(DAY_TOTALS_COOKIE)?.value === DAY_TOTALS_ACCOUNT;
 }
 
 export async function resolveTimezone(

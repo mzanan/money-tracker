@@ -220,3 +220,28 @@ export function formatConverted(
     return null;
   }
 }
+
+export function isNegligible(amount: number): boolean {
+  return Math.abs(amount) < 0.005;
+}
+
+const STAT_MAX_CHARS = 11;
+const STAT_COMPACT_FROM = 1_000_000;
+
+export function formatStat(amount: number, code: string): string {
+  const full = formatMoney(amount, code);
+  const large =
+    getCurrency(code).decimals === 0 && Math.abs(amount) >= STAT_COMPACT_FROM;
+  return large || full.length > STAT_MAX_CHARS
+    ? formatMoney(amount, code, { compact: true })
+    : full;
+}
+
+export function formatSignedOrNull(
+  amount: number,
+  code: string,
+): string | null {
+  return isNegligible(amount)
+    ? null
+    : formatMoney(amount, code, { signed: true });
+}

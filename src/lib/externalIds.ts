@@ -15,6 +15,22 @@ export function manualFeeExternalId(parentId: string): string {
 
 export const TRANSFER_FEE_DEST_SUFFIX = ":dest";
 
+export function transferFeeExternalId(
+  group: string,
+  side: "origin" | "destination" = "origin",
+): string {
+  const suffix = side === "destination" ? TRANSFER_FEE_DEST_SUFFIX : "";
+  return `${EXTERNAL_ID_PREFIX.transferFee}${group}${suffix}`;
+}
+
+export function transferFeeGroupFrom(
+  externalId: string | null | undefined,
+): string | null {
+  if (!externalId?.startsWith(EXTERNAL_ID_PREFIX.transferFee)) return null;
+  const rest = externalId.slice(EXTERNAL_ID_PREFIX.transferFee.length);
+  return rest.split(":")[0] || null;
+}
+
 export function isCsvExternalId(id: string | null | undefined): boolean {
   return (
     id != null &&

@@ -65,6 +65,7 @@ export default async function HomePage() {
         csvSources={data.csvSources}
         withdrawalSources={data.withdrawalSources}
         places={data.places}
+        costBasisSources={data.costBasisSources}
         reminders={remindersData.reminders}
         completedReminders={remindersData.completedReminders}
         today={remindersData.today}

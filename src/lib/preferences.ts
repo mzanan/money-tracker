@@ -1,5 +1,8 @@
 export const HIDE_AMOUNTS_COOKIE = "mt_hide_amounts";
 export const TIMEZONE_COOKIE = "mt_tz";
+export const DAY_TOTALS_COOKIE = "mt_day_totals";
+export const DAY_TOTALS_ACCOUNT = "account";
+export const DAY_TOTALS_BASE = "base";
 
 export const HIDDEN_AMOUNT = "••••";
 

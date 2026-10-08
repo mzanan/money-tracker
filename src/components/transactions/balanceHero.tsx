@@ -6,7 +6,7 @@ import { RateEstimate } from "@/components/ui/rateEstimate";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
-import { formatMoney } from "@/lib/currency";
+import { formatStat } from "@/lib/currency";
 import { formatYearMonthShort } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +39,7 @@ interface Props {
   view: HeroView;
   onViewChange: (next: HeroView) => void;
   daySpend: ReturnType<typeof useDaySpend>;
+  costBasisSources: string[];
 }
 
 export function BalanceHero({
@@ -56,6 +57,7 @@ export function BalanceHero({
   view,
   onViewChange,
   daySpend,
+  costBasisSources,
 }: Props) {
   const { mask } = useHideAmounts();
   const {
@@ -63,12 +65,21 @@ export function BalanceHero({
     monthTotals,
     totalPositive,
     totalSigned,
-    showBaseEstimate,
+    showBase,
     totalInBase,
+    totalAtTodaysRate,
     ratesStale,
+    incomeInBase,
+    expenseInBase,
+    netInBase,
     monthPositive,
     monthSigned,
-  } = useBalanceHero({ transactions, lifetimeTransactions, includeTransfers });
+  } = useBalanceHero({
+    transactions,
+    lifetimeTransactions,
+    includeTransfers,
+    costBasisSources,
+  });
 
   function toggle(kind: "income" | "expense") {
     onKindChange(selectedKind === kind ? "all" : kind);
@@ -120,10 +131,15 @@ export function BalanceHero({
           >
             {mask(totalSigned)}
           </p>
-          {showBaseEstimate && (
-            <p className="text-muted-foreground mt-1 h-4 text-xs">
+          {showBase && (
+            <p className="mt-1 h-4">
               {totalInBase && (
-                <RateEstimate value={mask(totalInBase)} stale={ratesStale} />
+                <RateEstimate
+                  value={mask(totalInBase)}
+                  showRate={totalAtTodaysRate}
+                  stale={ratesStale}
+                  variant="hint"
+                />
               )}
             </p>
           )}
@@ -133,8 +149,13 @@ export function BalanceHero({
               <MiniStat
                 label="In"
                 value={mask(
-                  `+${formatMoney(monthTotals.income, displayCurrency)}`,
+                  `+${formatStat(monthTotals.income, displayCurrency)}`,
                 )}
+                hint={
+                  incomeInBase && (
+                    <RateEstimate value={mask(incomeInBase)} showRate={false} />
+                  )
+                }
                 icon={<ArrowDownRightIcon className="size-4" />}
                 tone="income"
                 active={selectedKind === "income"}
@@ -144,8 +165,16 @@ export function BalanceHero({
               <MiniStat
                 label="Out"
                 value={mask(
-                  `-${formatMoney(monthTotals.expense, displayCurrency)}`,
+                  `-${formatStat(monthTotals.expense, displayCurrency)}`,
                 )}
+                hint={
+                  expenseInBase && (
+                    <RateEstimate
+                      value={mask(expenseInBase)}
+                      showRate={false}
+                    />
+                  )
+                }
                 icon={<ArrowUpRightIcon className="size-4" />}
                 tone="expense"
                 active={selectedKind === "expense"}
@@ -154,17 +183,26 @@ export function BalanceHero({
               />
             </div>
 
-            <div className="mt-4 flex items-center justify-between">
+            <div className="mt-4 flex items-baseline justify-between">
               <span className="text-muted-foreground text-xs">
                 Net this month
               </span>
-              <span
-                className={cn(
-                  "text-sm font-semibold tabular-nums",
-                  monthPositive ? "text-foreground" : "text-expense",
+              <span className="grid justify-items-end">
+                <span
+                  className={cn(
+                    "text-sm font-semibold tabular-nums",
+                    monthPositive ? "text-foreground" : "text-expense",
+                  )}
+                >
+                  {mask(monthSigned)}
+                </span>
+                {netInBase && (
+                  <RateEstimate
+                    value={mask(netInBase)}
+                    showRate={false}
+                    variant="hint"
+                  />
                 )}
-              >
-                {mask(monthSigned)}
               </span>
             </div>
           </div>

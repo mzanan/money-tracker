@@ -132,7 +132,9 @@ export function sourceForApp(app?: string | null): string {
 }
 
 const SOURCE_RE = /^[a-z0-9][a-z0-9 &_-]{0,31}$/;
-const RESERVED_SOURCES = new Set(["all"]);
+export const ALL_SOURCES = "all";
+
+const RESERVED_SOURCES = new Set([ALL_SOURCES]);
 
 export const SOURCE_NAME_HINT =
   "Use up to 32 letters, numbers, spaces, &, _ or -";

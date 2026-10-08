@@ -183,9 +183,10 @@ drizzle/migrations/           # SQL generado por drizzle-kit
 - **Snapshot de FX por fila**: cada `transactions` row guarda un
   `fx_rates_snapshot` (JSON USD-based) al cargar. Los totales siempre se
   calculan con esa snapshot, así no se mueven aunque cambien las tasas o la
-  moneda base. `useRates` (tasas de hoy) queda solo para estimados en vivo:
-  el preview de `quickAddForm`, el de transferencias y el "≈" en moneda base
-  bajo "Total balance" cuando la cuenta se muestra en otra moneda.
+  moneda base, salvo las cuentas con costo de transferencia (abajo). `useRates`
+  (tasas de hoy) queda solo para estimados en vivo: el preview de
+  `quickAddForm`, el de transferencias y el "≈" en moneda base bajo "Total
+  balance" de cuentas sin costo de transferencia.
 - **Privacy toggle**: ojito al lado de "Total balance" / "Total spent"
   enmascara los aggregates. Persistido en cookie `mt_hide_amounts`
   (server-readable, sin flash al recargar).
@@ -214,6 +215,15 @@ drizzle/migrations/           # SQL generado por drizzle-kit
   cobrada de un retiro se validan contra lo declarado. Gastos e ingresos
   comunes en otra moneda se permiten (tarjeta en el exterior). Una cuenta con
   una sola moneda declarada muestra su saldo en esa moneda, sin convertir.
+- **Costo de transferencia**: en una cuenta con una sola moneda declarada
+  (distinta de la base), cada fila en esa moneda se valúa a la cotización de
+  la última transferencia entrante de ese día o anterior (varias el mismo día se
+  combinan; la transferencia conserva la suya). Encadena entre cuentas y se
+  aplica en el server reescribiendo el snapshot de la fila
+  (`src/lib/costBasis.ts`, `getValuedTransactions`), así filas, totales,
+  dashboard y asistente usan lo mismo. El snapshot reescrito nunca se persiste.
+  Totales por día en moneda base o, con la preferencia `mt_day_totals`, en la
+  moneda de la cuenta del tab.
 - **Withdrawals y efectivo**: un retiro puede vivir como una sola fila de gasto
   (`withdrawal:<grupo>`, sin `transfer_group`), y entonces el monto entero
   cuenta como gasto y no queda saldo en efectivo. "Move to Cash" en el menú de

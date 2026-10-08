@@ -23,6 +23,7 @@ export function CalendarPanel({
   reminderDates,
   selectedDay,
   selectedDayGroup,
+  selectedDayCurrency,
   onSelectDay,
   reminders,
   completedReminders,
@@ -34,6 +35,7 @@ export function CalendarPanel({
   reminderDates: Set<string>;
   selectedDay: string | null;
   selectedDayGroup: DayTotalsWithPairs | null;
+  selectedDayCurrency?: string;
   onSelectDay: (day: string | null) => void;
   reminders: RecurringPayment[];
   completedReminders: RecurringPayment[];
@@ -128,7 +130,11 @@ export function CalendarPanel({
 
           <Reveal open={Boolean(selectedDayGroup)}>
             {shownDay && (
-              <DaySection day={shownDay} onClose={() => onSelectDay(null)} />
+              <DaySection
+                day={shownDay}
+                currency={selectedDayCurrency}
+                onClose={() => onSelectDay(null)}
+              />
             )}
           </Reveal>
 
@@ -143,7 +149,9 @@ export function CalendarPanel({
               </span>
               <Tabs
                 value={reminderScope}
-                onValueChange={(v) => setReminderScope(v as typeof reminderScope)}
+                onValueChange={(v) =>
+                  setReminderScope(v as typeof reminderScope)
+                }
               >
                 <TabsList>
                   <TabsTrigger value="month">Month</TabsTrigger>
