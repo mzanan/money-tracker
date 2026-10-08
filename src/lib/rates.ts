@@ -5,6 +5,7 @@ import {
   hasMissingCryptoRates,
   type SpotTicker,
 } from "@/lib/fx/cryptoRates";
+import { BYBIT_API } from "@/lib/integrations/bybit";
 import type { FxRates } from "@/types/db";
 
 const PROVIDER_URL = "https://open.er-api.com/v6/latest/USD";
@@ -71,8 +72,7 @@ export async function fetchRatesFromProvider(previous?: FxRates): Promise<{
   };
 }
 
-const BYBIT_TICKERS_URL =
-  "https://api.bybit.com/v5/market/tickers?category=spot";
+const BYBIT_TICKERS_URL = `${BYBIT_API}/v5/market/tickers?category=spot`;
 const CRYPTO_RETRY_MS = 10 * 60 * 1000;
 
 interface BybitTickerResponse {

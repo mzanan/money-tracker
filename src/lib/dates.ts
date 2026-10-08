@@ -34,6 +34,18 @@ export function daysBefore(dateStr: string, days: number): string {
   );
 }
 
+export function addUtcDays(dateStr: string, days: number): string {
+  return new Date(Date.parse(`${dateStr}T00:00:00Z`) + days * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+export function datesBetween(from: string, to: string): string[] {
+  const dates: string[] = [];
+  for (let day = from; day <= to; day = addUtcDays(day, 1)) dates.push(day);
+  return dates;
+}
+
 export function dayDiff(a: string, b: string): number {
   const msPerDay = 86_400_000;
   return Math.round(

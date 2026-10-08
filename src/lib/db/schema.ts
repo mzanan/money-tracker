@@ -269,6 +269,15 @@ export const fx_rates_cache = sqliteTable("fx_rates_cache", {
   next_update_at: text("next_update_at"),
 });
 
+export const fx_rates_daily = sqliteTable("fx_rates_daily", {
+  date: text("date").primaryKey(),
+  rates: text("rates", { mode: "json" }).$type<FxRates>().notNull(),
+  source: text("source").notNull(),
+  fetched_at: text("fetched_at")
+    .notNull()
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+});
+
 export const api_integrations = sqliteTable(
   "api_integrations",
   {

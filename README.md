@@ -133,6 +133,7 @@ src/
     onboarding/               # primer setup (currencies + base)
     api/auth/[...all]/        # Better Auth route handler
     api/rates/                # proxy + cache de open.er-api.com
+    api/cron/fx-rates/        # cron diario: tasas del día en fx_rates_daily
     api/chat/                 # asistente (Vercel AI SDK, key del usuario)
     api/calendar/, api/share/ # feed iCal de reminders, share target de screenshots
     robots.ts, sitemap.ts     # SEO/AEO (ver lib/seo.ts)
@@ -256,6 +257,15 @@ drizzle/migrations/           # SQL generado por drizzle-kit
 - **Tasas**: [open.er-api.com](https://open.er-api.com): gratis sin API key,
   incluye VND. Cacheada en `fx_rates_cache` (Turso). Si el proveedor cae, se
   sirve la cache stale.
+- **Tasas históricas**: un cron de Vercel (01:00 UTC, `CRON_SECRET`) guarda
+  cada día las tasas de open.er-api + Bybit en `fx_rates_daily` (una fila por
+  fecha UTC). El pasado se cargó una sola vez con
+  `tsx scripts/backfill-fx-rates.ts --apply` (fiat de
+  [exchange-api](https://github.com/fawazahmed0/exchange-api) desde
+  2024-03-02, cripto del precio de apertura de las velas diarias de Bybit). Si Bybit
+  falla, la fila se guarda solo con fiat (`source: open.er-api`) y el backfill
+  la completa al re-ejecutarlo. `readFxRatesForDate` usa la fecha pedida o la
+  anterior más cercana.
 - **Analytics**: PostHog EU vía el proxy `/relay`, solo en producción. Banner
   de cookies con `cookieless_mode: "on_reject"` (sin consentimiento no hay
   cookies) y opción para cambiarlo en Settings. `?notrack=1` en cualquier URL
