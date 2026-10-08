@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 
 import type { IntegrationCreds, NormalizedTx } from "./index";
 
-const BYBIT_API = "https://api.bybit.com";
+export const BYBIT_API = "https://api.bybit.com";
 const RECV_WINDOW = "5000";
 const WINDOW_DAYS = 6;
 const MAX_PAGES_PER_WINDOW = 20;
