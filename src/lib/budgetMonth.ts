@@ -1,6 +1,7 @@
 import {
   EXTERNAL_ID_PREFIX,
-  TRANSFER_FEE_DEST_SUFFIX,
+  transferFeeExternalId,
+  transferFeeGroupFrom,
   withdrawalGroupFrom,
 } from "@/lib/externalIds";
 
@@ -15,13 +16,6 @@ import type { TotalsBreakdown } from "@/lib/totals";
 import type { Transaction } from "@/types/db";
 
 type GroupShape = Pick<Transaction, "transfer_group" | "external_id">;
-
-function transferFeeGroupFrom(externalId: string | null): string | null {
-  if (!externalId?.startsWith(EXTERNAL_ID_PREFIX.transferFee)) return null;
-  const rest = externalId.slice(EXTERNAL_ID_PREFIX.transferFee.length);
-  const group = rest.split(":")[0];
-  return group || null;
-}
 
 function isExchangeExternalId(externalId: string | null): boolean {
   return externalId?.startsWith(EXTERNAL_ID_PREFIX.exchange) ?? false;
@@ -46,8 +40,8 @@ export function canShiftBudgetMonth(tx: GroupShape): boolean {
 export function linkedExternalIds(group: string): string[] {
   return [
     `${EXTERNAL_ID_PREFIX.transfer}${group}`,
-    `${EXTERNAL_ID_PREFIX.transferFee}${group}`,
-    `${EXTERNAL_ID_PREFIX.transferFee}${group}${TRANSFER_FEE_DEST_SUFFIX}`,
+    transferFeeExternalId(group),
+    transferFeeExternalId(group, "destination"),
     `${EXTERNAL_ID_PREFIX.withdrawal}${group}`,
     `${EXTERNAL_ID_PREFIX.withdrawal}${group}:out`,
     `${EXTERNAL_ID_PREFIX.withdrawal}${group}:in`,
@@ -80,8 +74,7 @@ export function splitCarriedOverPairs(
     ...displayOnly,
   ]);
   const crossed = pairs.filter(
-    (pair) =>
-      carriedIds.has(pair.expense.id) || carriedIds.has(pair.income.id),
+    (pair) => carriedIds.has(pair.expense.id) || carriedIds.has(pair.income.id),
   );
   if (crossed.length === 0) return unchanged;
   const used = new Set(

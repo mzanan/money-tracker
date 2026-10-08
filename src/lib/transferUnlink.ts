@@ -3,10 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { roundForCurrency } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
-import {
-  EXTERNAL_ID_PREFIX,
-  TRANSFER_FEE_DEST_SUFFIX,
-} from "@/lib/externalIds";
+import { EXTERNAL_ID_PREFIX, transferFeeExternalId } from "@/lib/externalIds";
 import { transferLegsAreNet } from "@/lib/transfer";
 
 export type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -26,8 +23,8 @@ export async function unlinkTransferGroup(
       ),
     );
 
-  const originFeeId = `${EXTERNAL_ID_PREFIX.transferFee}${group}`;
-  const destinationFeeId = `${originFeeId}${TRANSFER_FEE_DEST_SUFFIX}`;
+  const originFeeId = transferFeeExternalId(group);
+  const destinationFeeId = transferFeeExternalId(group, "destination");
   const isWithdrawal = linked.some((row) =>
     row.external_id?.startsWith(EXTERNAL_ID_PREFIX.withdrawal),
   );
