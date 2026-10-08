@@ -66,7 +66,7 @@ export function CsvImportCard({
             {mappingVisible ? (
               <MappingForm csv={csv} existingSources={existingSources} />
             ) : (
-              <div className="bg-surface-2/60 flex items-center gap-2 rounded-xl px-3 py-2">
+              <div className="bg-surface-2/60 flex items-center gap-2 rounded-inset px-3 py-2">
                 <div className="text-muted-foreground min-w-0 flex-1 text-sm">
                   {sourceEdit.editing ? (
                     <Input

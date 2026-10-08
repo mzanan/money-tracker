@@ -3,6 +3,9 @@ import { extendTailwindMerge } from "tailwind-merge";
 
 const twMerge = extendTailwindMerge({
   extend: {
+    theme: {
+      radius: ["card", "inset", "control", "fab"],
+    },
     classGroups: {
       "font-size": [{ text: ["micro", "caption", "meta", "eyebrow"] }],
     },

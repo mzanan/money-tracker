@@ -16,8 +16,8 @@ const tappableRowVariants = cva(
         between: "justify-between",
       },
       size: {
-        default: "rounded-2xl",
-        compact: "rounded-xl py-2",
+        default: "rounded-inset",
+        compact: "rounded-inset py-2",
       },
     },
     defaultVariants: {

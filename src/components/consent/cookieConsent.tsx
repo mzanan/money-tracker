@@ -19,7 +19,6 @@ export function CookieConsent() {
       <Surface
         role="region"
         aria-label="Cookie consent"
-        radius="lg"
         padding="sm"
         className="flex flex-col gap-3 border shadow-lg"
       >

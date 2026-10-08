@@ -19,7 +19,7 @@ export function DaySection({
   onClose: () => void;
 }) {
   return (
-    <Surface radius="lg" padding="list">
+    <Surface padding="list">
       <div className="flex items-center justify-between gap-2 px-3 pt-2">
         <span className="text-eyebrow">Selected day</span>
         <Button

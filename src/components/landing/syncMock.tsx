@@ -14,7 +14,7 @@ export function SyncMock() {
       aria-hidden
       className="flex size-full flex-col justify-between gap-6 p-6 select-none"
     >
-      <div className="bg-card flex flex-col rounded-2xl px-4 py-4">
+      <div className="bg-card flex flex-col rounded-card px-4 py-4">
         {mock.accounts.map((account, index) => (
           <ListRow
             key={account.name}

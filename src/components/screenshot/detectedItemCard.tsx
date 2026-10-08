@@ -54,7 +54,6 @@ export function DetectedItemCard({
 }) {
   return (
     <Surface
-      radius="lg"
       padding="md"
       className={item.selected ? "" : "opacity-50"}
     >

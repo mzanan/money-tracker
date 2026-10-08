@@ -34,7 +34,7 @@ export function MiniStat({
       onClick={onClick}
       aria-pressed={interactive ? active : undefined}
       className={cn(
-        "bg-background/60 dark:bg-surface-2 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-all",
+        "bg-background/60 dark:bg-surface-2 flex w-full items-center gap-3 rounded-inset px-3 py-2.5 text-left transition-all",
         interactive &&
           "hover:bg-background/80 dark:hover:bg-surface-2/80 cursor-pointer",
         "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",

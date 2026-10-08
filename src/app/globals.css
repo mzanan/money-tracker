@@ -130,6 +130,10 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.4);
   --radius-4xl: calc(var(--radius) * 3);
+  --radius-card: 1rem;
+  --radius-inset: 0.75rem;
+  --radius-control: 0.625rem;
+  --radius-fab: 1.5rem;
 }
 
 :root {

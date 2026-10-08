@@ -135,7 +135,6 @@ export function FiltersPanel({
       </Reveal>
       <Reveal open={!amountActive}>
         <Surface
-          radius="lg"
           padding="none"
           className="text-muted-foreground px-6 py-16 text-center text-sm"
         >

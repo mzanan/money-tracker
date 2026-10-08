@@ -29,7 +29,7 @@ export function UpcomingBanner({
       type="button"
       onClick={onOpen}
       className={cn(
-        "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors",
+        "flex w-full items-center gap-3 rounded-card px-4 py-3 text-left transition-colors",
         overdue
           ? "bg-destructive/10 hover:bg-destructive/15"
           : "bg-primary/10 hover:bg-primary/15",
