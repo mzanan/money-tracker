@@ -6,8 +6,10 @@ import { ArrowDownRightIcon, ArrowUpRightIcon } from "lucide-react";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
+import { useRates } from "@/hooks/useRates";
+import { useSettings } from "@/hooks/useSettings";
 import { excludeCanceledPairs } from "@/lib/cancellations";
-import { formatMoney } from "@/lib/currency";
+import { formatConverted, formatMoney } from "@/lib/currency";
 import { formatYearMonthShort } from "@/lib/dates";
 import { periodTotals } from "@/lib/totals";
 import { cn } from "@/lib/utils";
@@ -59,6 +61,8 @@ export function BalanceHero({
   onViewChange,
   daySpend,
 }: Props) {
+  const settings = useSettings();
+  const ratesQuery = useRates();
   const { mask } = useHideAmounts();
   const displayCurrency = useDisplayCurrency(lifetimeTransactions);
 
@@ -81,6 +85,13 @@ export function BalanceHero({
   const totalSigned = formatMoney(lifetimeTotals.net, displayCurrency, {
     signed: true,
   });
+  const totalInBase = formatConverted(
+    lifetimeTotals.net,
+    displayCurrency,
+    settings.base_currency,
+    ratesQuery.data?.rates,
+    { signed: true },
+  );
 
   const monthPositive = monthTotals.net >= 0;
   const monthSigned = formatMoney(monthTotals.net, displayCurrency, {
@@ -137,6 +148,12 @@ export function BalanceHero({
           >
             {mask(totalSigned)}
           </p>
+          {totalInBase && (
+            <p className="text-muted-foreground mt-1 text-xs tabular-nums">
+              ≈ {mask(totalInBase)}{" "}
+              <span className="opacity-60">today&apos;s rate</span>
+            </p>
+          )}
 
           <div className="border-border mt-9 border-t pt-6">
             <div className="grid grid-cols-2 gap-3">

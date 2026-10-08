@@ -204,3 +204,19 @@ export function amountToInputDigits(amount: number, code: string): string {
 export function kindSign(kind: string): "+" | "-" {
   return kind === "income" ? "+" : "-";
 }
+
+export function formatConverted(
+  amount: number,
+  from: string,
+  to: string,
+  rates: FxRates | null | undefined,
+  options: FormatOptions = {},
+): string | null {
+  if (from === to || !rates) return null;
+  try {
+    const converted = convert(amount, from, to, rates);
+    return formatMoney(roundForCurrency(converted, to), to, options);
+  } catch {
+    return null;
+  }
+}
