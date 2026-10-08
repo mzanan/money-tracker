@@ -1,5 +1,8 @@
 import { convert, feeAmountError, roundForCurrency } from "@/lib/currency";
-import { EXTERNAL_ID_PREFIX, TRANSFER_FEE_DEST_SUFFIX } from "@/lib/externalIds";
+import {
+  EXTERNAL_ID_PREFIX,
+  TRANSFER_FEE_DEST_SUFFIX,
+} from "@/lib/externalIds";
 
 import type { FxRates } from "@/types/db";
 
@@ -177,7 +180,8 @@ export function creditedPreview({
     return {
       credited: roundForCurrency(received.amount, received.currency),
       currency: received.currency,
-      impliedRate: inTransit > 0 ? (received.amount + fees.destination) / inTransit : null,
+      impliedRate:
+        inTransit > 0 ? (received.amount + fees.destination) / inTransit : null,
     };
   }
 
@@ -209,17 +213,10 @@ export function creditedPreview({
   };
 }
 
-export function transferCurrencyError({
-  legCurrency,
-  accountCurrency,
-  accountLabel,
-  side,
-}: {
-  legCurrency: string;
-  accountCurrency: string | undefined;
-  accountLabel: string;
-  side: "sent" | "received";
-}): string | null {
-  if (!accountCurrency || accountCurrency === legCurrency) return null;
-  return `${accountLabel} uses ${accountCurrency}. Enter the amount ${side} in ${accountCurrency}.`;
+export function receivedFieldLabel(
+  isIncome: boolean,
+  required: boolean,
+): string {
+  const base = isIncome ? "Amount sent" : "Amount received";
+  return required ? base : `${base}, optional`;
 }

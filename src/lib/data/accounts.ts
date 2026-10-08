@@ -2,6 +2,10 @@ import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { accounts } from "@/lib/db/schema";
+import {
+  declaredAccountCurrencies,
+  type AccountCurrencies,
+} from "@/lib/accountCurrencies";
 import type { AccountLabels } from "@/lib/constants/sources";
 
 import type { Account } from "@/types/db";
@@ -40,18 +44,17 @@ export async function getAccountLabels(userId: string): Promise<AccountLabels> {
 
 export async function getAccountCurrencies(
   userId: string,
-  sources: string[],
-): Promise<Map<string, string>> {
-  if (sources.length === 0) return new Map();
+  sources?: string[],
+): Promise<AccountCurrencies> {
+  if (sources?.length === 0) return {};
   const rows = await db
     .select({ source: accounts.source, currency: accounts.currency })
     .from(accounts)
     .where(
-      and(eq(accounts.user_id, userId), inArray(accounts.source, sources)),
+      and(
+        eq(accounts.user_id, userId),
+        sources ? inArray(accounts.source, sources) : undefined,
+      ),
     );
-  const map = new Map<string, string>();
-  for (const row of rows) {
-    if (row.currency) map.set(row.source, row.currency);
-  }
-  return map;
+  return declaredAccountCurrencies(rows);
 }

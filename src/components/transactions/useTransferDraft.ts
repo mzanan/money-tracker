@@ -3,6 +3,12 @@
 import { useState } from "react";
 
 import { useAccountOptions } from "./useAccountOptions";
+import { useAccountCurrencies } from "@/hooks/useAccountCurrencies";
+import { useSettings } from "@/hooks/useSettings";
+import {
+  accountAccepts,
+  preferredAccountCurrency,
+} from "@/lib/accountCurrencies";
 import { useRates } from "@/hooks/useRates";
 import { parseAmountInput } from "@/lib/currency";
 import {
@@ -27,13 +33,31 @@ export function useTransferDraft({
   active: boolean;
 }) {
   const { data: ratesData } = useRates();
-  const [selected, setSelected] = useState("");
+  const accountCurrencies = useAccountCurrencies();
+  const settings = useSettings();
+  const [selected, setSelectedState] = useState("");
   const [fees, setFees] = useState<FeeDraft[]>(EMPTY_FEES);
   const [receivedAmount, setReceivedAmount] = useState("");
   const [receivedCurrency, setReceivedCurrency] = useState(txCurrency);
 
+  const receivedRequired = !accountAccepts(
+    accountCurrencies[selected],
+    txCurrency,
+  );
+
+  function setSelected(next: string) {
+    setSelectedState(next);
+    const allowed = accountCurrencies[next];
+    setReceivedCurrency(
+      accountAccepts(allowed, txCurrency)
+        ? txCurrency
+        : (preferredAccountCurrency(allowed, settings.currencies) ??
+            txCurrency),
+    );
+  }
+
   function reset() {
-    setSelected("");
+    setSelectedState("");
     setFees(EMPTY_FEES);
     setReceivedAmount("");
     setReceivedCurrency(txCurrency);
@@ -76,6 +100,7 @@ export function useTransferDraft({
     setReceivedCurrency,
     destinationCurrency,
     received,
+    receivedRequired,
     bySide,
     preview,
     reset,

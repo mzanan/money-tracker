@@ -6,7 +6,7 @@ import { formatMoney } from "@/lib/currency";
 import { TransferFeeFields } from "./transferFeeFields";
 
 import type { FeeDraft } from "./transferFeeFields";
-import type { CreditedPreview } from "@/lib/transfer";
+import { receivedFieldLabel, type CreditedPreview } from "@/lib/transfer";
 
 export function TransferFeeSection({
   idPrefix,
@@ -19,6 +19,7 @@ export function TransferFeeSection({
   onReceivedAmountChange,
   receivedCurrency,
   onReceivedCurrencyChange,
+  receivedRequired = false,
   preview,
   txKind = "expense",
 }: {
@@ -32,6 +33,7 @@ export function TransferFeeSection({
   onReceivedAmountChange: (value: string) => void;
   receivedCurrency: string;
   onReceivedCurrencyChange: (value: string) => void;
+  receivedRequired?: boolean;
   preview: CreditedPreview | null;
   txKind?: "expense" | "income";
 }) {
@@ -47,7 +49,7 @@ export function TransferFeeSection({
       />
       <AmountCurrencyField
         id={`${idPrefix}-received`}
-        label={isIncome ? "Amount sent, optional" : "Amount received, optional"}
+        label={receivedFieldLabel(isIncome, receivedRequired)}
         value={receivedAmount}
         onChange={onReceivedAmountChange}
         currency={receivedCurrency}

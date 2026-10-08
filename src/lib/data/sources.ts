@@ -9,6 +9,7 @@ import {
   user_settings,
 } from "@/lib/db/schema";
 import { isSyncable } from "@/lib/integrations";
+import { suggestedAccountCurrencies } from "@/lib/accountCurrencies";
 
 export interface ImportedSource {
   source: string;
@@ -34,7 +35,10 @@ export async function getImportedSources(
       .where(eq(accounts.user_id, userId)),
   ]);
 
-  const sources = rows.map((r) => ({ source: r.source, count: Number(r.count) }));
+  const sources = rows.map((r) => ({
+    source: r.source,
+    count: Number(r.count),
+  }));
   const knownSources = new Set(sources.map((s) => s.source));
   for (const { source } of accountRows) {
     if (!knownSources.has(source)) {
@@ -105,4 +109,17 @@ export async function getCsvSources(userId: string): Promise<string[]> {
   return rows
     .map((r) => r.source)
     .filter((source) => source && source !== "manual" && !isSyncable(source));
+}
+
+export async function getSuggestedAccountCurrencies(
+  userId: string,
+): Promise<Record<string, string>> {
+  const used = await db
+    .selectDistinct({
+      source: transactions.source,
+      currency: transactions.currency_original,
+    })
+    .from(transactions)
+    .where(eq(transactions.user_id, userId));
+  return suggestedAccountCurrencies(used);
 }

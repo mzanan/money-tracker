@@ -204,6 +204,14 @@ drizzle/migrations/           # SQL generado por drizzle-kit
   "Transfer" del quick-add (panel del botón +), o marcando una fila existente desde el menú.
   Disponible en cuentas csv y en cash (solo con cash habilitado), nunca en
   cuentas sincronizadas ni en el tab All.
+- **Monedas por cuenta**: cada cuenta puede declarar una o varias monedas en
+  Settings > Accounts (`accounts.currency`, código simple o array JSON; ver
+  `src/lib/accountCurrencies.ts`). Sin declarar acepta cualquier moneda; Settings
+  solo sugiere la moneda si todas sus filas comparten una. Las patas de
+  transferencia, la fila propia al marcar/emparejar transferencias y la moneda
+  cobrada de un retiro se validan contra lo declarado. Gastos e ingresos
+  comunes en otra moneda se permiten (tarjeta en el exterior). Una cuenta con
+  una sola moneda declarada muestra su saldo en esa moneda, sin convertir.
 - **Withdrawals y efectivo**: un retiro puede vivir como una sola fila de gasto
   (`withdrawal:<grupo>`, sin `transfer_group`), y entonces el monto entero
   cuenta como gasto y no queda saldo en efectivo. "Move to Cash" en el menú de

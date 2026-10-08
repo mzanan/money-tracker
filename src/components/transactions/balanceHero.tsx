@@ -6,11 +6,10 @@ import { ArrowDownRightIcon, ArrowUpRightIcon } from "lucide-react";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
-import { useSettings } from "@/hooks/useSettings";
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { formatMoney } from "@/lib/currency";
 import { formatYearMonthShort } from "@/lib/dates";
-import { periodTotals, soleCurrencyOf } from "@/lib/totals";
+import { periodTotals } from "@/lib/totals";
 import { cn } from "@/lib/utils";
 
 import type { Transaction } from "@/types/db";
@@ -20,6 +19,7 @@ import { DaySpendView } from "./daySpendView";
 import { MiniStat } from "./miniStat";
 import { PeriodNav } from "./periodNav";
 import { TodayButton } from "./todayButton";
+import { useDisplayCurrency } from "./useDisplayCurrency";
 
 import type { useDaySpend } from "./useDaySpend";
 
@@ -59,10 +59,8 @@ export function BalanceHero({
   onViewChange,
   daySpend,
 }: Props) {
-  const settings = useSettings();
   const { mask } = useHideAmounts();
-  const displayCurrency =
-    soleCurrencyOf(lifetimeTransactions) ?? settings.base_currency;
+  const displayCurrency = useDisplayCurrency(lifetimeTransactions);
 
   const monthTotals = useMemo(
     () =>

@@ -72,6 +72,7 @@ export function QuickAddForm({
     receivedAmount,
     setReceivedAmount,
     receivedCurrency,
+    transferReceivedRequired,
     setReceivedCurrency,
     destinationCurrency,
     transferPreview,
@@ -313,6 +314,7 @@ export function QuickAddForm({
                 receivedAmount={receivedAmount}
                 onReceivedAmountChange={setReceivedAmount}
                 receivedCurrency={receivedCurrency}
+                receivedRequired={transferReceivedRequired}
                 onReceivedCurrencyChange={setReceivedCurrency}
                 preview={transferPreview}
               />

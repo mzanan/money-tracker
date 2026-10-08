@@ -4,12 +4,18 @@ import { useState } from "react";
 
 import { parseAmountInput } from "@/lib/currency";
 
-export function useWithdrawalDraft({ currencies }: { currencies: string[] }) {
+export function useWithdrawalDraft({
+  currencies,
+  preferred,
+}: {
+  currencies: string[];
+  preferred?: string | null;
+}) {
+  const defaultCharged = preferred ?? currencies[0];
   const [total, setTotal] = useState("");
   const [fee, setFee] = useState("");
-  const [chargedCurrencyState, setChargedCurrencyState] = useState(
-    currencies[0],
-  );
+  const [chargedCurrencyState, setChargedCurrencyState] =
+    useState(defaultCharged);
 
   function setChargedCurrency(value: string) {
     setChargedCurrencyState(value);
@@ -20,7 +26,7 @@ export function useWithdrawalDraft({ currencies }: { currencies: string[] }) {
   function reset() {
     setTotal("");
     setFee("");
-    setChargedCurrencyState(currencies[0]);
+    setChargedCurrencyState(defaultCharged);
   }
 
   const chargedCurrency = currencies.includes(chargedCurrencyState)
