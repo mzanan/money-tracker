@@ -25,6 +25,8 @@ import { EXTERNAL_ID_PREFIX, isWithdrawalExternalId } from "@/lib/externalIds";
 import { canonicalTag, tagKey } from "@/lib/tags";
 
 import type { Kind } from "./kindToggle";
+import { useAccountCurrencies } from "@/hooks/useAccountCurrencies";
+import { preferredAccountCurrency } from "@/lib/accountCurrencies";
 
 const MAX_TAG_SUGGESTIONS = 12;
 const MAX_TAGS = 10;
@@ -110,8 +112,14 @@ export function useTransactionForm({
     txAmount: parseAmountInput(amount) ?? 0,
     active: transferActive,
   });
+  const accountCurrencies = useAccountCurrencies();
   const withdrawalDraft = useWithdrawalDraft({
     currencies: settings.currencies,
+    preferred: preferredAccountCurrency(
+      accountCurrencies[seed.source],
+      settings.currencies,
+      seed.currency,
+    ),
   });
 
   useEffect(() => {

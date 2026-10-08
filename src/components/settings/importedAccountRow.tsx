@@ -4,7 +4,7 @@ import { CheckIcon, Loader2Icon, MoreVerticalIcon, XIcon } from "lucide-react";
 
 import {
   removeAccount,
-  setAccountCurrency,
+  setAccountCurrencies,
   upsertAccountLabel,
 } from "@/lib/actions/accounts";
 import { setSourceArchived } from "@/lib/actions/settings";
@@ -18,6 +18,10 @@ import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
 import { useInlineEdit } from "@/hooks/useInlineEdit";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
+import {
+  currencyOptions,
+  toggleAccountCurrency,
+} from "@/lib/accountCurrencies";
 import type { IntegrationSummary } from "@/types/db";
 
 import { Badge } from "@/components/ui/badge";
@@ -30,22 +34,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ListRow } from "@/components/ui/listRow";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
-const MULTI_CURRENCY_VALUE = "__multi__";
+import { AccountCurrenciesPicker } from "./accountCurrenciesPicker";
 
 interface Props {
   source: string;
   label: string;
   count: number;
   hasAccount: boolean;
-  currency: string | null;
+  currencies: string[];
+  suggestedCurrency: string | null;
   integration: IntegrationSummary | null;
 }
 
@@ -54,7 +52,8 @@ export function ImportedAccountRow({
   label,
   count,
   hasAccount,
-  currency,
+  currencies,
+  suggestedCurrency,
   integration,
 }: Props) {
   const settings = useSettings();
@@ -68,10 +67,11 @@ export function ImportedAccountRow({
     run(() => setSourceArchived(source, false), { success: "Tab restored" });
   }
 
-  function handleCurrencyChange(value: string) {
+  function handleCurrencyToggle(code: string) {
     currencyAction.run(
-      () => setAccountCurrency(source, value === MULTI_CURRENCY_VALUE ? null : value),
-      { success: "Currency updated" },
+      () =>
+        setAccountCurrencies(source, toggleAccountCurrency(currencies, code)),
+      { success: "Currencies updated" },
     );
   }
 
@@ -176,27 +176,14 @@ export function ImportedAccountRow({
         </Button>
       )}
       {!reserved && (
-        <Select
-          value={currency ?? MULTI_CURRENCY_VALUE}
-          onValueChange={handleCurrencyChange}
+        <AccountCurrenciesPicker
+          label={label}
+          options={currencyOptions(settings.currencies, currencies)}
+          declared={currencies}
+          suggested={suggestedCurrency}
           disabled={currencyAction.pending}
-        >
-          <SelectTrigger
-            size="sm"
-            className="w-28"
-            aria-label={`${label} currency`}
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={MULTI_CURRENCY_VALUE}>Multi-currency</SelectItem>
-            {settings.currencies.map((code) => (
-              <SelectItem key={code} value={code}>
-                {code}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          onToggle={handleCurrencyToggle}
+        />
       )}
       <DropdownMenu>
         <DropdownMenuTrigger

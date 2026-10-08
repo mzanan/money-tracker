@@ -1,6 +1,13 @@
-import { listAccounts, resolveSourceLabel } from "@/lib/data/accounts";
+import {
+  getAccountCurrencies,
+  listAccounts,
+  resolveSourceLabel,
+} from "@/lib/data/accounts";
 import { getIntegrationSummaries } from "@/lib/data/integrations";
-import { getImportedSources } from "@/lib/data/sources";
+import {
+  getImportedSources,
+  getSuggestedAccountCurrencies,
+} from "@/lib/data/sources";
 import { getUserSettings } from "@/lib/data/userSettings";
 import { getUser } from "@/lib/session";
 import type { IntegrationProvider } from "@/types/db";
@@ -14,18 +21,24 @@ export async function ImportedAccountsCard() {
   const user = await getUser();
   if (!user) return null;
 
-  const [sourceRows, accountRows, integrations, settings] = await Promise.all([
+  const [
+    sourceRows,
+    accountRows,
+    integrations,
+    settings,
+    declaredCurrencies,
+    suggestedCurrencies,
+  ] = await Promise.all([
     getImportedSources(user.id),
     listAccounts(user.id),
     getIntegrationSummaries(user.id),
     getUserSettings(user.id),
+    getAccountCurrencies(user.id),
+    getSuggestedAccountCurrencies(user.id),
   ]);
 
   const accountLabels = Object.fromEntries(
     accountRows.map((a) => [a.source, a.label]),
-  );
-  const accountCurrencies = new Map(
-    accountRows.map((a) => [a.source, a.currency]),
   );
   const counts = new Map(sourceRows.map((s) => [s.source, s.count]));
   const sources = new Set([
@@ -40,7 +53,8 @@ export async function ImportedAccountsCard() {
       count: counts.get(source) ?? 0,
       label: resolveSourceLabel(source, accountLabels),
       hasAccount: source in accountLabels,
-      currency: accountCurrencies.get(source) ?? null,
+      currencies: declaredCurrencies[source] ?? [],
+      suggestedCurrency: suggestedCurrencies[source] ?? null,
       integration: integrations.get(source as IntegrationProvider) ?? null,
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
@@ -60,7 +74,8 @@ export async function ImportedAccountsCard() {
             label={row.label}
             count={row.count}
             hasAccount={row.hasAccount}
-            currency={row.currency}
+            currencies={row.currencies}
+            suggestedCurrency={row.suggestedCurrency}
             integration={row.integration}
           />
         ))}

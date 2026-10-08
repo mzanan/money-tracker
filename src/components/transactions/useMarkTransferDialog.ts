@@ -51,6 +51,7 @@ export function useMarkTransferDialog({
     receivedAmount: draft.receivedAmount,
     setReceivedAmount: draft.setReceivedAmount,
     receivedCurrency: draft.receivedCurrency,
+    receivedRequired: draft.receivedRequired,
     setReceivedCurrency: draft.setReceivedCurrency,
     destinationCurrency: draft.destinationCurrency,
     preview: draft.preview,

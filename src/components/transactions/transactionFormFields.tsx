@@ -191,6 +191,7 @@ export function TransactionFormFields({
             receivedAmount={transferDraft.receivedAmount}
             onReceivedAmountChange={transferDraft.setReceivedAmount}
             receivedCurrency={transferDraft.receivedCurrency}
+            receivedRequired={transferDraft.receivedRequired}
             onReceivedCurrencyChange={transferDraft.setReceivedCurrency}
             preview={transferDraft.preview}
             txKind={kind}

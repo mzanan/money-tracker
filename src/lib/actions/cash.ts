@@ -13,7 +13,8 @@ import {
   resolveSourceLabel,
 } from "@/lib/constants/sources";
 import { amountValidationError, formatMoney } from "@/lib/currency";
-import { getAccountLabels } from "@/lib/data/accounts";
+import { accountCurrencyError } from "@/lib/accountCurrencies";
+import { getAccountCurrencies, getAccountLabels } from "@/lib/data/accounts";
 import { db } from "@/lib/db";
 import { transactions, user_settings } from "@/lib/db/schema";
 import {
@@ -167,6 +168,23 @@ function buildWithdrawalConversion(
   return { ok: true, row, feeRow };
 }
 
+async function sourceCurrencyError(
+  userId: string,
+  source: string,
+  currency: string,
+): Promise<string | null> {
+  const [accountCurrencies, accountLabels] = await Promise.all([
+    getAccountCurrencies(userId, [source]),
+    getAccountLabels(userId),
+  ]);
+  return accountCurrencyError({
+    currency,
+    allowed: accountCurrencies[source],
+    accountLabel: resolveSourceLabel(source, accountLabels),
+    side: "charged",
+  });
+}
+
 export async function recordCashWithdrawal(
   input: CashWithdrawalInput,
 ): Promise<ActionResult> {
@@ -200,6 +218,12 @@ export async function recordCashWithdrawal(
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const chargedError = await sourceCurrencyError(
+    user.id,
+    source,
+    chargedCurrency,
+  );
+  if (chargedError) return { ok: false, error: chargedError };
 
   const ctxResult = await withRatesErrorHandling(() =>
     buildCurrencyContext(user.id),
@@ -393,6 +417,12 @@ export async function recordWithdrawalExpense(
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const chargedError = await sourceCurrencyError(
+    user.id,
+    source,
+    chargedCurrency,
+  );
+  if (chargedError) return { ok: false, error: chargedError };
 
   const ctxResult = await withRatesErrorHandling(() =>
     buildCurrencyContext(user.id),
@@ -482,6 +512,12 @@ export async function convertToWithdrawal(
   if (isSyncedExternalId(tx.external_id)) {
     return { ok: false, error: "Synced rows can't be converted" };
   }
+  const chargedError = await sourceCurrencyError(
+    user.id,
+    tx.source,
+    chargedCurrency,
+  );
+  if (chargedError) return { ok: false, error: chargedError };
 
   const ctxResult = await withRatesErrorHandling(() =>
     buildCurrencyContext(user.id),
@@ -570,9 +606,7 @@ export async function undoMoveWithdrawalToCash(
   }
 
   try {
-    await db.transaction((dbTx) =>
-      unlinkWithdrawalGroup(dbTx, user.id, group),
-    );
+    await db.transaction((dbTx) => unlinkWithdrawalGroup(dbTx, user.id, group));
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {

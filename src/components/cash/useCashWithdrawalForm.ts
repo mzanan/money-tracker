@@ -3,8 +3,10 @@
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
+import { useAccountCurrencies } from "@/hooks/useAccountCurrencies";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
+import { preferredAccountCurrency } from "@/lib/accountCurrencies";
 import { recordCashWithdrawal } from "@/lib/actions/cash";
 import { parseAmountInput } from "@/lib/currency";
 import { todayInTz } from "@/lib/dates";
@@ -18,13 +20,25 @@ export function useCashWithdrawalForm(sources: string[], onDone?: () => void) {
   const [currency, setCurrencyState] = useState(
     settings.currencies[1] ?? settings.currencies[0],
   );
-  const [chargedCurrency, setChargedCurrencyState] = useState(
-    settings.currencies[0],
+  const accountCurrencies = useAccountCurrencies();
+  const chargedFor = (account: string) =>
+    preferredAccountCurrency(
+      accountCurrencies[account],
+      settings.currencies,
+      currency,
+    ) ?? settings.currencies[0];
+  const [chargedCurrency, setChargedCurrencyState] = useState(() =>
+    chargedFor(sources[0] ?? ""),
   );
   const [total, setTotal] = useState("");
   const [rate, setRate] = useState("");
   const [fee, setFee] = useState("");
-  const [source, setSource] = useState(sources[0] ?? "");
+  const [source, setSourceState] = useState(sources[0] ?? "");
+
+  function setSource(value: string) {
+    setSourceState(value);
+    setChargedCurrency(chargedFor(value));
+  }
   const [date, setDate] = useState(() => todayInTz(timezone));
 
   const needsCharge = chargedCurrency !== currency;

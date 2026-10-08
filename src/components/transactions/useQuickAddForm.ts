@@ -8,6 +8,7 @@ import {
   transferAvailableFor,
   withdrawalAvailableFor,
 } from "@/lib/constants/sources";
+import { useAccountCurrencies } from "@/hooks/useAccountCurrencies";
 import { useRates } from "@/hooks/useRates";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
@@ -21,6 +22,7 @@ import {
   parseAndRoundAmount,
   roundForCurrency,
 } from "@/lib/currency";
+import { preferredAccountCurrency } from "@/lib/accountCurrencies";
 import { todayInTz } from "@/lib/dates";
 import type { EntrySuggestion } from "@/lib/entrySuggestions";
 import { withdrawalChargedAmount } from "@/lib/withdrawal";
@@ -60,10 +62,17 @@ export function useQuickAddForm({
   const lastCurrency = useUiStore((state) => state.lastCurrency);
   const setLastCurrency = useUiStore((state) => state.setLastCurrency);
 
-  const initialCurrency =
+  const accountCurrencies = useAccountCurrencies();
+  const fallbackCurrency =
     lastCurrency && settings.currencies.includes(lastCurrency)
       ? lastCurrency
       : settings.currencies[0];
+  const initialCurrency =
+    preferredAccountCurrency(
+      accountCurrencies[source],
+      settings.currencies,
+      fallbackCurrency,
+    ) ?? fallbackCurrency;
 
   const [kind, setKind] = useState<Kind>("expense");
   const [amount, setAmount] = useState("");
@@ -102,6 +111,11 @@ export function useQuickAddForm({
   });
   const withdrawalDraft = useWithdrawalDraft({
     currencies: settings.currencies,
+    preferred: preferredAccountCurrency(
+      accountCurrencies[source],
+      settings.currencies,
+      currency,
+    ),
   });
 
   function resetModes() {
@@ -114,6 +128,12 @@ export function useQuickAddForm({
   if (source !== lastSource) {
     setLastSource(source);
     resetModes();
+    const sourceCurrency = preferredAccountCurrency(
+      accountCurrencies[source],
+      settings.currencies,
+      currency,
+    );
+    if (sourceCurrency) setCurrency(sourceCurrency);
   }
 
   const {
@@ -330,6 +350,7 @@ export function useQuickAddForm({
     receivedAmount: transferDraft.receivedAmount,
     setReceivedAmount: transferDraft.setReceivedAmount,
     receivedCurrency: transferDraft.receivedCurrency,
+    transferReceivedRequired: transferDraft.receivedRequired,
     setReceivedCurrency: transferDraft.setReceivedCurrency,
     destinationCurrency: transferDraft.destinationCurrency,
     transferPreview: transferDraft.preview,

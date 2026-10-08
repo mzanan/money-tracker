@@ -14,6 +14,7 @@ import {
 } from "@/lib/budgetMonth";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
+import { accountCurrencyError } from "@/lib/accountCurrencies";
 import { getAccountCurrencies } from "@/lib/data/accounts";
 import {
   kindOfSource,
@@ -31,7 +32,6 @@ import { shiftYearMonth } from "@/lib/dates";
 import {
   aggregateFeesBySide,
   inTransitAmount,
-  transferCurrencyError,
   transferFeeAmountsError,
   transferFeeSpecs,
   type ReceivedAmount,
@@ -179,16 +179,16 @@ export async function recordTransfer(
     source,
     destinationSource,
   ]);
-  const originError = transferCurrencyError({
-    legCurrency: currency,
-    accountCurrency: accountCurrencies.get(source),
+  const originError = accountCurrencyError({
+    currency,
+    allowed: accountCurrencies[source],
     accountLabel: labelForSource(source),
     side: "sent",
   });
   if (originError) return { ok: false, error: originError };
-  const destinationError = transferCurrencyError({
-    legCurrency: destinationCurrency,
-    accountCurrency: accountCurrencies.get(destinationSource),
+  const destinationError = accountCurrencyError({
+    currency: destinationCurrency,
+    allowed: accountCurrencies[destinationSource],
     accountLabel: labelForSource(destinationSource),
     side: "received",
   });
@@ -321,15 +321,23 @@ export async function markAsTransfer(
   const isExpense = tx.kind === "expense";
   const mirrorCurrency = received?.currency ?? tx.currency_original;
 
-  const mirrorAccountCurrency = (
-    await getAccountCurrencies(user.id, [mirrorSource])
-  ).get(mirrorSource);
-  const currencyError = transferCurrencyError({
-    legCurrency: mirrorCurrency,
-    accountCurrency: mirrorAccountCurrency,
-    accountLabel: labelForSource(mirrorSource),
-    side: isExpense ? "received" : "sent",
-  });
+  const legCurrencies = await getAccountCurrencies(user.id, [
+    mirrorSource,
+    tx.source,
+  ]);
+  const currencyError =
+    accountCurrencyError({
+      currency: mirrorCurrency,
+      allowed: legCurrencies[mirrorSource],
+      accountLabel: labelForSource(mirrorSource),
+      side: isExpense ? "received" : "sent",
+    }) ??
+    accountCurrencyError({
+      currency: tx.currency_original,
+      allowed: legCurrencies[tx.source],
+      accountLabel: labelForSource(tx.source),
+      side: "own",
+    });
   if (currencyError) return { ok: false, error: currencyError };
 
   if (received && !(received.amount > 0)) {
@@ -505,6 +513,21 @@ export async function markPairAsTransfer(
   if (txA.kind === txB.kind) {
     return { ok: false, error: "Pick one income and one expense" };
   }
+  const pairCurrencies = await getAccountCurrencies(user.id, [
+    txA.source,
+    txB.source,
+  ]);
+  const pairCurrencyError = [txA, txB]
+    .map((row) =>
+      accountCurrencyError({
+        currency: row.currency_original,
+        allowed: pairCurrencies[row.source],
+        accountLabel: labelForSource(row.source),
+        side: "own",
+      }),
+    )
+    .find(Boolean);
+  if (pairCurrencyError) return { ok: false, error: pairCurrencyError };
 
   let rates: FxRates | null = null;
   if (txA.currency_original !== txB.currency_original) {
@@ -665,9 +688,7 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
   const group = tx.transfer_group;
 
   try {
-    await db.transaction((dbTx) =>
-      unlinkTransferGroup(dbTx, user.id, group),
-    );
+    await db.transaction((dbTx) => unlinkTransferGroup(dbTx, user.id, group));
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {

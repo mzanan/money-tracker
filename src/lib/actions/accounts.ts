@@ -5,7 +5,10 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
 import { accounts } from "@/lib/db/schema";
-import { isSupportedCurrency } from "@/lib/constants/currencies";
+import {
+  invalidAccountCurrencies,
+  serializeAccountCurrencies,
+} from "@/lib/accountCurrencies";
 import {
   capitalizeLabel,
   isAccountNameTaken,
@@ -90,9 +93,9 @@ export async function createAccount(
   return { ok: true, data: { source } };
 }
 
-export async function setAccountCurrency(
+export async function setAccountCurrencies(
   source: string,
-  currency: string | null,
+  currencies: string[],
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
@@ -102,9 +105,10 @@ export async function setAccountCurrency(
 
   const guardError = guardEditable(normalizedSource);
   if (guardError) return { ok: false, error: guardError };
-  if (currency !== null && !isSupportedCurrency(currency)) {
+  if (invalidAccountCurrencies(currencies)) {
     return { ok: false, error: "Unsupported currency" };
   }
+  const currency = serializeAccountCurrencies(currencies);
 
   await db
     .insert(accounts)

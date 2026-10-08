@@ -3,12 +3,12 @@
 import { useMemo, useState } from "react";
 import { addDays, format, parseISO } from "date-fns";
 
-import { useSettings } from "@/hooks/useSettings";
 import { excludeCanceledPairs } from "@/lib/cancellations";
 import { monthBounds } from "@/lib/dates";
-import { dayTotalsList, soleCurrencyOf } from "@/lib/totals";
+import { dayTotalsList } from "@/lib/totals";
 
 import type { Transaction } from "@/types/db";
+import { useDisplayCurrency } from "./useDisplayCurrency";
 
 interface Args {
   yearMonth: string;
@@ -29,9 +29,7 @@ export function useDaySpend({
   hasNewerMonth,
   onShiftMonth,
 }: Args) {
-  const settings = useSettings();
-  const displayCurrency =
-    soleCurrencyOf(transactions) ?? settings.base_currency;
+  const displayCurrency = useDisplayCurrency(transactions);
 
   const [monthStart, monthEnd] = monthBounds(yearMonth);
   const todayInMonth = today >= monthStart && today <= monthEnd;

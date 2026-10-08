@@ -35,6 +35,7 @@ export function MarkTransferStep({
     receivedAmount,
     setReceivedAmount,
     receivedCurrency,
+    receivedRequired,
     setReceivedCurrency,
     destinationCurrency,
     preview,
@@ -84,6 +85,7 @@ export function MarkTransferStep({
         receivedAmount={receivedAmount}
         onReceivedAmountChange={setReceivedAmount}
         receivedCurrency={receivedCurrency}
+        receivedRequired={receivedRequired}
         onReceivedCurrencyChange={setReceivedCurrency}
         preview={preview}
         txKind={txKind}
