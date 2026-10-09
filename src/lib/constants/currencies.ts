@@ -4,6 +4,7 @@ export interface CurrencyMeta {
   symbol: string;
   /** ISO 4217 minor unit decimals (VND/JPY/KRW/CLP = 0, not 2). */
   decimals: number;
+  storageDecimals?: number;
   crypto?: boolean;
 }
 
@@ -77,6 +78,7 @@ export const CURRENCIES: CurrencyMeta[] = [
     name: "Tether USD",
     symbol: "USDT ",
     decimals: 2,
+    storageDecimals: 6,
     crypto: true,
   },
   {
@@ -84,6 +86,7 @@ export const CURRENCIES: CurrencyMeta[] = [
     name: "USD Coin",
     symbol: "USDC ",
     decimals: 2,
+    storageDecimals: 6,
     crypto: true,
   },
   { code: "BTC", name: "Bitcoin", symbol: "BTC ", decimals: 8, crypto: true },
@@ -128,6 +131,11 @@ export const CURRENCY_MAP: Record<string, CurrencyMeta> = Object.fromEntries(
 
 export function getCurrency(code: string): CurrencyMeta {
   return CURRENCY_MAP[code] ?? { code, name: code, symbol: code, decimals: 2 };
+}
+
+export function storageDecimals(code: string): number {
+  const meta = getCurrency(code);
+  return meta.storageDecimals ?? meta.decimals;
 }
 
 export function isSupportedCurrency(code: string): boolean {

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnySQLiteColumn,
   check,
   index,
   integer,
@@ -374,5 +375,128 @@ export const usage_events = sqliteTable(
       "usage_events_event_check",
       sql`${t.event} IN ('signup', 'image_extract_success', 'image_extract_error', 'chat_message')`,
     ),
+  ],
+);
+
+export const LEDGER_ACCOUNT_KINDS = [
+  "asset",
+  "expense",
+  "income",
+  "bridge",
+  "pending",
+] as const;
+
+export const ledger_accounts = sqliteTable(
+  "ledger_accounts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: LEDGER_ACCOUNT_KINDS }).notNull(),
+    key: text("key").notNull(),
+    institution: text("institution"),
+    name: text("name").notNull(),
+    currency: text("currency").notNull(),
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (t) => [
+    check(
+      "ledger_accounts_kind_check",
+      sql`${t.kind} IN ('asset', 'expense', 'income', 'bridge', 'pending')`,
+    ),
+    uniqueIndex("ledger_accounts_identity_uniq").on(
+      t.user_id,
+      t.kind,
+      t.key,
+      t.currency,
+    ),
+  ],
+);
+
+export const ledger_transactions = sqliteTable(
+  "ledger_transactions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    occurred_on: text("occurred_on").notNull(),
+    occurred_at: text("occurred_at").notNull(),
+    note: text("note"),
+    comment: text("comment"),
+    tags: text("tags", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    recurring_id: text("recurring_id").references(() => recurring_payments.id, {
+      onDelete: "set null",
+    }),
+    is_fixed: integer("is_fixed", { mode: "boolean" }),
+    budget_month: text("budget_month"),
+    reverses_id: text("reverses_id").references(
+      (): AnySQLiteColumn => ledger_transactions.id,
+    ),
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (t) => [
+    index("ledger_transactions_user_occurred_idx").on(t.user_id, t.occurred_on),
+    uniqueIndex("ledger_transactions_reverses_uniq").on(t.reverses_id),
+  ],
+);
+
+export const ledger_entries = sqliteTable(
+  "ledger_entries",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    transaction_id: text("transaction_id")
+      .notNull()
+      .references(() => ledger_transactions.id, { onDelete: "cascade" }),
+    account_id: text("account_id")
+      .notNull()
+      .references(() => ledger_accounts.id),
+    amount: integer("amount").notNull(),
+    occurred_on: text("occurred_on").notNull(),
+    legacy_tx_id: text("legacy_tx_id"),
+  },
+  (t) => [
+    check("ledger_entries_amount_nonzero", sql`${t.amount} <> 0`),
+    index("ledger_entries_account_occurred_idx").on(
+      t.account_id,
+      t.occurred_on,
+    ),
+    index("ledger_entries_user_idx").on(t.user_id),
+    index("ledger_entries_transaction_idx").on(t.transaction_id),
+  ],
+);
+
+export const ledger_external_ids = sqliteTable(
+  "ledger_external_ids",
+  {
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    origin: text("origin").notNull(),
+    external_id: text("external_id").notNull(),
+    transaction_id: text("transaction_id")
+      .notNull()
+      .references(() => ledger_transactions.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.user_id, t.origin, t.external_id] }),
+    index("ledger_external_ids_transaction_idx").on(t.transaction_id),
   ],
 );

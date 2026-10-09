@@ -2,6 +2,9 @@ import type {
   accounts,
   api_integrations,
   fx_rates_cache,
+  ledger_accounts,
+  ledger_entries,
+  ledger_transactions,
   locations,
   recurring_payments,
   transactions,
@@ -71,3 +74,11 @@ export type RecurringFrequency = RecurringPayment["frequency"];
 
 export type Account = typeof accounts.$inferSelect;
 export type AccountInsert = typeof accounts.$inferInsert;
+
+export type LedgerAccount = typeof ledger_accounts.$inferSelect;
+export type LedgerAccountInsert = typeof ledger_accounts.$inferInsert;
+export type LedgerAccountKind = LedgerAccount["kind"];
+export type LedgerTransaction = typeof ledger_transactions.$inferSelect;
+export type LedgerTransactionInsert = typeof ledger_transactions.$inferInsert;
+export type LedgerEntry = typeof ledger_entries.$inferSelect;
+export type LedgerEntryInsert = typeof ledger_entries.$inferInsert;
