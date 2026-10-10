@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "196bdb79-9750-4fe2-94f9-67f56a7de3c6",
+  "id": "e043082f-6e7f-4239-9dbe-2017ddfc97f7",
   "prevId": "7669494a-3945-4e62-b630-9481da429c5c",
   "tables": {
     "account": {
@@ -324,6 +324,50 @@
       },
       "uniqueConstraints": {},
       "checkConstraints": {}
+    },
+    "crypto_assets": {
+      "name": "crypto_assets",
+      "columns": {
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "scale": {
+          "name": "scale",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "crypto_assets_scale_check": {
+          "name": "crypto_assets_scale_check",
+          "value": "\"crypto_assets\".\"scale\" BETWEEN 0 AND 8"
+        }
+      }
     },
     "csv_import_locks": {
       "name": "csv_import_locks",
@@ -844,8 +888,8 @@
           "notNull": false,
           "autoincrement": false
         },
-        "reverses_id": {
-          "name": "reverses_id",
+        "voided_at": {
+          "name": "voided_at",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -868,13 +912,6 @@
             "occurred_on"
           ],
           "isUnique": false
-        },
-        "ledger_transactions_reverses_uniq": {
-          "name": "ledger_transactions_reverses_uniq",
-          "columns": [
-            "reverses_id"
-          ],
-          "isUnique": true
         }
       },
       "foreignKeys": {
@@ -902,19 +939,6 @@
             "id"
           ],
           "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "ledger_transactions_reverses_id_ledger_transactions_id_fk": {
-          "name": "ledger_transactions_reverses_id_ledger_transactions_id_fk",
-          "tableFrom": "ledger_transactions",
-          "tableTo": "ledger_transactions",
-          "columnsFrom": [
-            "reverses_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },

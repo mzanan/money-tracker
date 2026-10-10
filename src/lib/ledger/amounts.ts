@@ -1,22 +1,16 @@
-import { storageDecimals } from "@/lib/constants/currencies";
-
 const RELATIVE_TOLERANCE = Number.EPSILON * 4;
 const ABSOLUTE_TOLERANCE = 1e-9;
 
-function scaleOf(currency: string): number {
-  return 10 ** storageDecimals(currency);
+export function toMinor(amount: number, scale: number): number {
+  return Math.round(amount * 10 ** scale);
 }
 
-export function toMinor(amount: number, currency: string): number {
-  return Math.round(amount * scaleOf(currency));
+export function fromMinor(minor: number, scale: number): number {
+  return minor / 10 ** scale;
 }
 
-export function fromMinor(minor: number, currency: string): number {
-  return minor / scaleOf(currency);
-}
-
-export function isExactInMinor(amount: number, currency: string): boolean {
-  const scaled = amount * scaleOf(currency);
+export function isExactInMinor(amount: number, scale: number): boolean {
+  const scaled = amount * 10 ** scale;
   const rounded = Math.round(scaled);
   if (rounded === 0) return false;
   const tolerance = Math.max(

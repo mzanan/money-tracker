@@ -4,6 +4,7 @@ import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../src/lib/db";
 import {
   accounts,
+  crypto_assets,
   ledger_accounts,
   ledger_entries,
   ledger_external_ids,
@@ -24,7 +25,9 @@ import {
   plannedAssetBalances,
   type BalanceMismatch,
   type MigrationPlan,
+  type PlannedTransaction,
 } from "../src/lib/ledger/migration";
+import { scaleResolver, type ScaleOf } from "../src/lib/ledger/scale";
 
 config({ path: ".env.local" });
 config();
@@ -94,14 +97,8 @@ async function ledgerTransactionCount(userId: string): Promise<number> {
   return row?.count ?? 0;
 }
 
-async function nonLegacyLedgerCount(userId: string): Promise<number> {
-  const [orphanTransactions] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(ledger_transactions)
-    .where(
-      sql`${ledger_transactions.user_id} = ${userId} and not exists (select 1 from ${transactions} where ${transactions.id} = ${ledger_transactions.id})`,
-    );
-  const [unlinkedEntries] = await db
+async function nonLegacyEntryCount(userId: string): Promise<number> {
+  const [row] = await db
     .select({ count: sql<number>`count(*)` })
     .from(ledger_entries)
     .where(
@@ -110,18 +107,21 @@ async function nonLegacyLedgerCount(userId: string): Promise<number> {
         isNull(ledger_entries.legacy_tx_id),
       ),
     );
-  return (orphanTransactions?.count ?? 0) + (unlinkedEntries?.count ?? 0);
+  return row?.count ?? 0;
 }
 
 async function clearLedger(tx: DbTx, userId: string) {
+  await tx.delete(ledger_entries).where(eq(ledger_entries.user_id, userId));
+  await tx
+    .delete(ledger_external_ids)
+    .where(eq(ledger_external_ids.user_id, userId));
   await tx
     .delete(ledger_transactions)
     .where(eq(ledger_transactions.user_id, userId));
   await tx.delete(ledger_accounts).where(eq(ledger_accounts.user_id, userId));
 }
 
-async function writePlan(
-  tx: DbTx,
+function accountRowsOf(
   userId: string,
   plan: MigrationPlan,
   labels: Record<string, string>,
@@ -146,11 +146,25 @@ async function writePlan(
       currency: ref.currency,
     };
   });
+  return { accountRows, accountIds };
+}
+
+async function writeAccounts(
+  tx: DbTx,
+  accountRows: ReturnType<typeof accountRowsOf>["accountRows"],
+) {
   for (const batch of chunks(accountRows)) {
     await tx.insert(ledger_accounts).values(batch);
   }
+}
 
-  const transactionRows = plan.transactions.map((transaction) => ({
+async function writeTransactions(
+  tx: DbTx,
+  userId: string,
+  planned: ReadonlyArray<PlannedTransaction>,
+  accountIds: ReadonlyMap<string, string>,
+) {
+  const transactionRows = planned.map((transaction) => ({
     id: transaction.id,
     user_id: userId,
     occurred_on: transaction.occurredOn,
@@ -166,7 +180,7 @@ async function writePlan(
     await tx.insert(ledger_transactions).values(batch);
   }
 
-  const entryRows = plan.transactions.flatMap((transaction) =>
+  const entryRows = planned.flatMap((transaction) =>
     transaction.lines.map((line) => ({
       user_id: userId,
       transaction_id: transaction.id,
@@ -180,7 +194,7 @@ async function writePlan(
     await tx.insert(ledger_entries).values(batch);
   }
 
-  const externalRows = plan.transactions.flatMap((transaction) =>
+  const externalRows = planned.flatMap((transaction) =>
     transaction.externalRefs.map((ref) => ({
       user_id: userId,
       origin: ref.origin,
@@ -242,11 +256,11 @@ async function legacyRowsOf(userId: string) {
     .orderBy(asc(transactions.occurred_at), asc(transactions.id));
 }
 
-async function migrateUser(userId: string): Promise<boolean> {
+async function migrateUser(userId: string, scaleOf: ScaleOf): Promise<boolean> {
   console.log(`user ${userId}`);
   const rows = await legacyRowsOf(userId);
-  const plan = planLedgerMigration(rows);
-  const expected = legacyAssetBalances(rows);
+  const plan = planLedgerMigration(rows, scaleOf);
+  const expected = legacyAssetBalances(rows, scaleOf);
   printPlan(plan, rows.length);
   const planMismatches = balanceMismatches(
     expected,
@@ -272,20 +286,34 @@ async function migrateUser(userId: string): Promise<boolean> {
     return false;
   }
   if (existing > 0) {
-    const nonLegacy = await nonLegacyLedgerCount(userId);
+    const nonLegacy = await nonLegacyEntryCount(userId);
     if (nonLegacy > 0) {
       console.log(
-        `  skipped: ${nonLegacy} ledger rows were not migrated from legacy data, reset would destroy them`,
+        `  skipped: ${nonLegacy} ledger entries were written by the app after cutover, reset would destroy them`,
       );
       return false;
     }
   }
 
   const labels = await accountLabelsOf(userId);
+  const { accountRows, accountIds } = accountRowsOf(userId, plan, labels);
   await db.transaction(async (tx) => {
     if (existing > 0) await clearLedger(tx, userId);
-    await writePlan(tx, userId, plan, labels);
+    await writeAccounts(tx, accountRows);
   });
+  const batches = chunks(plan.transactions);
+  for (const [index, batch] of batches.entries()) {
+    try {
+      await db.transaction((tx) =>
+        writeTransactions(tx, userId, batch, accountIds),
+      );
+    } catch (error) {
+      console.log(
+        `  partial: batch ${index + 1}/${batches.length} failed, rerun with --apply --reset`,
+      );
+      throw error;
+    }
+  }
 
   const current = await legacyRowsOf(userId);
   if (current.length !== rows.length) {
@@ -294,7 +322,7 @@ async function migrateUser(userId: string): Promise<boolean> {
     );
   }
   const storedMismatches = balanceMismatches(
-    legacyAssetBalances(current),
+    legacyAssetBalances(current, scaleOf),
     await storedAssetBalances(userId),
   );
   printMismatches("stored", storedMismatches);
@@ -303,9 +331,12 @@ async function migrateUser(userId: string): Promise<boolean> {
   return storedMismatches.length === 0 && unbalanced === 0;
 }
 
-async function migrateUserSafely(userId: string): Promise<boolean> {
+async function migrateUserSafely(
+  userId: string,
+  scaleOf: ScaleOf,
+): Promise<boolean> {
   try {
-    return await migrateUser(userId);
+    return await migrateUser(userId, scaleOf);
   } catch (error) {
     console.log(`  failed: ${error instanceof Error ? error.message : error}`);
     return false;
@@ -326,9 +357,14 @@ async function main() {
   console.log(
     `${apply ? "APPLY" : "DRY RUN"}${reset ? " with reset" : ""}: ${userIds.length} users`,
   );
+  const scaleOf = scaleResolver(
+    await db
+      .select({ code: crypto_assets.code, scale: crypto_assets.scale })
+      .from(crypto_assets),
+  );
   let failed = 0;
   for (const userId of userIds) {
-    if (!(await migrateUserSafely(userId))) failed += 1;
+    if (!(await migrateUserSafely(userId, scaleOf))) failed += 1;
   }
   console.log(failed === 0 ? "OK" : `${failed} users need attention`);
   if (failed > 0) process.exitCode = 1;

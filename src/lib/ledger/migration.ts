@@ -13,6 +13,7 @@ import {
   type AccountRef,
 } from "@/lib/ledger/accounts";
 import { isExactInMinor, toMinor } from "@/lib/ledger/amounts";
+import type { ScaleOf } from "@/lib/ledger/scale";
 import { unbalancedCurrencies, type PostingLine } from "@/lib/ledger/posting";
 import { dedupeTags } from "@/lib/tags";
 import type { Transaction } from "@/types/db";
@@ -68,24 +69,28 @@ export const BLOCKING_REVIEW_REASONS: ReadonlySet<MigrationReviewReason> =
 
 type FeeTarget = { group: string } | { row: string } | null;
 
-function signedMinor(row: Transaction): number {
-  const minor = toMinor(row.amount_original, row.currency_original);
+function signedMinor(row: Transaction, scaleOf: ScaleOf): number {
+  const minor = toMinor(row.amount_original, scaleOf(row.currency_original));
   return row.kind === "income" ? minor : -minor;
 }
 
-function assetLine(row: Transaction): PostingLine {
+function assetLine(row: Transaction, scaleOf: ScaleOf): PostingLine {
   return {
     account: assetRef(row.source, row.currency_original),
-    amount: signedMinor(row),
+    amount: signedMinor(row, scaleOf),
     occurredOn: row.occurred_on,
     legacyTxId: row.id,
   };
 }
 
-function counterLine(row: Transaction, account: AccountRef): PostingLine {
+function counterLine(
+  row: Transaction,
+  account: AccountRef,
+  scaleOf: ScaleOf,
+): PostingLine {
   return {
     account,
-    amount: -signedMinor(row),
+    amount: -signedMinor(row, scaleOf),
     occurredOn: row.occurred_on,
     legacyTxId: row.id,
   };
@@ -156,6 +161,7 @@ function feeTargetOf(
 function planGroup(
   legs: ReadonlyArray<Transaction>,
   review: MigrationReviewItem[],
+  scaleOf: ScaleOf,
 ): PlannedTransaction {
   const expenses = legs.filter((leg) => leg.kind === "expense");
   const incomes = legs.filter((leg) => leg.kind === "income");
@@ -164,11 +170,11 @@ function planGroup(
   if (expenses.length === 1 && incomes.length === 1) {
     const [sent] = expenses;
     const [received] = incomes;
-    const lines = [assetLine(sent), assetLine(received)];
+    const lines = [assetLine(sent, scaleOf), assetLine(received, scaleOf)];
     if (sent.currency_original !== received.currency_original) {
       lines.push(
-        counterLine(sent, bridgeRef(sent.currency_original)),
-        counterLine(received, bridgeRef(received.currency_original)),
+        counterLine(sent, bridgeRef(sent.currency_original), scaleOf),
+        counterLine(received, bridgeRef(received.currency_original), scaleOf),
       );
     } else {
       const gap = -(lines[0].amount + lines[1].amount);
@@ -195,14 +201,15 @@ function planGroup(
     detail: `${expenses.length} expense and ${incomes.length} income legs`,
   });
   const lines = legs.flatMap((leg) => [
-    assetLine(leg),
-    counterLine(leg, pendingRef(leg.currency_original)),
+    assetLine(leg, scaleOf),
+    counterLine(leg, pendingRef(leg.currency_original), scaleOf),
   ]);
   return planFrom(expenses[0] ?? legs[0], legs, lines);
 }
 
 export function planLedgerMigration(
   rows: ReadonlyArray<Transaction>,
+  scaleOf: ScaleOf,
 ): MigrationPlan {
   const review: MigrationReviewItem[] = [];
   const ordered = [...rows].sort(
@@ -220,7 +227,7 @@ export function planLedgerMigration(
   const fees: Array<{ row: Transaction; target: FeeTarget }> = [];
 
   for (const row of ordered) {
-    if (!isExactInMinor(row.amount_original, row.currency_original)) {
+    if (!isExactInMinor(row.amount_original, scaleOf(row.currency_original))) {
       review.push({
         reason: "precision_loss",
         legacyTxIds: [row.id],
@@ -246,7 +253,7 @@ export function planLedgerMigration(
   const byRow = new Map<string, PlannedTransaction>();
 
   for (const [group, legs] of groups) {
-    const plan = planGroup(legs, review);
+    const plan = planGroup(legs, review, scaleOf);
     planned.push(plan);
     byGroup.set(group, plan);
     for (const leg of legs) byRow.set(leg.id, plan);
@@ -257,8 +264,12 @@ export function planLedgerMigration(
       row,
       [row],
       [
-        assetLine(row),
-        counterLine(row, uncategorizedRef(row.kind, row.currency_original)),
+        assetLine(row, scaleOf),
+        counterLine(
+          row,
+          uncategorizedRef(row.kind, row.currency_original),
+          scaleOf,
+        ),
       ],
     );
     planned.push(plan);
@@ -274,8 +285,8 @@ export function planLedgerMigration(
 
   for (const { row, target } of fees) {
     const lines = [
-      assetLine(row),
-      counterLine(row, feesRef(row.currency_original)),
+      assetLine(row, scaleOf),
+      counterLine(row, feesRef(row.currency_original), scaleOf),
     ];
     const anchor =
       target && "group" in target
@@ -316,11 +327,12 @@ export function planLedgerMigration(
 
 export function legacyAssetBalances(
   rows: ReadonlyArray<Transaction>,
+  scaleOf: ScaleOf,
 ): Map<string, number> {
   const balances = new Map<string, number>();
   for (const row of rows) {
     const id = accountRefId(assetRef(row.source, row.currency_original));
-    balances.set(id, (balances.get(id) ?? 0) + signedMinor(row));
+    balances.set(id, (balances.get(id) ?? 0) + signedMinor(row, scaleOf));
   }
   return balances;
 }

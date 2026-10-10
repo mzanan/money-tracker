@@ -1,3 +1,11 @@
+CREATE TABLE `crypto_assets` (
+	`code` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`scale` integer NOT NULL,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	CONSTRAINT "crypto_assets_scale_check" CHECK("crypto_assets"."scale" BETWEEN 0 AND 8)
+);
+--> statement-breakpoint
 CREATE TABLE `ledger_accounts` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
@@ -51,12 +59,11 @@ CREATE TABLE `ledger_transactions` (
 	`recurring_id` text,
 	`is_fixed` integer,
 	`budget_month` text,
-	`reverses_id` text,
+	`voided_at` text,
 	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`recurring_id`) REFERENCES `recurring_payments`(`id`) ON UPDATE no action ON DELETE set null,
-	FOREIGN KEY (`reverses_id`) REFERENCES `ledger_transactions`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`recurring_id`) REFERENCES `recurring_payments`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
 CREATE INDEX `ledger_transactions_user_occurred_idx` ON `ledger_transactions` (`user_id`,`occurred_on`);--> statement-breakpoint
-CREATE UNIQUE INDEX `ledger_transactions_reverses_uniq` ON `ledger_transactions` (`reverses_id`);
+INSERT INTO `crypto_assets` (`code`, `name`, `scale`) VALUES ('USDT', 'Tether USD', 6), ('USDC', 'USD Coin', 6);

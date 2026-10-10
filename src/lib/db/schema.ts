@@ -1,6 +1,5 @@
 import { sql } from "drizzle-orm";
 import {
-  type AnySQLiteColumn,
   check,
   index,
   integer,
@@ -378,6 +377,19 @@ export const usage_events = sqliteTable(
   ],
 );
 
+export const crypto_assets = sqliteTable(
+  "crypto_assets",
+  {
+    code: text("code").primaryKey(),
+    name: text("name").notNull(),
+    scale: integer("scale").notNull(),
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (t) => [check("crypto_assets_scale_check", sql`${t.scale} BETWEEN 0 AND 8`)],
+);
+
 export const LEDGER_ACCOUNT_KINDS = [
   "asset",
   "expense",
@@ -440,16 +452,13 @@ export const ledger_transactions = sqliteTable(
     }),
     is_fixed: integer("is_fixed", { mode: "boolean" }),
     budget_month: text("budget_month"),
-    reverses_id: text("reverses_id").references(
-      (): AnySQLiteColumn => ledger_transactions.id,
-    ),
+    voided_at: text("voided_at"),
     created_at: text("created_at")
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (t) => [
     index("ledger_transactions_user_occurred_idx").on(t.user_id, t.occurred_on),
-    uniqueIndex("ledger_transactions_reverses_uniq").on(t.reverses_id),
   ],
 );
 
