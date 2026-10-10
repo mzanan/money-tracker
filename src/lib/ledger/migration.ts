@@ -1,5 +1,7 @@
 import {
-  EXTERNAL_ID_PREFIX,
+  LEG_IN_SUFFIX,
+  csvFeeParentFrom,
+  manualFeeParentFrom,
   transferFeeGroupFrom,
   withdrawalGroupFrom,
 } from "@/lib/externalIds";
@@ -61,13 +63,19 @@ export interface BalanceMismatch {
   actual: number;
 }
 
-const CSV_FEE_SUFFIX = ":fee";
-const WITHDRAWAL_IN_SUFFIX = ":in";
-
 export const BLOCKING_REVIEW_REASONS: ReadonlySet<MigrationReviewReason> =
   new Set(["precision_loss", "unbalanced"]);
 
 type FeeTarget = { group: string } | { row: string } | null;
+
+function chronological(
+  aAt: string,
+  aId: string,
+  bAt: string,
+  bId: string,
+): number {
+  return aAt.localeCompare(bAt) || aId.localeCompare(bId);
+}
 
 function signedMinor(row: Transaction, scaleOf: ScaleOf): number {
   const minor = toMinor(row.amount_original, scaleOf(row.currency_original));
@@ -146,13 +154,11 @@ function feeTargetOf(
   if (!externalId) return null;
   const group = transferFeeGroupFrom(externalId);
   if (group) return { group };
-  if (externalId.startsWith(EXTERNAL_ID_PREFIX.manualFee)) {
-    return { row: externalId.slice(EXTERNAL_ID_PREFIX.manualFee.length) };
-  }
-  if (externalId.endsWith(CSV_FEE_SUFFIX)) {
-    const parentId = csvRowIds.get(
-      `${row.source}|${externalId.slice(0, -CSV_FEE_SUFFIX.length)}`,
-    );
+  const manualParent = manualFeeParentFrom(externalId);
+  if (manualParent !== null) return { row: manualParent };
+  const csvParent = csvFeeParentFrom(externalId);
+  if (csvParent !== null) {
+    const parentId = csvRowIds.get(`${row.source}|${csvParent}`);
     return parentId ? { row: parentId } : null;
   }
   return null;
@@ -212,9 +218,8 @@ export function planLedgerMigration(
   scaleOf: ScaleOf,
 ): MigrationPlan {
   const review: MigrationReviewItem[] = [];
-  const ordered = [...rows].sort(
-    (a, b) =>
-      a.occurred_at.localeCompare(b.occurred_at) || a.id.localeCompare(b.id),
+  const ordered = [...rows].sort((a, b) =>
+    chronological(a.occurred_at, a.id, b.occurred_at, b.id),
   );
   const csvRowIds = new Map(
     ordered.flatMap((row) =>
@@ -276,8 +281,7 @@ export function planLedgerMigration(
     byRow.set(row.id, plan);
     const withdrawalGroup = withdrawalGroupFrom(row.external_id);
     const isBankSide =
-      row.kind === "expense" &&
-      !row.external_id?.endsWith(WITHDRAWAL_IN_SUFFIX);
+      row.kind === "expense" && !row.external_id?.endsWith(LEG_IN_SUFFIX);
     if (withdrawalGroup && isBankSide && !byGroup.has(withdrawalGroup)) {
       byGroup.set(withdrawalGroup, plan);
     }
@@ -318,10 +322,7 @@ export function planLedgerMigration(
     }
   }
 
-  planned.sort(
-    (a, b) =>
-      a.occurredAt.localeCompare(b.occurredAt) || a.id.localeCompare(b.id),
-  );
+  planned.sort((a, b) => chronological(a.occurredAt, a.id, b.occurredAt, b.id));
   return { transactions: planned, review };
 }
 

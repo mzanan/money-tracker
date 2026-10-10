@@ -1,9 +1,9 @@
 import { config } from "dotenv";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 
+import { getAccountLabels } from "../src/lib/data/accounts";
 import { db } from "../src/lib/db";
 import {
-  accounts,
   crypto_assets,
   ledger_accounts,
   ledger_entries,
@@ -79,14 +79,6 @@ function printPlan(plan: MigrationPlan, rowCount: number) {
       `    [${item.reason}] ${item.legacyTxIds.join(", ")} ${item.detail}`,
     );
   }
-}
-
-async function accountLabelsOf(userId: string) {
-  const rows = await db
-    .select({ source: accounts.source, label: accounts.label })
-    .from(accounts)
-    .where(eq(accounts.user_id, userId));
-  return Object.fromEntries(rows.map((row) => [row.source, row.label]));
 }
 
 async function ledgerTransactionCount(userId: string): Promise<number> {
@@ -295,7 +287,7 @@ async function migrateUser(userId: string, scaleOf: ScaleOf): Promise<boolean> {
     }
   }
 
-  const labels = await accountLabelsOf(userId);
+  const labels = await getAccountLabels(userId);
   const { accountRows, accountIds } = accountRowsOf(userId, plan, labels);
   await db.transaction(async (tx) => {
     if (existing > 0) await clearLedger(tx, userId);

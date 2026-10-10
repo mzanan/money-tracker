@@ -13,6 +13,20 @@ export function manualFeeExternalId(parentId: string): string {
   return `${EXTERNAL_ID_PREFIX.manualFee}${parentId}`;
 }
 
+export const CSV_FEE_SUFFIX = ":fee";
+
+export const LEG_IN_SUFFIX = ":in";
+
+export function manualFeeParentFrom(externalId: string): string | null {
+  if (!externalId.startsWith(EXTERNAL_ID_PREFIX.manualFee)) return null;
+  return externalId.slice(EXTERNAL_ID_PREFIX.manualFee.length);
+}
+
+export function csvFeeParentFrom(externalId: string): string | null {
+  if (!externalId.endsWith(CSV_FEE_SUFFIX)) return null;
+  return externalId.slice(0, -CSV_FEE_SUFFIX.length);
+}
+
 export const TRANSFER_FEE_DEST_SUFFIX = ":dest";
 
 export function transferFeeExternalId(
