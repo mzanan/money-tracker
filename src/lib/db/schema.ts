@@ -397,6 +397,7 @@ export const LEDGER_ACCOUNT_KINDS = [
   "income",
   "bridge",
   "pending",
+  "transit",
 ] as const;
 
 export const ledger_accounts = sqliteTable(
@@ -420,7 +421,7 @@ export const ledger_accounts = sqliteTable(
   (t) => [
     check(
       "ledger_accounts_kind_check",
-      sql`${t.kind} IN ('asset', 'expense', 'income', 'bridge', 'pending')`,
+      sql`${t.kind} IN ('asset', 'expense', 'income', 'bridge', 'pending', 'transit')`,
     ),
     uniqueIndex("ledger_accounts_identity_uniq").on(
       t.user_id,
@@ -458,7 +459,6 @@ export const ledger_transactions = sqliteTable(
     }),
     is_fixed: integer("is_fixed", { mode: "boolean" }),
     budget_month: text("budget_month"),
-    voided_at: text("voided_at"),
     created_at: text("created_at")
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),

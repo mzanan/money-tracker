@@ -33,6 +33,15 @@ export function buildMovements(
   rows: MovementSourceRows,
   scaleOf: ScaleOf,
 ): Movement[] {
+  return buildRawMovements(rows, scaleOf)
+    .flatMap(splitLegsByDate)
+    .sort(newestFirst);
+}
+
+export function buildRawMovements(
+  rows: MovementSourceRows,
+  scaleOf: ScaleOf,
+): Movement[] {
   const accountsById = new Map(rows.accounts.map((a) => [a.id, a]));
   const linesByTx = new Map<string, MovementLine[]>();
   for (const entry of rows.entries) {
@@ -59,7 +68,6 @@ export function buildMovements(
     refsByTx.set(ref.transaction_id, refs);
   }
   return rows.transactions
-    .filter((tx) => tx.voided_at === null)
     .map((tx) => ({
       id: tx.id,
       occurredOn: tx.occurred_on,
@@ -73,9 +81,7 @@ export function buildMovements(
       externalRefs: refsByTx.get(tx.id) ?? [],
       lines: linesByTx.get(tx.id) ?? [],
       leg: null,
-    }))
-    .flatMap(splitLegsByDate)
-    .sort(newestFirst);
+    }));
 }
 
 export function splitLegsByDate(movement: Movement): Movement[] {
@@ -119,8 +125,8 @@ export function feeRemnant(movement: Movement): Movement[] {
     : [{ ...movement, id: `${movement.id}:fee`, lines }];
 }
 
-export function actionTargetId(movement: Movement): string {
-  return primaryAssetLine(movement)?.legacyTxId ?? movement.id;
+export function ledgerTransactionId(movement: Movement): string {
+  return movement.leg?.movementId ?? movement.id.replace(/:fee$/, "");
 }
 
 export function isFeeLine(line: MovementLine): boolean {

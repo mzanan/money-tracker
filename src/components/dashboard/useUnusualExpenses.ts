@@ -8,7 +8,7 @@ import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { setTransactionFixed } from "@/lib/actions/transactions";
 import { resolveSourceLabel } from "@/lib/constants/sources";
-import { actionTargetId, primaryAssetLine } from "@/lib/ledger/movements";
+import { ledgerTransactionId, primaryAssetLine } from "@/lib/ledger/movements";
 import { movementSpend } from "@/lib/ledger/valuation";
 import { findUnusualExpenses } from "@/lib/unusualExpenses";
 
@@ -80,7 +80,7 @@ export function useUnusualExpenses(
   function markOneOff(tx: Movement) {
     setPendingTxId(tx.id);
     setAnswered((current) => new Set(current).add(tx.id));
-    oneOffAction.run(() => setTransactionFixed(actionTargetId(tx), true), {
+    oneOffAction.run(() => setTransactionFixed(ledgerTransactionId(tx), true), {
       success: "Marked as non-daily",
       onError: () => unanswer(tx.id),
     });
@@ -89,7 +89,7 @@ export function useUnusualExpenses(
   function markRegular(tx: Movement) {
     setPendingTxId(tx.id);
     setAnswered((current) => new Set(current).add(tx.id));
-    regularAction.run(() => setTransactionFixed(actionTargetId(tx), false), {
+    regularAction.run(() => setTransactionFixed(ledgerTransactionId(tx), false), {
       success: "Marked as daily",
       onError: () => unanswer(tx.id),
     });

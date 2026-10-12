@@ -5,6 +5,7 @@ import {
   assetLines,
   isOwnMovement,
   isPrincipalLine,
+  ledgerTransactionId,
   primaryAssetLine,
 } from "@/lib/ledger/movements";
 import { isAllScope, scopedDate, type MovementScope } from "@/lib/ledger/scope";
@@ -28,7 +29,7 @@ export function rowFacts(movement: Movement, scope: MovementScope): RowFacts {
   );
   const isTransfer = isOwnMovement(movement);
   return {
-    id: line?.legacyTxId ?? movement.id,
+    id: ledgerTransactionId(movement),
     movementId: movement.id,
     kind: (line?.amount ?? 0) >= 0 ? "income" : "expense",
     source,

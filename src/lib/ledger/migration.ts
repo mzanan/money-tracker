@@ -17,27 +17,17 @@ import {
 } from "@/lib/ledger/accounts";
 import { isExactInMinor, toMinor } from "@/lib/ledger/amounts";
 import type { ScaleOf } from "@/lib/ledger/scale";
-import { unbalancedCurrencies, type PostingLine } from "@/lib/ledger/posting";
+import {
+  unbalancedCurrencies,
+  type ExternalRef,
+  type LedgerDraft,
+  type PostingLine,
+} from "@/lib/ledger/posting";
 import { dedupeTags } from "@/lib/tags";
 import type { LedgerEntryRole, Transaction } from "@/types/db";
 
-export interface ExternalRef {
-  origin: string;
-  externalId: string;
-}
-
-export interface PlannedTransaction {
+export interface PlannedTransaction extends LedgerDraft {
   id: string;
-  occurredOn: string;
-  occurredAt: string;
-  note: string | null;
-  comment: string | null;
-  tags: string[];
-  recurringId: string | null;
-  isFixed: boolean | null;
-  budgetMonth: string | null;
-  lines: PostingLine[];
-  externalRefs: ExternalRef[];
 }
 
 export type MigrationReviewReason =
