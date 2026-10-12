@@ -103,13 +103,11 @@ export function scopeBalance(
   displayCurrency: string,
   ratesByDate: RatesByDate,
   asOf: string,
-  before?: string,
 ): number {
   const source = isAllScope(scope) ? undefined : scope;
   const native = new Map<string, number>();
   for (const movement of movements) {
     for (const line of assetLines(movement, source)) {
-      if (before !== undefined && line.occurredOn >= before) continue;
       native.set(line.currency, (native.get(line.currency) ?? 0) + line.amount);
     }
   }

@@ -72,8 +72,6 @@ export function BalanceHero({
     netInBase,
     monthPositive,
     monthSigned,
-    opening,
-    closing,
   } = useBalanceHero({
     yearMonth,
     movements,
@@ -183,13 +181,6 @@ export function BalanceHero({
             </div>
 
             <div className="mt-4 grid gap-2">
-              {opening && (
-                <BalanceLine
-                  label="Opening balance"
-                  value={mask(opening.signed)}
-                  positive={opening.positive}
-                />
-              )}
               <BalanceLine
                 label="Net this month"
                 value={mask(monthSigned)}
@@ -204,13 +195,6 @@ export function BalanceHero({
                   )
                 }
               />
-              {closing && (
-                <BalanceLine
-                  label="Closing balance"
-                  value={mask(closing.signed)}
-                  positive={closing.positive}
-                />
-              )}
             </div>
           </div>
         </TabsContent>

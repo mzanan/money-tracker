@@ -9,9 +9,8 @@ import {
   formatSignedOrNull,
   formatStat,
   isNegligible,
-  signedBalance,
 } from "@/lib/currency";
-import { asOfBefore, shiftYearMonth, todayInTz } from "@/lib/dates";
+import { todayInTz } from "@/lib/dates";
 import { excludeCanceledPairs } from "@/lib/ledger/canceledPairs";
 import {
   isAllScope,
@@ -42,8 +41,6 @@ export function useBalanceHero({
   const base = settings.base_currency;
   const displayCurrency = useDisplayCurrency(lifetimeMovements, scope);
   const showBase = displayCurrency !== base;
-  const monthStart = `${yearMonth}-01`;
-  const nextMonthStart = `${shiftYearMonth(yearMonth, 1)}-01`;
   const today = todayInTz(timezone);
 
   const showOpening = !isAllScope(scope);
@@ -83,40 +80,6 @@ export function useBalanceHero({
     [showBase, lifetimeMovements, scope, base, ratesByDate, today],
   );
 
-  const monthEdges = useMemo(
-    () =>
-      showOpening
-        ? {
-            opening: scopeBalance(
-              lifetimeMovements,
-              scope,
-              displayCurrency,
-              ratesByDate,
-              asOfBefore(monthStart, today),
-              monthStart,
-            ),
-            closing: scopeBalance(
-              lifetimeMovements,
-              scope,
-              displayCurrency,
-              ratesByDate,
-              asOfBefore(nextMonthStart, today),
-              nextMonthStart,
-            ),
-          }
-        : null,
-    [
-      showOpening,
-      lifetimeMovements,
-      scope,
-      displayCurrency,
-      ratesByDate,
-      monthStart,
-      nextMonthStart,
-      today,
-    ],
-  );
-
   return {
     displayCurrency,
     monthTotals,
@@ -138,7 +101,5 @@ export function useBalanceHero({
     monthSigned: formatMoney(monthTotals.net, displayCurrency, {
       signed: true,
     }),
-    opening: monthEdges && signedBalance(monthEdges.opening, displayCurrency),
-    closing: monthEdges && signedBalance(monthEdges.closing, displayCurrency),
   };
 }

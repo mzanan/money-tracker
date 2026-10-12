@@ -1,4 +1,3 @@
-import { monthEndsBetween } from "@/lib/dates";
 import type { FxRates } from "@/types/db";
 import type {
   Movement,
@@ -120,15 +119,10 @@ export function valuationDates(
   today: string,
 ): Set<string> {
   const dates = new Set<string>([today]);
-  let oldest = today;
   for (const movement of movements) {
     dates.add(movement.occurredOn);
-    for (const line of movement.lines) {
-      dates.add(line.occurredOn);
-      if (line.occurredOn < oldest) oldest = line.occurredOn;
-    }
+    for (const line of movement.lines) dates.add(line.occurredOn);
   }
-  for (const end of monthEndsBetween(oldest, today)) dates.add(end);
   return dates;
 }
 
