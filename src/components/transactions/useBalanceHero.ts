@@ -2,91 +2,106 @@
 
 import { useMemo } from "react";
 
-import { useRates } from "@/hooks/useRates";
+import { useRatesByDate } from "@/hooks/useRatesByDate";
 import { useSettings } from "@/hooks/useSettings";
-import { excludeCanceledPairs } from "@/lib/cancellations";
-import { isSingleFundedSource } from "@/lib/costBasis";
 import {
-  formatConverted,
   formatMoney,
   formatSignedOrNull,
   formatStat,
   isNegligible,
+  signedBalance,
 } from "@/lib/currency";
-import { periodTotals } from "@/lib/totals";
+import { shiftYearMonth } from "@/lib/dates";
+import { excludeCanceledPairs } from "@/lib/ledger/canceledPairs";
+import { isAllScope, periodTotals, scopeBalance } from "@/lib/ledger/scope";
 
-import type { Transaction } from "@/types/db";
+import type { MovementScope } from "@/lib/ledger/scope";
+import type { Movement } from "@/types/ledger";
 
 import { useDisplayCurrency } from "./useDisplayCurrency";
 
 export function useBalanceHero({
-  transactions,
-  lifetimeTransactions,
-  includeTransfers,
-  costBasisSources,
+  yearMonth,
+  movements,
+  lifetimeMovements,
+  scope,
 }: {
-  transactions: Transaction[];
-  lifetimeTransactions: Transaction[];
-  includeTransfers: boolean;
-  costBasisSources: string[];
+  yearMonth: string;
+  movements: Movement[];
+  lifetimeMovements: Movement[];
+  scope: MovementScope;
 }) {
   const settings = useSettings();
-  const ratesQuery = useRates();
+  const ratesByDate = useRatesByDate();
   const base = settings.base_currency;
-  const displayCurrency = useDisplayCurrency(lifetimeTransactions);
+  const displayCurrency = useDisplayCurrency(lifetimeMovements, scope);
   const showBase = displayCurrency !== base;
-  const atCost = isSingleFundedSource(lifetimeTransactions, costBasisSources);
+  const monthStart = `${yearMonth}-01`;
+  const nextMonthStart = `${shiftYearMonth(yearMonth, 1)}-01`;
 
-  const monthRows = useMemo(
-    () => excludeCanceledPairs(transactions),
-    [transactions],
-  );
+  const monthRows = useMemo(() => excludeCanceledPairs(movements), [movements]);
 
   const monthTotals = useMemo(
-    () => periodTotals(monthRows, displayCurrency, includeTransfers),
-    [monthRows, displayCurrency, includeTransfers],
+    () => periodTotals(monthRows, scope, displayCurrency, ratesByDate),
+    [monthRows, scope, displayCurrency, ratesByDate],
   );
   const monthBase = useMemo(
-    () => (showBase ? periodTotals(monthRows, base, includeTransfers) : null),
-    [showBase, monthRows, base, includeTransfers],
+    () => (showBase ? periodTotals(monthRows, scope, base, ratesByDate) : null),
+    [showBase, monthRows, scope, base, ratesByDate],
   );
 
-  const lifetimeTotals = useMemo(
-    () => periodTotals(lifetimeTransactions, displayCurrency, includeTransfers),
-    [lifetimeTransactions, displayCurrency, includeTransfers],
+  const total = useMemo(
+    () => scopeBalance(lifetimeMovements, scope, displayCurrency, ratesByDate),
+    [lifetimeMovements, scope, displayCurrency, ratesByDate],
   );
-  const lifetimeAtCost = useMemo(
+  const totalBase = useMemo(
     () =>
-      showBase && atCost
-        ? periodTotals(lifetimeTransactions, base, includeTransfers).net
+      showBase
+        ? scopeBalance(lifetimeMovements, scope, base, ratesByDate)
         : null,
-    [showBase, atCost, lifetimeTransactions, base, includeTransfers],
+    [showBase, lifetimeMovements, scope, base, ratesByDate],
   );
 
-  const totalInBase =
-    lifetimeAtCost !== null
-      ? formatSignedOrNull(lifetimeAtCost, base)
-      : showBase && !isNegligible(lifetimeTotals.net)
-        ? formatConverted(
-            lifetimeTotals.net,
-            displayCurrency,
-            base,
-            ratesQuery.data?.rates,
-            { signed: true },
-          )
-        : null;
+  const showOpening = !isAllScope(scope);
+  const monthEdges = useMemo(
+    () =>
+      showOpening
+        ? {
+            opening: scopeBalance(
+              lifetimeMovements,
+              scope,
+              displayCurrency,
+              ratesByDate,
+              monthStart,
+            ),
+            closing: scopeBalance(
+              lifetimeMovements,
+              scope,
+              displayCurrency,
+              ratesByDate,
+              nextMonthStart,
+            ),
+          }
+        : null,
+    [
+      showOpening,
+      lifetimeMovements,
+      scope,
+      displayCurrency,
+      ratesByDate,
+      monthStart,
+      nextMonthStart,
+    ],
+  );
 
   return {
     displayCurrency,
     monthTotals,
-    totalPositive: lifetimeTotals.net >= 0,
-    totalSigned: formatMoney(lifetimeTotals.net, displayCurrency, {
-      signed: true,
-    }),
+    totalPositive: total >= 0,
+    totalSigned: formatMoney(total, displayCurrency, { signed: true }),
     showBase,
-    totalInBase,
-    totalAtTodaysRate: lifetimeAtCost === null,
-    ratesStale: ratesQuery.data?.stale ?? false,
+    totalInBase:
+      totalBase === null ? null : formatSignedOrNull(totalBase, base),
     incomeInBase:
       monthBase && !isNegligible(monthBase.income)
         ? `+${formatStat(monthBase.income, base)}`
@@ -100,5 +115,7 @@ export function useBalanceHero({
     monthSigned: formatMoney(monthTotals.net, displayCurrency, {
       signed: true,
     }),
+    opening: monthEdges && signedBalance(monthEdges.opening, displayCurrency),
+    closing: monthEdges && signedBalance(monthEdges.closing, displayCurrency),
   };
 }

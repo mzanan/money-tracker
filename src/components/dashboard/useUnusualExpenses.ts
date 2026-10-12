@@ -3,21 +3,24 @@
 import { useMemo, useState } from "react";
 
 import { useAccountLabels } from "@/hooks/useAccountLabels";
+import { useRatesByDate } from "@/hooks/useRatesByDate";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { setTransactionFixed } from "@/lib/actions/transactions";
 import { resolveSourceLabel } from "@/lib/constants/sources";
-import { safeTransactionInDisplay } from "@/lib/totals";
+import { primaryAssetLine } from "@/lib/ledger/movements";
+import { movementSpend } from "@/lib/ledger/valuation";
 import { findUnusualExpenses } from "@/lib/unusualExpenses";
 
-import type { Transaction } from "@/types/db";
+import type { Movement } from "@/types/ledger";
 
 export function useUnusualExpenses(
-  monthTransactions: Transaction[],
+  monthTransactions: Movement[],
   recurringNotes: Set<string>,
 ) {
   const settings = useSettings();
   const accountLabels = useAccountLabels();
+  const ratesByDate = useRatesByDate();
   const [answered, setAnswered] = useState<Set<string>>(new Set());
   const [pendingTxId, setPendingTxId] = useState<string | null>(null);
   const oneOffAction = useServerAction();
@@ -30,12 +33,14 @@ export function useUnusualExpenses(
         settings.fixed_labels,
         recurringNotes,
         settings.base_currency,
+        ratesByDate,
       ),
     [
       monthTransactions,
       settings.fixed_labels,
       recurringNotes,
       settings.base_currency,
+      ratesByDate,
     ],
   );
 
@@ -46,11 +51,16 @@ export function useUnusualExpenses(
         .map((tx) => {
           return {
             tx,
-            value: safeTransactionInDisplay(tx, settings.base_currency) ?? 0,
-            title: tx.tags[0] || resolveSourceLabel(tx.source, accountLabels),
+            value: movementSpend(tx, settings.base_currency, ratesByDate) ?? 0,
+            title:
+              tx.tags[0] ||
+              resolveSourceLabel(
+                primaryAssetLine(tx)?.key ?? "",
+                accountLabels,
+              ),
           };
         }),
-    [candidates, answered, settings.base_currency, accountLabels],
+    [candidates, answered, settings.base_currency, ratesByDate, accountLabels],
   );
 
   function isRowPending(txId: string): boolean {
@@ -67,7 +77,7 @@ export function useUnusualExpenses(
     });
   }
 
-  function markOneOff(tx: Transaction) {
+  function markOneOff(tx: Movement) {
     setPendingTxId(tx.id);
     setAnswered((current) => new Set(current).add(tx.id));
     oneOffAction.run(() => setTransactionFixed(tx.id, true), {
@@ -76,7 +86,7 @@ export function useUnusualExpenses(
     });
   }
 
-  function markRegular(tx: Transaction) {
+  function markRegular(tx: Movement) {
     setPendingTxId(tx.id);
     setAnswered((current) => new Set(current).add(tx.id));
     regularAction.run(() => setTransactionFixed(tx.id, false), {

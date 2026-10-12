@@ -1,3 +1,7 @@
+import {
+  resolveSourceLabel,
+  type AccountLabels,
+} from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
 
 export const ESTIMATE_PREFIX = "≈ ";
@@ -22,4 +26,11 @@ export function rowAmountTexts({
   return accountFirst
     ? { primary: original, secondary: `${ESTIMATE_PREFIX}${base}` }
     : { primary: base, secondary: original };
+}
+
+export function transferLabel(
+  ends: { from: string; to: string },
+  labels: AccountLabels,
+): string {
+  return `${resolveSourceLabel(ends.from, labels)} → ${resolveSourceLabel(ends.to, labels)}`;
 }

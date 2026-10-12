@@ -3,36 +3,40 @@
 import { useMemo } from "react";
 
 import { useRates } from "@/hooks/useRates";
+import { useRatesByDate } from "@/hooks/useRatesByDate";
 import { useSettings } from "@/hooks/useSettings";
-import { excludeCanceledPairs } from "@/lib/cancellations";
+import { ALL_SOURCES } from "@/lib/constants/sources";
 import { splitFixedVariable } from "@/lib/fixedExpenses";
+import { excludeCanceledPairs } from "@/lib/ledger/canceledPairs";
+import { periodTotals } from "@/lib/ledger/scope";
 import {
   computeSpendProjection,
   monthElapsedTransactions,
   monthScheduledFixed,
   overdueUnpaidReminders,
 } from "@/lib/spendProjection";
-import { periodTotals } from "@/lib/totals";
 
-import type { RecurringPayment, Transaction } from "@/types/db";
+import type { RecurringPayment } from "@/types/db";
+import type { Movement } from "@/types/ledger";
 
 export function useSpendProjection({
   yearMonth,
   today,
   monthTransactions,
-  lifetimeTransactions,
+  lifetimeMovements,
   reminders,
   recurringNotes,
 }: {
   yearMonth: string;
   today: string;
-  monthTransactions: Transaction[];
-  lifetimeTransactions: Transaction[];
+  monthTransactions: Movement[];
+  lifetimeMovements: Movement[];
   reminders: RecurringPayment[];
   recurringNotes: Set<string>;
 }) {
   const settings = useSettings();
   const ratesQuery = useRates();
+  const ratesByDate = useRatesByDate();
   const fixedLabels = settings.fixed_labels;
 
   const isCurrentMonth = yearMonth === today.slice(0, 7);
@@ -41,10 +45,10 @@ export function useSpendProjection({
     if (!isCurrentMonth) return [];
     return overdueUnpaidReminders({
       reminders,
-      lifetimeTransactions,
+      lifetimeMovements,
       yearMonth,
     });
-  }, [reminders, yearMonth, isCurrentMonth, lifetimeTransactions]);
+  }, [reminders, yearMonth, isCurrentMonth, lifetimeMovements]);
 
   const projection = useMemo(() => {
     if (!isCurrentMonth) return null;
@@ -57,6 +61,7 @@ export function useSpendProjection({
       recurringNotes,
       baseCurrency: settings.base_currency,
       rates: ratesQuery.data?.rates ?? null,
+      ratesByDate,
     });
   }, [
     isCurrentMonth,
@@ -68,15 +73,18 @@ export function useSpendProjection({
     recurringNotes,
     settings.base_currency,
     ratesQuery.data,
+    ratesByDate,
   ]);
 
   const realTotal = useMemo(() => {
     if (isCurrentMonth) return null;
     return periodTotals(
       excludeCanceledPairs(monthTransactions),
+      ALL_SOURCES,
       settings.base_currency,
+      ratesByDate,
     ).expense;
-  }, [isCurrentMonth, monthTransactions, settings.base_currency]);
+  }, [isCurrentMonth, monthTransactions, settings.base_currency, ratesByDate]);
 
   const fixedCounts = useMemo(() => {
     if (!isCurrentMonth) return { paid: 0, upcoming: 0 };

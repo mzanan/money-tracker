@@ -201,8 +201,19 @@ export function amountToInputDigits(amount: number, code: string): string {
   return parseAmountInput(digits) === null ? "" : digits;
 }
 
-export function kindSign(kind: string): "+" | "-" {
-  return kind === "income" ? "+" : "-";
+export function kindSign(kind: string): "+" | "-" | "" {
+  if (kind === "income") return "+";
+  return kind === "transfer" ? "" : "-";
+}
+
+export function signedBalance(
+  value: number,
+  currency: string,
+): { signed: string; positive: boolean } {
+  return {
+    signed: formatMoney(value, currency, { signed: true }),
+    positive: value >= 0,
+  };
 }
 
 export function formatConverted(

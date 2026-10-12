@@ -1,12 +1,14 @@
 import { isManualEntryExternalId } from "@/lib/externalIds";
 import { amountToInputDigits } from "@/lib/currency";
+import { assetLines, movementType } from "@/lib/ledger/movements";
 import { MAX_TAGS_PER_TRANSACTION, tagKey } from "@/lib/tags";
-import type { Transaction } from "@/types/db";
+import type { TransactionKind } from "@/types/db";
+import type { Movement } from "@/types/ledger";
 
 export interface EntrySuggestion {
   key: string;
   note: string;
-  kind: Transaction["kind"];
+  kind: TransactionKind;
   amount: number;
   currency: string;
   tags: string[];
@@ -14,37 +16,50 @@ export interface EntrySuggestion {
   count: number;
 }
 
-function isSuggestible(tx: Transaction): boolean {
-  return !tx.transfer_group && isManualEntryExternalId(tx.external_id);
+function suggestibleFlow(movement: Movement) {
+  const kind = movementType(movement);
+  if (kind !== "expense" && kind !== "income") return null;
+  if (
+    !movement.externalRefs.every((ref) =>
+      isManualEntryExternalId(ref.externalId),
+    )
+  ) {
+    return null;
+  }
+  const assets = assetLines(movement);
+  if (assets.length !== 1) return null;
+  return { kind, line: assets[0] };
 }
 
 export function buildEntrySuggestions(
-  txs: ReadonlyArray<Transaction>,
+  movements: ReadonlyArray<Movement>,
 ): EntrySuggestion[] {
   const byKey = new Map<string, EntrySuggestion>();
   const lastAt = new Map<string, string>();
 
-  for (const tx of txs) {
-    const note = tx.note?.trim();
-    if (!note || !isSuggestible(tx)) continue;
+  for (const movement of movements) {
+    const note = movement.note?.trim();
+    if (!note) continue;
+    const flow = suggestibleFlow(movement);
+    if (!flow) continue;
     const key = suggestionKey(note);
     const existing = byKey.get(key);
     const seenAt = lastAt.get(key);
-    if (existing && seenAt && seenAt >= tx.occurred_at) {
+    if (existing && seenAt && seenAt >= movement.occurredAt) {
       existing.count += 1;
       continue;
     }
     byKey.set(key, {
       key,
       note,
-      kind: tx.kind,
-      amount: tx.amount_original,
-      currency: tx.currency_original,
-      tags: tx.tags.slice(0, MAX_TAGS_PER_TRANSACTION),
-      source: tx.source,
+      kind: flow.kind,
+      amount: Math.abs(flow.line.amount),
+      currency: flow.line.currency,
+      tags: movement.tags.slice(0, MAX_TAGS_PER_TRANSACTION),
+      source: flow.line.key,
       count: (existing?.count ?? 0) + 1,
     });
-    lastAt.set(key, tx.occurred_at);
+    lastAt.set(key, movement.occurredAt);
   }
 
   return Array.from(byKey.values()).sort(

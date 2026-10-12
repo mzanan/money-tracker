@@ -8,25 +8,24 @@ import { parseAmountInput, roundForCurrency } from "@/lib/currency";
 import { aggregateFeesBySide, parseFeeDrafts } from "@/lib/transfer";
 
 import type { FeeDraft } from "./transferFeeFields";
-import type { Transaction } from "@/types/db";
+import type { RowFacts } from "@/types/ledger";
 
 export function useMarkPairTransferDialog({
   expenseTx,
   incomeTx,
   onSuccess,
 }: {
-  expenseTx: Transaction;
-  incomeTx: Transaction;
+  expenseTx: RowFacts;
+  incomeTx: RowFacts;
   onSuccess: () => void;
 }) {
   const { run, pending } = useServerAction();
 
-  const sameCurrency =
-    expenseTx.currency_original === incomeTx.currency_original;
-  const rawDelta = expenseTx.amount_original - incomeTx.amount_original;
+  const sameCurrency = expenseTx.currency === incomeTx.currency;
+  const rawDelta = expenseTx.amount - incomeTx.amount;
   const delta =
     sameCurrency && rawDelta > 0
-      ? roundForCurrency(rawDelta, expenseTx.currency_original)
+      ? roundForCurrency(rawDelta, expenseTx.currency)
       : 0;
 
   const [fees, setFees] = useState<FeeDraft[]>([
@@ -37,13 +36,13 @@ export function useMarkPairTransferDialog({
 
   const bySide = aggregateFeesBySide(
     feeEntries,
-    expenseTx.currency_original,
-    incomeTx.currency_original,
+    expenseTx.currency,
+    incomeTx.currency,
   );
 
   const total = roundForCurrency(
     bySide.origin + bySide.destination,
-    expenseTx.currency_original,
+    expenseTx.currency,
   );
   const deltaMismatch = sameCurrency && total > 0 && total !== delta;
 

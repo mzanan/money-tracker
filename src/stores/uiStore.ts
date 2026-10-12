@@ -3,15 +3,15 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import type { Transaction } from "@/types/db";
+import type { RowFacts } from "@/types/ledger";
 
 interface UiState {
   lastCurrency: string | null;
   setLastCurrency: (code: string) => void;
   txSelectMode: boolean;
-  selectedTxs: Transaction[];
+  selectedTxs: RowFacts[];
   setTxSelectMode: (on: boolean) => void;
-  toggleTxSelected: (tx: Transaction) => void;
+  toggleTxSelected: (tx: RowFacts) => void;
 }
 
 export const useUiStore = create<UiState>()(

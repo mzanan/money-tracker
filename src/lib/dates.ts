@@ -133,18 +133,18 @@ export function isValidCalendarDate(value: string): boolean {
 }
 
 export function oldestYearMonthFrom(
-  rows: ReadonlyArray<{ occurred_on: string }>,
+  rows: ReadonlyArray<{ occurredOn: string }>,
 ): string | null {
   if (rows.length === 0) return null;
-  let oldest = rows[0].occurred_on;
+  let oldest = rows[0].occurredOn;
   for (const row of rows) {
-    if (row.occurred_on < oldest) oldest = row.occurred_on;
+    if (row.occurredOn < oldest) oldest = row.occurredOn;
   }
   return oldest.slice(0, 7);
 }
 
 export function newestYearMonthFrom(
-  rows: ReadonlyArray<{ occurred_on: string; budget_month: string | null }>,
+  rows: ReadonlyArray<{ occurredOn: string; budgetMonth: string | null }>,
 ): string | null {
   if (rows.length === 0) return null;
   let newest = effectiveYearMonth(rows[0]);
@@ -155,11 +155,11 @@ export function newestYearMonthFrom(
   return newest;
 }
 
-export function effectiveYearMonth(tx: {
-  occurred_on: string;
-  budget_month: string | null;
+export function effectiveYearMonth(row: {
+  occurredOn: string;
+  budgetMonth: string | null;
 }): string {
-  return tx.budget_month ?? tx.occurred_on.slice(0, 7);
+  return row.budgetMonth ?? row.occurredOn.slice(0, 7);
 }
 
 export function forwardMonthCap(base: string, newest: string | null): string {

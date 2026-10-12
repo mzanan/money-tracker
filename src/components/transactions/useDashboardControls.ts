@@ -2,13 +2,18 @@
 
 import { useMemo, useState } from "react";
 
+import { useRatesByDate } from "@/hooks/useRatesByDate";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
-import { dayTotalsWithPairs } from "@/lib/cancellations";
+import { ALL_SOURCES } from "@/lib/constants/sources";
 import { todayInTz } from "@/lib/dates";
 import { applyListFilters, filterByAmount, initialSource } from "@/lib/filters";
+import { dayTotalsWithPairs } from "@/lib/ledger/days";
+import { movedOutMovements } from "@/lib/ledger/carriedOver";
+import { monthMovements, scopedMovements } from "@/lib/ledger/scope";
 
-import type { DayTotalsWithPairs } from "@/lib/cancellations";
-import type { Location, RecurringPayment, Transaction } from "@/types/db";
+import type { DayTotals } from "@/lib/ledger/days";
+import type { Location, RecurringPayment } from "@/types/db";
+import type { Movement } from "@/types/ledger";
 
 import type { KindFilter } from "./balanceHero";
 
@@ -22,27 +27,22 @@ function parseAmount(input: string): number | undefined {
   return input.trim() && !Number.isNaN(value) && value > 0 ? value : undefined;
 }
 
-function bySource(txs: Transaction[], source: string): Transaction[] {
-  return source === "all" ? txs : txs.filter((tx) => tx.source === source);
-}
-
 export function useDashboardControls({
-  monthTransactions,
-  monthMovedOut,
-  lifetimeTransactions,
+  yearMonth,
+  lifetimeMovements,
   reminders,
   places,
   sources,
 }: {
-  monthTransactions: Transaction[];
-  monthMovedOut: Transaction[];
-  lifetimeTransactions: Transaction[];
+  yearMonth: string;
+  lifetimeMovements: Movement[];
   reminders: RecurringPayment[];
   places: Location[];
   sources: string[];
 }) {
   const settings = useSettings();
   const timezone = useTimezone();
+  const ratesByDate = useRatesByDate();
   const today = todayInTz(timezone);
 
   const [panel, setPanel] = useState<PanelMode>("none");
@@ -78,61 +78,81 @@ export function useDashboardControls({
     setPanel("none");
   }
 
+  const sourceFilteredLifetime = useMemo(
+    () => scopedMovements(lifetimeMovements, selectedSource),
+    [lifetimeMovements, selectedSource],
+  );
   const sourceFilteredMonth = useMemo(
-    () => bySource(monthTransactions, selectedSource),
-    [monthTransactions, selectedSource],
+    () => monthMovements(sourceFilteredLifetime, selectedSource, yearMonth),
+    [sourceFilteredLifetime, selectedSource, yearMonth],
   );
   const sourceFilteredMovedOut = useMemo(
-    () => bySource(monthMovedOut, selectedSource),
-    [monthMovedOut, selectedSource],
+    () => movedOutMovements(sourceFilteredLifetime, selectedSource, yearMonth),
+    [sourceFilteredLifetime, selectedSource, yearMonth],
   );
-  const sourceFilteredLifetime = useMemo(
-    () => bySource(lifetimeTransactions, selectedSource),
-    [lifetimeTransactions, selectedSource],
+
+  const listOptions = useMemo(
+    () => ({
+      kind: selectedKind,
+      tag: selectedTag,
+      place: selectedPlace,
+      places,
+      scope: selectedSource,
+      baseCurrency: settings.base_currency,
+      ratesByDate,
+    }),
+    [
+      selectedKind,
+      selectedTag,
+      selectedPlace,
+      places,
+      selectedSource,
+      settings.base_currency,
+      ratesByDate,
+    ],
   );
 
   const monthList = useMemo(
-    () =>
-      applyListFilters(sourceFilteredMonth, {
-        kind: selectedKind,
-        tag: selectedTag,
-        place: selectedPlace,
-        places,
-      }),
-    [sourceFilteredMonth, selectedKind, selectedTag, selectedPlace, places],
+    () => applyListFilters(sourceFilteredMonth, listOptions),
+    [sourceFilteredMonth, listOptions],
   );
 
   const movedOutList = useMemo(
-    () =>
-      applyListFilters(sourceFilteredMovedOut, {
-        kind: selectedKind,
-        tag: selectedTag,
-        place: selectedPlace,
-        places,
-      }),
-    [sourceFilteredMovedOut, selectedKind, selectedTag, selectedPlace, places],
+    () => applyListFilters(sourceFilteredMovedOut, listOptions),
+    [sourceFilteredMovedOut, listOptions],
   );
 
   const filterResults = useMemo(() => {
     const base = scope === "all" ? sourceFilteredLifetime : sourceFilteredMonth;
-    const byKind =
-      selectedKind === "all"
-        ? base
-        : base.filter((tx) => tx.kind === selectedKind);
-    return filterByAmount(byKind, { min, max }, settings.base_currency);
+    const byKind = applyListFilters(base, {
+      ...listOptions,
+      tag: null,
+      place: null,
+    });
+    return filterByAmount(
+      byKind,
+      { min, max },
+      {
+        scope: selectedSource,
+        currency: settings.base_currency,
+        ratesByDate,
+      },
+    );
   }, [
     scope,
     sourceFilteredLifetime,
     sourceFilteredMonth,
-    selectedKind,
+    listOptions,
     min,
     max,
+    selectedSource,
     settings.base_currency,
+    ratesByDate,
   ]);
 
   const activityDates = useMemo(
-    () => new Set(lifetimeTransactions.map((tx) => tx.occurred_on)),
-    [lifetimeTransactions],
+    () => new Set(lifetimeMovements.map((movement) => movement.occurredOn)),
+    [lifetimeMovements],
   );
   const reminderDates = useMemo(
     () => new Set(reminders.map((reminder) => reminder.next_due_on)),
@@ -142,32 +162,35 @@ export function useDashboardControls({
   const selectedDayRows = useMemo(
     () =>
       selectedDay
-        ? lifetimeTransactions.filter((tx) => tx.occurred_on === selectedDay)
+        ? lifetimeMovements.filter(
+            (movement) => movement.occurredOn === selectedDay,
+          )
         : [],
-    [selectedDay, lifetimeTransactions],
+    [selectedDay, lifetimeMovements],
   );
   const selectedDayCurrency = useDayTotalsCurrency(
     selectedSource,
     selectedDayRows,
   );
 
-  const selectedDayGroup = useMemo<DayTotalsWithPairs | null>(() => {
+  const selectedDayGroup = useMemo<DayTotals | null>(() => {
     if (!selectedDay) return null;
-    const group = dayTotalsWithPairs(
-      lifetimeTransactions,
-      selectedDayCurrency,
-    ).find((day) => day.date === selectedDay);
+    const group = dayTotalsWithPairs(selectedDayRows, {
+      scope: ALL_SOURCES,
+      currency: selectedDayCurrency,
+      ratesByDate,
+    }).find((day) => day.date === selectedDay);
     return (
       group ?? {
         date: selectedDay,
-        transactions: [],
+        movements: [],
         income: 0,
         expense: 0,
         net: 0,
         pairs: [],
       }
     );
-  }, [selectedDay, lifetimeTransactions, selectedDayCurrency]);
+  }, [selectedDay, selectedDayRows, selectedDayCurrency, ratesByDate]);
 
   return {
     selectedDayCurrency,
@@ -177,7 +200,6 @@ export function useDashboardControls({
     closePanel,
     selectedSource,
     setSelectedSource,
-    includeTransfers: selectedSource !== "all",
     selectedKind,
     setSelectedKind,
     selectedTag,

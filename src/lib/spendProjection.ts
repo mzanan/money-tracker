@@ -1,4 +1,4 @@
-import { excludeCanceledPairs } from "@/lib/cancellations";
+import { ALL_SOURCES } from "@/lib/constants/sources";
 import { convert } from "@/lib/currency";
 import { monthBounds, shiftYearMonth } from "@/lib/dates";
 import {
@@ -6,9 +6,11 @@ import {
   matchesReminder,
   splitFixedVariable,
 } from "@/lib/fixedExpenses";
-import { periodTotals } from "@/lib/totals";
+import { excludeCanceledPairs } from "@/lib/ledger/canceledPairs";
+import { periodTotals } from "@/lib/ledger/scope";
 
-import type { FxRates, RecurringPayment, Transaction } from "@/types/db";
+import type { FxRates, RecurringPayment } from "@/types/db";
+import type { Movement, RatesByDate } from "@/types/ledger";
 
 export interface SpendProjection {
   variableDailyAverage: number;
@@ -22,11 +24,11 @@ export interface SpendProjection {
 }
 
 export function monthElapsedTransactions(
-  monthTransactions: Transaction[],
+  monthTransactions: Movement[],
   today: string,
-): Transaction[] {
+): Movement[] {
   return excludeCanceledPairs(monthTransactions).filter(
-    (tx) => tx.occurred_on <= today,
+    (tx) => tx.occurredOn <= today,
   );
 }
 
@@ -34,11 +36,11 @@ export const PROJECTION_OVERDUE_MONTHS = 1;
 
 export function overdueUnpaidReminders({
   reminders,
-  lifetimeTransactions,
+  lifetimeMovements,
   yearMonth,
 }: {
   reminders: RecurringPayment[];
-  lifetimeTransactions: Transaction[];
+  lifetimeMovements: Movement[];
   yearMonth: string;
 }): RecurringPayment[] {
   const [, monthEnd] = monthBounds(yearMonth);
@@ -49,33 +51,33 @@ export function overdueUnpaidReminders({
     (r) => r.next_due_on >= overdueFrom && r.next_due_on <= monthEnd,
   );
   const paymentHistory = excludeCanceledPairs(
-    lifetimeTransactions.filter(
-      (tx) => tx.occurred_on >= overdueFrom && tx.occurred_on <= monthEnd,
+    lifetimeMovements.filter(
+      (tx) => tx.occurredOn >= overdueFrom && tx.occurredOn <= monthEnd,
     ),
   );
   return excludePaidReminders(dueInWindow, paymentHistory);
 }
 
 export function monthScheduledFixed(
-  monthTransactions: Transaction[],
+  monthTransactions: Movement[],
   today: string,
   fixedLabels: string[],
   recurringNotes: Set<string>,
-): Transaction[] {
+): Movement[] {
   const upcoming = excludeCanceledPairs(monthTransactions).filter(
-    (tx) => tx.occurred_on > today,
+    (tx) => tx.occurredOn > today,
   );
   return splitFixedVariable(upcoming, fixedLabels, recurringNotes).fixed;
 }
 
 export function splitByMonthStart(
-  txs: Transaction[],
+  txs: Movement[],
   monthStart: string,
-): { inMonth: Transaction[]; carried: Transaction[] } {
-  const inMonth: Transaction[] = [];
-  const carried: Transaction[] = [];
+): { inMonth: Movement[]; carried: Movement[] } {
+  const inMonth: Movement[] = [];
+  const carried: Movement[] = [];
   for (const tx of txs) {
-    if (tx.occurred_on >= monthStart) inMonth.push(tx);
+    if (tx.occurredOn >= monthStart) inMonth.push(tx);
     else carried.push(tx);
   }
   return { inMonth, carried };
@@ -90,16 +92,20 @@ export function computeSpendProjection({
   recurringNotes,
   baseCurrency,
   rates,
+  ratesByDate,
 }: {
   yearMonth: string;
   today: string;
-  monthTransactions: Transaction[];
+  monthTransactions: Movement[];
   unpaidRecurring: RecurringPayment[];
   fixedLabels: string[];
   recurringNotes: Set<string>;
   baseCurrency: string;
   rates: FxRates | null;
+  ratesByDate: RatesByDate;
 }): SpendProjection {
+  const spent = (movements: Movement[]) =>
+    periodTotals(movements, ALL_SOURCES, baseCurrency, ratesByDate).expense;
   const [monthStart, monthEnd] = monthBounds(yearMonth);
   const totalDaysInMonth = Number(monthEnd.slice(8, 10));
   const daysElapsed = Math.max(Number(today.slice(8, 10)), 1);
@@ -112,9 +118,9 @@ export function computeSpendProjection({
   );
 
   const { inMonth, carried } = splitByMonthStart(variable, monthStart);
-  const inMonthVariable = periodTotals(inMonth, baseCurrency).expense;
-  const carriedVariable = periodTotals(carried, baseCurrency).expense;
-  const fixedPaid = periodTotals(fixed, baseCurrency).expense;
+  const inMonthVariable = spent(inMonth);
+  const carriedVariable = spent(carried);
+  const fixedPaid = spent(fixed);
 
   const remainingDays = totalDaysInMonth - daysElapsed;
   const variableDailyAverage = inMonthVariable / daysElapsed;
@@ -146,7 +152,7 @@ export function computeSpendProjection({
   ).filter(
     (tx) => !unpaidRecurring.some((reminder) => matchesReminder(tx, reminder)),
   );
-  const fixedScheduled = periodTotals(scheduledRows, baseCurrency).expense;
+  const fixedScheduled = spent(scheduledRows);
 
   const fixedTotal = fixedPaid + fixedUpcoming + fixedScheduled;
   const projectedTotal = projectedVariable + fixedTotal;

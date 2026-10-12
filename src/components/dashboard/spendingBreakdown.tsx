@@ -12,10 +12,11 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlacesDialog } from "@/components/transactions/placesDialog";
 import { useSpendingBreakdown, type Mode } from "./useSpendingBreakdown";
 
-import type { Location, Transaction } from "@/types/db";
+import type { Location } from "@/types/db";
+import type { Movement } from "@/types/ledger";
 
 interface Props {
-  transactions: Transaction[];
+  transactions: Movement[];
   places: Location[];
   selectedTag: string | null;
   onSelectTag: (tag: string | null) => void;

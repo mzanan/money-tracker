@@ -3,18 +3,22 @@
 import { useMemo, useState } from "react";
 import { addDays, format, parseISO } from "date-fns";
 
-import { excludeCanceledPairs } from "@/lib/cancellations";
+import { useRatesByDate } from "@/hooks/useRatesByDate";
 import { monthBounds } from "@/lib/dates";
-import { dayTotalsList } from "@/lib/totals";
+import { excludeCanceledPairs } from "@/lib/ledger/canceledPairs";
+import { dayTotalsList } from "@/lib/ledger/days";
+import { movementAmount } from "@/lib/ledger/scope";
+import { useSettings } from "@/hooks/useSettings";
 
-import type { Transaction } from "@/types/db";
+import type { MovementScope } from "@/lib/ledger/scope";
+import type { Movement } from "@/types/ledger";
 import { useDisplayCurrency } from "./useDisplayCurrency";
 
 interface Args {
   yearMonth: string;
-  transactions: Transaction[];
+  movements: Movement[];
+  scope: MovementScope;
   today: string;
-  includeTransfers?: boolean;
   hasOlderMonth: boolean;
   hasNewerMonth: boolean;
   onShiftMonth: (delta: number) => void;
@@ -22,14 +26,16 @@ interface Args {
 
 export function useDaySpend({
   yearMonth,
-  transactions,
+  movements,
+  scope,
   today,
-  includeTransfers = false,
   hasOlderMonth,
   hasNewerMonth,
   onShiftMonth,
 }: Args) {
-  const displayCurrency = useDisplayCurrency(transactions);
+  const displayCurrency = useDisplayCurrency(movements, scope);
+  const ratesByDate = useRatesByDate();
+  const baseCurrency = useSettings().base_currency;
 
   const [monthStart, monthEnd] = monthBounds(yearMonth);
   const todayInMonth = today >= monthStart && today <= monthEnd;
@@ -39,11 +45,18 @@ export function useDaySpend({
       string,
       { expense: number; income: number; count: number }
     >();
-    const real = excludeCanceledPairs(transactions);
-    for (const day of dayTotalsList(real, displayCurrency, includeTransfers)) {
+    const real = excludeCanceledPairs(movements);
+    const days = dayTotalsList(real, {
+      scope,
+      currency: displayCurrency,
+      ratesByDate,
+    });
+    for (const day of days) {
       if (day.date < monthStart || day.date > monthEnd) continue;
-      const expenseCount = day.transactions.filter(
-        (t) => t.kind === "expense",
+      const expenseCount = day.movements.filter(
+        (movement) =>
+          movementAmount(movement, scope, baseCurrency, ratesByDate).kind ===
+          "expense",
       ).length;
       map.set(day.date, {
         expense: day.expense,
@@ -52,7 +65,15 @@ export function useDaySpend({
       });
     }
     return map;
-  }, [transactions, displayCurrency, includeTransfers, monthStart, monthEnd]);
+  }, [
+    movements,
+    scope,
+    displayCurrency,
+    ratesByDate,
+    baseCurrency,
+    monthStart,
+    monthEnd,
+  ]);
 
   const daysInMonth = useMemo(() => {
     const out: string[] = [];

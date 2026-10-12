@@ -7,7 +7,8 @@ import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { useMoney } from "@/hooks/useMoney";
 import { resolveSourceLabel } from "@/lib/constants/sources";
 import { cn } from "@/lib/utils";
-import type { CanceledPair } from "@/lib/cancellations";
+import type { CanceledPair } from "@/lib/ledger/canceledPairs";
+import type { MovementScope } from "@/lib/ledger/scope";
 
 import { IconCircle } from "@/components/ui/iconCircle";
 import { TappableRow } from "@/components/ui/tappableRow";
@@ -16,17 +17,19 @@ import { TransactionRow } from "./transactionRow";
 
 export function CanceledGroup({
   pair,
+  scope,
   showBudgetMonthBadges = true,
   recurringNotes,
 }: {
   pair: CanceledPair;
+  scope: MovementScope;
   showBudgetMonthBadges?: boolean;
   recurringNotes?: Set<string>;
 }) {
   const accountLabels = useAccountLabels();
   const money = useMoney();
   const [open, setOpen] = useState(false);
-  const sourceLabel = resolveSourceLabel(pair.expense.source, accountLabels);
+  const sourceLabel = resolveSourceLabel(pair.flow.source, accountLabels);
   const title =
     pair.expense.note?.trim() || `Canceled payment · ${sourceLabel}`;
 
@@ -51,9 +54,7 @@ export function CanceledGroup({
         </span>
         <span className="flex shrink-0 flex-col items-end">
           <span className="text-muted-foreground text-sm font-medium tabular-nums line-through">
-            {money(pair.expense.amount_original, {
-              currency: pair.expense.currency_original,
-            })}
+            {money(pair.flow.amount, { currency: pair.flow.currency })}
           </span>
           <span className="text-muted-foreground text-meta mt-0.5">net 0</span>
         </span>
@@ -67,12 +68,14 @@ export function CanceledGroup({
       {open && (
         <div className="grid min-w-0 gap-px pl-3">
           <TransactionRow
-            tx={pair.expense}
+            movement={pair.expense}
+            scope={scope}
             showBudgetMonthBadges={showBudgetMonthBadges}
             recurringNotes={recurringNotes}
           />
           <TransactionRow
-            tx={pair.income}
+            movement={pair.income}
+            scope={scope}
             showBudgetMonthBadges={showBudgetMonthBadges}
             recurringNotes={recurringNotes}
           />

@@ -133,3 +133,5 @@ export function getCurrency(code: string): CurrencyMeta {
 export function isSupportedCurrency(code: string): boolean {
   return code in CURRENCY_MAP;
 }
+
+export const DEFAULT_BASE_CURRENCY = "USD";

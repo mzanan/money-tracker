@@ -8,7 +8,7 @@ import { CompletedReminderRow } from "@/components/reminders/completedReminderRo
 import { ReminderRow } from "@/components/reminders/reminderRow";
 import { formatYearMonthLong, formatYmd } from "@/lib/dates";
 
-import type { DayTotalsWithPairs } from "@/lib/cancellations";
+import type { DayTotals } from "@/lib/ledger/days";
 import type { RecurringPayment } from "@/types/db";
 
 import { DaySection } from "./daySection";
@@ -34,7 +34,7 @@ export function CalendarPanel({
   activityDates: Set<string>;
   reminderDates: Set<string>;
   selectedDay: string | null;
-  selectedDayGroup: DayTotalsWithPairs | null;
+  selectedDayGroup: DayTotals | null;
   selectedDayCurrency?: string;
   onSelectDay: (day: string | null) => void;
   reminders: RecurringPayment[];

@@ -3,18 +3,20 @@
 import { useMemo, useState } from "react";
 
 import { useMoney } from "@/hooks/useMoney";
+import { useRatesByDate } from "@/hooks/useRatesByDate";
 import { useSettings } from "@/hooks/useSettings";
-import { excludeCanceledPairs } from "@/lib/cancellations";
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
+import { monthExpenseMovements } from "@/lib/ledger/canceledPairs";
+import { movementSpend } from "@/lib/ledger/valuation";
 import { placeOf } from "@/lib/places";
-import { safeTransactionInDisplay } from "@/lib/totals";
 
-import type { Location, Transaction } from "@/types/db";
+import type { Location } from "@/types/db";
+import type { Movement } from "@/types/ledger";
 
 export type Mode = "tag" | "place";
 
 interface Params {
-  transactions: Transaction[];
+  transactions: Movement[];
   places: Location[];
   selectedTag: string | null;
   onSelectTag: (tag: string | null) => void;
@@ -32,6 +34,7 @@ export function useSpendingBreakdown({
 }: Params) {
   const settings = useSettings();
   const money = useMoney();
+  const ratesByDate = useRatesByDate();
   const [mode, setMode] = useState<Mode>("tag");
 
   const selected = mode === "tag" ? selectedTag : selectedPlace;
@@ -46,16 +49,15 @@ export function useSpendingBreakdown({
   const breakdown = useMemo(() => {
     const totals = new Map<string, number>();
     let total = 0;
-    for (const tx of excludeCanceledPairs(transactions)) {
-      if (tx.kind !== "expense" || tx.transfer_group) continue;
-      const value = safeTransactionInDisplay(tx, settings.base_currency);
+    for (const tx of monthExpenseMovements(transactions)) {
+      const value = movementSpend(tx, settings.base_currency, ratesByDate);
       if (value == null) continue;
       const keys =
         mode === "tag"
           ? tx.tags.length > 0
             ? tx.tags
             : [UNTAGGED_LABEL]
-          : [placeOf(tx.occurred_on, places)];
+          : [placeOf(tx.occurredOn, places)];
       for (const key of keys) {
         totals.set(key, (totals.get(key) ?? 0) + value);
       }
@@ -69,7 +71,7 @@ export function useSpendingBreakdown({
       }))
       .sort((a, b) => b.amount - a.amount);
     return { list, max: list[0]?.amount ?? 0 };
-  }, [transactions, settings.base_currency, mode, places]);
+  }, [transactions, settings.base_currency, ratesByDate, mode, places]);
 
   return {
     mode,

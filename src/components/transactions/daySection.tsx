@@ -5,7 +5,8 @@ import { XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
 
-import type { DayTotalsWithPairs } from "@/lib/cancellations";
+import { ALL_SOURCES } from "@/lib/constants/sources";
+import type { DayTotals } from "@/lib/ledger/days";
 
 import { DayGroup } from "./dayGroup";
 
@@ -14,7 +15,7 @@ export function DaySection({
   currency,
   onClose,
 }: {
-  day: DayTotalsWithPairs;
+  day: DayTotals;
   currency?: string;
   onClose: () => void;
 }) {
@@ -31,8 +32,13 @@ export function DaySection({
           <XIcon />
         </Button>
       </div>
-      {day.transactions.length + day.pairs.length > 0 ? (
-        <DayGroup day={day} currency={currency} showBudgetMonthBadges={false} />
+      {day.movements.length + day.pairs.length > 0 ? (
+        <DayGroup
+          day={day}
+          currency={currency}
+          scope={ALL_SOURCES}
+          showBudgetMonthBadges={false}
+        />
       ) : (
         <p className="text-muted-foreground px-3 py-6 text-center text-sm">
           No transactions on this day.

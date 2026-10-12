@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import { format, parse } from "date-fns";
 
+import { useRatesByDate } from "@/hooks/useRatesByDate";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
 import { todayInTz } from "@/lib/dates";
-import { monthExpenseRows } from "@/lib/cancellations";
+import { ALL_SOURCES } from "@/lib/constants/sources";
 import { UNTAGGED_LABEL } from "@/lib/constants/tags";
 import {
   effectiveYearMonth,
@@ -16,32 +17,36 @@ import {
   shiftYearMonth,
 } from "@/lib/dates";
 import { splitFixedVariable } from "@/lib/fixedExpenses";
-import { periodTotals, safeTransactionInDisplay } from "@/lib/totals";
+import { monthExpenseMovements } from "@/lib/ledger/canceledPairs";
+import { assetLines } from "@/lib/ledger/movements";
+import { periodTotals } from "@/lib/ledger/scope";
+import { movementSpend } from "@/lib/ledger/valuation";
 import { detectRecurringNotes } from "@/lib/unusualExpenses";
 
-import type { Transaction } from "@/types/db";
+import type { Movement } from "@/types/ledger";
 
 const TREND_MONTHS = 6;
 
 export function useDashboardView({
   yearMonth,
-  lifetimeTransactions,
+  movements: lifetimeMovements,
 }: {
   yearMonth: string;
-  lifetimeTransactions: Transaction[];
+  movements: Movement[];
 }) {
   const settings = useSettings();
+  const ratesByDate = useRatesByDate();
   const [visibleYearMonth, setVisibleYearMonth] = useState(yearMonth);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<string | null>(null);
 
   const oldestYearMonth = useMemo(
-    () => oldestYearMonthFrom(lifetimeTransactions),
-    [lifetimeTransactions],
+    () => oldestYearMonthFrom(lifetimeMovements),
+    [lifetimeMovements],
   );
   const newestYearMonth = useMemo(
-    () => newestYearMonthFrom(lifetimeTransactions),
-    [lifetimeTransactions],
+    () => newestYearMonthFrom(lifetimeMovements),
+    [lifetimeMovements],
   );
   const forwardCap = forwardMonthCap(yearMonth, newestYearMonth);
   const hasOlder =
@@ -61,16 +66,16 @@ export function useDashboardView({
   }
 
   const monthTransactions = useMemo(() => {
-    return lifetimeTransactions
+    return lifetimeMovements
       .filter((tx) => effectiveYearMonth(tx) === visibleYearMonth)
       .slice()
       .sort((a, b) => {
-        if (a.occurred_on !== b.occurred_on) {
-          return a.occurred_on < b.occurred_on ? 1 : -1;
+        if (a.occurredOn !== b.occurredOn) {
+          return a.occurredOn < b.occurredOn ? 1 : -1;
         }
-        return (a.occurred_at ?? "") < (b.occurred_at ?? "") ? 1 : -1;
+        return a.occurredAt < b.occurredAt ? 1 : -1;
       });
-  }, [lifetimeTransactions, visibleYearMonth]);
+  }, [lifetimeMovements, visibleYearMonth]);
 
   const trend = useMemo(() => {
     const months: {
@@ -83,10 +88,10 @@ export function useDashboardView({
       const month = shiftYearMonth(yearMonth, -i);
       const hasData = oldestYearMonth !== null && month >= oldestYearMonth;
       let expense = 0;
-      for (const tx of monthExpenseRows(
-        lifetimeTransactions.filter((t) => effectiveYearMonth(t) === month),
+      for (const tx of monthExpenseMovements(
+        lifetimeMovements.filter((t) => effectiveYearMonth(t) === month),
       )) {
-        expense += safeTransactionInDisplay(tx, settings.base_currency) ?? 0;
+        expense += movementSpend(tx, settings.base_currency, ratesByDate) ?? 0;
       }
       months.push({
         month,
@@ -96,7 +101,13 @@ export function useDashboardView({
       });
     }
     return months;
-  }, [yearMonth, oldestYearMonth, lifetimeTransactions, settings.base_currency]);
+  }, [
+    yearMonth,
+    oldestYearMonth,
+    lifetimeMovements,
+    settings.base_currency,
+    ratesByDate,
+  ]);
 
   const hasAnyData = oldestYearMonth !== null;
 
@@ -107,10 +118,10 @@ export function useDashboardView({
 
   const topMerchants = useMemo(() => {
     const byMerchant = new Map<string, { total: number; count: number }>();
-    for (const tx of monthExpenseRows(monthTransactions)) {
+    for (const tx of monthExpenseMovements(monthTransactions)) {
       const label = tx.note?.trim();
       if (!label) continue;
-      const value = safeTransactionInDisplay(tx, settings.base_currency);
+      const value = movementSpend(tx, settings.base_currency, ratesByDate);
       if (value == null) continue;
       const entry = byMerchant.get(label) ?? { total: 0, count: 0 };
       entry.total += value;
@@ -121,21 +132,22 @@ export function useDashboardView({
       .map(([label, { total, count }]) => ({ label, total, count }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
-  }, [monthTransactions, settings.base_currency]);
+  }, [monthTransactions, settings.base_currency, ratesByDate]);
 
   const recurringNotes = useMemo(
     () =>
       detectRecurringNotes(
-        lifetimeTransactions,
+        lifetimeMovements,
         `${visibleYearMonth}-01`,
         settings.base_currency,
+        ratesByDate,
       ),
-    [lifetimeTransactions, visibleYearMonth, settings.base_currency],
+    [lifetimeMovements, visibleYearMonth, settings.base_currency, ratesByDate],
   );
 
   const timezone = useTimezone();
   const monthStats = useMemo(() => {
-    const rows = monthExpenseRows(monthTransactions);
+    const rows = monthExpenseMovements(monthTransactions);
     const { fixed, variable } = splitFixedVariable(
       rows,
       settings.fixed_labels,
@@ -143,9 +155,16 @@ export function useDashboardView({
     );
     const variableExpense = periodTotals(
       variable,
+      ALL_SOURCES,
       settings.base_currency,
+      ratesByDate,
     ).expense;
-    const fixedExpense = periodTotals(fixed, settings.base_currency).expense;
+    const fixedExpense = periodTotals(
+      fixed,
+      ALL_SOURCES,
+      settings.base_currency,
+      ratesByDate,
+    ).expense;
     const expense = variableExpense + fixedExpense;
 
     const today = todayInTz(timezone);
@@ -168,27 +187,27 @@ export function useDashboardView({
     recurringNotes,
     timezone,
     visibleYearMonth,
+    ratesByDate,
   ]);
 
   const cashBalances = useMemo(() => {
     const byCurrency = new Map<string, number>();
-    for (const tx of lifetimeTransactions) {
-      if (tx.source !== "manual") continue;
-      const delta =
-        tx.kind === "income" ? tx.amount_original : -tx.amount_original;
-      byCurrency.set(
-        tx.currency_original,
-        (byCurrency.get(tx.currency_original) ?? 0) + delta,
-      );
+    for (const tx of lifetimeMovements) {
+      for (const line of assetLines(tx, "manual")) {
+        byCurrency.set(
+          line.currency,
+          (byCurrency.get(line.currency) ?? 0) + line.amount,
+        );
+      }
     }
     return Array.from(byCurrency.entries())
       .map(([currency, balance]) => ({ currency, balance }))
       .filter(({ balance }) => Math.abs(balance) >= 0.01)
       .sort((a, b) => a.currency.localeCompare(b.currency));
-  }, [lifetimeTransactions]);
+  }, [lifetimeMovements]);
 
   const filteredList = useMemo(() => {
-    let list: Transaction[] = [];
+    let list: Movement[] = [];
     if (selectedTag !== null) {
       list = monthTransactions.filter((tx) =>
         tx.tags.length === 0

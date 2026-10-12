@@ -107,19 +107,16 @@ export function MergeBar() {
                       <span className="block truncate text-sm font-medium">
                         {transactionLabel(keepTx, accountLabels)}
                       </span>
-                      {keepTx.transfer_group && <TransferBadge />}
+                      {keepTx.isTransfer && <TransferBadge />}
                     </span>
                     <span className="text-muted-foreground block text-xs">
-                      {keepTx.occurred_on} · keeps this amount, the other one is
+                      {keepTx.occurredOn} · keeps this amount, the other one is
                       deleted and its details are preserved
                     </span>
                   </span>
                   <span className="shrink-0 text-sm font-semibold tabular-nums">
                     {kindSign(keepTx.kind)}
-                    {formatMoney(
-                      keepTx.amount_original,
-                      keepTx.currency_original,
-                    )}
+                    {formatMoney(keepTx.amount, keepTx.currency)}
                   </span>
                 </TappableRow>
               ))}

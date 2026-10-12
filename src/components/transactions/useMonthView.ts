@@ -2,31 +2,37 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useRatesByDate } from "@/hooks/useRatesByDate";
 import { useSettings } from "@/hooks/useSettings";
-import { dayTotalsWithPairs } from "@/lib/cancellations";
 import {
   groupCarriedOverByMonth,
-  mergeMovedOutIntoDays,
   partitionCarriedOver,
   splitCarriedOverPairs,
-} from "@/lib/budgetMonth";
+} from "@/lib/ledger/carriedOver";
+import { dayTotalsWithPairs, mergeMovedOutIntoDays } from "@/lib/ledger/days";
 import {
   MONTH_INITIAL_DAYS,
   MONTH_STEP_DAYS,
 } from "@/lib/constants/pagination";
 import { useUiStore } from "@/stores/uiStore";
 
-import type { Transaction } from "@/types/db";
+import type { MovementScope } from "@/lib/ledger/scope";
+import type { Movement } from "@/types/ledger";
 
 export function useMonthView(
-  transactions: Transaction[],
-  includeTransfers = false,
-  movedOut: Transaction[] = [],
+  movements: Movement[],
+  scope: MovementScope,
+  movedOut: Movement[] = [],
   groupCarriedOver = true,
   dayTotalsCurrency?: string,
 ) {
   const settings = useSettings();
+  const ratesByDate = useRatesByDate();
   const dayCurrency = dayTotalsCurrency ?? settings.base_currency;
+  const ctx = useMemo(
+    () => ({ scope, currency: dayCurrency, ratesByDate }),
+    [scope, dayCurrency, ratesByDate],
+  );
   const txSelectMode = useUiStore((s) => s.txSelectMode);
   const setTxSelectMode = useUiStore((s) => s.setTxSelectMode);
   const [visibleDays, setVisibleDays] = useState(MONTH_INITIAL_DAYS);
@@ -37,8 +43,8 @@ export function useMonthView(
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const partitioned = useMemo(
-    () => partitionCarriedOver(transactions),
-    [transactions],
+    () => partitionCarriedOver(movements),
+    [movements],
   );
   const crossed = useMemo(
     () =>
@@ -56,20 +62,9 @@ export function useMonthView(
   const carriedOverGroups = useMemo(
     () =>
       groupCarriedOver
-        ? groupCarriedOverByMonth(
-            carriedOver,
-            dayCurrency,
-            includeTransfers,
-            crossed.pairs,
-          )
+        ? groupCarriedOverByMonth(carriedOver, ctx, crossed.pairs)
         : [],
-    [
-      carriedOver,
-      crossed.pairs,
-      groupCarriedOver,
-      dayCurrency,
-      includeTransfers,
-    ],
+    [carriedOver, crossed.pairs, groupCarriedOver, ctx],
   );
   const displayOnlyRows = useMemo(
     () =>
@@ -80,18 +75,12 @@ export function useMonthView(
   );
 
   const nativeDays = useMemo(
-    () =>
-      dayTotalsWithPairs(
-        native,
-        dayCurrency,
-        includeTransfers,
-        displayOnlyRows,
-      ),
-    [native, dayCurrency, includeTransfers, displayOnlyRows],
+    () => dayTotalsWithPairs(native, ctx, displayOnlyRows),
+    [native, ctx, displayOnlyRows],
   );
   const days = useMemo(
-    () => mergeMovedOutIntoDays(nativeDays, displayOnlyRows),
-    [nativeDays, displayOnlyRows],
+    () => mergeMovedOutIntoDays(nativeDays, displayOnlyRows, scope),
+    [nativeDays, displayOnlyRows, scope],
   );
 
   const shown = days.slice(0, visibleDays);

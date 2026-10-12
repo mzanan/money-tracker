@@ -8,7 +8,8 @@ import { useSettings } from "@/hooks/useSettings";
 import { formatMoney } from "@/lib/currency";
 import { formatDayLong } from "@/lib/dates";
 import { cn } from "@/lib/utils";
-import type { DayTotalsWithPairs } from "@/lib/cancellations";
+import type { DayTotals } from "@/lib/ledger/days";
+import type { MovementScope } from "@/lib/ledger/scope";
 
 import { TappableRow } from "@/components/ui/tappableRow";
 
@@ -25,8 +26,9 @@ export function DayGroup({
   showBudgetMonthBadges = true,
   recurringNotes,
   currency,
+  scope,
 }: {
-  day: DayTotalsWithPairs;
+  day: DayTotals;
   defaultOpen?: boolean;
   open?: boolean;
   onToggle?: () => void;
@@ -35,13 +37,14 @@ export function DayGroup({
   showBudgetMonthBadges?: boolean;
   recurringNotes?: Set<string>;
   currency?: string;
+  scope: MovementScope;
 }) {
   const settings = useSettings();
   const totalsCurrency = currency ?? settings.base_currency;
   const { mask } = useHideAmounts();
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const open = openProp ?? internalOpen;
-  const count = day.transactions.length + day.pairs.length * 2;
+  const count = day.movements.length + day.pairs.length * 2;
   const totals = {
     income: day.income < 0.005 ? 0 : day.income,
     expense: day.expense < 0.005 ? 0 : day.expense,
@@ -87,10 +90,11 @@ export function DayGroup({
       </TappableRow>
       {open && (
         <div className="grid min-w-0 gap-px">
-          {day.transactions.map((tx) => (
+          {day.movements.map((movement) => (
             <TransactionRow
-              key={tx.id}
-              tx={tx}
+              key={movement.id}
+              movement={movement}
+              scope={scope}
               showDate={showRowDate}
               showBudgetMonthBadges={showBudgetMonthBadges}
               recurringNotes={recurringNotes}
@@ -100,6 +104,7 @@ export function DayGroup({
             <CanceledGroup
               key={pair.expense.id}
               pair={pair}
+              scope={scope}
               showBudgetMonthBadges={showBudgetMonthBadges}
               recurringNotes={recurringNotes}
             />

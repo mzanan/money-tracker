@@ -8,20 +8,21 @@ import { useMoney } from "@/hooks/useMoney";
 
 import { useSpendProjection } from "./useSpendProjection";
 
-import type { RecurringPayment, Transaction } from "@/types/db";
+import type { RecurringPayment } from "@/types/db";
+import type { Movement } from "@/types/ledger";
 
 export function SpendProjectionCard({
   yearMonth,
   today,
   monthTransactions,
-  lifetimeTransactions,
+  lifetimeMovements,
   reminders,
   recurringNotes,
 }: {
   yearMonth: string;
   today: string;
-  monthTransactions: Transaction[];
-  lifetimeTransactions: Transaction[];
+  monthTransactions: Movement[];
+  lifetimeMovements: Movement[];
   reminders: RecurringPayment[];
   recurringNotes: Set<string>;
 }) {
@@ -36,7 +37,7 @@ export function SpendProjectionCard({
     yearMonth,
     today,
     monthTransactions,
-    lifetimeTransactions,
+    lifetimeMovements,
     reminders,
     recurringNotes,
   });

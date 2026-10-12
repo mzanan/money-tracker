@@ -6,25 +6,26 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/emptyState";
 import { Surface } from "@/components/ui/surface";
 
-import type { Transaction } from "@/types/db";
+import type { MovementScope } from "@/lib/ledger/scope";
+import type { Movement } from "@/types/ledger";
 
 import { CarriedOverGroup } from "./carriedOverGroup";
 import { DayGroup } from "./dayGroup";
 import { useMonthView } from "./useMonthView";
 
 export function MonthView({
-  transactions,
+  movements,
   movedOut = [],
   emptyLabel = "No transactions this month.",
-  includeTransfers = false,
+  scope,
   groupCarriedOver = true,
   dayTotalsCurrency,
   recurringNotes,
 }: {
-  transactions: Transaction[];
-  movedOut?: Transaction[];
+  movements: Movement[];
+  movedOut?: Movement[];
   emptyLabel?: string;
-  includeTransfers?: boolean;
+  scope: MovementScope;
   groupCarriedOver?: boolean;
   dayTotalsCurrency?: string;
   recurringNotes?: Set<string>;
@@ -42,8 +43,8 @@ export function MonthView({
     txSelectMode,
     setTxSelectMode,
   } = useMonthView(
-    transactions,
-    includeTransfers,
+    movements,
+    scope,
     movedOut,
     groupCarriedOver,
     dayTotalsCurrency,
@@ -90,6 +91,7 @@ export function MonthView({
           onToggle={() => toggleDay(day.date)}
           recurringNotes={recurringNotes}
           currency={dayCurrency}
+          scope={scope}
         />
       ))}
       {carriedOverGroups.map((group) => (
@@ -97,6 +99,7 @@ export function MonthView({
           key={group.month}
           group={group}
           currency={dayCurrency}
+          scope={scope}
         />
       ))}
       {hasMore && (

@@ -133,6 +133,7 @@ export function sourceForApp(app?: string | null): string {
 
 const SOURCE_RE = /^[a-z0-9][a-z0-9 &_-]{0,31}$/;
 export const ALL_SOURCES = "all";
+export const MANUAL_SOURCE = "manual";
 
 const RESERVED_SOURCES = new Set([ALL_SOURCES]);
 

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/drawer";
 import { ErrorText } from "@/components/ui/errorText";
 import { formatMoney } from "@/lib/currency";
-import type { Transaction } from "@/types/db";
+import type { RowFacts } from "@/types/ledger";
 
 import { TransferFeeFields } from "./transferFeeFields";
 import { useMarkPairTransferDialog } from "./useMarkPairTransferDialog";
@@ -29,8 +29,8 @@ export function MarkPairTransferDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  expenseTx: Transaction;
-  incomeTx: Transaction;
+  expenseTx: RowFacts;
+  incomeTx: RowFacts;
   onSuccess: () => void;
 }) {
   const { sameCurrency, delta, fees, setFees, deltaMismatch, pending, submit } =
@@ -49,22 +49,20 @@ export function MarkPairTransferDialog({
         <DrawerBody>
           {sameCurrency && delta > 0 && (
             <p className="text-muted-foreground text-sm">
-              The amounts differ by{" "}
-              {formatMoney(delta, expenseTx.currency_original)}. Split it
-              between the accounts that charged it.
+              The amounts differ by {formatMoney(delta, expenseTx.currency)}.
+              Split it between the accounts that charged it.
             </p>
           )}
           <TransferFeeFields
             idPrefix="pair-transfer"
             fees={fees}
             onChange={setFees}
-            sourceCurrency={expenseTx.currency_original}
-            destinationCurrency={incomeTx.currency_original}
+            sourceCurrency={expenseTx.currency}
+            destinationCurrency={incomeTx.currency}
           />
           {deltaMismatch && (
             <ErrorText>
-              The fees must add up to{" "}
-              {formatMoney(delta, expenseTx.currency_original)}.
+              The fees must add up to {formatMoney(delta, expenseTx.currency)}.
             </ErrorText>
           )}
         </DrawerBody>

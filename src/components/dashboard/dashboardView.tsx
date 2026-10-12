@@ -19,11 +19,13 @@ import { SpendProjectionCard } from "./spendProjectionCard";
 import { UnusualExpensesCard } from "./unusualExpensesCard";
 import { useDashboardView } from "./useDashboardView";
 
-import type { Location, RecurringPayment, Transaction } from "@/types/db";
+import { ALL_SOURCES } from "@/lib/constants/sources";
+import type { Location, RecurringPayment } from "@/types/db";
+import type { Movement } from "@/types/ledger";
 
 interface Props {
   yearMonth: string;
-  lifetimeTransactions: Transaction[];
+  movements: Movement[];
   places: Location[];
   reminders: RecurringPayment[];
   today: string;
@@ -32,7 +34,7 @@ interface Props {
 
 export function DashboardView({
   yearMonth,
-  lifetimeTransactions,
+  movements,
   places,
   reminders,
   today,
@@ -40,7 +42,7 @@ export function DashboardView({
 }: Props) {
   const money = useMoney();
   const cash = useCashActionDrawer();
-  const v = useDashboardView({ yearMonth, lifetimeTransactions });
+  const v = useDashboardView({ yearMonth, movements });
 
   return (
     <div className="mx-auto grid w-full max-w-xl gap-5 *:min-w-0">
@@ -155,7 +157,7 @@ export function DashboardView({
         yearMonth={v.visibleYearMonth}
         today={today}
         monthTransactions={v.monthTransactions}
-        lifetimeTransactions={lifetimeTransactions}
+        lifetimeMovements={movements}
         reminders={reminders}
         recurringNotes={v.recurringNotes}
       />
@@ -238,7 +240,8 @@ export function DashboardView({
 
       {v.filteredList.length > 0 && (
         <MonthView
-          transactions={v.filteredList}
+          movements={v.filteredList}
+          scope={ALL_SOURCES}
           emptyLabel="No transactions."
           recurringNotes={v.recurringNotes}
         />

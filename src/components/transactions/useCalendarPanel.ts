@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { formatYm, monthBounds, parseYmd } from "@/lib/dates";
 
-import type { DayTotalsWithPairs } from "@/lib/cancellations";
+import type { DayTotals } from "@/lib/ledger/days";
 import type { RecurringPayment } from "@/types/db";
 
 import { useDrawerStep } from "./drawerStepContext";
@@ -24,7 +24,7 @@ export function useCalendarPanel({
   open: boolean;
   yearMonth: string;
   selectedDay: string | null;
-  selectedDayGroup: DayTotalsWithPairs | null;
+  selectedDayGroup: DayTotals | null;
   reminders: RecurringPayment[];
   completedReminders: RecurringPayment[];
   today: string;
@@ -62,9 +62,7 @@ export function useCalendarPanel({
     });
   }, [stepApi]);
 
-  const [shownDay, setShownDay] = useState<DayTotalsWithPairs | null>(
-    selectedDayGroup,
-  );
+  const [shownDay, setShownDay] = useState<DayTotals | null>(selectedDayGroup);
   if (selectedDayGroup && selectedDayGroup !== shownDay) {
     setShownDay(selectedDayGroup);
   }

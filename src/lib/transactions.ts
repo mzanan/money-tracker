@@ -12,8 +12,10 @@ import { EXTERNAL_ID_PREFIX, isCsvExternalId } from "@/lib/externalIds";
 import type { TransferFeeSpec } from "@/lib/transfer";
 import { snapshotRatesFor } from "@/lib/currency";
 import { transactions } from "@/lib/db/schema";
+import { sourcesOf } from "@/lib/ledger/movements";
 import { dedupeTags } from "@/lib/tags";
 import type { FxRates, Transaction, TransactionInsert } from "@/types/db";
+import type { Movement } from "@/types/ledger";
 
 export {
   EXTERNAL_ID_PREFIX,
@@ -73,7 +75,7 @@ export function normalizeTags(tags: string[] | null | undefined): string[] {
 }
 
 export function transactionLabel(
-  tx: Transaction,
+  tx: Pick<Transaction, "source" | "note" | "tags">,
   accountLabels?: AccountLabels,
 ): string {
   const sourceLabel = accountLabels
@@ -84,28 +86,27 @@ export function transactionLabel(
 }
 
 export function collectSources(
-  txs: ReadonlyArray<Pick<Transaction, "source">>,
+  movements: ReadonlyArray<Movement>,
   extraSources: ReadonlyArray<string>,
 ): string[] {
   const set = new Set<string>();
-  for (const tx of txs) {
-    if (tx.source) set.add(tx.source);
+  for (const movement of movements) {
+    for (const source of sourcesOf(movement)) set.add(source);
   }
   for (const source of extraSources) set.add(source);
   return Array.from(set).sort();
 }
 
-export function csvSourcesFrom(
-  txs: ReadonlyArray<Pick<Transaction, "source" | "external_id">>,
-): string[] {
+export function csvSourcesFrom(movements: ReadonlyArray<Movement>): string[] {
   const set = new Set<string>();
-  for (const tx of txs) {
-    if (
-      tx.source &&
-      isCsvExternalId(tx.external_id) &&
-      kindOfSource(tx.source) === "csv"
-    ) {
-      set.add(tx.source);
+  for (const movement of movements) {
+    for (const ref of movement.externalRefs) {
+      if (
+        isCsvExternalId(ref.externalId) &&
+        kindOfSource(ref.origin) === "csv"
+      ) {
+        set.add(ref.origin);
+      }
     }
   }
   return Array.from(set).sort();

@@ -14,7 +14,7 @@ import {
 import { undoMoveWithdrawalToCash } from "@/lib/actions/cash";
 import { setBudgetMonthShift, unmarkTransfer } from "@/lib/actions/transfers";
 import { isAccountCurrency } from "@/lib/accountCurrencies";
-import { canShiftBudgetMonth, hasBudgetMonthOverride } from "@/lib/budgetMonth";
+import { canShiftBudgetMonth } from "@/lib/budgetMonth";
 import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
 import { kindSign } from "@/lib/currency";
 import { formatMonthShort, todayInTz } from "@/lib/dates";
@@ -24,18 +24,25 @@ import {
   isWithdrawalExternalId,
 } from "@/lib/externalIds";
 import { isFixedTransaction } from "@/lib/fixedExpenses";
-import { transactionInDisplay } from "@/lib/totals";
-import { rowAmountTexts } from "@/lib/transactionDisplay";
+import { hasBudgetMonthOverride } from "@/lib/ledger/carriedOver";
+import { transferEnds } from "@/lib/ledger/movements";
+import { rowFacts } from "@/lib/ledger/rowFacts";
+import { isAllScope, movementAmount } from "@/lib/ledger/scope";
+import { amountInCurrency } from "@/lib/ledger/valuation";
+import { rowAmountTexts, transferLabel } from "@/lib/transactionDisplay";
+import { useRatesByDate } from "@/hooks/useRatesByDate";
 import { useUiStore } from "@/stores/uiStore";
 
 import { useDrawerStep } from "./drawerStepContext";
 
-import type { Transaction } from "@/types/db";
+import type { MovementScope } from "@/lib/ledger/scope";
+import type { Movement } from "@/types/ledger";
 
 const NO_RECURRING_NOTES = new Set<string>();
 
 export function useTransactionRow(
-  tx: Transaction,
+  movement: Movement,
+  scope: MovementScope,
   showDate = false,
   showBudgetMonthBadges = true,
   recurringNotes: Set<string> = NO_RECURRING_NOTES,
@@ -44,6 +51,8 @@ export function useTransactionRow(
   const accountCurrencies = useAccountCurrencies();
   const timezone = useTimezone();
   const accountLabels = useAccountLabels();
+  const ratesByDate = useRatesByDate();
+  const tx = rowFacts(movement, scope);
   const remove = useServerAction();
   const transfer = useServerAction();
   const fixedToggle = useServerAction();
@@ -57,10 +66,10 @@ export function useTransactionRow(
   const duplicate = useDialogState(runAfterMenuClose);
   const moveToCash = useDialogState(runAfterMenuClose);
 
-  const isTransfer = Boolean(tx.transfer_group);
-  const isWithdrawal = isWithdrawalExternalId(tx.external_id);
+  const isTransfer = tx.isTransfer;
+  const isWithdrawal = isWithdrawalExternalId(tx.externalId);
   const canMoveToCash =
-    isSingleLegWithdrawalExternalId(tx.external_id) &&
+    isSingleLegWithdrawalExternalId(tx.externalId) &&
     !isTransfer &&
     tx.kind === "expense";
   const canUndoMoveToCash = isWithdrawal && isTransfer;
@@ -68,14 +77,15 @@ export function useTransactionRow(
   const canDelete = !isSynced && !isTransfer;
   const lockAmountFields = isSynced || isTransfer || isWithdrawal;
   const canChangeSource =
-    !isTransfer && (!isSynced || !isSyncedExternalId(tx.external_id));
-  const canShiftMonth = canShiftBudgetMonth(tx) || hasBudgetMonthOverride(tx);
-  const realMonth = tx.occurred_on.slice(0, 7);
+    !isTransfer && (!isSynced || !isSyncedExternalId(tx.externalId));
+  const canShiftMonth =
+    canShiftBudgetMonth(tx) || hasBudgetMonthOverride(movement);
+  const realMonth = tx.occurredOn.slice(0, 7);
   const isMovedOut =
-    showBudgetMonthBadges && !showDate && hasBudgetMonthOverride(tx);
+    showBudgetMonthBadges && !showDate && hasBudgetMonthOverride(movement);
   const isCarriedOver =
-    showBudgetMonthBadges && showDate && hasBudgetMonthOverride(tx);
-  const budgetMonthLabel = tx.budget_month
+    showBudgetMonthBadges && showDate && hasBudgetMonthOverride(movement);
+  const budgetMonthLabel = tx.budgetMonth
     ? `Move back to ${formatMonthShort(realMonth)}`
     : "Move to next month";
 
@@ -84,47 +94,55 @@ export function useTransactionRow(
   const toggleTxSelected = useUiStore((s) => s.toggleTxSelected);
   const isSelected = selectedTxs.some((t) => t.id === tx.id);
 
-  let inDisplay: number | null;
-  try {
-    inDisplay = transactionInDisplay(tx, settings.base_currency);
-  } catch {
-    inDisplay = null;
-  }
+  const shown = movementAmount(
+    movement,
+    scope,
+    settings.base_currency,
+    ratesByDate,
+  );
+  const inDisplay = amountInCurrency(
+    shown,
+    settings.base_currency,
+    ratesByDate,
+  );
 
-  const sign = kindSign(tx.kind);
+  const sign = kindSign(shown.kind);
   const { hideAmounts, mask } = useHideAmounts();
   const amounts = rowAmountTexts({
-    amount: tx.amount_original,
-    currency: tx.currency_original,
+    amount: shown.amount,
+    currency: shown.currency,
     baseAmount: inDisplay,
     baseCurrency: settings.base_currency,
     accountFirst: isAccountCurrency(
       accountCurrencies[tx.source],
-      tx.currency_original,
+      shown.currency,
     ),
   });
   const amountText = mask(`${sign}${amounts.primary}`);
   const convertedText = hideAmounts ? null : amounts.secondary;
-  const sourceLabel = resolveSourceLabel(tx.source, accountLabels);
+  const ends = isAllScope(scope) ? transferEnds(movement) : null;
+  const sourceLabel = ends
+    ? transferLabel(ends, accountLabels)
+    : resolveSourceLabel(tx.source, accountLabels);
   const avatarSeed = tx.tags[0] || sourceLabel;
   const reminderTitle = tx.tags[0] || sourceLabel;
   const description = tx.note?.trim();
   const resolvedFixed = isFixedTransaction(
-    tx,
+    movement,
     settings.fixed_labels,
     recurringNotes,
   );
 
   const editSeed = {
     kind: tx.kind,
-    amount: tx.amount_original,
-    currency: tx.currency_original,
+    amount: tx.amount,
+    currency: tx.currency,
     source: tx.source,
     note: tx.note,
     tags: tx.tags,
-    occurredOn: tx.occurred_on,
-    transferGroup: tx.transfer_group,
-    externalId: tx.external_id,
+    occurredOn: tx.occurredOn,
+    transferGroup: tx.transferGroup,
+    externalId: tx.externalId,
   };
   const duplicateSeed = { ...editSeed, occurredOn: todayInTz(timezone) };
 
@@ -144,8 +162,8 @@ export function useTransactionRow(
   function handleUndoTransfer() {
     runAfterMenuClose(() =>
       transfer.run(() => unmarkTransfer(tx.id), {
-        confirm: tx.budget_month
-          ? `Undo this transfer? Its rows keep ${formatMonthShort(tx.budget_month)} as budget month and can be moved back individually.`
+        confirm: tx.budgetMonth
+          ? `Undo this transfer? Its rows keep ${formatMonthShort(tx.budgetMonth)} as budget month and can be moved back individually.`
           : "Undo this transfer?",
         success: "Transfer undone",
       }),
@@ -163,7 +181,7 @@ export function useTransactionRow(
   }
 
   function handleShiftBudgetMonth() {
-    const next = tx.budget_month ? 0 : 1;
+    const next = tx.budgetMonth ? 0 : 1;
     const successMessage = next === 1 ? "Moved to next month" : "Moved back";
     runAfterMenuClose(() =>
       budgetMonthShift.run(() => setBudgetMonthShift(tx.id, next), {
@@ -182,6 +200,8 @@ export function useTransactionRow(
   }
 
   return {
+    tx,
+    amountKind: shown.kind,
     txSelectMode,
     isSelected,
     toggleSelected,

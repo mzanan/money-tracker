@@ -43,20 +43,25 @@ import { TagChips } from "./tagChips";
 import { TransferBadge } from "./transferBadge";
 import { useTransactionRow } from "./useTransactionRow";
 
-import type { Transaction } from "@/types/db";
+import type { MovementScope } from "@/lib/ledger/scope";
+import type { Movement } from "@/types/ledger";
 
 export function TransactionRow({
-  tx,
+  movement,
+  scope,
   showDate = false,
   showBudgetMonthBadges = true,
   recurringNotes,
 }: {
-  tx: Transaction;
+  movement: Movement;
+  scope: MovementScope;
   showDate?: boolean;
   showBudgetMonthBadges?: boolean;
   recurringNotes?: Set<string>;
 }) {
   const {
+    tx,
+    amountKind,
     txSelectMode,
     isSelected,
     toggleSelected,
@@ -93,7 +98,13 @@ export function TransactionRow({
     handleShiftBudgetMonth,
     stepApi,
     runAfterMenuClose,
-  } = useTransactionRow(tx, showDate, showBudgetMonthBadges, recurringNotes);
+  } = useTransactionRow(
+    movement,
+    scope,
+    showDate,
+    showBudgetMonthBadges,
+    recurringNotes,
+  );
 
   function openEdit() {
     if (stepApi) {
@@ -170,12 +181,12 @@ export function TransactionRow({
               title="Set a reminder"
               seed={{
                 label: reminderTitle,
-                amount: tx.amount_original,
-                currency: tx.currency_original,
+                amount: tx.amount,
+                currency: tx.currency,
                 source: tx.source,
                 frequency: "MONTHLY",
-                lastPaidOn: tx.occurred_on,
-                nextDueOn: computeNextDue(tx.occurred_on, "MONTHLY"),
+                lastPaidOn: tx.occurredOn,
+                nextDueOn: computeNextDue(tx.occurredOn, "MONTHLY"),
                 note: null,
               }}
               onBack={stepApi.pop}
@@ -197,8 +208,8 @@ export function TransactionRow({
             <MarkTransferStep
               txId={tx.id}
               txSource={tx.source}
-              txCurrency={tx.currency_original}
-              txAmount={tx.amount_original}
+              txCurrency={tx.currency}
+              txAmount={tx.amount}
               txKind={tx.kind}
               onBack={stepApi.pop}
             />
@@ -265,17 +276,17 @@ export function TransactionRow({
           {isCarriedOver && (
             <BudgetMonthBadge
               direction="from"
-              yearMonth={tx.occurred_on.slice(0, 7)}
+              yearMonth={tx.occurredOn.slice(0, 7)}
             />
           )}
-          {isMovedOut && tx.budget_month && (
-            <BudgetMonthBadge direction="to" yearMonth={tx.budget_month} />
+          {isMovedOut && tx.budgetMonth && (
+            <BudgetMonthBadge direction="to" yearMonth={tx.budgetMonth} />
           )}
           <TagChips tags={tx.tags} />
         </span>
         {(showDate || description) && (
           <span className="text-muted-foreground text-meta mt-0.5 block truncate">
-            {showDate && formatDayShort(tx.occurred_on)}
+            {showDate && formatDayShort(tx.occurredOn)}
             {showDate && description ? " · " : ""}
             {description && sourceLabel}
           </span>
@@ -287,7 +298,7 @@ export function TransactionRow({
             "text-sm leading-tight font-semibold tabular-nums",
             isMovedOut
               ? "text-muted-foreground"
-              : tx.kind === "income"
+              : amountKind === "income"
                 ? "text-income"
                 : "text-foreground",
           )}
@@ -407,12 +418,12 @@ export function TransactionRow({
           title="Set a reminder"
           seed={{
             label: reminderTitle,
-            amount: tx.amount_original,
-            currency: tx.currency_original,
+            amount: tx.amount,
+            currency: tx.currency,
             source: tx.source,
             frequency: "MONTHLY",
-            lastPaidOn: tx.occurred_on,
-            nextDueOn: computeNextDue(tx.occurred_on, "MONTHLY"),
+            lastPaidOn: tx.occurredOn,
+            nextDueOn: computeNextDue(tx.occurredOn, "MONTHLY"),
             note: null,
           }}
         />
@@ -429,8 +440,8 @@ export function TransactionRow({
         <MarkTransferDialog
           txId={tx.id}
           txSource={tx.source}
-          txCurrency={tx.currency_original}
-          txAmount={tx.amount_original}
+          txCurrency={tx.currency}
+          txAmount={tx.amount}
           txKind={tx.kind}
           open={transferDialog.open}
           onOpenChange={transferDialog.setOpen}

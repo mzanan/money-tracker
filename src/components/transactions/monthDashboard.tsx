@@ -1,7 +1,8 @@
 "use client";
 
 import type { EntrySuggestion } from "@/lib/entrySuggestions";
-import type { Location, RecurringPayment, Transaction } from "@/types/db";
+import type { Location, RecurringPayment } from "@/types/db";
+import type { Movement } from "@/types/ledger";
 
 import { UpcomingBanner } from "@/components/reminders/upcomingBanner";
 
@@ -20,12 +21,11 @@ import { useMonthDashboard } from "./useMonthDashboard";
 
 interface Props {
   yearMonth: string;
-  lifetimeTransactions: Transaction[];
+  movements: Movement[];
   sources: string[];
   csvSources: string[];
   withdrawalSources: string[];
   places: Location[];
-  costBasisSources?: string[];
   reminders?: RecurringPayment[];
   completedReminders?: RecurringPayment[];
   today: string;
@@ -35,12 +35,11 @@ interface Props {
 
 export function MonthDashboard({
   yearMonth,
-  lifetimeTransactions,
+  movements,
   sources,
   csvSources,
   withdrawalSources,
   places,
-  costBasisSources = [],
   reminders = [],
   completedReminders = [],
   today,
@@ -62,7 +61,7 @@ export function MonthDashboard({
     isDaily,
     filterChoices,
     activeFilters,
-    feedTransactions,
+    feedMovements,
     feedMovedOut,
     panelMounted,
     drawerOpen,
@@ -72,7 +71,7 @@ export function MonthDashboard({
     addSources,
   } = useMonthDashboard({
     yearMonth,
-    lifetimeTransactions,
+    movements,
     places,
     reminders,
     today,
@@ -80,7 +79,7 @@ export function MonthDashboard({
   });
   const dayTotalsCurrency = useDayTotalsCurrency(
     c.selectedSource,
-    feedTransactions,
+    feedMovements,
   );
 
   return (
@@ -98,9 +97,9 @@ export function MonthDashboard({
         />
         <BalanceHero
           yearMonth={visibleYearMonth}
-          transactions={c.sourceFilteredMonth}
-          lifetimeTransactions={c.sourceFilteredLifetime}
-          includeTransfers={c.includeTransfers}
+          movements={c.sourceFilteredMonth}
+          lifetimeMovements={c.sourceFilteredLifetime}
+          scope={c.selectedSource}
           selectedKind={c.selectedKind}
           onKindChange={c.setSelectedKind}
           hasOlder={hasOlder}
@@ -111,7 +110,6 @@ export function MonthDashboard({
           view={view}
           onViewChange={setView}
           daySpend={daySpend}
-          costBasisSources={costBasisSources}
         />
         <div className="grid min-h-[calc(100svh-var(--spacing-header))] min-w-0 content-start gap-5 *:min-w-0">
           <SourceFilter
@@ -122,10 +120,10 @@ export function MonthDashboard({
             onChange={c.setSelectedSource}
           />
           <MonthView
-            transactions={feedTransactions}
+            movements={feedMovements}
             dayTotalsCurrency={dayTotalsCurrency}
             movedOut={feedMovedOut}
-            includeTransfers={c.includeTransfers}
+            scope={c.selectedSource}
             recurringNotes={recurringNotes}
             emptyLabel={
               activeFilters > 0
@@ -168,7 +166,7 @@ export function MonthDashboard({
               onSelectPlace={c.setSelectedPlace}
               amountActive={c.amountActive}
               results={c.filterResults}
-              includeTransfers={c.includeTransfers}
+              movementScope={c.selectedSource}
             />
           ) : shownPanel === "calendar" ? (
             <CalendarPanel

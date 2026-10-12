@@ -3,71 +3,63 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { api_integrations, locations } from "@/lib/db/schema";
 import { listAccountSources } from "@/lib/data/accounts";
-import { getValuedTransactions } from "@/lib/data/valuedTransactions";
+import { getLedgerData } from "@/lib/data/ledgerMovements";
 import { getUserSettings } from "@/lib/data/userSettings";
-import { thisYearMonth } from "@/lib/dates";
+import { thisYearMonth, todayInTz } from "@/lib/dates";
 import { cashWithdrawalSourcesByUsage } from "@/lib/filters";
 import { resolveTimezone } from "@/lib/preferences.server";
 import { requireUser } from "@/lib/session";
 import { collectSources, csvSourcesFrom } from "@/lib/transactions";
-import type { IntegrationProvider, Location, Transaction } from "@/types/db";
+import type { IntegrationProvider, Location } from "@/types/db";
+import type { LedgerData } from "@/types/ledger";
 
 export interface HomePageData {
   yearMonth: string;
-  lifetimeTxs: Transaction[];
+  ledger: LedgerData;
   sources: string[];
   csvSources: string[];
   withdrawalSources: string[];
   recentTags: string[];
   places: Location[];
-  costBasisSources: string[];
 }
 
 export async function getHomePageData(): Promise<HomePageData> {
   const user = await requireUser();
+  const settings = await getUserSettings(user.id);
+  const timezone = await resolveTimezone(settings?.timezone);
 
-  const [settings, valued, integrationsRows, places, accountSources] =
-    await Promise.all([
-      getUserSettings(user.id),
-      getValuedTransactions(user.id),
-      db
-        .select({ provider: api_integrations.provider })
-        .from(api_integrations)
-        .where(eq(api_integrations.user_id, user.id)),
-      db.select().from(locations).where(eq(locations.user_id, user.id)),
-      listAccountSources(user.id),
-    ]);
-  const lifetimeTxs = valued.transactions;
-
-  const yearMonth = thisYearMonth(await resolveTimezone(settings?.timezone));
+  const [ledger, integrationsRows, places, accountSources] = await Promise.all([
+    getLedgerData(user.id, todayInTz(timezone)),
+    db
+      .select({ provider: api_integrations.provider })
+      .from(api_integrations)
+      .where(eq(api_integrations.user_id, user.id)),
+    db.select().from(locations).where(eq(locations.user_id, user.id)),
+    listAccountSources(user.id),
+  ]);
+  const movements = ledger.movements;
 
   const connectedProviderIds = integrationsRows.map(
     (i) => i.provider as IntegrationProvider,
   );
 
-  const byRecency = lifetimeTxs
-    .slice()
-    .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+  const recentTags = uniqueStrings(
+    movements.flatMap((movement) => movement.tags),
+  ).slice(0, 12);
 
-  const recentTags = uniqueStrings(byRecency.flatMap((tx) => tx.tags)).slice(
-    0,
-    12,
-  );
-
-  const sources = collectSources(lifetimeTxs, [
+  const sources = collectSources(movements, [
     ...connectedProviderIds,
     ...accountSources,
   ]);
 
   return {
-    yearMonth,
-    lifetimeTxs,
+    yearMonth: thisYearMonth(timezone),
+    ledger,
     sources,
-    csvSources: csvSourcesFrom(lifetimeTxs),
-    withdrawalSources: cashWithdrawalSourcesByUsage(sources, lifetimeTxs),
+    csvSources: csvSourcesFrom(movements),
+    withdrawalSources: cashWithdrawalSourcesByUsage(sources, movements),
     recentTags,
     places,
-    costBasisSources: valued.fundedSources,
   };
 }
 
