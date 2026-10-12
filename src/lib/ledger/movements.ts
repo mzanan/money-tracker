@@ -79,35 +79,48 @@ export function buildMovements(
 }
 
 export function splitLegsByDate(movement: Movement): Movement[] {
-  const dates = [
-    ...new Set(assetLines(movement).map((line) => line.occurredOn)),
-  ].sort();
+  const principal = assetLines(movement).filter(isPrincipalLine);
+  const dates = [...new Set(principal.map((line) => line.occurredOn))].sort();
   if (dates.length < 2 || !isOwnMovement(movement)) return [movement];
   const type = movementType(movement);
   const ends = transferEnds(movement);
-  const [first] = dates;
+  const partDate = (day: string) =>
+    dates.includes(day)
+      ? day
+      : (dates.filter((date) => date <= day).pop() ?? dates[0]);
   return dates.map((date) => {
-    const lines = movement.lines.filter((line) =>
-      dates.includes(line.occurredOn)
-        ? line.occurredOn === date
-        : date === first,
+    const lines = movement.lines.filter(
+      (line) => partDate(line.occurredOn) === date,
     );
-    const net = lines
-      .filter((line) => line.kind === "asset")
-      .reduce((sum, line) => sum + line.amount, 0);
+    const sent = lines.some(
+      (line) => line.kind === "asset" && isPrincipalLine(line) && line.amount < 0,
+    );
     return {
       ...movement,
       id: `${movement.id}:${date}`,
       occurredOn: date,
+      budgetMonth:
+        movement.budgetMonth === date.slice(0, 7) ? null : movement.budgetMonth,
       lines,
       leg: {
         movementId: movement.id,
         type,
         ends,
-        direction: net < 0 ? "sent" : "received",
+        direction: sent ? "sent" : "received",
       },
     };
   });
+}
+
+export function feeRemnant(movement: Movement): Movement[] {
+  const lines = movement.lines.filter((line) => !isPrincipalLine(line));
+  return lines.length === 0
+    ? []
+    : [{ ...movement, id: `${movement.id}:fee`, lines }];
+}
+
+export function actionTargetId(movement: Movement): string {
+  return primaryAssetLine(movement)?.legacyTxId ?? movement.id;
 }
 
 export function isFeeLine(line: MovementLine): boolean {

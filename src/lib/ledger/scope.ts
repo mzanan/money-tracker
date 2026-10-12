@@ -208,6 +208,18 @@ export function movementAmount(
   );
 }
 
+export function linesInMonth(
+  movements: ReadonlyArray<Movement>,
+  yearMonth: string,
+): Movement[] {
+  return movements.flatMap((movement) => {
+    const lines = movement.lines.filter(
+      (line) => line.occurredOn.slice(0, 7) === yearMonth,
+    );
+    return lines.length === 0 ? [] : [{ ...movement, lines }];
+  });
+}
+
 export function scopedYearMonth(
   movement: Movement,
   scope: MovementScope,

@@ -22,6 +22,7 @@ export interface TransactionSummary {
   tags: string[];
   note: string | null;
   source: string;
+  leg?: "sent" | "received";
 }
 
 export interface MerchantTotal {
@@ -156,6 +157,7 @@ export function filterTransactionSummaries(
       tags: movement.tags,
       note: movement.note,
       source: primaryAssetLine(movement)?.key ?? MANUAL_SOURCE,
+      ...(movement.leg ? { leg: movement.leg.direction } : {}),
     });
     if (matches.length >= limit) break;
   }

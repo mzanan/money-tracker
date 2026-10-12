@@ -15,9 +15,9 @@ import { asOfBefore, shiftYearMonth, todayInTz } from "@/lib/dates";
 import { excludeCanceledPairs } from "@/lib/ledger/canceledPairs";
 import {
   isAllScope,
+  linesInMonth,
   periodTotals,
   scopeBalance,
-  scopedYearMonth,
 } from "@/lib/ledger/scope";
 
 import type { MovementScope } from "@/lib/ledger/scope";
@@ -49,12 +49,10 @@ export function useBalanceHero({
   const showOpening = !isAllScope(scope);
   const monthRows = useMemo(
     () =>
-      showOpening
-        ? lifetimeMovements.filter(
-            (movement) => scopedYearMonth(movement, scope) === yearMonth,
-          )
-        : excludeCanceledPairs(movements),
-    [showOpening, lifetimeMovements, movements, scope, yearMonth],
+      excludeCanceledPairs(
+        showOpening ? linesInMonth(lifetimeMovements, yearMonth) : movements,
+      ),
+    [showOpening, lifetimeMovements, movements, yearMonth],
   );
 
   const monthTotals = useMemo(

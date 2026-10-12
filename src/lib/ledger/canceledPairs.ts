@@ -1,5 +1,5 @@
 import { dayDiff } from "@/lib/dates";
-import { simpleFlow } from "@/lib/ledger/movements";
+import { feeRemnant, simpleFlow } from "@/lib/ledger/movements";
 import type { Movement, SimpleFlow } from "@/types/ledger";
 
 export const CANCELED_PAIR_WINDOW_DAYS = 14;
@@ -55,7 +55,9 @@ export function splitCanceledPairs(
 
   return {
     pairs,
-    rest: movements.filter((movement) => !used.has(movement.id)),
+    rest: movements.flatMap((movement) =>
+      used.has(movement.id) ? feeRemnant(movement) : [movement],
+    ),
   };
 }
 

@@ -110,7 +110,10 @@ export function useTransactionRow(
     ratesByDate,
   );
 
-  const sign = legSign(shown.kind, movement.leg?.direction);
+  const sign = legSign(
+    shown.kind,
+    isAllScope(scope) ? movement.leg?.direction : undefined,
+  );
   const { hideAmounts, mask } = useHideAmounts();
   const amounts = rowAmountTexts({
     amount: shown.amount,
