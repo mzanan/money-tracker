@@ -28,9 +28,18 @@ export function rowAmountTexts({
     : { primary: base, secondary: original };
 }
 
+export function exchangeText(sides: {
+  sent: { amount: number; currency: string };
+  received: { amount: number; currency: string };
+}): string {
+  return `${formatMoney(Math.abs(sides.sent.amount), sides.sent.currency)} → ${formatMoney(sides.received.amount, sides.received.currency)}`;
+}
+
 export function transferLabel(
   ends: { from: string; to: string },
   labels: AccountLabels,
+  direction?: "sent" | "received",
 ): string {
-  return `${resolveSourceLabel(ends.from, labels)} → ${resolveSourceLabel(ends.to, labels)}`;
+  const route = `${resolveSourceLabel(ends.from, labels)} → ${resolveSourceLabel(ends.to, labels)}`;
+  return direction ? `${route} (${direction})` : route;
 }

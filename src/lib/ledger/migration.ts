@@ -1,6 +1,7 @@
 import {
   LEG_IN_SUFFIX,
   csvFeeParentFrom,
+  isWithdrawalExternalId,
   manualFeeParentFrom,
   transferFeeGroupFrom,
   withdrawalGroupFrom,
@@ -18,7 +19,7 @@ import { isExactInMinor, toMinor } from "@/lib/ledger/amounts";
 import type { ScaleOf } from "@/lib/ledger/scale";
 import { unbalancedCurrencies, type PostingLine } from "@/lib/ledger/posting";
 import { dedupeTags } from "@/lib/tags";
-import type { Transaction } from "@/types/db";
+import type { LedgerEntryRole, Transaction } from "@/types/db";
 
 export interface ExternalRef {
   origin: string;
@@ -82,10 +83,19 @@ function signedMinor(row: Transaction, scaleOf: ScaleOf): number {
   return row.kind === "income" ? minor : -minor;
 }
 
-function assetLine(row: Transaction, scaleOf: ScaleOf): PostingLine {
+function rowRole(row: Transaction): LedgerEntryRole {
+  return isWithdrawalExternalId(row.external_id) ? "withdrawal" : "amount";
+}
+
+function assetLine(
+  row: Transaction,
+  scaleOf: ScaleOf,
+  role: LedgerEntryRole = rowRole(row),
+): PostingLine {
   return {
     account: assetRef(row.source, row.currency_original),
     amount: signedMinor(row, scaleOf),
+    role,
     occurredOn: row.occurred_on,
     legacyTxId: row.id,
   };
@@ -95,10 +105,12 @@ function counterLine(
   row: Transaction,
   account: AccountRef,
   scaleOf: ScaleOf,
+  role: LedgerEntryRole = rowRole(row),
 ): PostingLine {
   return {
     account,
     amount: -signedMinor(row, scaleOf),
+    role,
     occurredOn: row.occurred_on,
     legacyTxId: row.id,
   };
@@ -188,6 +200,7 @@ function planGroup(
         lines.push({
           account: pendingRef(sent.currency_original),
           amount: gap,
+          role: "amount",
           occurredOn: sent.occurred_on,
           legacyTxId: sent.id,
         });
@@ -289,8 +302,8 @@ export function planLedgerMigration(
 
   for (const { row, target } of fees) {
     const lines = [
-      assetLine(row, scaleOf),
-      counterLine(row, feesRef(row.currency_original), scaleOf),
+      assetLine(row, scaleOf, "fee"),
+      counterLine(row, feesRef(row.currency_original), scaleOf, "fee"),
     ];
     const anchor =
       target && "group" in target

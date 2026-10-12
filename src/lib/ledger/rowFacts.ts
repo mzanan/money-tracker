@@ -1,45 +1,22 @@
 import { DEFAULT_BASE_CURRENCY } from "@/lib/constants/currencies";
 import { MANUAL_SOURCE } from "@/lib/constants/sources";
-import { CSV_FEE_SUFFIX, EXTERNAL_ID_PREFIX } from "@/lib/externalIds";
+import { isFeeExternalId } from "@/lib/externalIds";
 import {
   assetLines,
-  isFeeLine,
   isOwnMovement,
+  isPrincipalLine,
   primaryAssetLine,
 } from "@/lib/ledger/movements";
 import { isAllScope, scopedDate, type MovementScope } from "@/lib/ledger/scope";
 import type { Movement, MovementLine, RowFacts } from "@/types/ledger";
-
-function isFeeExternalId(externalId: string): boolean {
-  return (
-    externalId.startsWith(EXTERNAL_ID_PREFIX.transferFee) ||
-    externalId.startsWith(EXTERNAL_ID_PREFIX.manualFee) ||
-    externalId.endsWith(CSV_FEE_SUFFIX)
-  );
-}
-
-function feeLegacyIds(movement: Movement): Set<string> {
-  return new Set(
-    movement.lines.flatMap((line) =>
-      isFeeLine(line) && line.legacyTxId !== null ? [line.legacyTxId] : [],
-    ),
-  );
-}
 
 function scopeLine(
   movement: Movement,
   scope: MovementScope,
 ): MovementLine | null {
   if (isAllScope(scope)) return primaryAssetLine(movement);
-  const fees = feeLegacyIds(movement);
   const lines = assetLines(movement, scope);
-  return (
-    lines.find(
-      (line) => line.legacyTxId === null || !fees.has(line.legacyTxId),
-    ) ??
-    lines[0] ??
-    null
-  );
+  return lines.find(isPrincipalLine) ?? lines[0] ?? null;
 }
 
 export function rowFacts(movement: Movement, scope: MovementScope): RowFacts {
@@ -63,6 +40,6 @@ export function rowFacts(movement: Movement, scope: MovementScope): RowFacts {
     budgetMonth: movement.budgetMonth,
     externalId: ref?.externalId ?? null,
     isTransfer,
-    transferGroup: isTransfer ? movement.id : null,
+    transferGroup: isTransfer ? (movement.leg?.movementId ?? movement.id) : null,
   };
 }

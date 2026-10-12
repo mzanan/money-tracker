@@ -40,6 +40,23 @@ export function addUtcDays(dateStr: string, days: number): string {
     .slice(0, 10);
 }
 
+export function asOfBefore(day: string, today: string): string {
+  const previous = addUtcDays(day, -1);
+  return previous < today ? previous : today;
+}
+
+export function monthEndsBetween(from: string, to: string): string[] {
+  const ends: string[] = [];
+  for (
+    let yearMonth = from.slice(0, 7);
+    yearMonth <= to.slice(0, 7);
+    yearMonth = shiftYearMonth(yearMonth, 1)
+  ) {
+    ends.push(asOfBefore(`${shiftYearMonth(yearMonth, 1)}-01`, to));
+  }
+  return ends;
+}
+
 export function datesBetween(from: string, to: string): string[] {
   const dates: string[] = [];
   for (let day = from; day <= to; day = addUtcDays(day, 1)) dates.push(day);

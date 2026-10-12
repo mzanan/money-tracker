@@ -16,7 +16,7 @@ import { setBudgetMonthShift, unmarkTransfer } from "@/lib/actions/transfers";
 import { isAccountCurrency } from "@/lib/accountCurrencies";
 import { canShiftBudgetMonth } from "@/lib/budgetMonth";
 import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
-import { kindSign } from "@/lib/currency";
+import { legSign } from "@/lib/currency";
 import { formatMonthShort, todayInTz } from "@/lib/dates";
 import {
   isSingleLegWithdrawalExternalId,
@@ -25,11 +25,15 @@ import {
 } from "@/lib/externalIds";
 import { isFixedTransaction } from "@/lib/fixedExpenses";
 import { hasBudgetMonthOverride } from "@/lib/ledger/carriedOver";
-import { transferEnds } from "@/lib/ledger/movements";
+import { exchangeSides, transferEnds } from "@/lib/ledger/movements";
 import { rowFacts } from "@/lib/ledger/rowFacts";
 import { isAllScope, movementAmount } from "@/lib/ledger/scope";
 import { amountInCurrency } from "@/lib/ledger/valuation";
-import { rowAmountTexts, transferLabel } from "@/lib/transactionDisplay";
+import {
+  exchangeText,
+  rowAmountTexts,
+  transferLabel,
+} from "@/lib/transactionDisplay";
 import { useRatesByDate } from "@/hooks/useRatesByDate";
 import { useUiStore } from "@/stores/uiStore";
 
@@ -106,7 +110,7 @@ export function useTransactionRow(
     ratesByDate,
   );
 
-  const sign = kindSign(shown.kind);
+  const sign = legSign(shown.kind, movement.leg?.direction);
   const { hideAmounts, mask } = useHideAmounts();
   const amounts = rowAmountTexts({
     amount: shown.amount,
@@ -118,11 +122,14 @@ export function useTransactionRow(
       shown.currency,
     ),
   });
-  const amountText = mask(`${sign}${amounts.primary}`);
-  const convertedText = hideAmounts ? null : amounts.secondary;
+  const sides = exchangeSides(movement);
+  const amountText = mask(
+    sides ? exchangeText(sides) : `${sign}${amounts.primary}`,
+  );
+  const convertedText = hideAmounts || sides ? null : amounts.secondary;
   const ends = isAllScope(scope) ? transferEnds(movement) : null;
   const sourceLabel = ends
-    ? transferLabel(ends, accountLabels)
+    ? transferLabel(ends, accountLabels, movement.leg?.direction)
     : resolveSourceLabel(tx.source, accountLabels);
   const avatarSeed = tx.tags[0] || sourceLabel;
   const reminderTitle = tx.tags[0] || sourceLabel;

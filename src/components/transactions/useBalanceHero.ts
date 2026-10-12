@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 
 import { useRatesByDate } from "@/hooks/useRatesByDate";
-import { useSettings } from "@/hooks/useSettings";
+import { useSettings, useTimezone } from "@/hooks/useSettings";
 import {
   formatMoney,
   formatSignedOrNull,
@@ -11,9 +11,14 @@ import {
   isNegligible,
   signedBalance,
 } from "@/lib/currency";
-import { shiftYearMonth } from "@/lib/dates";
+import { asOfBefore, shiftYearMonth, todayInTz } from "@/lib/dates";
 import { excludeCanceledPairs } from "@/lib/ledger/canceledPairs";
-import { isAllScope, periodTotals, scopeBalance } from "@/lib/ledger/scope";
+import {
+  isAllScope,
+  periodTotals,
+  scopeBalance,
+  scopedYearMonth,
+} from "@/lib/ledger/scope";
 
 import type { MovementScope } from "@/lib/ledger/scope";
 import type { Movement } from "@/types/ledger";
@@ -32,14 +37,25 @@ export function useBalanceHero({
   scope: MovementScope;
 }) {
   const settings = useSettings();
+  const timezone = useTimezone();
   const ratesByDate = useRatesByDate();
   const base = settings.base_currency;
   const displayCurrency = useDisplayCurrency(lifetimeMovements, scope);
   const showBase = displayCurrency !== base;
   const monthStart = `${yearMonth}-01`;
   const nextMonthStart = `${shiftYearMonth(yearMonth, 1)}-01`;
+  const today = todayInTz(timezone);
 
-  const monthRows = useMemo(() => excludeCanceledPairs(movements), [movements]);
+  const showOpening = !isAllScope(scope);
+  const monthRows = useMemo(
+    () =>
+      showOpening
+        ? lifetimeMovements.filter(
+            (movement) => scopedYearMonth(movement, scope) === yearMonth,
+          )
+        : excludeCanceledPairs(movements),
+    [showOpening, lifetimeMovements, movements, scope, yearMonth],
+  );
 
   const monthTotals = useMemo(
     () => periodTotals(monthRows, scope, displayCurrency, ratesByDate),
@@ -51,18 +67,24 @@ export function useBalanceHero({
   );
 
   const total = useMemo(
-    () => scopeBalance(lifetimeMovements, scope, displayCurrency, ratesByDate),
-    [lifetimeMovements, scope, displayCurrency, ratesByDate],
+    () =>
+      scopeBalance(
+        lifetimeMovements,
+        scope,
+        displayCurrency,
+        ratesByDate,
+        today,
+      ),
+    [lifetimeMovements, scope, displayCurrency, ratesByDate, today],
   );
   const totalBase = useMemo(
     () =>
       showBase
-        ? scopeBalance(lifetimeMovements, scope, base, ratesByDate)
+        ? scopeBalance(lifetimeMovements, scope, base, ratesByDate, today)
         : null,
-    [showBase, lifetimeMovements, scope, base, ratesByDate],
+    [showBase, lifetimeMovements, scope, base, ratesByDate, today],
   );
 
-  const showOpening = !isAllScope(scope);
   const monthEdges = useMemo(
     () =>
       showOpening
@@ -72,6 +94,7 @@ export function useBalanceHero({
               scope,
               displayCurrency,
               ratesByDate,
+              asOfBefore(monthStart, today),
               monthStart,
             ),
             closing: scopeBalance(
@@ -79,6 +102,7 @@ export function useBalanceHero({
               scope,
               displayCurrency,
               ratesByDate,
+              asOfBefore(nextMonthStart, today),
               nextMonthStart,
             ),
           }
@@ -91,6 +115,7 @@ export function useBalanceHero({
       ratesByDate,
       monthStart,
       nextMonthStart,
+      today,
     ],
   );
 

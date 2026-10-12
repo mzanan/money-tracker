@@ -7,7 +7,7 @@ import {
   primaryAssetLine,
   touchesSource,
 } from "@/lib/ledger/movements";
-import { lineValue } from "@/lib/ledger/valuation";
+import { convertAsOf, lineValue } from "@/lib/ledger/valuation";
 import type {
   FlowKind,
   Movement,
@@ -102,15 +102,21 @@ export function scopeBalance(
   scope: MovementScope,
   displayCurrency: string,
   ratesByDate: RatesByDate,
+  asOf: string,
   before?: string,
 ): number {
   const source = isAllScope(scope) ? undefined : scope;
-  let total = 0;
+  const native = new Map<string, number>();
   for (const movement of movements) {
     for (const line of assetLines(movement, source)) {
       if (before !== undefined && line.occurredOn >= before) continue;
-      total += lineValue(line, displayCurrency, ratesByDate) ?? 0;
+      native.set(line.currency, (native.get(line.currency) ?? 0) + line.amount);
     }
+  }
+  let total = 0;
+  for (const [currency, amount] of native) {
+    total +=
+      convertAsOf(amount, currency, displayCurrency, asOf, ratesByDate) ?? 0;
   }
   return total;
 }

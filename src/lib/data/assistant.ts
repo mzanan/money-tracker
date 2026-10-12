@@ -18,7 +18,7 @@ import { getLedgerData } from "@/lib/data/ledgerMovements";
 import { ALL_SOURCES } from "@/lib/constants/sources";
 import { todayInTz } from "@/lib/dates";
 import { dayTotalsList } from "@/lib/ledger/days";
-import { periodTotals } from "@/lib/ledger/scope";
+import { periodTotals, scopeBalance } from "@/lib/ledger/scope";
 import { monthsPerCycle } from "@/lib/reminders";
 import type { TotalsBreakdown } from "@/lib/ledger/scope";
 import type { StatsContext } from "@/lib/assistantStats";
@@ -76,8 +76,18 @@ function totalsOf({ movements, ctx }: RangeData): TotalsBreakdown {
 export async function getBalance(
   userId: string,
   baseCurrency: string,
-): Promise<TotalsBreakdown> {
-  return totalsOf(await fetchRange(userId, baseCurrency));
+): Promise<TotalsBreakdown & { balance: number }> {
+  const range = await fetchRange(userId, baseCurrency);
+  return {
+    ...totalsOf(range),
+    balance: scopeBalance(
+      range.movements,
+      ALL_SOURCES,
+      baseCurrency,
+      range.ctx.ratesByDate,
+      todayInTz("UTC"),
+    ),
+  };
 }
 
 export async function getPeriodSummary(

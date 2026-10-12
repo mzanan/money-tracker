@@ -1,9 +1,11 @@
 import { eq } from "drizzle-orm";
 import { cache } from "react";
 
+import { parseAccountCurrencies } from "@/lib/accountCurrencies";
 import { getUserSettings } from "@/lib/data/userSettings";
 import { db } from "@/lib/db";
 import {
+  accounts,
   crypto_assets,
   fx_rates_daily,
   ledger_accounts,
@@ -31,6 +33,7 @@ export const getLedgerData = cache(
       cryptoRows,
       settings,
       rateRows,
+      declaredRows,
     ] = await Promise.all([
       db
         .select()
@@ -59,6 +62,10 @@ export const getLedgerData = cache(
       db
         .select({ date: fx_rates_daily.date, rates: fx_rates_daily.rates })
         .from(fx_rates_daily),
+      db
+        .select({ currency: accounts.currency })
+        .from(accounts)
+        .where(eq(accounts.user_id, userId)),
     ]);
 
     const movements = buildMovements(
@@ -75,6 +82,7 @@ export const getLedgerData = cache(
       [DEFAULT_BASE_CURRENCY, settings?.base_currency ?? DEFAULT_BASE_CURRENCY],
       settings?.currencies ?? [],
       accountRows.map((account) => account.currency),
+      declaredRows.flatMap((row) => parseAccountCurrencies(row.currency)),
     );
 
     return {

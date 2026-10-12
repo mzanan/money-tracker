@@ -88,6 +88,14 @@ const NON_ENTRY_PREFIXES = [
   EXTERNAL_ID_PREFIX.manualFee,
 ];
 
+export function isFeeExternalId(externalId: string): boolean {
+  return (
+    externalId.startsWith(EXTERNAL_ID_PREFIX.transferFee) ||
+    externalId.startsWith(EXTERNAL_ID_PREFIX.manualFee) ||
+    externalId.endsWith(CSV_FEE_SUFFIX)
+  );
+}
+
 export function isManualEntryExternalId(
   id: string | null | undefined,
 ): boolean {

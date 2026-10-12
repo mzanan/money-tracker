@@ -8,6 +8,7 @@ import {
   ledger_accounts,
   ledger_entries,
   ledger_external_ids,
+  ledger_revisions,
   ledger_transactions,
   transactions,
 } from "../src/lib/db/schema";
@@ -108,6 +109,9 @@ async function clearLedger(tx: DbTx, userId: string) {
     .delete(ledger_external_ids)
     .where(eq(ledger_external_ids.user_id, userId));
   await tx
+    .delete(ledger_revisions)
+    .where(eq(ledger_revisions.user_id, userId));
+  await tx
     .delete(ledger_transactions)
     .where(eq(ledger_transactions.user_id, userId));
   await tx.delete(ledger_accounts).where(eq(ledger_accounts.user_id, userId));
@@ -177,6 +181,8 @@ async function writeTransactions(
       user_id: userId,
       transaction_id: transaction.id,
       account_id: accountIds.get(accountRefId(line.account))!,
+      currency: line.account.currency,
+      role: line.role,
       amount: line.amount,
       occurred_on: line.occurredOn,
       legacy_tx_id: line.legacyTxId,

@@ -1,6 +1,9 @@
-import { isManualEntryExternalId } from "@/lib/externalIds";
+import {
+  isFeeExternalId,
+  isManualEntryExternalId,
+} from "@/lib/externalIds";
 import { amountToInputDigits } from "@/lib/currency";
-import { assetLines, movementType } from "@/lib/ledger/movements";
+import { movementType, principalAssetLines } from "@/lib/ledger/movements";
 import { MAX_TAGS_PER_TRANSACTION, tagKey } from "@/lib/tags";
 import type { TransactionKind } from "@/types/db";
 import type { Movement } from "@/types/ledger";
@@ -20,13 +23,15 @@ function suggestibleFlow(movement: Movement) {
   const kind = movementType(movement);
   if (kind !== "expense" && kind !== "income") return null;
   if (
-    !movement.externalRefs.every((ref) =>
-      isManualEntryExternalId(ref.externalId),
+    !movement.externalRefs.every(
+      (ref) =>
+        isFeeExternalId(ref.externalId) ||
+        isManualEntryExternalId(ref.externalId),
     )
   ) {
     return null;
   }
-  const assets = assetLines(movement);
+  const assets = principalAssetLines(movement);
   if (assets.length !== 1) return null;
   return { kind, line: assets[0] };
 }

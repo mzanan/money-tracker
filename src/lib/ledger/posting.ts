@@ -1,8 +1,10 @@
 import type { AccountRef } from "@/lib/ledger/accounts";
+import type { LedgerEntryRole } from "@/types/db";
 
 export interface PostingLine {
   account: AccountRef;
   amount: number;
+  role: LedgerEntryRole;
   occurredOn: string;
   legacyTxId: string | null;
 }

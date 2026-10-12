@@ -4,6 +4,7 @@ import type {
   fx_rates_cache,
   ledger_accounts,
   ledger_entries,
+  ledger_revisions,
   ledger_transactions,
   locations,
   recurring_payments,
@@ -82,3 +83,10 @@ export type LedgerTransaction = typeof ledger_transactions.$inferSelect;
 export type LedgerTransactionInsert = typeof ledger_transactions.$inferInsert;
 export type LedgerEntry = typeof ledger_entries.$inferSelect;
 export type LedgerEntryInsert = typeof ledger_entries.$inferInsert;
+export type LedgerEntryRole = LedgerEntry["role"];
+export type LedgerRevision = typeof ledger_revisions.$inferSelect;
+
+export interface LedgerRevisionSnapshot {
+  transaction: LedgerTransaction;
+  entries: LedgerEntry[];
+}

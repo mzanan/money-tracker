@@ -1,3 +1,4 @@
+import { monthEndsBetween } from "@/lib/dates";
 import type { FxRates } from "@/types/db";
 import type {
   Movement,
@@ -20,16 +21,20 @@ export function ratesByDateFor(
   const result: RatesByDate = {};
   if (ordered.length === 0) return result;
   const wanted = [...new Set(dates)].sort();
+  const latest: FxRates = {};
+  const absorb = (rates: FxRates) => {
+    for (const [code, value] of Object.entries(rates)) {
+      if (currencies.has(code) && value) latest[code] = value;
+    }
+  };
+  absorb(ordered[0].rates);
   let cursor = 0;
   for (const date of wanted) {
     while (cursor + 1 < ordered.length && ordered[cursor + 1].date <= date) {
       cursor += 1;
+      absorb(ordered[cursor].rates);
     }
-    const rates: FxRates = {};
-    for (const [code, value] of Object.entries(ordered[cursor].rates)) {
-      if (currencies.has(code)) rates[code] = value;
-    }
-    result[date] = rates;
+    result[date] = { ...latest };
   }
   return result;
 }
@@ -47,6 +52,23 @@ export function convertOn(
   const toRate = rates?.[to];
   if (!fromRate || !toRate) return null;
   return (amount / fromRate) * toRate;
+}
+
+export function convertAsOf(
+  amount: number,
+  from: string,
+  to: string,
+  asOf: string,
+  ratesByDate: RatesByDate,
+): number | null {
+  if (from === to || ratesByDate[asOf]) {
+    return convertOn(amount, from, to, asOf, ratesByDate);
+  }
+  const latest = Object.keys(ratesByDate)
+    .filter((date) => date <= asOf)
+    .sort()
+    .pop();
+  return latest ? convertOn(amount, from, to, latest, ratesByDate) : null;
 }
 
 export function lineValue(
@@ -98,10 +120,15 @@ export function valuationDates(
   today: string,
 ): Set<string> {
   const dates = new Set<string>([today]);
+  let oldest = today;
   for (const movement of movements) {
     dates.add(movement.occurredOn);
-    for (const line of movement.lines) dates.add(line.occurredOn);
+    for (const line of movement.lines) {
+      dates.add(line.occurredOn);
+      if (line.occurredOn < oldest) oldest = line.occurredOn;
+    }
   }
+  for (const end of monthEndsBetween(oldest, today)) dates.add(end);
   return dates;
 }
 

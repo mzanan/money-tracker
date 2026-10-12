@@ -46,6 +46,7 @@ export function buildMovements(
       key: account.key,
       currency: account.currency,
       amount: fromMinor(entry.amount, scaleOf(account.currency)),
+      role: entry.role,
       occurredOn: entry.occurred_on,
       legacyTxId: entry.legacy_tx_id,
     });
@@ -71,8 +72,42 @@ export function buildMovements(
       isFixed: tx.is_fixed,
       externalRefs: refsByTx.get(tx.id) ?? [],
       lines: linesByTx.get(tx.id) ?? [],
+      leg: null,
     }))
+    .flatMap(splitLegsByDate)
     .sort(newestFirst);
+}
+
+export function splitLegsByDate(movement: Movement): Movement[] {
+  const dates = [
+    ...new Set(assetLines(movement).map((line) => line.occurredOn)),
+  ].sort();
+  if (dates.length < 2 || !isOwnMovement(movement)) return [movement];
+  const type = movementType(movement);
+  const ends = transferEnds(movement);
+  const [first] = dates;
+  return dates.map((date) => {
+    const lines = movement.lines.filter((line) =>
+      dates.includes(line.occurredOn)
+        ? line.occurredOn === date
+        : date === first,
+    );
+    const net = lines
+      .filter((line) => line.kind === "asset")
+      .reduce((sum, line) => sum + line.amount, 0);
+    return {
+      ...movement,
+      id: `${movement.id}:${date}`,
+      occurredOn: date,
+      lines,
+      leg: {
+        movementId: movement.id,
+        type,
+        ends,
+        direction: net < 0 ? "sent" : "received",
+      },
+    };
+  });
 }
 
 export function isFeeLine(line: MovementLine): boolean {
@@ -100,6 +135,7 @@ export function touchesSource(movement: Movement, source: string): boolean {
 }
 
 export function movementType(movement: Movement): MovementType {
+  if (movement.leg) return movement.leg.type;
   const lines = movement.lines;
   if (lines.some((line) => line.kind === "pending")) return "unresolved";
   if (lines.some((line) => line.kind === "expense" && !isFeeLine(line))) {
@@ -121,25 +157,35 @@ export function isOwnMovement(movement: Movement): boolean {
 export function primaryAssetLine(movement: Movement): MovementLine | null {
   const assets = assetLines(movement);
   return (
-    assets.find((line) => line.amount < 0 && !isFeeAsset(movement, line)) ??
+    assets.find((line) => line.amount < 0 && isPrincipalLine(line)) ??
+    assets.find(isPrincipalLine) ??
     assets[0] ??
     null
   );
 }
 
-function isFeeAsset(movement: Movement, line: MovementLine): boolean {
-  return movement.lines.some(
-    (other) =>
-      isFeeLine(other) &&
-      other.legacyTxId !== null &&
-      other.legacyTxId === line.legacyTxId,
-  );
+export function isPrincipalLine(line: MovementLine): boolean {
+  return line.role === "amount" || line.role === "withdrawal";
+}
+
+export function principalAssetLines(movement: Movement): MovementLine[] {
+  return assetLines(movement).filter(isPrincipalLine);
+}
+
+export function exchangeSides(
+  movement: Movement,
+): { sent: MovementLine; received: MovementLine } | null {
+  if (movementType(movement) !== "exchange") return null;
+  const lines = principalAssetLines(movement);
+  const sent = lines.find((line) => line.amount < 0);
+  const received = lines.find((line) => line.amount > 0);
+  return sent && received ? { sent, received } : null;
 }
 
 export function simpleFlow(movement: Movement): SimpleFlow | null {
   const type = movementType(movement);
   if (type !== "income" && type !== "expense") return null;
-  const assets = assetLines(movement);
+  const assets = principalAssetLines(movement);
   if (assets.length !== 1) return null;
   const [line] = assets;
   return {
@@ -153,6 +199,7 @@ export function simpleFlow(movement: Movement): SimpleFlow | null {
 export function transferEnds(
   movement: Movement,
 ): { from: string; to: string } | null {
+  if (movement.leg) return movement.leg.ends;
   if (!isOwnMovement(movement)) return null;
   const assets = assetLines(movement);
   const from = assets.find((line) => line.amount < 0);

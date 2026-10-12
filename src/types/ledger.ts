@@ -1,4 +1,8 @@
-import type { FxRates, LedgerAccountKind } from "@/types/db";
+import type {
+  FxRates,
+  LedgerAccountKind,
+  LedgerEntryRole,
+} from "@/types/db";
 
 export interface MovementLine {
   id: string;
@@ -7,6 +11,7 @@ export interface MovementLine {
   key: string;
   currency: string;
   amount: number;
+  role: LedgerEntryRole;
   occurredOn: string;
   legacyTxId: string | null;
 }
@@ -28,6 +33,14 @@ export interface Movement {
   isFixed: boolean | null;
   externalRefs: MovementExternalRef[];
   lines: MovementLine[];
+  leg: MovementLeg | null;
+}
+
+export interface MovementLeg {
+  movementId: string;
+  type: MovementType;
+  ends: { from: string; to: string } | null;
+  direction: "sent" | "received";
 }
 
 export type MovementType =

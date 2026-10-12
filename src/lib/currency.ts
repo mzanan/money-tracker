@@ -206,6 +206,15 @@ export function kindSign(kind: string): "+" | "-" | "" {
   return kind === "transfer" ? "" : "-";
 }
 
+export function legSign(
+  kind: string,
+  direction: "sent" | "received" | undefined,
+): "+" | "-" | "" {
+  if (direction === "sent") return "-";
+  if (direction === "received") return "+";
+  return kindSign(kind);
+}
+
 export function signedBalance(
   value: number,
   currency: string,
