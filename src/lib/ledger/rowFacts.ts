@@ -1,6 +1,6 @@
 import { DEFAULT_BASE_CURRENCY } from "@/lib/constants/currencies";
 import { MANUAL_SOURCE } from "@/lib/constants/sources";
-import { isFeeExternalId } from "@/lib/externalIds";
+import { isFeeExternalId, isWithdrawalExternalId } from "@/lib/externalIds";
 import {
   assetLines,
   isOwnMovement,
@@ -24,10 +24,13 @@ function scopeLine(
 export function rowFacts(movement: Movement, scope: MovementScope): RowFacts {
   const line = scopeLine(movement, scope);
   const source = line?.key ?? MANUAL_SOURCE;
-  const ref = movement.externalRefs.find(
+  const refs = movement.externalRefs.filter(
     (candidate) =>
       candidate.origin === source && !isFeeExternalId(candidate.externalId),
   );
+  const ref =
+    refs.find((candidate) => isWithdrawalExternalId(candidate.externalId)) ??
+    refs[0];
   const isTransfer = isOwnMovement(movement);
   return {
     id: isFeeRemnant(movement) ? movement.id : ledgerTransactionId(movement),

@@ -1,13 +1,13 @@
 "use server";
 
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { and, eq, isNull } from "drizzle-orm";
-
-import { ActionError, actionErrorMessage } from "@/lib/actionError";
+import { actionErrorMessage } from "@/lib/actionError";
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import {
+  MANUAL_SOURCE,
   kindOfSource,
   normalizeSource,
   resolveSourceLabel,
@@ -15,32 +15,34 @@ import {
 import { amountValidationError, formatMoney } from "@/lib/currency";
 import { accountCurrencyError } from "@/lib/accountCurrencies";
 import { getAccountCurrencies, getAccountLabels } from "@/lib/data/accounts";
+import {
+  getLedgerRecord,
+  getScaleOf,
+  postLedgerTransaction,
+} from "@/lib/data/ledgerWrites";
 import { db } from "@/lib/db";
-import { transactions, user_settings } from "@/lib/db/schema";
+import { user_settings } from "@/lib/db/schema";
+import { feeLines, flowLines, transferPosting } from "@/lib/ledger/builders";
 import {
-  EXTERNAL_ID_PREFIX,
-  isSingleLegWithdrawalExternalId,
-  isSyncedExternalId,
-  isWithdrawalExternalId,
-  withdrawalGroupFrom,
-} from "@/lib/externalIds";
+  hasSyncedRef,
+  isTransferMovement,
+  isWithdrawalMovement,
+} from "@/lib/ledger/edits";
+import { simpleFlow } from "@/lib/ledger/movements";
+import type { LedgerDraft } from "@/lib/ledger/posting";
+import type { ScaleOf } from "@/lib/ledger/scale";
 import {
-  buildCurrencyContext,
-  withRatesErrorHandling,
-} from "@/lib/currencyContext";
+  bankWithdrawalLine,
+  exchangeRefs,
+  hasCashLeg,
+  withCashLeg,
+  withdrawalGroupOf,
+  withdrawalRef,
+  withoutCashLeg,
+} from "@/lib/ledger/withdrawals";
 import { getUser } from "@/lib/session";
-import { unlinkWithdrawalGroup } from "@/lib/transferUnlink";
-import {
-  buildFeeRow,
-  buildTransactionRow,
-  type BuildContext,
-} from "@/lib/transactions";
-import {
-  impliedCashRate,
-  resolveWithdrawalCharge,
-  withdrawalNote,
-} from "@/lib/withdrawal";
-import type { TransactionInsert } from "@/types/db";
+import { normalizeTags } from "@/lib/transactions";
+import { resolveWithdrawalCharge, withdrawalNote } from "@/lib/withdrawal";
 
 import type { ActionResult } from "./transactions";
 
@@ -58,59 +60,46 @@ const withdrawalSchema = z.object({
 export type CashWithdrawalInput = z.infer<typeof withdrawalSchema>;
 
 function withdrawableSourceError(source: string): string | null {
-  if (source === "manual") return "Pick a non-cash account";
+  if (source === MANUAL_SOURCE) return "Pick a non-cash account";
   if (kindOfSource(source) === "api") {
     return "Can't withdraw from a synced account";
   }
   return null;
 }
 
-function buildWithdrawalFeeRow(
-  input: {
-    userId: string;
-    fee: number;
-    currency: string;
-    occurredOn: string;
-    source: string;
-    group: string;
-  },
-  ctx: BuildContext,
-): TransactionInsert | null {
-  return buildFeeRow(
-    {
-      userId: input.userId,
-      amount: input.fee,
-      currency: input.currency,
-      occurredOn: input.occurredOn,
-      note: "Withdrawal fee",
-      source: input.source,
-      externalId: `${EXTERNAL_ID_PREFIX.transferFee}${input.group}`,
-    },
-    ctx,
-  );
+function emptyDraft(occurredOn: string): Omit<LedgerDraft, "lines"> {
+  return {
+    occurredOn,
+    occurredAt: new Date().toISOString(),
+    note: null,
+    comment: null,
+    tags: [],
+    recurringId: null,
+    isFixed: null,
+    budgetMonth: null,
+    externalRefs: [],
+  };
 }
 
-interface WithdrawalConversionInput {
-  userId: string;
+interface WithdrawalConversion {
   source: string;
   occurredOn: string;
-  tags?: string[];
   note: string | null;
   receivedAmount: number;
   receivedCurrency: string;
   chargedCurrency: string;
   total: number;
   fee?: number;
-  externalId: string;
-  group: string;
 }
 
-function buildWithdrawalConversion(
-  input: WithdrawalConversionInput,
-  ctx: BuildContext,
-):
-  | { ok: true; row: TransactionInsert; feeRow: TransactionInsert | null }
-  | { ok: false; error: string } {
+type ConversionResult =
+  | { ok: true; note: string; lines: LedgerDraft["lines"] }
+  | { ok: false; error: string };
+
+function withdrawalConversion(
+  input: WithdrawalConversion,
+  scaleOf: ScaleOf,
+): ConversionResult {
   const totalAmountError = amountValidationError(
     input.total,
     input.chargedCurrency,
@@ -129,43 +118,29 @@ function buildWithdrawalConversion(
 
   const base = input.note?.trim() || "ATM withdrawal";
   const note = `${base} · ${formatMoney(input.receivedAmount, input.receivedCurrency, { showCode: true })}`;
-  const row = buildTransactionRow(
-    {
-      userId: input.userId,
-      kind: "expense",
-      amount: converted,
-      currency: input.chargedCurrency,
-      occurredOn: input.occurredOn,
-      tags: input.tags,
-      note,
-      source: input.source,
-      externalId: input.externalId,
-    },
-    ctx,
-  );
-  if (!row) {
-    return { ok: false, error: `No rate for ${input.chargedCurrency}` };
-  }
-
-  let feeRow: TransactionInsert | null = null;
-  if (fee !== undefined && fee > 0) {
-    feeRow = buildWithdrawalFeeRow(
-      {
-        userId: input.userId,
-        fee,
-        currency: input.chargedCurrency,
-        occurredOn: input.occurredOn,
+  const money = { amount: converted, currency: input.chargedCurrency };
+  return {
+    ok: true,
+    note,
+    lines: [
+      ...flowLines({
+        kind: "expense",
         source: input.source,
-        group: input.group,
-      },
-      ctx,
-    );
-    if (!feeRow) {
-      return { ok: false, error: `No rate for ${input.chargedCurrency}` };
-    }
-  }
-
-  return { ok: true, row, feeRow };
+        money,
+        occurredOn: input.occurredOn,
+        role: "withdrawal",
+        scaleOf,
+      }),
+      ...(fee !== undefined && fee > 0
+        ? feeLines(
+            input.source,
+            { amount: fee, currency: input.chargedCurrency },
+            input.occurredOn,
+            scaleOf,
+          )
+        : []),
+    ],
+  };
 }
 
 async function sourceCurrencyError(
@@ -225,71 +200,36 @@ export async function recordCashWithdrawal(
   );
   if (chargedError) return { ok: false, error: chargedError };
 
-  const ctxResult = await withRatesErrorHandling(() =>
-    buildCurrencyContext(user.id),
-  );
-  if (!ctxResult.ok) return ctxResult;
-  const ctx = ctxResult.data;
-  if (!ctx) return { ok: false, error: "Settings not found" };
-
-  const accountLabels = await getAccountLabels(user.id);
-  const group = crypto.randomUUID();
-  const note = `Cash withdrawal from ${resolveSourceLabel(source, accountLabels)}`;
-  const out = buildTransactionRow(
-    {
-      userId: user.id,
-      kind: "expense",
-      amount: converted,
-      currency: chargedCurrency,
-      occurredOn,
-      note,
-      source,
-      externalId: `${EXTERNAL_ID_PREFIX.withdrawal}${group}:out`,
-    },
-    ctx,
-  );
-  const incoming = buildTransactionRow(
-    {
-      userId: user.id,
-      kind: "income",
-      amount,
-      currency,
-      occurredOn,
-      note,
-      externalId: `${EXTERNAL_ID_PREFIX.withdrawal}${group}:in`,
-    },
-    ctx,
-  );
-  if (!out || !incoming) {
-    return { ok: false, error: `No rate for ${currency}` };
-  }
-
-  let feeRow: TransactionInsert | null = null;
-  if (fee !== undefined && fee > 0) {
-    feeRow = buildWithdrawalFeeRow(
-      {
-        userId: user.id,
-        fee,
-        currency: chargedCurrency,
-        occurredOn,
-        source,
-        group,
-      },
-      ctx,
-    );
-    if (!feeRow) {
-      return { ok: false, error: `No rate for ${chargedCurrency}` };
-    }
-  }
-
   try {
-    await db
-      .insert(transactions)
-      .values([
-        { ...out, transfer_group: group },
-        { ...incoming, transfer_group: group },
-        ...(feeRow ? [feeRow] : []),
-      ]);
+    const [accountLabels, scaleOf] = await Promise.all([
+      getAccountLabels(user.id),
+      getScaleOf(),
+    ]);
+    const id = crypto.randomUUID();
+    await postLedgerTransaction(
+      user.id,
+      {
+        ...emptyDraft(occurredOn),
+        note: `Cash withdrawal from ${resolveSourceLabel(source, accountLabels)}`,
+        lines: transferPosting({
+          origin: source,
+          destination: MANUAL_SOURCE,
+          sent: { amount: converted, currency: chargedCurrency },
+          received: { amount, currency },
+          originFee: fee ?? 0,
+          destinationFee: 0,
+          sentOn: occurredOn,
+          receivedOn: occurredOn,
+          role: "withdrawal",
+          scaleOf,
+        }),
+        externalRefs: [
+          withdrawalRef(source, id, "out"),
+          withdrawalRef(MANUAL_SOURCE, id, "in"),
+        ],
+      },
+      { id },
+    );
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -333,48 +273,29 @@ export async function recordCashExchange(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const ctxResult = await withRatesErrorHandling(() =>
-    buildCurrencyContext(user.id),
-  );
-  if (!ctxResult.ok) return ctxResult;
-  const ctx = ctxResult.data;
-  if (!ctx) return { ok: false, error: "Settings not found" };
-
-  const group = crypto.randomUUID();
-  const note = `Cash exchange ${outCurrency} → ${inCurrency}`;
-  const out = buildTransactionRow(
-    {
-      userId: user.id,
-      kind: "expense",
-      amount: outAmount,
-      currency: outCurrency,
-      occurredOn,
-      note,
-      externalId: `${EXTERNAL_ID_PREFIX.exchange}${group}:out`,
-    },
-    ctx,
-  );
-  const incoming = buildTransactionRow(
-    {
-      userId: user.id,
-      kind: "income",
-      amount: inAmount,
-      currency: inCurrency,
-      occurredOn,
-      note,
-      externalId: `${EXTERNAL_ID_PREFIX.exchange}${group}:in`,
-    },
-    ctx,
-  );
-  if (!out || !incoming) {
-    return { ok: false, error: "No rate for one of the currencies" };
-  }
-
   try {
-    await db.insert(transactions).values([
-      { ...out, transfer_group: group },
-      { ...incoming, transfer_group: group },
-    ]);
+    const scaleOf = await getScaleOf();
+    const id = crypto.randomUUID();
+    await postLedgerTransaction(
+      user.id,
+      {
+        ...emptyDraft(occurredOn),
+        note: `Cash exchange ${outCurrency} → ${inCurrency}`,
+        lines: transferPosting({
+          origin: MANUAL_SOURCE,
+          destination: MANUAL_SOURCE,
+          sent: { amount: outAmount, currency: outCurrency },
+          received: { amount: inAmount, currency: inCurrency },
+          originFee: 0,
+          destinationFee: 0,
+          sentOn: occurredOn,
+          receivedOn: occurredOn,
+          scaleOf,
+        }),
+        externalRefs: exchangeRefs(id),
+      },
+      { id },
+    );
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -424,38 +345,34 @@ export async function recordWithdrawalExpense(
   );
   if (chargedError) return { ok: false, error: chargedError };
 
-  const ctxResult = await withRatesErrorHandling(() =>
-    buildCurrencyContext(user.id),
-  );
-  if (!ctxResult.ok) return ctxResult;
-  const ctx = ctxResult.data;
-  if (!ctx) return { ok: false, error: "Settings not found" };
-
-  const group = crypto.randomUUID();
-  const conversion = buildWithdrawalConversion(
-    {
-      userId: user.id,
-      source,
-      occurredOn,
-      tags,
-      note: parsed.data.note ?? null,
-      receivedAmount: cashAmount,
-      receivedCurrency: cashCurrency,
-      chargedCurrency,
-      total,
-      fee: parsed.data.fee,
-      externalId: `${EXTERNAL_ID_PREFIX.withdrawal}${group}`,
-      group,
-    },
-    ctx,
-  );
-  if (!conversion.ok) return conversion;
-  const { row: expense, feeRow } = conversion;
-
   try {
-    await db
-      .insert(transactions)
-      .values([expense, ...(feeRow ? [feeRow] : [])]);
+    const scaleOf = await getScaleOf();
+    const conversion = withdrawalConversion(
+      {
+        source,
+        occurredOn,
+        note: parsed.data.note ?? null,
+        receivedAmount: cashAmount,
+        receivedCurrency: cashCurrency,
+        chargedCurrency,
+        total,
+        fee: parsed.data.fee,
+      },
+      scaleOf,
+    );
+    if (!conversion.ok) return conversion;
+    const id = crypto.randomUUID();
+    await postLedgerTransaction(
+      user.id,
+      {
+        ...emptyDraft(occurredOn),
+        note: conversion.note,
+        tags: normalizeTags(tags),
+        lines: conversion.lines,
+        externalRefs: [withdrawalRef(source, id)],
+      },
+      { id },
+    );
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -487,96 +404,62 @@ export async function convertToWithdrawal(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const tx = await db
-    .select()
-    .from(transactions)
-    .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)))
-    .limit(1)
-    .then((rows) => rows[0]);
-  if (!tx) return { ok: false, error: "Transaction not found" };
-
-  if (tx.transfer_group) {
-    return { ok: false, error: "Undo the transfer first" };
-  }
-  if (isWithdrawalExternalId(tx.external_id)) {
-    return { ok: false, error: "Already a withdrawal" };
-  }
-  if (tx.external_id?.startsWith(EXTERNAL_ID_PREFIX.transferFee)) {
-    return { ok: false, error: "A fee row can't be a withdrawal" };
-  }
-  if (tx.kind !== "expense") {
-    return { ok: false, error: "Only an expense can be a withdrawal" };
-  }
-  const sourceError = withdrawableSourceError(tx.source);
-  if (sourceError) return { ok: false, error: sourceError };
-  if (isSyncedExternalId(tx.external_id)) {
-    return { ok: false, error: "Synced rows can't be converted" };
-  }
-  const chargedError = await sourceCurrencyError(
-    user.id,
-    tx.source,
-    chargedCurrency,
-  );
-  if (chargedError) return { ok: false, error: chargedError };
-
-  const ctxResult = await withRatesErrorHandling(() =>
-    buildCurrencyContext(user.id),
-  );
-  if (!ctxResult.ok) return ctxResult;
-  const ctx = ctxResult.data;
-  if (!ctx) return { ok: false, error: "Settings not found" };
-
-  const group = crypto.randomUUID();
-  const conversion = buildWithdrawalConversion(
-    {
-      userId: user.id,
-      source: tx.source,
-      occurredOn: tx.occurred_on,
-      note: tx.note,
-      receivedAmount: tx.amount_original,
-      receivedCurrency: tx.currency_original,
-      chargedCurrency,
-      total,
-      fee,
-      externalId: `${EXTERNAL_ID_PREFIX.withdrawal}${group}`,
-      group,
-    },
-    ctx,
-  );
-  if (!conversion.ok) return conversion;
-  const { row, feeRow } = conversion;
-
-  const externalIdGuard =
-    tx.external_id === null
-      ? isNull(transactions.external_id)
-      : eq(transactions.external_id, tx.external_id);
-
   try {
-    await db.transaction(async (dbTx) => {
-      const result = await dbTx
-        .update(transactions)
-        .set({
-          amount_original: row.amount_original,
-          currency_original: row.currency_original,
-          fx_rates_snapshot: row.fx_rates_snapshot,
-          note: row.note,
-          external_id: row.external_id,
-        })
-        .where(
-          and(
-            eq(transactions.id, id),
-            eq(transactions.user_id, user.id),
-            isNull(transactions.transfer_group),
-            externalIdGuard,
-          ),
-        );
-      if (result.rowsAffected === 0) {
-        throw new ActionError("Transaction changed, reload and retry");
-      }
-      if (feeRow) {
-        await dbTx.insert(transactions).values(feeRow);
-      }
-    });
+    const record = await getLedgerRecord(user.id, id);
+    if (!record) return { ok: false, error: "Transaction not found" };
+    const { movement, draft } = record;
+    if (isTransferMovement(movement)) {
+      return { ok: false, error: "Undo the transfer first" };
+    }
+    if (isWithdrawalMovement(movement)) {
+      return { ok: false, error: "Already a withdrawal" };
+    }
+    const flow = simpleFlow(movement);
+    if (!flow)
+      return { ok: false, error: "This movement can't be a withdrawal" };
+    if (flow.kind !== "expense") {
+      return { ok: false, error: "Only an expense can be a withdrawal" };
+    }
+    const sourceError = withdrawableSourceError(flow.source);
+    if (sourceError) return { ok: false, error: sourceError };
+    if (hasSyncedRef(movement)) {
+      return { ok: false, error: "Synced rows can't be converted" };
+    }
+    const chargedError = await sourceCurrencyError(
+      user.id,
+      flow.source,
+      chargedCurrency,
+    );
+    if (chargedError) return { ok: false, error: chargedError };
+
+    const conversion = withdrawalConversion(
+      {
+        source: flow.source,
+        occurredOn: draft.occurredOn,
+        note: draft.note,
+        receivedAmount: flow.amount,
+        receivedCurrency: flow.currency,
+        chargedCurrency,
+        total,
+        fee,
+      },
+      await getScaleOf(),
+    );
+    if (!conversion.ok) return conversion;
+    const priorFees = draft.lines.filter((line) => line.role === "fee");
+    await postLedgerTransaction(
+      user.id,
+      {
+        ...draft,
+        note: conversion.note,
+        lines: [...conversion.lines, ...priorFees],
+        externalRefs: [
+          ...draft.externalRefs,
+          withdrawalRef(flow.source, movement.id),
+        ],
+      },
+      { replaceId: movement.id, expected: draft.lines },
+    );
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -593,20 +476,18 @@ export async function undoMoveWithdrawalToCash(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const tx = await db
-    .select()
-    .from(transactions)
-    .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)))
-    .limit(1)
-    .then((rows) => rows[0]);
-  if (!tx) return { ok: false, error: "Transaction not found" };
-  const group = tx.transfer_group;
-  if (!group || !isWithdrawalExternalId(tx.external_id)) {
-    return { ok: false, error: "Not a withdrawal with a cash entry" };
-  }
-
   try {
-    await db.transaction((dbTx) => unlinkWithdrawalGroup(dbTx, user.id, group));
+    const record = await getLedgerRecord(user.id, id);
+    if (!record) return { ok: false, error: "Transaction not found" };
+    const { draft } = record;
+    const group = withdrawalGroupOf(draft);
+    if (!group || !hasCashLeg(draft) || !bankWithdrawalLine(draft)) {
+      return { ok: false, error: "Not a withdrawal with a cash entry" };
+    }
+    await postLedgerTransaction(user.id, withoutCashLeg(draft, group), {
+      replaceId: record.movement.id,
+      expected: draft.lines,
+    });
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -637,84 +518,33 @@ export async function moveWithdrawalToCash(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const tx = await db
-    .select()
-    .from(transactions)
-    .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)))
-    .limit(1)
-    .then((rows) => rows[0]);
-  if (!tx) return { ok: false, error: "Transaction not found" };
-  if (!isWithdrawalExternalId(tx.external_id)) {
-    return { ok: false, error: "Only a withdrawal can move to Cash" };
-  }
-  if (!isSingleLegWithdrawalExternalId(tx.external_id)) {
-    return { ok: false, error: "This withdrawal already has a cash entry" };
-  }
-  if (tx.transfer_group) {
-    return { ok: false, error: "This withdrawal already has a cash entry" };
-  }
-  if (tx.kind !== "expense") {
-    return { ok: false, error: "Only the bank side can move to Cash" };
-  }
-
-  const group = withdrawalGroupFrom(tx.external_id);
-  if (!group) return { ok: false, error: "Withdrawal is missing its group" };
-
-  const ctxResult = await withRatesErrorHandling(() =>
-    buildCurrencyContext(user.id),
-  );
-  if (!ctxResult.ok) return ctxResult;
-  const ctx = ctxResult.data;
-  if (!ctx) return { ok: false, error: "Settings not found" };
-
-  const impliedRate = impliedCashRate(
-    {
-      amount: tx.amount_original,
-      currency: tx.currency_original,
-      rates: tx.fx_rates_snapshot,
-    },
-    { amount: cashAmount, currency: cashCurrency },
-  );
-  const incoming = buildTransactionRow(
-    {
-      userId: user.id,
-      kind: "income",
-      amount: cashAmount,
-      currency: cashCurrency,
-      occurredOn: tx.occurred_on,
-      note: withdrawalNote(tx.note, cashAmount, cashCurrency),
-      externalId: `${EXTERNAL_ID_PREFIX.withdrawal}${group}:in`,
-    },
-    {
-      rates: {
-        ...ctx.rates,
-        ...tx.fx_rates_snapshot,
-        ...(impliedRate === null ? {} : { [cashCurrency]: impliedRate }),
-      },
-      userCurrencies: ctx.userCurrencies,
-    },
-  );
-  if (!incoming) return { ok: false, error: `No rate for ${cashCurrency}` };
-
   try {
+    const record = await getLedgerRecord(user.id, id);
+    if (!record) return { ok: false, error: "Transaction not found" };
+    const { movement, draft } = record;
+    if (!isWithdrawalMovement(movement)) {
+      return { ok: false, error: "Only a withdrawal can move to Cash" };
+    }
+    if (hasCashLeg(draft) || isTransferMovement(movement)) {
+      return { ok: false, error: "This withdrawal already has a cash entry" };
+    }
+    if (!bankWithdrawalLine(draft)) {
+      return { ok: false, error: "Only the bank side can move to Cash" };
+    }
+    const group = withdrawalGroupOf(draft);
+    if (!group) return { ok: false, error: "Withdrawal is missing its group" };
+
+    const next = withCashLeg(
+      { ...draft, note: withdrawalNote(draft.note, cashAmount, cashCurrency) },
+      group,
+      { amount: cashAmount, currency: cashCurrency },
+      await getScaleOf(),
+    );
     await db.transaction(async (dbTx) => {
-      const result = await dbTx
-        .update(transactions)
-        .set({ transfer_group: group })
-        .where(
-          and(
-            eq(transactions.id, id),
-            eq(transactions.user_id, user.id),
-            isNull(transactions.transfer_group),
-          ),
-        );
-      if (result.rowsAffected === 0) {
-        throw new ActionError("Transaction changed, reload and retry");
-      }
-      await dbTx.insert(transactions).values({
-        ...incoming,
-        transfer_group: group,
-        budget_month: tx.budget_month,
+      await postLedgerTransaction(user.id, next, {
+        replaceId: movement.id,
+        executor: dbTx,
+        expected: draft.lines,
       });
       await dbTx
         .update(user_settings)

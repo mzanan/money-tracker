@@ -179,6 +179,7 @@ export function transferPosting({
   destinationFee,
   sentOn,
   receivedOn,
+  role = "amount",
   scaleOf,
 }: {
   origin: string;
@@ -189,6 +190,7 @@ export function transferPosting({
   destinationFee: number;
   sentOn: string;
   receivedOn: string;
+  role?: LedgerEntryRole;
   scaleOf: ScaleOf;
 }): PostingLine[] {
   return [
@@ -199,6 +201,7 @@ export function transferPosting({
         money: received,
         occurredOn: receivedOn,
       },
+      role,
       scaleOf,
     }),
     ...(originFee > 0
