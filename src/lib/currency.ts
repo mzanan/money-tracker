@@ -177,23 +177,6 @@ export function relativeUsdDiff(usdA: number, usdB: number): number | null {
   return Math.abs(usdA - usdB) / reference;
 }
 
-export function snapshotRatesFor(
-  rates: FxRates,
-  codes: Iterable<string>,
-): FxRates {
-  const out: FxRates = {};
-  for (const code of codes) {
-    if (rates[code] !== undefined) {
-      out[code] = rates[code];
-    }
-  }
-  // Rates are USD-based, so `convert` implicitly needs USD in the snapshot.
-  if (rates.USD !== undefined) {
-    out.USD = rates.USD;
-  }
-  return out;
-}
-
 export function amountToInputDigits(amount: number, code: string): string {
   const { decimals } = getCurrency(code);
   const fixed = amount.toFixed(decimals);

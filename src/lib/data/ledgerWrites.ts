@@ -1,5 +1,5 @@
 import { ActionError } from "@/lib/actionError";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, between, eq, inArray, like } from "drizzle-orm";
 
 import { getAccountLabels } from "@/lib/data/accounts";
 import { db } from "@/lib/db";
@@ -75,21 +75,35 @@ async function ensureAccounts(
   return ids;
 }
 
+const WRITE_CHUNK = 100;
+
+function chunked<T>(items: ReadonlyArray<T>, size = WRITE_CHUNK): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    out.push(items.slice(i, i + size));
+  }
+  return out;
+}
+
+interface DraftWrite {
+  id: string;
+  draft: LedgerDraft;
+}
+
 async function writeEntries(
   executor: Executor,
   userId: string,
-  transactionId: string,
-  draft: LedgerDraft,
+  writes: ReadonlyArray<DraftWrite>,
 ) {
   const accountIds = await ensureAccounts(
     executor,
     userId,
-    draft.lines.map((line) => line.account),
+    writes.flatMap(({ draft }) => draft.lines.map((line) => line.account)),
   );
-  await executor.insert(ledger_entries).values(
+  const entryRows = writes.flatMap(({ id, draft }) =>
     draft.lines.map((line) => ({
       user_id: userId,
-      transaction_id: transactionId,
+      transaction_id: id,
       account_id: accountIds.get(accountRefId(line.account))!,
       currency: line.account.currency,
       role: line.role,
@@ -98,15 +112,19 @@ async function writeEntries(
       legacy_tx_id: line.legacyTxId,
     })),
   );
-  if (draft.externalRefs.length > 0) {
-    await executor.insert(ledger_external_ids).values(
-      draft.externalRefs.map((ref) => ({
-        user_id: userId,
-        origin: ref.origin,
-        external_id: ref.externalId,
-        transaction_id: transactionId,
-      })),
-    );
+  for (const batch of chunked(entryRows)) {
+    await executor.insert(ledger_entries).values(batch);
+  }
+  const refRows = writes.flatMap(({ id, draft }) =>
+    draft.externalRefs.map((ref) => ({
+      user_id: userId,
+      origin: ref.origin,
+      external_id: ref.externalId,
+      transaction_id: id,
+    })),
+  );
+  for (const batch of chunked(refRows)) {
+    await executor.insert(ledger_external_ids).values(batch);
   }
 }
 
@@ -226,21 +244,24 @@ async function replaceTransaction(
         eq(ledger_transactions.id, transactionId),
       ),
     );
-  await writeEntries(executor, userId, transactionId, draft);
+  await writeEntries(executor, userId, [{ id: transactionId, draft }]);
 }
 
-async function insertTransaction(
+async function insertTransactions(
   executor: Executor,
   userId: string,
-  transactionId: string,
-  draft: LedgerDraft,
+  writes: ReadonlyArray<DraftWrite>,
 ) {
-  await executor.insert(ledger_transactions).values({
-    id: transactionId,
-    user_id: userId,
-    ...transactionRow(draft),
-  });
-  await writeEntries(executor, userId, transactionId, draft);
+  for (const batch of chunked(writes)) {
+    await executor.insert(ledger_transactions).values(
+      batch.map(({ id, draft }) => ({
+        id,
+        user_id: userId,
+        ...transactionRow(draft),
+      })),
+    );
+  }
+  await writeEntries(executor, userId, writes);
 }
 
 export async function postLedgerTransaction(
@@ -265,10 +286,94 @@ export async function postLedgerTransaction(
           draft,
           options.expected,
         )
-      : insertTransaction(executor, userId, transactionId, draft);
+      : insertTransactions(executor, userId, [{ id: transactionId, draft }]);
   if (options.executor) await write(options.executor);
   else await db.transaction((tx) => write(tx));
   return transactionId;
+}
+
+export async function postLedgerTransactions(
+  userId: string,
+  drafts: ReadonlyArray<{ id?: string; draft: LedgerDraft }>,
+  executor?: DbTx,
+): Promise<string[]> {
+  for (const { draft } of drafts) {
+    const error = postingError(draft);
+    if (error) throw new LedgerPostingError(error);
+  }
+  if (drafts.length === 0) return [];
+  const writes = drafts.map(({ id, draft }) => ({
+    id: id ?? crypto.randomUUID(),
+    draft,
+  }));
+  const write = (tx: Executor) => insertTransactions(tx, userId, writes);
+  if (executor) await write(executor);
+  else await db.transaction((tx) => write(tx));
+  return writes.map(({ id }) => id);
+}
+
+export async function existingExternalIds(
+  userId: string,
+  origin: string,
+  externalIds: ReadonlyArray<string>,
+  executor: Executor = db,
+): Promise<Set<string>> {
+  const found = new Set<string>();
+  for (const batch of chunked([...new Set(externalIds)], 500)) {
+    const rows = await executor
+      .select({ external_id: ledger_external_ids.external_id })
+      .from(ledger_external_ids)
+      .where(
+        and(
+          eq(ledger_external_ids.user_id, userId),
+          eq(ledger_external_ids.origin, origin),
+          inArray(ledger_external_ids.external_id, batch),
+        ),
+      );
+    for (const row of rows) found.add(row.external_id);
+  }
+  return found;
+}
+
+export async function externalIdsWithPrefix(
+  userId: string,
+  origin: string,
+  prefix: string,
+): Promise<Set<string>> {
+  const rows = await db
+    .select({ external_id: ledger_external_ids.external_id })
+    .from(ledger_external_ids)
+    .where(
+      and(
+        eq(ledger_external_ids.user_id, userId),
+        eq(ledger_external_ids.origin, origin),
+        like(ledger_external_ids.external_id, `${prefix}%`),
+      ),
+    );
+  return new Set(rows.map((row) => row.external_id));
+}
+
+export async function getLedgerRecordsBetween(
+  userId: string,
+  start: string,
+  end: string,
+  executor: Executor = db,
+): Promise<LedgerRecord[]> {
+  const rows = await executor
+    .selectDistinct({ id: ledger_entries.transaction_id })
+    .from(ledger_entries)
+    .where(
+      and(
+        eq(ledger_entries.user_id, userId),
+        between(ledger_entries.occurred_on, start, end),
+      ),
+    );
+  const records = await getLedgerRecords(
+    userId,
+    rows.map((row) => row.id),
+    executor,
+  );
+  return [...records.values()];
 }
 
 export async function deleteLedgerTransactions(
@@ -277,42 +382,45 @@ export async function deleteLedgerTransactions(
   executor?: DbTx,
 ): Promise<number> {
   if (transactionIds.length === 0) return 0;
-  const ids = [...transactionIds];
   const remove = async (tx: Executor) => {
-    await tx
-      .delete(ledger_entries)
-      .where(
-        and(
-          eq(ledger_entries.user_id, userId),
-          inArray(ledger_entries.transaction_id, ids),
-        ),
-      );
-    await tx
-      .delete(ledger_external_ids)
-      .where(
-        and(
-          eq(ledger_external_ids.user_id, userId),
-          inArray(ledger_external_ids.transaction_id, ids),
-        ),
-      );
-    await tx
-      .delete(ledger_revisions)
-      .where(
-        and(
-          eq(ledger_revisions.user_id, userId),
-          inArray(ledger_revisions.transaction_id, ids),
-        ),
-      );
-    const deleted = await tx
-      .delete(ledger_transactions)
-      .where(
-        and(
-          eq(ledger_transactions.user_id, userId),
-          inArray(ledger_transactions.id, ids),
-        ),
-      )
-      .returning({ id: ledger_transactions.id });
-    return deleted.length;
+    let deleted = 0;
+    for (const ids of chunked([...transactionIds], 500)) {
+      await tx
+        .delete(ledger_entries)
+        .where(
+          and(
+            eq(ledger_entries.user_id, userId),
+            inArray(ledger_entries.transaction_id, ids),
+          ),
+        );
+      await tx
+        .delete(ledger_external_ids)
+        .where(
+          and(
+            eq(ledger_external_ids.user_id, userId),
+            inArray(ledger_external_ids.transaction_id, ids),
+          ),
+        );
+      await tx
+        .delete(ledger_revisions)
+        .where(
+          and(
+            eq(ledger_revisions.user_id, userId),
+            inArray(ledger_revisions.transaction_id, ids),
+          ),
+        );
+      const rows = await tx
+        .delete(ledger_transactions)
+        .where(
+          and(
+            eq(ledger_transactions.user_id, userId),
+            inArray(ledger_transactions.id, ids),
+          ),
+        )
+        .returning({ id: ledger_transactions.id });
+      deleted += rows.length;
+    }
+    return deleted;
   };
   return executor ? remove(executor) : db.transaction((tx) => remove(tx));
 }
@@ -329,43 +437,56 @@ export async function getLedgerRecords(
 ): Promise<Map<string, LedgerRecord>> {
   const ids = [...new Set(transactionIds)];
   if (ids.length === 0) return new Map();
+  const byChunk = async <T>(
+    fetch: (chunk: string[]) => Promise<T[]>,
+  ): Promise<T[]> => {
+    const rows: T[] = [];
+    for (const chunk of chunked(ids, 500)) rows.push(...(await fetch(chunk)));
+    return rows;
+  };
   const [transactions, entries, accounts, externalIds, scaleOf] =
     await Promise.all([
-      executor
-        .select()
-        .from(ledger_transactions)
-        .where(
-          and(
-            eq(ledger_transactions.user_id, userId),
-            inArray(ledger_transactions.id, ids),
+      byChunk((chunk) =>
+        executor
+          .select()
+          .from(ledger_transactions)
+          .where(
+            and(
+              eq(ledger_transactions.user_id, userId),
+              inArray(ledger_transactions.id, chunk),
+            ),
           ),
-        ),
-      executor
-        .select()
-        .from(ledger_entries)
-        .where(
-          and(
-            eq(ledger_entries.user_id, userId),
-            inArray(ledger_entries.transaction_id, ids),
+      ),
+      byChunk((chunk) =>
+        executor
+          .select()
+          .from(ledger_entries)
+          .where(
+            and(
+              eq(ledger_entries.user_id, userId),
+              inArray(ledger_entries.transaction_id, chunk),
+            ),
           ),
-        ),
+      ),
       executor
         .select()
         .from(ledger_accounts)
         .where(eq(ledger_accounts.user_id, userId)),
-      executor
-        .select({
-          transaction_id: ledger_external_ids.transaction_id,
-          origin: ledger_external_ids.origin,
-          external_id: ledger_external_ids.external_id,
-        })
-        .from(ledger_external_ids)
-        .where(
-          and(
-            eq(ledger_external_ids.user_id, userId),
-            inArray(ledger_external_ids.transaction_id, ids),
+      byChunk((chunk) =>
+        executor
+          .select({
+            transaction_id: ledger_external_ids.transaction_id,
+            origin: ledger_external_ids.origin,
+            external_id: ledger_external_ids.external_id,
+          })
+          .from(ledger_external_ids)
+          .where(
+            and(
+              eq(ledger_external_ids.user_id, userId),
+              inArray(ledger_external_ids.transaction_id, chunk),
+            ),
           ),
-        ),
+      ),
       getScaleOf(),
     ]);
   const accountsById = new Map(accounts.map((row) => [row.id, row]));

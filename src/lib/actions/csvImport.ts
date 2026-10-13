@@ -1,25 +1,27 @@
 "use server";
 
-import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
+import { and, eq, lt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { actionErrorMessage } from "@/lib/actionError";
-import { isSupportedCurrency } from "@/lib/constants/currencies";
-import { isValidAmountForCurrency, roundForCurrency } from "@/lib/currency";
-import { isValidCalendarDate } from "@/lib/dates";
+import { MANUAL_SOURCE } from "@/lib/constants/sources";
 import { db } from "@/lib/db";
-import { csv_import_locks, transactions, user_settings } from "@/lib/db/schema";
-import { isSyncable } from "@/lib/integrations";
-import { getRates, RatesUnavailableError } from "@/lib/rates";
-import { getUser } from "@/lib/session";
+import { csv_import_locks } from "@/lib/db/schema";
 import {
-  buildFeeRow,
-  buildTransactionRow,
-  csvExternalIdCondition,
-  EXTERNAL_ID_PREFIX,
-  transactionContentHash,
-} from "@/lib/transactions";
-import type { TransactionInsert } from "@/types/db";
+  csvDraft,
+  postableCsvDrafts,
+  uniqueCsvDrafts,
+  type CsvDraft,
+} from "@/lib/csv/ledgerDraft";
+import { getLastEntryDate, staleCsvTransactionIds } from "@/lib/data/sources";
+import {
+  deleteLedgerTransactions,
+  existingExternalIds,
+  getScaleOf,
+  postLedgerTransactions,
+} from "@/lib/data/ledgerWrites";
+import { isSyncable } from "@/lib/integrations";
+import { getUser } from "@/lib/session";
 
 import type { ActionResult } from "./transactions";
 
@@ -41,6 +43,7 @@ export interface CsvImportInput {
 }
 
 const REPLACE_LOCK_STALE_MS = 10 * 60 * 1000;
+const BATCH_SIZE = 500;
 
 // Single atomic UPSERT: acquires a free lock, or steals one only if it's
 // stale, in one statement. Avoids a separate SELECT+DELETE+INSERT reclaim,
@@ -50,7 +53,9 @@ async function acquireReplaceLock(
   userId: string,
   source: string,
 ): Promise<string | null> {
-  const staleBefore = new Date(Date.now() - REPLACE_LOCK_STALE_MS).toISOString();
+  const staleBefore = new Date(
+    Date.now() - REPLACE_LOCK_STALE_MS,
+  ).toISOString();
   const acquired = await db
     .insert(csv_import_locks)
     .values({ user_id: userId, source })
@@ -88,30 +93,22 @@ export async function getLastImportDate(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const row = await db
-    .select({ occurred_on: transactions.occurred_on })
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.user_id, user.id),
-        eq(transactions.source, normalized),
-      ),
-    )
-    .orderBy(desc(transactions.occurred_on))
-    .limit(1)
-    .then((rows) => rows[0]);
-
-  return { ok: true, data: { date: row?.occurred_on ?? null } };
+  return {
+    ok: true,
+    data: { date: await getLastEntryDate(user.id, normalized) },
+  };
 }
 
 export async function importCsvRows(
   input: CsvImportInput,
-): Promise<ActionResult<{ imported: number; skipped: number; errors: number }>> {
+): Promise<
+  ActionResult<{ imported: number; skipped: number; errors: number }>
+> {
   const source = input.source.trim().toLowerCase();
   if (!source) {
     return { ok: false, error: "Account name is required" };
   }
-  if (source === "manual") {
+  if (source === MANUAL_SOURCE) {
     return { ok: false, error: "Account name 'manual' is reserved" };
   }
   if (isSyncable(source)) {
@@ -127,97 +124,16 @@ export async function importCsvRows(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const settings = await db
-    .select({ currencies: user_settings.currencies })
-    .from(user_settings)
-    .where(eq(user_settings.user_id, user.id))
-    .limit(1)
-    .then((rows) => rows[0]);
-  if (!settings) return { ok: false, error: "Settings not found" };
-
-  let rates;
-  try {
-    rates = (await getRates()).rates;
-  } catch (error) {
-    if (error instanceof RatesUnavailableError) {
-      return {
-        ok: false,
-        error: "Exchange rates unavailable. Try again in a bit.",
-      };
-    }
-    return { ok: false, error: "Error fetching rates" };
-  }
-
+  const scaleOf = await getScaleOf();
   let errors = 0;
-  const insertRows: TransactionInsert[] = [];
+  const drafts: CsvDraft[] = [];
   for (const row of input.rows) {
-    if (!isSupportedCurrency(row.currency) && !rates[row.currency]) {
-      errors += 1;
-      continue;
-    }
-    if (!isValidAmountForCurrency(row.amount, row.currency)) {
-      errors += 1;
-      continue;
-    }
-    const amount = roundForCurrency(row.amount, row.currency);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      errors += 1;
-      continue;
-    }
-    const occurredOn = row.occurredOn.slice(0, 10);
-    if (!isValidCalendarDate(occurredOn)) {
-      errors += 1;
-      continue;
-    }
-
-    const providedId = row.externalId?.trim();
-    const externalId = providedId
-      ? `${EXTERNAL_ID_PREFIX.csv}${providedId.toLowerCase().slice(0, 64)}`
-      : transactionContentHash({ ...row, amount }).slice(0, 32);
-    const built = buildTransactionRow(
-      {
-        userId: user.id,
-        kind: row.kind,
-        amount,
-        currency: row.currency,
-        occurredOn,
-        occurredAt: row.occurredAt,
-        note: row.description,
-        source,
-        externalId,
-      },
-      { rates, userCurrencies: settings.currencies },
-    );
-    if (!built) {
-      errors += 1;
-      continue;
-    }
-    insertRows.push(built);
-
-    if (
-      row.feeAmount &&
-      row.feeAmount > 0 &&
-      isValidAmountForCurrency(row.feeAmount, row.currency)
-    ) {
-      const feeAmount = roundForCurrency(row.feeAmount, row.currency);
-      const feeRow = buildFeeRow(
-        {
-          userId: user.id,
-          amount: feeAmount,
-          currency: row.currency,
-          occurredOn,
-          occurredAt: row.occurredAt,
-          note: "Wise fee",
-          source,
-          externalId: `${externalId}:fee`,
-        },
-        { rates, userCurrencies: settings.currencies },
-      );
-      if (feeRow) insertRows.push(feeRow);
-    }
+    const built = csvDraft(row, source, scaleOf);
+    if (built) drafts.push(built);
+    else errors += 1;
   }
 
-  if (input.replace && insertRows.length === 0) {
+  if (input.replace && drafts.length === 0) {
     return {
       ok: false,
       error: `All ${errors} rows failed validation. Nothing was imported, existing data was left untouched.`,
@@ -245,24 +161,29 @@ export async function importCsvRows(
     }
   }
 
-  const BATCH_SIZE = 500;
   let imported = 0;
   try {
-    for (let i = 0; i < insertRows.length; i += BATCH_SIZE) {
-      const batch = insertRows.slice(i, i + BATCH_SIZE);
+    const unique = uniqueCsvDrafts(drafts);
+    for (let i = 0; i < unique.length; i += BATCH_SIZE) {
+      const batch = unique.slice(i, i + BATCH_SIZE);
       try {
-        const inserted = await db
-          .insert(transactions)
-          .values(batch)
-          .onConflictDoNothing({
-            target: [
-              transactions.user_id,
-              transactions.source,
-              transactions.external_id,
-            ],
-          })
-          .returning({ id: transactions.id });
-        imported += inserted.length;
+        imported += await db.transaction(async (dbTx) => {
+          const taken = await existingExternalIds(
+            user.id,
+            source,
+            batch.flatMap(({ externalIds }) => externalIds),
+            dbTx,
+          );
+          await postLedgerTransactions(
+            user.id,
+            batch.flatMap((item) =>
+              postableCsvDrafts(item, taken).map((draft) => ({ draft })),
+            ),
+            dbTx,
+          );
+          return batch.filter(({ externalIds }) => !taken.has(externalIds[0]))
+            .length;
+        });
       } catch (error) {
         return {
           ok: false,
@@ -276,39 +197,15 @@ export async function importCsvRows(
 
     if (input.replace) {
       try {
+        const keep = new Set(drafts.flatMap(({ externalIds }) => externalIds));
         await db.transaction(async (dbTx) => {
-          const staleRows = await dbTx
-            .select({
-              id: transactions.id,
-              external_id: transactions.external_id,
-            })
-            .from(transactions)
-            .where(
-              and(
-                eq(transactions.user_id, user.id),
-                eq(transactions.source, source),
-                csvExternalIdCondition(),
-              ),
-            );
-
-          const newExternalIds = new Set(
-            insertRows.map((row) => row.external_id),
+          const staleIds = await staleCsvTransactionIds(
+            user.id,
+            source,
+            keep,
+            dbTx,
           );
-          const staleIds = staleRows
-            .filter((row) => !newExternalIds.has(row.external_id))
-            .map((row) => row.id);
-
-          for (let i = 0; i < staleIds.length; i += BATCH_SIZE) {
-            const chunk = staleIds.slice(i, i + BATCH_SIZE);
-            await dbTx
-              .delete(transactions)
-              .where(
-                and(
-                  eq(transactions.user_id, user.id),
-                  inArray(transactions.id, chunk),
-                ),
-              );
-          }
+          await deleteLedgerTransactions(user.id, staleIds, dbTx);
         });
       } catch (error) {
         return {
@@ -326,7 +223,7 @@ export async function importCsvRows(
     }
   }
 
-  const skipped = insertRows.length - imported;
+  const skipped = drafts.length - imported;
   revalidatePath("/", "layout");
 
   return { ok: true, data: { imported, skipped, errors } };

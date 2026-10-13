@@ -1,6 +1,10 @@
 import { dayWindow } from "@/lib/dates";
 import { EXTERNAL_ID_PREFIX } from "@/lib/externalIds";
-import { normalizeTags } from "@/lib/transactions";
+import { flowCandidateOf } from "@/lib/ledger/candidates";
+import type { LedgerDraft } from "@/lib/ledger/posting";
+import { feeOnlyDraft } from "@/lib/ledger/edits";
+import { manualFeeNote, normalizeTags } from "@/lib/transactions";
+import type { FlowCandidate, Movement } from "@/types/ledger";
 
 const ABSORB_WINDOW_DAYS = 2;
 const ABSORB_AMOUNT_TOLERANCE = 0.01;
@@ -102,5 +106,104 @@ export function absorbDateRange(rows: AbsorbRow[]): {
   return {
     start: dayWindow(days[0], ABSORB_WINDOW_DAYS).start,
     end: dayWindow(days[days.length - 1], ABSORB_WINDOW_DAYS).end,
+  };
+}
+
+export function isAbsorbableRef(externalId: string): boolean {
+  return (
+    externalId.startsWith(EXTERNAL_ID_PREFIX.reminder) ||
+    externalId.startsWith(EXTERNAL_ID_PREFIX.screenshot)
+  );
+}
+
+export function absorbRowOf(
+  movement: Movement,
+  candidate: FlowCandidate,
+): AbsorbRow {
+  return {
+    id: movement.id,
+    kind: candidate.kind,
+    amount_original: candidate.amount,
+    currency_original: candidate.currency,
+    occurred_on: candidate.occurredOn,
+    external_id: movement.externalRefs[0]?.externalId ?? null,
+    note: movement.note,
+    comment: movement.comment,
+    tags: movement.tags,
+    is_fixed: movement.isFixed,
+    recurring_id: movement.recurringId,
+    budget_month: movement.budgetMonth,
+  };
+}
+
+export function withAbsorbPatch(
+  draft: LedgerDraft,
+  patch: AbsorbPatch,
+): LedgerDraft {
+  return {
+    ...draft,
+    note: patch.note !== undefined ? patch.note : draft.note,
+    comment: patch.comment !== undefined ? patch.comment : draft.comment,
+    tags: patch.tags ?? draft.tags,
+    isFixed: patch.is_fixed !== undefined ? patch.is_fixed : draft.isFixed,
+    recurringId:
+      patch.recurring_id !== undefined ? patch.recurring_id : draft.recurringId,
+    budgetMonth:
+      patch.budget_month !== undefined ? patch.budget_month : draft.budgetMonth,
+  };
+}
+
+export function absorbPool(
+  movements: ReadonlyArray<Movement>,
+  syncSource: string,
+): AbsorbRow[] {
+  return movements.flatMap((movement) => {
+    const candidate = flowCandidateOf(movement);
+    if (!candidate || candidate.source === syncSource) return [];
+    if (
+      !movement.externalRefs.every((ref) => isAbsorbableRef(ref.externalId))
+    ) {
+      return [];
+    }
+    return [absorbRowOf(movement, candidate)];
+  });
+}
+
+export interface AbsorbPlan {
+  writes: Array<{ id: string; draft: LedgerDraft }>;
+  absorbedIds: string[];
+  feeDrafts: LedgerDraft[];
+}
+
+export function absorbPlan(
+  synced: ReadonlyArray<{ id: string; draft: LedgerDraft; row: AbsorbRow }>,
+  records: ReadonlyArray<{ movement: Movement; draft: LedgerDraft }>,
+  syncSource: string,
+): AbsorbPlan {
+  const byId = new Map(records.map((record) => [record.movement.id, record]));
+  const matches = findAbsorbMatches(
+    synced.map(({ row }) => row),
+    absorbPool(
+      records.map(({ movement }) => movement),
+      syncSource,
+    ),
+  );
+  const patches = new Map(
+    matches.map((match) => [match.syncedId, match.patch]),
+  );
+  const absorbed = matches.flatMap((match) => {
+    const record = byId.get(match.absorbedId);
+    return record ? [record] : [];
+  });
+  return {
+    writes: synced.map(({ id, draft }) => {
+      const patch = patches.get(id);
+      return { id, draft: patch ? withAbsorbPatch(draft, patch) : draft };
+    }),
+    absorbedIds: absorbed.map(({ movement }) => movement.id),
+    feeDrafts: absorbed.flatMap(({ draft }) => {
+      const fees = feeOnlyDraft(draft, manualFeeNote(draft.note));
+      return fees ? [fees] : [];
+    }),
   };
 }

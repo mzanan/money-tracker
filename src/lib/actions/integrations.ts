@@ -1,113 +1,67 @@
 "use server";
 
-import { and, between, eq, inArray, isNull, like, ne, or } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-import { absorbDateRange, findAbsorbMatches } from "@/lib/absorb";
+import { absorbDateRange, absorbPlan } from "@/lib/absorb";
 import { actionErrorMessage } from "@/lib/actionError";
-import { isSupportedCurrency } from "@/lib/constants/currencies";
-import { roundForCurrency } from "@/lib/currency";
 import { dateInTz } from "@/lib/dates";
 import { db } from "@/lib/db";
-import { api_integrations, transactions, user_settings } from "@/lib/db/schema";
-import { EXTERNAL_ID_PREFIX } from "@/lib/externalIds";
+import { api_integrations, user_settings } from "@/lib/db/schema";
+import {
+  deleteLedgerTransactions,
+  existingExternalIds,
+  getLedgerRecordsBetween,
+  getScaleOf,
+  postLedgerTransactions,
+} from "@/lib/data/ledgerWrites";
 import { ADAPTERS } from "@/lib/integrations";
 import { decryptSecret, encryptSecret } from "@/lib/integrations/crypto";
+import {
+  freshSynced,
+  syncedDraft,
+  type SyncedDraft,
+} from "@/lib/integrations/syncedDraft";
+import { hasStorageScale } from "@/lib/ledger/scale";
 import { resolveTimezone } from "@/lib/preferences.server";
-import { getRates, RatesUnavailableError } from "@/lib/rates";
 import {
   integrationProviderSchema,
   saveIntegrationSchema,
   type SaveIntegrationInput,
 } from "@/lib/schemas/integration";
 import { getUser } from "@/lib/session";
-import { buildTransactionRow } from "@/lib/transactions";
 import type { ApiIntegrationUpdate, IntegrationProvider } from "@/types/db";
 
 import type { ActionResult } from "./transactions";
 
-const ABSORBABLE_EXTERNAL_ID = or(
-  isNull(transactions.external_id),
-  like(transactions.external_id, `${EXTERNAL_ID_PREFIX.reminder}%`),
-  like(transactions.external_id, `${EXTERNAL_ID_PREFIX.screenshot}%`),
-);
-
-const absorbColumns = {
-  id: transactions.id,
-  kind: transactions.kind,
-  amount_original: transactions.amount_original,
-  currency_original: transactions.currency_original,
-  occurred_on: transactions.occurred_on,
-  external_id: transactions.external_id,
-  note: transactions.note,
-  comment: transactions.comment,
-  tags: transactions.tags,
-  is_fixed: transactions.is_fixed,
-  recurring_id: transactions.recurring_id,
-  budget_month: transactions.budget_month,
-};
-
-async function absorbMatching(
+async function postSynced(
   userId: string,
   syncSource: string,
-  insertedIds: string[],
-): Promise<number> {
-  if (insertedIds.length === 0) return 0;
-
-  const inserted = await db
-    .select(absorbColumns)
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.user_id, userId),
-        inArray(transactions.id, insertedIds),
-      ),
+  drafts: ReadonlyArray<SyncedDraft>,
+): Promise<{ imported: number; absorbed: number }> {
+  return db.transaction(async (dbTx) => {
+    const taken = await existingExternalIds(
+      userId,
+      syncSource,
+      drafts.map(({ externalId }) => externalId),
+      dbTx,
     );
-  if (inserted.length === 0) return 0;
-
-  const { start, end } = absorbDateRange(inserted);
-  const candidates = await db
-    .select(absorbColumns)
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.user_id, userId),
-        ne(transactions.source, syncSource),
-        isNull(transactions.transfer_group),
-        ABSORBABLE_EXTERNAL_ID,
-        between(transactions.occurred_on, start, end),
-      ),
-    );
-
-  const matches = findAbsorbMatches(inserted, candidates);
-  if (matches.length === 0) return 0;
-
-  await db.transaction(async (tx) => {
-    for (const match of matches) {
-      if (Object.keys(match.patch).length > 0) {
-        await tx
-          .update(transactions)
-          .set(match.patch)
-          .where(
-            and(
-              eq(transactions.user_id, userId),
-              eq(transactions.id, match.syncedId),
-            ),
-          );
-      }
-      await tx
-        .delete(transactions)
-        .where(
-          and(
-            eq(transactions.user_id, userId),
-            eq(transactions.id, match.absorbedId),
-            isNull(transactions.transfer_group),
-          ),
-        );
+    const fresh = freshSynced(drafts, taken);
+    if (fresh.length === 0) return { imported: 0, absorbed: 0 };
+    const { start, end } = absorbDateRange(fresh.map(({ row }) => row));
+    const records = await getLedgerRecordsBetween(userId, start, end, dbTx);
+    const plan = absorbPlan(fresh, records, syncSource);
+    await postLedgerTransactions(userId, plan.writes, dbTx);
+    await deleteLedgerTransactions(userId, plan.absorbedIds, dbTx);
+    if (plan.feeDrafts.length > 0) {
+      await postLedgerTransactions(
+        userId,
+        plan.feeDrafts.map((draft) => ({ draft })),
+        dbTx,
+      );
     }
+    return { imported: fresh.length, absorbed: plan.absorbedIds.length };
   });
-
-  return matches.length;
 }
 
 const DEFAULT_SINCE_DAYS = 30;
@@ -309,10 +263,7 @@ export async function syncIntegration(
   if (!integration) return { ok: false, error: "Integration not connected" };
 
   const settings = await db
-    .select({
-      currencies: user_settings.currencies,
-      timezone: user_settings.timezone,
-    })
+    .select({ timezone: user_settings.timezone })
     .from(user_settings)
     .where(eq(user_settings.user_id, user.id))
     .limit(1)
@@ -320,18 +271,7 @@ export async function syncIntegration(
   if (!settings) return { ok: false, error: "Settings not found" };
   const timezone = await resolveTimezone(settings.timezone);
 
-  let rates;
-  try {
-    rates = (await getRates()).rates;
-  } catch (error) {
-    if (error instanceof RatesUnavailableError) {
-      return {
-        ok: false,
-        error: "Exchange rates unavailable. Try again in a bit.",
-      };
-    }
-    return { ok: false, error: "Error fetching rates" };
-  }
+  const scaleOf = await getScaleOf();
 
   const since = integration.last_synced_at
     ? new Date(integration.last_synced_at)
@@ -369,63 +309,30 @@ export async function syncIntegration(
 
   let skippedNoRate = 0;
   let skippedIncome = 0;
-  const rows = [];
+  const drafts: SyncedDraft[] = [];
   for (const tx of normalized) {
     if (!integration.import_income && tx.kind === "income") {
       skippedIncome += 1;
       continue;
     }
-    if (!isSupportedCurrency(tx.currency) && !rates[tx.currency]) {
+    if (!hasStorageScale(tx.currency, scaleOf)) {
       skippedNoRate += 1;
       continue;
     }
-    const amount = roundForCurrency(tx.amount, tx.currency);
-    if (amount <= 0) continue;
-    const row = buildTransactionRow(
-      {
-        userId: user.id,
-        kind: tx.kind,
-        amount,
-        currency: tx.currency,
-        occurredOn: dateInTz(tx.occurredAt, timezone),
-        occurredAt: tx.occurredAt,
-        tags: tx.tags,
-        note: tx.note,
-        source: provider,
-        externalId: tx.externalId,
-      },
-      { rates, userCurrencies: settings.currencies },
+    const draft = syncedDraft(
+      tx,
+      provider,
+      dateInTz(tx.occurredAt, timezone),
+      scaleOf(tx.currency),
     );
-    if (!row) {
-      skippedNoRate += 1;
-      continue;
-    }
-    rows.push(row);
+    if (draft) drafts.push(draft);
   }
 
   let imported = 0;
   let absorbed = 0;
-  if (rows.length > 0) {
+  if (drafts.length > 0) {
     try {
-      const inserted = await db
-        .insert(transactions)
-        .values(rows)
-        .onConflictDoNothing({
-          target: [
-            transactions.user_id,
-            transactions.source,
-            transactions.external_id,
-          ],
-        })
-        .returning({ id: transactions.id });
-      imported = inserted.length;
-      if (inserted.length > 0) {
-        absorbed = await absorbMatching(
-          user.id,
-          provider,
-          inserted.map((row) => row.id),
-        );
-      }
+      ({ imported, absorbed } = await postSynced(user.id, provider, drafts));
     } catch (error) {
       return {
         ok: false,

@@ -1,8 +1,4 @@
-import type {
-  FxRates,
-  LedgerAccountKind,
-  LedgerEntryRole,
-} from "@/types/db";
+import type { FxRates, LedgerAccountKind, LedgerEntryRole } from "@/types/db";
 
 export interface MovementLine {
   id: string;
@@ -87,4 +83,17 @@ export interface RowFacts {
   externalId: string | null;
   isTransfer: boolean;
   transferGroup: string | null;
+}
+
+export interface FlowCandidate {
+  id: string;
+  kind: "income" | "expense";
+  source: string;
+  amount: number;
+  currency: string;
+  occurredOn: string;
+  occurredAt: string;
+  note: string | null;
+  recurringId: string | null;
+  externalRefs: MovementExternalRef[];
 }

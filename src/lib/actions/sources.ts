@@ -1,17 +1,17 @@
 "use server";
 
-import { and, eq, isNotNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { actionErrorMessage } from "@/lib/actionError";
 import { db } from "@/lib/db";
-import { transactions } from "@/lib/db/schema";
-import { isWithdrawalExternalId } from "@/lib/externalIds";
-import { getUser } from "@/lib/session";
 import {
-  unlinkTransferGroup,
-  unlinkWithdrawalGroup,
-} from "@/lib/transferUnlink";
+  deleteLedgerTransactions,
+  getLedgerRecords,
+  postLedgerTransaction,
+} from "@/lib/data/ledgerWrites";
+import { getSourceTransactionIds } from "@/lib/data/sources";
+import { draftsWithoutSource } from "@/lib/ledger/sourceRemoval";
+import { getUser } from "@/lib/session";
 
 import type { ActionResult } from "./transactions";
 
@@ -29,51 +29,29 @@ export async function deleteSource(
 
   try {
     const deleted = await db.transaction(async (dbTx) => {
-      const linkedRows = await dbTx
-        .select({
-          transfer_group: transactions.transfer_group,
-          external_id: transactions.external_id,
-        })
-        .from(transactions)
-        .where(
-          and(
-            eq(transactions.user_id, user.id),
-            eq(transactions.source, value),
-            isNotNull(transactions.transfer_group),
-          ),
-        );
-
-      const groups = new Map<string, boolean>();
-      for (const row of linkedRows) {
-        const group = row.transfer_group;
-        if (!group) continue;
-        groups.set(
-          group,
-          (groups.get(group) ?? false) ||
-            isWithdrawalExternalId(row.external_id),
-        );
-      }
-      for (const [group, isWithdrawal] of groups) {
-        if (isWithdrawal) {
-          await unlinkWithdrawalGroup(dbTx, user.id, group);
-        } else {
-          await unlinkTransferGroup(dbTx, user.id, group);
+      const ids = await getSourceTransactionIds(user.id, value, dbTx);
+      const records = await getLedgerRecords(user.id, ids, dbTx);
+      const removed: string[] = [];
+      for (const record of records.values()) {
+        const [first, ...rest] = draftsWithoutSource(record, value);
+        if (!first) {
+          removed.push(record.movement.id);
+          continue;
+        }
+        await postLedgerTransaction(user.id, first, {
+          replaceId: record.movement.id,
+          executor: dbTx,
+        });
+        for (const draft of rest) {
+          await postLedgerTransaction(user.id, draft, { executor: dbTx });
         }
       }
-
-      return dbTx
-        .delete(transactions)
-        .where(
-          and(
-            eq(transactions.user_id, user.id),
-            eq(transactions.source, value),
-          ),
-        )
-        .returning({ id: transactions.id });
+      await deleteLedgerTransactions(user.id, removed, dbTx);
+      return records.size;
     });
 
     revalidatePath("/", "layout");
-    return { ok: true, data: { deleted: deleted.length } };
+    return { ok: true, data: { deleted } };
   } catch (error) {
     return { ok: false, error: actionErrorMessage(error, "Delete failed") };
   }
