@@ -9,7 +9,6 @@ import {
   type AccountLabels,
 } from "@/lib/constants/sources";
 import { EXTERNAL_ID_PREFIX, isCsvExternalId } from "@/lib/externalIds";
-import type { TransferFeeSpec } from "@/lib/transfer";
 import { snapshotRatesFor } from "@/lib/currency";
 import { transactions } from "@/lib/db/schema";
 import { sourcesOf } from "@/lib/ledger/movements";
@@ -151,35 +150,4 @@ const FEE_NOTE_SUFFIX = " fee";
 export function manualFeeNote(note: string | null | undefined): string {
   const base = note?.trim().slice(0, NOTE_MAX_LENGTH - FEE_NOTE_SUFFIX.length);
   return base ? `${base}${FEE_NOTE_SUFFIX}` : "Fee";
-}
-
-export function buildTransferFeeRows({
-  userId,
-  occurredOn,
-  ctx,
-  specs,
-}: {
-  userId: string;
-  occurredOn: string;
-  ctx: BuildContext;
-  specs: ReadonlyArray<TransferFeeSpec>;
-}): { ok: true; data: TransactionInsert[] } | { ok: false; error: string } {
-  const rows: TransactionInsert[] = [];
-  for (const spec of specs) {
-    const row = buildFeeRow(
-      {
-        userId,
-        amount: spec.amount,
-        currency: spec.currency,
-        occurredOn,
-        note: "Transfer fee",
-        source: spec.source,
-        externalId: spec.externalId,
-      },
-      ctx,
-    );
-    if (!row) return { ok: false, error: `No rate for ${spec.currency}` };
-    rows.push(row);
-  }
-  return { ok: true, data: rows };
 }

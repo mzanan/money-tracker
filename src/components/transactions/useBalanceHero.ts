@@ -43,13 +43,13 @@ export function useBalanceHero({
   const showBase = displayCurrency !== base;
   const today = todayInTz(timezone);
 
-  const showOpening = !isAllScope(scope);
+  const accountScoped = !isAllScope(scope);
   const monthRows = useMemo(
     () =>
       excludeCanceledPairs(
-        showOpening ? linesInMonth(lifetimeMovements, yearMonth) : movements,
+        accountScoped ? linesInMonth(lifetimeMovements, yearMonth) : movements,
       ),
-    [showOpening, lifetimeMovements, movements, yearMonth],
+    [accountScoped, lifetimeMovements, movements, yearMonth],
   );
 
   const monthTotals = useMemo(

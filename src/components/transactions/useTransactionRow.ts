@@ -14,7 +14,7 @@ import {
 import { undoMoveWithdrawalToCash } from "@/lib/actions/cash";
 import { setBudgetMonthShift, unmarkTransfer } from "@/lib/actions/transfers";
 import { isAccountCurrency } from "@/lib/accountCurrencies";
-import { canShiftBudgetMonth } from "@/lib/budgetMonth";
+import { isBudgetShiftable } from "@/lib/ledger/edits";
 import { kindOfSource, resolveSourceLabel } from "@/lib/constants/sources";
 import { legSign } from "@/lib/currency";
 import { formatMonthShort, todayInTz } from "@/lib/dates";
@@ -25,7 +25,11 @@ import {
 } from "@/lib/externalIds";
 import { isFixedTransaction } from "@/lib/fixedExpenses";
 import { hasBudgetMonthOverride } from "@/lib/ledger/carriedOver";
-import { exchangeSides, transferEnds } from "@/lib/ledger/movements";
+import {
+  exchangeSides,
+  isFeeRemnant,
+  transferEnds,
+} from "@/lib/ledger/movements";
 import { rowFacts } from "@/lib/ledger/rowFacts";
 import { isAllScope, movementAmount } from "@/lib/ledger/scope";
 import { amountInCurrency } from "@/lib/ledger/valuation";
@@ -70,6 +74,7 @@ export function useTransactionRow(
   const duplicate = useDialogState(runAfterMenuClose);
   const moveToCash = useDialogState(runAfterMenuClose);
 
+  const readOnly = isFeeRemnant(movement);
   const isTransfer = tx.isTransfer;
   const isWithdrawal = isWithdrawalExternalId(tx.externalId);
   const canMoveToCash =
@@ -83,7 +88,7 @@ export function useTransactionRow(
   const canChangeSource =
     !isTransfer && (!isSynced || !isSyncedExternalId(tx.externalId));
   const canShiftMonth =
-    canShiftBudgetMonth(tx) || hasBudgetMonthOverride(movement);
+    isBudgetShiftable(movement) || hasBudgetMonthOverride(movement);
   const realMonth = tx.occurredOn.slice(0, 7);
   const isMovedOut =
     showBudgetMonthBadges && !showDate && hasBudgetMonthOverride(movement);
@@ -157,7 +162,7 @@ export function useTransactionRow(
   const duplicateSeed = { ...editSeed, occurredOn: todayInTz(timezone) };
 
   function toggleSelected() {
-    toggleTxSelected(tx);
+    if (!readOnly) toggleTxSelected(tx);
   }
 
   function handleToggleFixed() {
@@ -215,6 +220,7 @@ export function useTransactionRow(
     txSelectMode,
     isSelected,
     toggleSelected,
+    readOnly,
     avatarSeed,
     description,
     isTransfer,

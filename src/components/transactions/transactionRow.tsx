@@ -61,6 +61,7 @@ export function TransactionRow({
 }) {
   const {
     tx,
+    readOnly,
     amountKind,
     txSelectMode,
     isSelected,
@@ -311,92 +312,94 @@ export function TransactionRow({
           </span>
         )}
       </div>
-      <div
-        className={cn(
-          "flex items-center gap-1",
-          txSelectMode && "pointer-events-none opacity-30",
-        )}
-      >
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label="More actions"
-                className="text-muted-foreground hover:text-foreground -mr-0.5"
-              >
-                <EllipsisIcon />
-              </Button>
-            }
-          />
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={openEdit}>
-              <PencilLineIcon />
-              Edit
-            </DropdownMenuItem>
-            {canChangeSource && (
-              <DropdownMenuItem onSelect={openChangeAccount}>
-                <LandmarkIcon />
-                Change account
+      {!readOnly && (
+        <div
+          className={cn(
+            "flex items-center gap-1",
+            txSelectMode && "pointer-events-none opacity-30",
+          )}
+        >
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="More actions"
+                  className="text-muted-foreground hover:text-foreground -mr-0.5"
+                >
+                  <EllipsisIcon />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={openEdit}>
+                <PencilLineIcon />
+                Edit
               </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onSelect={openDuplicate}>
-              <CopyIcon />
-              Duplicate
-            </DropdownMenuItem>
-            {canUndoMoveToCash ? (
-              <DropdownMenuItem onSelect={handleUndoMoveToCash}>
-                <WalletIcon />
-                Undo move to Cash
-              </DropdownMenuItem>
-            ) : isTransfer ? (
-              <DropdownMenuItem onSelect={handleUndoTransfer}>
-                <BanknoteIcon />
-                Undo transfer
-              </DropdownMenuItem>
-            ) : (
-              !isWithdrawal && (
-                <DropdownMenuItem onSelect={openMarkTransfer}>
-                  <BanknoteIcon />
-                  Mark as transfer
+              {canChangeSource && (
+                <DropdownMenuItem onSelect={openChangeAccount}>
+                  <LandmarkIcon />
+                  Change account
                 </DropdownMenuItem>
-              )
-            )}
-            {canMoveToCash && (
-              <DropdownMenuItem onSelect={openMoveToCash}>
-                <WalletIcon />
-                Move to Cash
+              )}
+              <DropdownMenuItem onSelect={openDuplicate}>
+                <CopyIcon />
+                Duplicate
               </DropdownMenuItem>
-            )}
-            {canShiftMonth && (
-              <DropdownMenuItem onSelect={handleShiftBudgetMonth}>
-                <CalendarArrowDownIcon />
-                {budgetMonthLabel}
+              {canUndoMoveToCash ? (
+                <DropdownMenuItem onSelect={handleUndoMoveToCash}>
+                  <WalletIcon />
+                  Undo move to Cash
+                </DropdownMenuItem>
+              ) : isTransfer ? (
+                <DropdownMenuItem onSelect={handleUndoTransfer}>
+                  <BanknoteIcon />
+                  Undo transfer
+                </DropdownMenuItem>
+              ) : (
+                !isWithdrawal && (
+                  <DropdownMenuItem onSelect={openMarkTransfer}>
+                    <BanknoteIcon />
+                    Mark as transfer
+                  </DropdownMenuItem>
+                )
+              )}
+              {canMoveToCash && (
+                <DropdownMenuItem onSelect={openMoveToCash}>
+                  <WalletIcon />
+                  Move to Cash
+                </DropdownMenuItem>
+              )}
+              {canShiftMonth && (
+                <DropdownMenuItem onSelect={handleShiftBudgetMonth}>
+                  <CalendarArrowDownIcon />
+                  {budgetMonthLabel}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onSelect={openSetReminder}>
+                <BellPlusIcon />
+                Set reminder
               </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onSelect={openSetReminder}>
-              <BellPlusIcon />
-              Set reminder
-            </DropdownMenuItem>
-            {!isTransfer && (
-              <DropdownMenuItem onSelect={handleToggleFixed}>
-                <PinIcon />
-                {resolvedFixed ? "Mark as daily" : "Mark as non-daily"}
-              </DropdownMenuItem>
-            )}
-            {canDelete && (
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onSelect={handleDelete}
-              >
-                <Trash2Icon />
-                Delete
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+              {!isTransfer && (
+                <DropdownMenuItem onSelect={handleToggleFixed}>
+                  <PinIcon />
+                  {resolvedFixed ? "Mark as daily" : "Mark as non-daily"}
+                </DropdownMenuItem>
+              )}
+              {canDelete && (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={handleDelete}
+                >
+                  <Trash2Icon />
+                  Delete
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
       {edit.mounted && (
         <TransactionFormDialog
           key={edit.key}

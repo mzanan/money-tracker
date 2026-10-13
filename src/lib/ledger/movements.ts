@@ -67,21 +67,20 @@ export function buildRawMovements(
     refs.push({ origin: ref.origin, externalId: ref.external_id });
     refsByTx.set(ref.transaction_id, refs);
   }
-  return rows.transactions
-    .map((tx) => ({
-      id: tx.id,
-      occurredOn: tx.occurred_on,
-      occurredAt: tx.occurred_at,
-      budgetMonth: tx.budget_month,
-      note: tx.note,
-      comment: tx.comment,
-      tags: tx.tags,
-      recurringId: tx.recurring_id,
-      isFixed: tx.is_fixed,
-      externalRefs: refsByTx.get(tx.id) ?? [],
-      lines: linesByTx.get(tx.id) ?? [],
-      leg: null,
-    }));
+  return rows.transactions.map((tx) => ({
+    id: tx.id,
+    occurredOn: tx.occurred_on,
+    occurredAt: tx.occurred_at,
+    budgetMonth: tx.budget_month,
+    note: tx.note,
+    comment: tx.comment,
+    tags: tx.tags,
+    recurringId: tx.recurring_id,
+    isFixed: tx.is_fixed,
+    externalRefs: refsByTx.get(tx.id) ?? [],
+    lines: linesByTx.get(tx.id) ?? [],
+    leg: null,
+  }));
 }
 
 export function splitLegsByDate(movement: Movement): Movement[] {
@@ -99,7 +98,8 @@ export function splitLegsByDate(movement: Movement): Movement[] {
       (line) => partDate(line.occurredOn) === date,
     );
     const sent = lines.some(
-      (line) => line.kind === "asset" && isPrincipalLine(line) && line.amount < 0,
+      (line) =>
+        line.kind === "asset" && isPrincipalLine(line) && line.amount < 0,
     );
     return {
       ...movement,
@@ -118,15 +118,26 @@ export function splitLegsByDate(movement: Movement): Movement[] {
   });
 }
 
+const FEE_REMNANT_SUFFIX = ":fee";
+
 export function feeRemnant(movement: Movement): Movement[] {
   const lines = movement.lines.filter((line) => !isPrincipalLine(line));
   return lines.length === 0
     ? []
-    : [{ ...movement, id: `${movement.id}:fee`, lines }];
+    : [{ ...movement, id: `${movement.id}${FEE_REMNANT_SUFFIX}`, lines }];
+}
+
+export function isFeeRemnant(movement: Movement): boolean {
+  return movement.id.endsWith(FEE_REMNANT_SUFFIX);
 }
 
 export function ledgerTransactionId(movement: Movement): string {
-  return movement.leg?.movementId ?? movement.id.replace(/:fee$/, "");
+  return (
+    movement.leg?.movementId ??
+    (isFeeRemnant(movement)
+      ? movement.id.slice(0, -FEE_REMNANT_SUFFIX.length)
+      : movement.id)
+  );
 }
 
 export function isFeeLine(line: MovementLine): boolean {

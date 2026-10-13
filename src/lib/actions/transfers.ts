@@ -1,21 +1,21 @@
 "use server";
 
-import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { ActionError, actionErrorMessage } from "@/lib/actionError";
+import { actionErrorMessage } from "@/lib/actionError";
 import { isSupportedCurrency } from "@/lib/constants/currencies";
-
-import {
-  BUDGET_MONTH_LOCK_ERROR,
-  budgetMonthGroupOf,
-  linkedExternalIds,
-} from "@/lib/budgetMonth";
+import { BUDGET_MONTH_LOCK_ERROR } from "@/lib/budgetMonth";
 import { db } from "@/lib/db";
-import { transactions } from "@/lib/db/schema";
 import { accountCurrencyError } from "@/lib/accountCurrencies";
 import { getAccountCurrencies } from "@/lib/data/accounts";
+import {
+  deleteLedgerTransactions,
+  getLedgerRecord,
+  getLedgerRecords,
+  getScaleOf,
+  postLedgerTransaction,
+} from "@/lib/data/ledgerWrites";
 import {
   kindOfSource,
   labelForSource,
@@ -29,27 +29,30 @@ import {
 } from "@/lib/currency";
 import { getTransferSources } from "@/lib/data/sources";
 import { shiftYearMonth } from "@/lib/dates";
+import { transferPosting } from "@/lib/ledger/builders";
+import {
+  feeOnlyDraft,
+  isBudgetShiftable,
+  isTransferMovement,
+  isWithdrawalMovement,
+  mirrorRef,
+  splitTransfer,
+} from "@/lib/ledger/edits";
+import { simpleFlow } from "@/lib/ledger/movements";
 import {
   aggregateFeesBySide,
   inTransitAmount,
   transferFeeAmountsError,
-  transferFeeSpecs,
   type ReceivedAmount,
   type TransferFeeEntry,
 } from "@/lib/transfer";
-import { isWithdrawalExternalId } from "@/lib/externalIds";
 import {
   buildCurrencyContext,
   withRatesErrorHandling,
 } from "@/lib/currencyContext";
 import { getUser } from "@/lib/session";
-import { unlinkTransferGroup } from "@/lib/transferUnlink";
-import {
-  buildTransactionRow,
-  buildTransferFeeRows,
-  EXTERNAL_ID_PREFIX,
-} from "@/lib/transactions";
-import type { FxRates, TransactionInsert } from "@/types/db";
+import { manualFeeNote, normalizeTags } from "@/lib/transactions";
+import type { FxRates } from "@/types/db";
 
 import type { ActionResult } from "./transactions";
 
@@ -194,75 +197,35 @@ export async function recordTransfer(
   });
   if (destinationError) return { ok: false, error: destinationError };
 
-  const ctxResult = await withRatesErrorHandling(() =>
-    buildCurrencyContext(user.id),
-  );
-  if (!ctxResult.ok) return ctxResult;
-  const ctx = ctxResult.data;
-  if (!ctx) return { ok: false, error: "Settings not found" };
-
-  const group = crypto.randomUUID();
-  const expense = buildTransactionRow(
-    {
-      userId: user.id,
-      kind: "expense",
-      amount: inTransit,
-      currency,
-      occurredOn,
-      tags,
-      note: parsed.data.note,
-      source,
-    },
-    ctx,
-  );
-  if (!expense) return { ok: false, error: `No rate for ${currency}` };
-
-  const mirror = buildTransactionRow(
-    {
-      userId: user.id,
-      kind: "income",
-      amount: mirrorAmount,
-      currency: destinationCurrency,
-      occurredOn,
-      note: parsed.data.note,
-      source: destinationSource,
-      externalId: `${EXTERNAL_ID_PREFIX.transfer}${group}`,
-    },
-    ctx,
-  );
-  if (!mirror) {
-    return { ok: false, error: `No rate for ${destinationCurrency}` };
-  }
-
-  const feeResult = buildTransferFeeRows({
-    userId: user.id,
-    occurredOn,
-    ctx,
-    specs: transferFeeSpecs({
-      group,
-      originFee: fees.origin,
-      originCurrency: currency,
-      originSource: source,
-      destinationFee: fees.destination,
-      destinationCurrency,
-      destinationSource,
-    }),
-  });
-  if (!feeResult.ok) return feeResult;
-  const feeRows = feeResult.data!;
-
   try {
-    await db.transaction(async (dbTx) => {
-      await dbTx
-        .insert(transactions)
-        .values({ ...expense, transfer_group: group });
-      await dbTx
-        .insert(transactions)
-        .values({ ...mirror, transfer_group: group });
-      for (const row of feeRows) {
-        await dbTx.insert(transactions).values(row);
-      }
-    });
+    const scaleOf = await getScaleOf();
+    const id = crypto.randomUUID();
+    await postLedgerTransaction(
+      user.id,
+      {
+        occurredOn,
+        occurredAt: new Date().toISOString(),
+        note: parsed.data.note?.trim() || null,
+        comment: null,
+        tags: normalizeTags(tags),
+        recurringId: null,
+        isFixed: null,
+        budgetMonth: null,
+        lines: transferPosting({
+          origin: source,
+          destination: destinationSource,
+          sent: { amount: inTransit, currency },
+          received: { amount: mirrorAmount, currency: destinationCurrency },
+          originFee: fees.origin,
+          destinationFee: fees.destination,
+          sentOn: occurredOn,
+          receivedOn: occurredOn,
+          scaleOf,
+        }),
+        externalRefs: [mirrorRef(destinationSource, id)],
+      },
+      { id },
+    );
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -284,26 +247,24 @@ export async function markAsTransfer(
   const mirrorSource = normalizeSource(rawMirrorSource);
   if (!mirrorSource) return { ok: false, error: "Invalid account name" };
 
-  const tx = await db
-    .select()
-    .from(transactions)
-    .where(and(eq(transactions.id, txId), eq(transactions.user_id, user.id)))
-    .limit(1)
-    .then((rows) => rows[0]);
-  if (!tx) return { ok: false, error: "Transaction not found" };
-  if (tx.transfer_group) {
+  const record = await getLedgerRecord(user.id, txId);
+  if (!record) return { ok: false, error: "Transaction not found" };
+  const { movement, draft } = record;
+  if (isTransferMovement(movement)) {
     return { ok: false, error: "Already marked as a transfer" };
   }
-  if (isWithdrawalExternalId(tx.external_id)) {
+  if (isWithdrawalMovement(movement)) {
     return { ok: false, error: "A withdrawal can't be marked as a transfer" };
   }
-  if (tx.budget_month) {
+  if (draft.budgetMonth) {
     return {
       ok: false,
       error: BUDGET_MONTH_LOCK_ERROR,
     };
   }
-  if (mirrorSource === tx.source) {
+  const flow = simpleFlow(movement);
+  if (!flow) return { ok: false, error: "Transaction not found" };
+  if (mirrorSource === flow.source) {
     return { ok: false, error: "Pick a different account" };
   }
   if (kindOfSource(mirrorSource) === "api") {
@@ -311,19 +272,19 @@ export async function markAsTransfer(
   }
 
   const received = opts?.received;
-  if (received && received.currency === tx.currency_original) {
+  if (received && received.currency === flow.currency) {
     return {
       ok: false,
       error: "The received amount must be in a different currency",
     };
   }
 
-  const isExpense = tx.kind === "expense";
-  const mirrorCurrency = received?.currency ?? tx.currency_original;
+  const isExpense = flow.kind === "expense";
+  const mirrorCurrency = received?.currency ?? flow.currency;
 
   const legCurrencies = await getAccountCurrencies(user.id, [
     mirrorSource,
-    tx.source,
+    flow.source,
   ]);
   const currencyError =
     accountCurrencyError({
@@ -333,9 +294,9 @@ export async function markAsTransfer(
       side: isExpense ? "received" : "sent",
     }) ??
     accountCurrencyError({
-      currency: tx.currency_original,
-      allowed: legCurrencies[tx.source],
-      accountLabel: labelForSource(tx.source),
+      currency: flow.currency,
+      allowed: legCurrencies[flow.source],
+      accountLabel: labelForSource(flow.source),
       side: "own",
     });
   if (currencyError) return { ok: false, error: currencyError };
@@ -343,8 +304,8 @@ export async function markAsTransfer(
   if (received && !(received.amount > 0)) {
     return { ok: false, error: "Enter the amount received" };
   }
-  const originCurrency = isExpense ? tx.currency_original : mirrorCurrency;
-  const destinationCurrency = isExpense ? mirrorCurrency : tx.currency_original;
+  const originCurrency = isExpense ? flow.currency : mirrorCurrency;
+  const destinationCurrency = isExpense ? mirrorCurrency : flow.currency;
 
   const originFee =
     opts?.fees?.origin && opts.fees.origin > 0
@@ -356,11 +317,8 @@ export async function markAsTransfer(
       : 0;
 
   const inTransit = isExpense
-    ? roundForCurrency(tx.amount_original - originFee, tx.currency_original)
-    : roundForCurrency(
-        tx.amount_original + destinationFee,
-        tx.currency_original,
-      );
+    ? roundForCurrency(flow.amount - originFee, flow.currency)
+    : roundForCurrency(flow.amount + destinationFee, flow.currency);
   const mirrorAmount = received
     ? roundForCurrency(
         isExpense
@@ -373,93 +331,47 @@ export async function markAsTransfer(
   const feeError = transferFeeAmountsError({
     originFee,
     originCurrency,
-    originLegAmount: isExpense ? tx.amount_original : received?.amount,
+    originLegAmount: isExpense ? flow.amount : received?.amount,
     destinationFee,
     destinationCurrency,
-    destinationLegAmount: isExpense ? received?.amount : tx.amount_original,
+    destinationLegAmount: isExpense ? received?.amount : flow.amount,
   });
   if (feeError) return { ok: false, error: feeError };
   if (inTransit <= 0 || mirrorAmount <= 0) {
     return { ok: false, error: "Fees leave nothing to transfer" };
   }
 
-  const ctxResult = await withRatesErrorHandling(() =>
-    buildCurrencyContext(user.id),
-  );
-  if (!ctxResult.ok) return ctxResult;
-  const ctx = ctxResult.data;
-  if (!ctx) return { ok: false, error: "Settings not found" };
-
-  const mirror = buildTransactionRow(
-    {
-      userId: user.id,
-      kind: isExpense ? "income" : "expense",
-      amount: mirrorAmount,
-      currency: mirrorCurrency,
-      occurredOn: tx.occurred_on,
-      note: tx.note,
-      source: mirrorSource,
-      externalId: `${EXTERNAL_ID_PREFIX.transfer}${tx.id}`,
-    },
-    ctx,
-  );
-  if (!mirror) {
-    return { ok: false, error: `No rate for ${mirrorCurrency}` };
-  }
-
-  const feeResult = buildTransferFeeRows({
-    userId: user.id,
-    occurredOn: tx.occurred_on,
-    ctx,
-    specs: transferFeeSpecs({
-      group: tx.id,
-      originFee,
-      originCurrency,
-      originSource: isExpense ? tx.source : mirrorSource,
-      destinationFee,
-      destinationCurrency,
-      destinationSource: isExpense ? mirrorSource : tx.source,
-    }),
-  });
-  if (!feeResult.ok) return feeResult;
-  const feeRows = feeResult.data!;
-
   try {
+    const scaleOf = await getScaleOf();
+    const own = { amount: inTransit, currency: flow.currency };
+    const mirror = { amount: mirrorAmount, currency: mirrorCurrency };
+    const lines = transferPosting({
+      origin: isExpense ? flow.source : mirrorSource,
+      destination: isExpense ? mirrorSource : flow.source,
+      sent: isExpense ? own : mirror,
+      received: isExpense ? mirror : own,
+      originFee,
+      destinationFee,
+      sentOn: draft.occurredOn,
+      receivedOn: draft.occurredOn,
+      scaleOf,
+    });
+    const splitFee = feeOnlyDraft(draft, manualFeeNote(draft.note));
     await db.transaction(async (dbTx) => {
-      await dbTx
-        .insert(transactions)
-        .values({ ...mirror, transfer_group: tx.id })
-        .onConflictDoNothing({
-          target: [
-            transactions.user_id,
-            transactions.source,
-            transactions.external_id,
+      await postLedgerTransaction(
+        user.id,
+        {
+          ...draft,
+          lines,
+          externalRefs: [
+            ...draft.externalRefs,
+            mirrorRef(mirrorSource, movement.id),
           ],
-        });
-      for (const row of feeRows) {
-        await dbTx
-          .insert(transactions)
-          .values(row)
-          .onConflictDoNothing({
-            target: [
-              transactions.user_id,
-              transactions.source,
-              transactions.external_id,
-            ],
-          });
-      }
-      const result = await dbTx
-        .update(transactions)
-        .set({ transfer_group: tx.id, amount_original: inTransit })
-        .where(
-          and(
-            eq(transactions.id, tx.id),
-            eq(transactions.user_id, user.id),
-            isNull(transactions.transfer_group),
-          ),
-        );
-      if (result.rowsAffected === 0) {
-        throw new ActionError("Transaction changed, reload and retry");
+        },
+        { replaceId: movement.id, executor: dbTx, expected: draft.lines },
+      );
+      if (splitFee) {
+        await postLedgerTransaction(user.id, splitFee, { executor: dbTx });
       }
     });
     revalidatePath("/", "layout");
@@ -483,46 +395,44 @@ export async function markPairAsTransfer(
     return { ok: false, error: "Pick two different transactions" };
   }
 
-  const rows = await db
-    .select()
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.user_id, user.id),
-        inArray(transactions.id, [txId1, txId2]),
-      ),
-    );
-  if (rows.length !== 2) return { ok: false, error: "Transaction not found" };
-  if (rows.some((r) => r.transfer_group)) {
+  const records = await getLedgerRecords(user.id, [txId1, txId2]);
+  const recordA = records.get(txId1);
+  const recordB = records.get(txId2);
+  if (!recordA || !recordB) {
+    return { ok: false, error: "Transaction not found" };
+  }
+  if ([recordA, recordB].some((r) => isTransferMovement(r.movement))) {
     return { ok: false, error: "Already marked as a transfer" };
   }
-  if (rows.some((r) => r.budget_month)) {
+  if ([recordA, recordB].some((r) => r.draft.budgetMonth)) {
     return {
       ok: false,
       error: BUDGET_MONTH_LOCK_ERROR,
     };
   }
+  const flowA = simpleFlow(recordA.movement);
+  const flowB = simpleFlow(recordB.movement);
+  if (!flowA || !flowB) return { ok: false, error: "Transaction not found" };
 
-  const [txA, txB] = rows;
-  if (txA.source === txB.source) {
+  if (flowA.source === flowB.source) {
     return {
       ok: false,
       error: "Pick transactions from two different accounts",
     };
   }
-  if (txA.kind === txB.kind) {
+  if (flowA.kind === flowB.kind) {
     return { ok: false, error: "Pick one income and one expense" };
   }
   const pairCurrencies = await getAccountCurrencies(user.id, [
-    txA.source,
-    txB.source,
+    flowA.source,
+    flowB.source,
   ]);
-  const pairCurrencyError = [txA, txB]
-    .map((row) =>
+  const pairCurrencyError = [flowA, flowB]
+    .map((flow) =>
       accountCurrencyError({
-        currency: row.currency_original,
-        allowed: pairCurrencies[row.source],
-        accountLabel: labelForSource(row.source),
+        currency: flow.currency,
+        allowed: pairCurrencies[flow.source],
+        accountLabel: labelForSource(flow.source),
         side: "own",
       }),
     )
@@ -530,7 +440,7 @@ export async function markPairAsTransfer(
   if (pairCurrencyError) return { ok: false, error: pairCurrencyError };
 
   let rates: FxRates | null = null;
-  if (txA.currency_original !== txB.currency_original) {
+  if (flowA.currency !== flowB.currency) {
     const ctxResult = await withRatesErrorHandling(() =>
       buildCurrencyContext(user.id),
     );
@@ -541,8 +451,8 @@ export async function markPairAsTransfer(
 
   if (
     !transferAmountsMatch(
-      { amount: txA.amount_original, currency: txA.currency_original },
-      { amount: txB.amount_original, currency: txB.currency_original },
+      { amount: flowA.amount, currency: flowA.currency },
+      { amount: flowB.amount, currency: flowB.currency },
       rates,
     )
   ) {
@@ -552,115 +462,110 @@ export async function markPairAsTransfer(
     };
   }
 
-  const [expenseTx, incomeTx] =
-    txA.kind === "expense" ? [txA, txB] : [txB, txA];
-  const sameCurrency = txA.currency_original === txB.currency_original;
+  const [expense, income] =
+    flowA.kind === "expense"
+      ? [
+          { flow: flowA, record: recordA },
+          { flow: flowB, record: recordB },
+        ]
+      : [
+          { flow: flowB, record: recordB },
+          { flow: flowA, record: recordA },
+        ];
+  const sameCurrency = flowA.currency === flowB.currency;
 
   const originFee =
     opts?.fees?.origin && opts.fees.origin > 0
-      ? roundForCurrency(opts.fees.origin, expenseTx.currency_original)
+      ? roundForCurrency(opts.fees.origin, expense.flow.currency)
       : 0;
   const destinationFee =
     opts?.fees?.destination && opts.fees.destination > 0
-      ? roundForCurrency(opts.fees.destination, incomeTx.currency_original)
+      ? roundForCurrency(opts.fees.destination, income.flow.currency)
       : 0;
 
-  if (sameCurrency && (originFee > 0 || destinationFee > 0)) {
+  if (sameCurrency) {
     const delta = roundForCurrency(
-      expenseTx.amount_original - incomeTx.amount_original,
-      expenseTx.currency_original,
+      expense.flow.amount - income.flow.amount,
+      expense.flow.currency,
     );
     const given = roundForCurrency(
       originFee + destinationFee,
-      expenseTx.currency_original,
+      expense.flow.currency,
     );
     if (given !== delta) {
       return {
         ok: false,
-        error: "The fees must add up to the difference between the amounts",
+        error:
+          given === 0
+            ? "The amounts differ: enter the difference as a fee"
+            : "The fees must add up to the difference between the amounts",
       };
     }
   }
 
   const expenseInTransit = roundForCurrency(
-    expenseTx.amount_original - originFee,
-    expenseTx.currency_original,
+    expense.flow.amount - originFee,
+    expense.flow.currency,
   );
   const incomeInTransit = roundForCurrency(
-    incomeTx.amount_original + destinationFee,
-    incomeTx.currency_original,
+    income.flow.amount + destinationFee,
+    income.flow.currency,
   );
   if (expenseInTransit <= 0 || incomeInTransit <= 0) {
     return { ok: false, error: "Fees leave nothing to transfer" };
   }
   const feeError = transferFeeAmountsError({
     originFee,
-    originCurrency: expenseTx.currency_original,
-    originLegAmount: expenseTx.amount_original,
+    originCurrency: expense.flow.currency,
+    originLegAmount: expense.flow.amount,
     destinationFee,
-    destinationCurrency: incomeTx.currency_original,
-    destinationLegAmount: incomeTx.amount_original,
+    destinationCurrency: income.flow.currency,
+    destinationLegAmount: income.flow.amount,
   });
   if (feeError) return { ok: false, error: feeError };
 
-  let feeRows: TransactionInsert[] = [];
-  if (originFee > 0 || destinationFee > 0) {
-    const ctxResult = await withRatesErrorHandling(() =>
-      buildCurrencyContext(user.id),
-    );
-    if (!ctxResult.ok) return ctxResult;
-    if (!ctxResult.data) return { ok: false, error: "Settings not found" };
-
-    const specs = transferFeeSpecs({
-      group: txId1,
-      originFee,
-      originCurrency: expenseTx.currency_original,
-      originSource: expenseTx.source,
-      destinationFee,
-      destinationCurrency: incomeTx.currency_original,
-      destinationSource: incomeTx.source,
-    });
-    const feeResult = buildTransferFeeRows({
-      userId: user.id,
-      occurredOn: expenseTx.occurred_on,
-      ctx: ctxResult.data,
-      specs,
-    });
-    if (!feeResult.ok) return feeResult;
-    feeRows = feeResult.data;
-  }
-
   try {
+    const scaleOf = await getScaleOf();
+    const keep = expense.record.draft;
+    const other = income.record.draft;
+    const lines = transferPosting({
+      origin: expense.flow.source,
+      destination: income.flow.source,
+      sent: { amount: expenseInTransit, currency: expense.flow.currency },
+      received: { amount: incomeInTransit, currency: income.flow.currency },
+      originFee,
+      destinationFee,
+      sentOn: keep.occurredOn,
+      receivedOn: other.occurredOn,
+      scaleOf,
+    });
+    const splitFees = [keep, other].flatMap((source) => {
+      const fee = feeOnlyDraft(source, manualFeeNote(source.note));
+      return fee ? [fee] : [];
+    });
+    const keepId = expense.record.movement.id;
     await db.transaction(async (dbTx) => {
-      await dbTx
-        .update(transactions)
-        .set({ transfer_group: txId1, amount_original: expenseInTransit })
-        .where(
-          and(
-            eq(transactions.user_id, user.id),
-            eq(transactions.id, expenseTx.id),
-          ),
-        );
-      await dbTx
-        .update(transactions)
-        .set({ transfer_group: txId1, amount_original: incomeInTransit })
-        .where(
-          and(
-            eq(transactions.user_id, user.id),
-            eq(transactions.id, incomeTx.id),
-          ),
-        );
-      for (const row of feeRows) {
-        await dbTx
-          .insert(transactions)
-          .values(row)
-          .onConflictDoNothing({
-            target: [
-              transactions.user_id,
-              transactions.source,
-              transactions.external_id,
-            ],
-          });
+      await deleteLedgerTransactions(
+        user.id,
+        [income.record.movement.id],
+        dbTx,
+      );
+      await postLedgerTransaction(
+        user.id,
+        {
+          ...keep,
+          note: keep.note ?? other.note,
+          comment: keep.comment ?? other.comment,
+          tags: normalizeTags([...keep.tags, ...other.tags]),
+          recurringId: keep.recurringId ?? other.recurringId,
+          isFixed: keep.isFixed ?? other.isFixed,
+          lines,
+          externalRefs: [...keep.externalRefs, ...other.externalRefs],
+        },
+        { replaceId: keepId, executor: dbTx, expected: keep.lines },
+      );
+      for (const fee of splitFees) {
+        await postLedgerTransaction(user.id, fee, { executor: dbTx });
       }
     });
     revalidatePath("/", "layout");
@@ -677,18 +582,24 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const tx = await db
-    .select()
-    .from(transactions)
-    .where(and(eq(transactions.id, txId), eq(transactions.user_id, user.id)))
-    .limit(1)
-    .then((rows) => rows[0]);
-  if (!tx?.transfer_group) return { ok: false, error: "Not a transfer" };
+  const record = await getLedgerRecord(user.id, txId);
+  if (!record || !isTransferMovement(record.movement)) {
+    return { ok: false, error: "Not a transfer" };
+  }
 
-  const group = tx.transfer_group;
+  const [first, ...rest] = splitTransfer(record.draft);
+  if (!first) return { ok: false, error: "Not a transfer" };
 
   try {
-    await db.transaction((dbTx) => unlinkTransferGroup(dbTx, user.id, group));
+    await db.transaction(async (dbTx) => {
+      await postLedgerTransaction(user.id, first, {
+        replaceId: record.movement.id,
+        executor: dbTx,
+      });
+      for (const draft of rest) {
+        await postLedgerTransaction(user.id, draft, { executor: dbTx });
+      }
+    });
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -706,76 +617,29 @@ export async function setBudgetMonthShift(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const tx = await db
-    .select()
-    .from(transactions)
-    .where(and(eq(transactions.id, txId), eq(transactions.user_id, user.id)))
-    .limit(1)
-    .then((rows) => rows[0]);
-  if (!tx) return { ok: false, error: "Transaction not found" };
+  const record = await getLedgerRecord(user.id, txId);
+  if (!record) return { ok: false, error: "Transaction not found" };
+  const { movement, draft } = record;
 
-  const group = budgetMonthGroupOf(tx);
-  if (!group) {
-    if (shift === 0 && tx.budget_month !== null) {
-      try {
-        await db
-          .update(transactions)
-          .set({ budget_month: null })
-          .where(
-            and(eq(transactions.id, txId), eq(transactions.user_id, user.id)),
-          );
-        revalidatePath("/", "layout");
-        return { ok: true };
-      } catch (error) {
-        return {
-          ok: false,
-          error: actionErrorMessage(error, "Update failed"),
-        };
-      }
-    }
+  let budgetMonth: string | null = null;
+  if (isBudgetShiftable(movement)) {
+    const anchor = draft.lines
+      .reduce(
+        (oldest, line) => (line.occurredOn < oldest ? line.occurredOn : oldest),
+        draft.occurredOn,
+      )
+      .slice(0, 7);
+    budgetMonth = shift === 1 ? shiftYearMonth(anchor, 1) : null;
+  } else if (shift === 1 || draft.budgetMonth === null) {
     return { ok: false, error: "Only transfers and withdrawals can be moved" };
   }
 
-  const linked = await db
-    .select()
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.user_id, user.id),
-        or(
-          eq(transactions.transfer_group, group),
-          inArray(transactions.external_id, linkedExternalIds(group)),
-        ),
-      ),
-    );
-
-  const anchorMonth = linked
-    .reduce(
-      (oldest, row) => (row.occurred_on < oldest ? row.occurred_on : oldest),
-      tx.occurred_on,
-    )
-    .slice(0, 7);
-  const target = shift === 1 ? shiftYearMonth(anchorMonth, 1) : null;
-
   try {
-    await db.transaction(async (dbTx) => {
-      for (const row of linked) {
-        const value = target === row.occurred_on.slice(0, 7) ? null : target;
-        await dbTx
-          .update(transactions)
-          .set({ budget_month: value })
-          .where(
-            and(
-              eq(transactions.id, row.id),
-              eq(transactions.user_id, user.id),
-              or(
-                eq(transactions.transfer_group, group),
-                inArray(transactions.external_id, linkedExternalIds(group)),
-              ),
-            ),
-          );
-      }
-    });
+    await postLedgerTransaction(
+      user.id,
+      { ...draft, budgetMonth },
+      { replaceId: movement.id },
+    );
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {

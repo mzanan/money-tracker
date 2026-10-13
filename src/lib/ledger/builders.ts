@@ -45,7 +45,10 @@ function pair(
   role: LedgerEntryRole,
   occurredOn: string,
 ): PostingLine[] {
-  return [line(from, -minor, role, occurredOn), line(to, minor, role, occurredOn)];
+  return [
+    line(from, -minor, role, occurredOn),
+    line(to, minor, role, occurredOn),
+  ];
 }
 
 export function feeLines(
@@ -112,7 +115,12 @@ export function transferLines({
     );
   }
   const lines = [
-    line(assetRef(sent.source, sent.money.currency), -sentMinor, role, sent.occurredOn),
+    line(
+      assetRef(sent.source, sent.money.currency),
+      -sentMinor,
+      role,
+      sent.occurredOn,
+    ),
   ];
   if (received.occurredOn === null) {
     lines.push(
@@ -140,4 +148,74 @@ export function transferLines({
     );
   }
   return lines;
+}
+
+export function minorFlowLines({
+  kind,
+  source,
+  currency,
+  minor,
+  occurredOn,
+}: {
+  kind: TransactionKind;
+  source: string;
+  currency: string;
+  minor: number;
+  occurredOn: string;
+}): PostingLine[] {
+  const asset = assetRef(source, currency);
+  const category = uncategorizedRef(kind, currency);
+  return kind === "expense"
+    ? pair(asset, category, minor, "amount", occurredOn)
+    : pair(category, asset, minor, "amount", occurredOn);
+}
+
+export function transferPosting({
+  origin,
+  destination,
+  sent,
+  received,
+  originFee,
+  destinationFee,
+  sentOn,
+  receivedOn,
+  scaleOf,
+}: {
+  origin: string;
+  destination: string;
+  sent: Money;
+  received: Money;
+  originFee: number;
+  destinationFee: number;
+  sentOn: string;
+  receivedOn: string;
+  scaleOf: ScaleOf;
+}): PostingLine[] {
+  return [
+    ...transferLines({
+      sent: { source: origin, money: sent, occurredOn: sentOn },
+      received: {
+        source: destination,
+        money: received,
+        occurredOn: receivedOn,
+      },
+      scaleOf,
+    }),
+    ...(originFee > 0
+      ? feeLines(
+          origin,
+          { amount: originFee, currency: sent.currency },
+          sentOn,
+          scaleOf,
+        )
+      : []),
+    ...(destinationFee > 0
+      ? feeLines(
+          destination,
+          { amount: destinationFee, currency: received.currency },
+          receivedOn,
+          scaleOf,
+        )
+      : []),
+  ];
 }

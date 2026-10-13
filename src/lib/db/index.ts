@@ -33,4 +33,6 @@ export const db = new Proxy({} as DrizzleDb, {
   },
 });
 
+export type DbTx = Parameters<Parameters<DrizzleDb["transaction"]>[0]>[0];
+
 export { schema };

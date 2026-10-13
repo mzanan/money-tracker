@@ -1,47 +1,6 @@
 import { convert, feeAmountError, roundForCurrency } from "@/lib/currency";
-import { transferFeeExternalId } from "@/lib/externalIds";
 
 import type { FxRates } from "@/types/db";
-
-export interface TransferFeeSpec {
-  amount: number;
-  currency: string;
-  source: string;
-  externalId: string;
-}
-
-export function transferFeeSpecs({
-  group,
-  originFee,
-  originCurrency,
-  originSource,
-  destinationFee,
-  destinationCurrency,
-  destinationSource,
-}: {
-  group: string;
-  originFee: number;
-  originCurrency: string;
-  originSource: string;
-  destinationFee: number;
-  destinationCurrency: string;
-  destinationSource: string;
-}): TransferFeeSpec[] {
-  return [
-    {
-      amount: originFee,
-      currency: originCurrency,
-      source: originSource,
-      externalId: transferFeeExternalId(group),
-    },
-    {
-      amount: destinationFee,
-      currency: destinationCurrency,
-      source: destinationSource,
-      externalId: transferFeeExternalId(group, "destination"),
-    },
-  ].filter((spec) => spec.amount > 0);
-}
 
 export function transferFeeAmountsError({
   originFee,

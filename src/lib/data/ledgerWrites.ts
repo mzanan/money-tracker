@@ -24,7 +24,8 @@ import {
   type PostingLine,
 } from "@/lib/ledger/posting";
 import { scaleResolver, type ScaleOf } from "@/lib/ledger/scale";
-import type { DbTx } from "@/lib/transferUnlink";
+import type { DbTx } from "@/lib/db";
+import type { LedgerEntry, LedgerRevisionSnapshot } from "@/types/db";
 import type { Movement } from "@/types/ledger";
 
 type Executor = typeof db | DbTx;
@@ -126,7 +127,7 @@ async function snapshotRevision(
   executor: Executor,
   userId: string,
   transactionId: string,
-): Promise<boolean> {
+): Promise<LedgerRevisionSnapshot | null> {
   const [transaction] = await executor
     .select()
     .from(ledger_transactions)
@@ -137,7 +138,7 @@ async function snapshotRevision(
       ),
     )
     .limit(1);
-  if (!transaction) return false;
+  if (!transaction) return null;
   const entries = await executor
     .select()
     .from(ledger_entries)
@@ -152,7 +153,43 @@ async function snapshotRevision(
     transaction_id: transactionId,
     snapshot: { transaction, entries },
   });
-  return true;
+  return { transaction, entries };
+}
+
+function entrySignature(entry: {
+  amount: number;
+  role: string;
+  occurredOn: string;
+  currency: string;
+}): string {
+  return `${entry.currency}|${entry.amount}|${entry.role}|${entry.occurredOn}`;
+}
+
+function sameEntries(
+  current: ReadonlyArray<LedgerEntry>,
+  expected: ReadonlyArray<PostingLine>,
+): boolean {
+  const a = current
+    .map((entry) =>
+      entrySignature({
+        amount: entry.amount,
+        role: entry.role,
+        occurredOn: entry.occurred_on,
+        currency: entry.currency,
+      }),
+    )
+    .sort();
+  const b = expected
+    .map((line) =>
+      entrySignature({
+        amount: line.amount,
+        role: line.role,
+        occurredOn: line.occurredOn,
+        currency: line.account.currency,
+      }),
+    )
+    .sort();
+  return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
 async function replaceTransaction(
@@ -160,9 +197,13 @@ async function replaceTransaction(
   userId: string,
   transactionId: string,
   draft: LedgerDraft,
+  expected?: ReadonlyArray<PostingLine>,
 ) {
-  const found = await snapshotRevision(executor, userId, transactionId);
-  if (!found) throw new LedgerPostingError("Transaction not found");
+  const snapshot = await snapshotRevision(executor, userId, transactionId);
+  if (!snapshot) throw new LedgerPostingError("Transaction not found");
+  if (expected && !sameEntries(snapshot.entries, expected)) {
+    throw new LedgerPostingError("Transaction changed, reload and retry");
+  }
   const owned = and(
     eq(ledger_entries.user_id, userId),
     eq(ledger_entries.transaction_id, transactionId),
@@ -205,14 +246,25 @@ async function insertTransaction(
 export async function postLedgerTransaction(
   userId: string,
   draft: LedgerDraft,
-  options: { replaceId?: string; executor?: DbTx } = {},
+  options: {
+    replaceId?: string;
+    id?: string;
+    executor?: DbTx;
+    expected?: ReadonlyArray<PostingLine>;
+  } = {},
 ): Promise<string> {
   const error = postingError(draft);
   if (error) throw new LedgerPostingError(error);
-  const transactionId = options.replaceId ?? crypto.randomUUID();
+  const transactionId = options.replaceId ?? options.id ?? crypto.randomUUID();
   const write = (executor: Executor) =>
     options.replaceId
-      ? replaceTransaction(executor, userId, transactionId, draft)
+      ? replaceTransaction(
+          executor,
+          userId,
+          transactionId,
+          draft,
+          options.expected,
+        )
       : insertTransaction(executor, userId, transactionId, draft);
   if (options.executor) await write(options.executor);
   else await db.transaction((tx) => write(tx));

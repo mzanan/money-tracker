@@ -17,6 +17,8 @@ export const CSV_FEE_SUFFIX = ":fee";
 
 export const LEG_IN_SUFFIX = ":in";
 
+export const LEG_OUT_SUFFIX = ":out";
+
 export function manualFeeParentFrom(externalId: string): string | null {
   if (!externalId.startsWith(EXTERNAL_ID_PREFIX.manualFee)) return null;
   return externalId.slice(EXTERNAL_ID_PREFIX.manualFee.length);

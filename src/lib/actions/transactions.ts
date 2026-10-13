@@ -31,12 +31,13 @@ import { dedupeTags } from "@/lib/tags";
 import { BUDGET_MONTH_LOCK_ERROR } from "@/lib/budgetMonth";
 import { feeLines, flowLines } from "@/lib/ledger/builders";
 import {
+  hasSyncedRef,
   isSyncedMovement,
   isTransferMovement,
   isWithdrawalMovement,
-  singleDate,
-  withDate,
+  legDate,
   withFlow,
+  withLegDate,
   withSource,
 } from "@/lib/ledger/edits";
 import {
@@ -191,15 +192,18 @@ export async function updateTransaction(
           "Amount, currency and kind are synced automatically, not editable",
       };
     }
-    const dateChanged = draft.occurredOn !== parsed.data.occurredOn;
-    if (draft.budgetMonth && dateChanged) {
-      return { ok: false, error: BUDGET_MONTH_LOCK_ERROR };
-    }
-    if (dateChanged && singleDate(draft) === null) {
+    if (!flow && amountFieldsChanged) {
       return {
         ok: false,
-        error: "Undo the transfer before changing its dates",
+        error: "Amount, currency and kind aren't editable on this movement",
       };
+    }
+    const legSource = parsed.data.source
+      ? (normalizeSource(parsed.data.source) ?? undefined)
+      : undefined;
+    const dateChanged = legDate(draft, legSource) !== parsed.data.occurredOn;
+    if (draft.budgetMonth && dateChanged) {
+      return { ok: false, error: BUDGET_MONTH_LOCK_ERROR };
     }
 
     const details = {
@@ -223,7 +227,7 @@ export async function updateTransaction(
             await getScaleOf(),
           )
         : dateChanged
-          ? withDate(details, parsed.data.occurredOn)
+          ? withLegDate(details, legSource, parsed.data.occurredOn)
           : details;
     await postLedgerTransaction(user.id, next, { replaceId: movement.id });
     revalidatePath("/", "layout");
@@ -253,7 +257,7 @@ export async function updateTransactionSource(
     const record = await getLedgerRecord(user.id, id);
     if (!record) return { ok: false, error: "Transaction not found" };
     const { movement, draft } = record;
-    if (isSyncedMovement(movement)) {
+    if (hasSyncedRef(movement)) {
       return { ok: false, error: "Synced transactions can't change account" };
     }
     if (isTransferMovement(movement)) {

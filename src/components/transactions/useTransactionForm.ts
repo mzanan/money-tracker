@@ -196,6 +196,7 @@ export function useTransactionForm({
             tags,
             note: description.trim() || null,
             occurredOn: date,
+            source: seed.source,
           });
           if (!result.ok) return result;
 

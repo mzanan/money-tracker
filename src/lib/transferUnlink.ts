@@ -1,12 +1,13 @@
 import { and, eq, inArray } from "drizzle-orm";
 
 import { roundForCurrency } from "@/lib/currency";
-import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 import { EXTERNAL_ID_PREFIX, transferFeeExternalId } from "@/lib/externalIds";
 import { transferLegsAreNet } from "@/lib/transfer";
 
-export type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+import type { DbTx } from "@/lib/db";
+
+export type { DbTx };
 
 export async function unlinkTransferGroup(
   dbTx: DbTx,

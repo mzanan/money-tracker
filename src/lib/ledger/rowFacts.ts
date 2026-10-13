@@ -4,6 +4,7 @@ import { isFeeExternalId } from "@/lib/externalIds";
 import {
   assetLines,
   isOwnMovement,
+  isFeeRemnant,
   isPrincipalLine,
   ledgerTransactionId,
   primaryAssetLine,
@@ -29,7 +30,7 @@ export function rowFacts(movement: Movement, scope: MovementScope): RowFacts {
   );
   const isTransfer = isOwnMovement(movement);
   return {
-    id: ledgerTransactionId(movement),
+    id: isFeeRemnant(movement) ? movement.id : ledgerTransactionId(movement),
     movementId: movement.id,
     kind: (line?.amount ?? 0) >= 0 ? "income" : "expense",
     source,
@@ -41,6 +42,8 @@ export function rowFacts(movement: Movement, scope: MovementScope): RowFacts {
     budgetMonth: movement.budgetMonth,
     externalId: ref?.externalId ?? null,
     isTransfer,
-    transferGroup: isTransfer ? (movement.leg?.movementId ?? movement.id) : null,
+    transferGroup: isTransfer
+      ? (movement.leg?.movementId ?? movement.id)
+      : null,
   };
 }
