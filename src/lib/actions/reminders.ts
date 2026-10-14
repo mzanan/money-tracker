@@ -314,7 +314,7 @@ export async function markReminderPaid(
             comment: draft.comment || reminder.label,
             recurringId: reminder.id,
           },
-          { replaceId: linkId, executor: dbTx, expected: draft.lines },
+          { replaceId: linkId, executor: dbTx, expected: draft },
         );
       }
       await dbTx

@@ -84,7 +84,7 @@ export async function creditTransfer(
     await postLedgerTransaction(
       user.id,
       { ...draft, transitDestination: null, lines },
-      { replaceId: movement.id, expected: draft.lines },
+      { replaceId: movement.id, expected: draft },
     );
     revalidatePath("/", "layout");
     return { ok: true };

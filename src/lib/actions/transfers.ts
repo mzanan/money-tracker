@@ -393,7 +393,7 @@ export async function markAsTransfer(
             mirrorRef(mirrorSource, movement.id),
           ],
         },
-        { replaceId: movement.id, executor: dbTx, expected: draft.lines },
+        { replaceId: movement.id, executor: dbTx, expected: draft },
       );
       if (splitFee) {
         await postLedgerTransaction(user.id, splitFee, { executor: dbTx });
@@ -587,7 +587,7 @@ export async function markPairAsTransfer(
           lines,
           externalRefs: [...keep.externalRefs, ...other.externalRefs],
         },
-        { replaceId: keepId, executor: dbTx, expected: keep.lines },
+        { replaceId: keepId, executor: dbTx, expected: keep },
       );
       for (const fee of splitFees) {
         await postLedgerTransaction(user.id, fee, { executor: dbTx });

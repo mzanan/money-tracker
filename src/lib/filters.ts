@@ -110,11 +110,15 @@ export function applyListFilters(
 ): Movement[] {
   let list = movements;
   if (kind !== "all") {
-    list = list.filter(
-      (movement) =>
-        movementAmount(movement, scope, baseCurrency, ratesByDate).kind ===
-        kind,
-    );
+    list = list.filter((movement) => {
+      const shown = movementAmount(
+        movement,
+        scope,
+        baseCurrency,
+        ratesByDate,
+      ).kind;
+      return shown === kind || shown === "transfer";
+    });
   }
   if (tag !== null) {
     list = list.filter((movement) =>

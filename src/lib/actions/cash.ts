@@ -456,7 +456,7 @@ export async function convertToWithdrawal(
           withdrawalRef(flow.source, movement.id),
         ],
       },
-      { replaceId: movement.id, expected: draft.lines },
+      { replaceId: movement.id, expected: draft },
     );
     revalidatePath("/", "layout");
     return { ok: true };
@@ -484,7 +484,7 @@ export async function undoMoveWithdrawalToCash(
     }
     await postLedgerTransaction(user.id, withoutCashLeg(draft, group), {
       replaceId: record.movement.id,
-      expected: draft.lines,
+      expected: draft,
     });
     revalidatePath("/", "layout");
     return { ok: true };
@@ -542,7 +542,7 @@ export async function moveWithdrawalToCash(
       await postLedgerTransaction(user.id, next, {
         replaceId: movement.id,
         executor: dbTx,
-        expected: draft.lines,
+        expected: draft,
       });
     });
     revalidatePath("/", "layout");

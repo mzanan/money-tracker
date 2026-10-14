@@ -229,7 +229,10 @@ export async function updateTransaction(
         : dateChanged
           ? withLegDate(details, legSource, parsed.data.occurredOn)
           : details;
-    await postLedgerTransaction(user.id, next, { replaceId: movement.id });
+    await postLedgerTransaction(user.id, next, {
+      replaceId: movement.id,
+      expected: draft,
+    });
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -271,7 +274,7 @@ export async function updateTransactionSource(
     await postLedgerTransaction(
       user.id,
       withSource(draft, current, normalized),
-      { replaceId: movement.id },
+      { replaceId: movement.id, expected: draft },
     );
     revalidatePath("/", "layout");
     return { ok: true };
@@ -299,7 +302,7 @@ export async function setTransactionFixed(
     await postLedgerTransaction(
       user.id,
       { ...record.draft, isFixed },
-      { replaceId: record.movement.id },
+      { replaceId: record.movement.id, expected: record.draft },
     );
     revalidatePath("/", "layout");
     return { ok: true };

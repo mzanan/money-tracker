@@ -232,18 +232,35 @@ async function sameEntries(
   return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
+function sameHeader(
+  current: LedgerRevisionSnapshot["transaction"],
+  expected: LedgerDraft,
+): boolean {
+  const row = transactionRow(expected);
+  return (Object.keys(row) as Array<keyof typeof row>).every(
+    (key) =>
+      JSON.stringify(current[key] ?? null) === JSON.stringify(row[key] ?? null),
+  );
+}
+
 async function replaceTransaction(
   executor: Executor,
   userId: string,
   transactionId: string,
   draft: LedgerDraft,
-  expected?: ReadonlyArray<PostingLine>,
+  expected?: LedgerDraft,
 ) {
   const snapshot = await snapshotRevision(executor, userId, transactionId);
   if (!snapshot) throw new LedgerPostingError("Transaction not found");
   if (
     expected &&
-    !(await sameEntries(executor, userId, snapshot.entries, expected))
+    (!sameHeader(snapshot.transaction, expected) ||
+      !(await sameEntries(
+        executor,
+        userId,
+        snapshot.entries,
+        expected.lines,
+      )))
   ) {
     throw new LedgerPostingError("Transaction changed, reload and retry");
   }
@@ -296,7 +313,7 @@ export async function postLedgerTransaction(
     replaceId?: string;
     id?: string;
     executor?: DbTx;
-    expected?: ReadonlyArray<PostingLine>;
+    expected?: LedgerDraft;
   } = {},
 ): Promise<string> {
   const error = postingError(draft);

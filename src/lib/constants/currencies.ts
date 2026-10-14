@@ -86,36 +86,6 @@ export const CURRENCIES: CurrencyMeta[] = [
     decimals: 2,
     crypto: true,
   },
-  { code: "BTC", name: "Bitcoin", symbol: "BTC ", decimals: 8, crypto: true },
-  { code: "ETH", name: "Ethereum", symbol: "ETH ", decimals: 8, crypto: true },
-  { code: "SOL", name: "Solana", symbol: "SOL ", decimals: 6, crypto: true },
-  { code: "BNB", name: "BNB", symbol: "BNB ", decimals: 6, crypto: true },
-  { code: "XRP", name: "XRP", symbol: "XRP ", decimals: 6, crypto: true },
-  { code: "ADA", name: "Cardano", symbol: "ADA ", decimals: 6, crypto: true },
-  {
-    code: "DOGE",
-    name: "Dogecoin",
-    symbol: "DOGE ",
-    decimals: 6,
-    crypto: true,
-  },
-  { code: "TRX", name: "TRON", symbol: "TRX ", decimals: 6, crypto: true },
-  { code: "LTC", name: "Litecoin", symbol: "LTC ", decimals: 8, crypto: true },
-  {
-    code: "AVAX",
-    name: "Avalanche",
-    symbol: "AVAX ",
-    decimals: 6,
-    crypto: true,
-  },
-  { code: "DOT", name: "Polkadot", symbol: "DOT ", decimals: 6, crypto: true },
-  {
-    code: "LINK",
-    name: "Chainlink",
-    symbol: "LINK ",
-    decimals: 6,
-    crypto: true,
-  },
 ];
 
 export const CRYPTO_CODES: ReadonlyArray<string> = CURRENCIES.filter(
@@ -135,3 +105,8 @@ export function isSupportedCurrency(code: string): boolean {
 }
 
 export const DEFAULT_BASE_CURRENCY = "USD";
+
+export function supportedOrDefault(codes: ReadonlyArray<string>): string[] {
+  const supported = codes.filter(isSupportedCurrency);
+  return supported.length > 0 ? supported : [DEFAULT_BASE_CURRENCY];
+}

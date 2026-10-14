@@ -90,6 +90,17 @@ async function ledgerTransactionCount(userId: string): Promise<number> {
   return row?.count ?? 0;
 }
 
+async function userRowCount(
+  table: typeof ledger_accounts | typeof ledger_revisions,
+  userId: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(table)
+    .where(eq(table.user_id, userId));
+  return row?.count ?? 0;
+}
+
 async function nonLegacyEntryCount(userId: string): Promise<number> {
   const [row] = await db
     .select({ count: sql<number>`count(*)` })
@@ -291,12 +302,29 @@ async function migrateUser(userId: string, scaleOf: ScaleOf): Promise<boolean> {
       );
       return false;
     }
+    const revisions = await userRowCount(ledger_revisions, userId);
+    if (revisions > 0) {
+      console.log(
+        `  skipped: ${revisions} ledger edits were made in the app after cutover, reset would revert them`,
+      );
+      return false;
+    }
+    const partialRun =
+      existing < plan.transactions.length && existing % CHUNK_SIZE === 0;
+    if (existing !== plan.transactions.length && !partialRun) {
+      console.log(
+        `  skipped: ${existing} ledger transactions vs ${plan.transactions.length} planned, the app changed the ledger after cutover`,
+      );
+      return false;
+    }
   }
+  const leftoverAccounts =
+    existing === 0 ? await userRowCount(ledger_accounts, userId) : 0;
 
   const labels = await getAccountLabels(userId);
   const { accountRows, accountIds } = accountRowsOf(userId, plan, labels);
   await db.transaction(async (tx) => {
-    if (existing > 0) await clearLedger(tx, userId);
+    if (existing > 0 || leftoverAccounts > 0) await clearLedger(tx, userId);
     await writeAccounts(tx, accountRows);
   });
   const batches = chunks(plan.transactions);
