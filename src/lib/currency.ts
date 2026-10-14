@@ -154,7 +154,8 @@ export function formatMoney(
         : { notation: "compact", maximumFractionDigits: abs >= 1000 ? 1 : 0 }
       : { minimumFractionDigits: decimals, maximumFractionDigits: decimals },
   ).format(abs);
-  const sign = amount < 0 ? "-" : options.signed ? "+" : "";
+  const negative = amount < 0 && roundForCurrency(abs, code) !== 0;
+  const sign = negative ? "-" : options.signed ? "+" : "";
   const base = `${sign}${symbol}${num}`;
   return options.showCode ? `${base} ${code}` : base;
 }
