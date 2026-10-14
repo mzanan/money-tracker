@@ -43,3 +43,33 @@ export function transferLabel(
   const route = `${resolveSourceLabel(ends.from, labels)} → ${resolveSourceLabel(ends.to, labels)}`;
   return direction ? `${route} (${direction})` : route;
 }
+
+export function transitBannerTitle(count: number): string {
+  return count === 1
+    ? "1 transfer in transit"
+    : `${count} transfers in transit`;
+}
+
+export function transferBadgeLabel(
+  isWithdrawal: boolean,
+  inTransit: boolean,
+): string {
+  if (isWithdrawal) return "Withdrawal";
+  return inTransit ? "In transit" : "Transfer";
+}
+
+export function pendingHint(amount: number, currency: string): string | null {
+  return amount > 0 ? `+${formatMoney(amount, currency)} pending` : null;
+}
+
+export function transitBannerDetail(amountText: string, route: string): string {
+  return `${amountText} · ${route}`;
+}
+
+export function transferToast(
+  amount: number,
+  currency: string,
+  inTransit: boolean,
+): string {
+  return `${inTransit ? "In transit" : "Transfer"} · ${formatMoney(amount, currency)}`;
+}

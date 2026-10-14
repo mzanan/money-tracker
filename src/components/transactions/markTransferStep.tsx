@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { StepShell } from "@/components/ui/stepShell";
 import { useSettings } from "@/hooks/useSettings";
 
+import { TransferCreditFields } from "./transferCreditFields";
 import { TransferFeeSection } from "./transferFeeSection";
 import { useMarkTransferDialog } from "./useMarkTransferDialog";
 
@@ -15,6 +16,7 @@ export function MarkTransferStep({
   txSource,
   txCurrency,
   txAmount,
+  txDate,
   txKind,
   onBack,
 }: {
@@ -22,6 +24,7 @@ export function MarkTransferStep({
   txSource: string;
   txCurrency: string;
   txAmount: number;
+  txDate: string;
   txKind: "expense" | "income";
   onBack: () => void;
 }) {
@@ -39,6 +42,10 @@ export function MarkTransferStep({
     setReceivedCurrency,
     destinationCurrency,
     preview,
+    notReceived,
+    setNotReceived,
+    creditedOn,
+    setCreditedOn,
     pending,
     submit,
   } = useMarkTransferDialog({
@@ -46,6 +53,7 @@ export function MarkTransferStep({
     txSource,
     txCurrency,
     txAmount,
+    txDate,
     open: true,
     onOpenChange: (open) => {
       if (!open) onBack();
@@ -75,6 +83,16 @@ export function MarkTransferStep({
         onValueChange={setSelected}
         emptyMessage="No other account to pick. Import or add one first."
       />
+      {txKind === "expense" && (
+        <TransferCreditFields
+          idPrefix="transfer-step"
+          notReceived={notReceived}
+          onNotReceivedChange={setNotReceived}
+          creditedOn={creditedOn}
+          onCreditedOnChange={setCreditedOn}
+          sentOn={txDate}
+        />
+      )}
       <TransferFeeSection
         idPrefix="transfer-step"
         fees={fees}
@@ -89,6 +107,7 @@ export function MarkTransferStep({
         onReceivedCurrencyChange={setReceivedCurrency}
         preview={preview}
         txKind={txKind}
+        pending={notReceived}
       />
     </StepShell>
   );

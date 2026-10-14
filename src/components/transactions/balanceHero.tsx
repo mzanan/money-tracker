@@ -30,6 +30,7 @@ interface Props {
   yearMonth: string;
   movements: Movement[];
   lifetimeMovements: Movement[];
+  pendingMovements: Movement[];
   scope: MovementScope;
   selectedKind: KindFilter;
   onKindChange: (next: KindFilter) => void;
@@ -47,6 +48,7 @@ export function BalanceHero({
   yearMonth,
   movements,
   lifetimeMovements,
+  pendingMovements,
   scope,
   selectedKind,
   onKindChange,
@@ -67,6 +69,7 @@ export function BalanceHero({
     totalSigned,
     showBase,
     totalInBase,
+    pendingText,
     incomeInBase,
     expenseInBase,
     netInBase,
@@ -76,6 +79,7 @@ export function BalanceHero({
     yearMonth,
     movements,
     lifetimeMovements,
+    pendingMovements,
     scope,
   });
 
@@ -129,6 +133,11 @@ export function BalanceHero({
           >
             {mask(totalSigned)}
           </p>
+          {pendingText && (
+            <p className="text-muted-foreground mt-1 text-xs tabular-nums">
+              {mask(pendingText)}
+            </p>
+          )}
           {showBase && (
             <p className="mt-1 h-4">
               {totalInBase && (

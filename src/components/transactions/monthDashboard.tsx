@@ -16,6 +16,8 @@ import { DashboardToolbar } from "./dashboardToolbar";
 import { FiltersPanel } from "./filtersPanel";
 import { MonthView } from "./monthView";
 import { SourceFilter } from "./sourceFilter";
+import { TransitBanner } from "./transitBanner";
+import { TransitPanel } from "./transitPanel";
 import { useDayTotalsCurrency } from "./useDayTotalsCurrency";
 import { useMonthDashboard } from "./useMonthDashboard";
 
@@ -67,6 +69,7 @@ export function MonthDashboard({
     drawerOpen,
     shownPanel,
     recurringNotes,
+    inTransit,
     panelTitle,
     addSources,
   } = useMonthDashboard({
@@ -90,6 +93,10 @@ export function MonthDashboard({
           today={today}
           onOpen={() => c.openPanel("calendar")}
         />
+        <TransitBanner
+          movements={inTransit}
+          onOpen={() => c.openPanel("transit")}
+        />
         <DashboardToolbar
           panel={c.panel}
           onToggle={c.togglePanel}
@@ -99,6 +106,7 @@ export function MonthDashboard({
           yearMonth={visibleYearMonth}
           movements={c.sourceFilteredMonth}
           lifetimeMovements={c.sourceFilteredLifetime}
+          pendingMovements={inTransit}
           scope={c.selectedSource}
           selectedKind={c.selectedKind}
           onKindChange={c.setSelectedKind}
@@ -182,6 +190,8 @@ export function MonthDashboard({
               completedReminders={completedReminders}
               today={c.today}
             />
+          ) : shownPanel === "transit" ? (
+            <TransitPanel movements={inTransit} />
           ) : shownPanel === "add" ? (
             <AddEntryPanel
               addSources={addSources}

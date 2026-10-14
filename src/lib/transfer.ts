@@ -1,4 +1,9 @@
-import { convert, feeAmountError, roundForCurrency } from "@/lib/currency";
+import {
+  amountToInputDigits,
+  convert,
+  feeAmountError,
+  roundForCurrency,
+} from "@/lib/currency";
 
 import type { FxRates } from "@/types/db";
 
@@ -175,4 +180,36 @@ export function receivedFieldLabel(
 ): string {
   const base = isIncome ? "Amount sent" : "Amount received";
   return required ? base : `${base}, optional`;
+}
+
+export function creditCurrencies(
+  sentCurrency: string,
+  available: ReadonlyArray<string>,
+): string[] {
+  return available.includes(sentCurrency)
+    ? [...available]
+    : [sentCurrency, ...available];
+}
+
+export function creditReceivedDefault(
+  sent: { amount: number; currency: string },
+  receivedCurrency: string,
+  fee: number,
+): string {
+  if (receivedCurrency !== sent.currency) return "";
+  const net = roundForCurrency(sent.amount - fee, sent.currency);
+  return net > 0 ? amountToInputDigits(net, sent.currency) : "";
+}
+
+export function creditDateError(
+  sentOn: string,
+  creditedOn: string | null,
+): string | null {
+  return creditedOn !== null && creditedOn < sentOn
+    ? "The credit date can't be before the send date"
+    : null;
+}
+
+export function clampCreditDate(date: string, sentOn: string): string {
+  return date < sentOn ? sentOn : date;
 }

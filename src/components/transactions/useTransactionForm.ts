@@ -98,7 +98,7 @@ export function useTransactionForm({
     !isWithdrawalExtId &&
     !isTransferFeeExtId &&
     kindOfSource(seed.source) !== "api" &&
-    transferAvailableFor(seed.source, settings.cash_enabled) &&
+    transferAvailableFor(seed.source) &&
     !withdrawalWouldBeActive;
   const transferActive = transfer && transferToggleAvailable;
 
@@ -110,7 +110,9 @@ export function useTransactionForm({
     txSource: seed.source,
     txCurrency: currency,
     txAmount: parseAmountInput(amount) ?? 0,
+    sentOn: date,
     active: transferActive,
+    pendingAllowed: kind === "expense",
   });
   const accountCurrencies = useAccountCurrencies();
   const withdrawalDraft = useWithdrawalDraft({
@@ -206,6 +208,7 @@ export function useTransactionForm({
               transferDraft.selected,
               {
                 fees: transferDraft.bySide,
+                receivedOn: transferDraft.receivedOn,
                 ...(transferDraft.received
                   ? { received: transferDraft.received }
                   : {}),

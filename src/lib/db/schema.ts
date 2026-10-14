@@ -459,6 +459,7 @@ export const ledger_transactions = sqliteTable(
     }),
     is_fixed: integer("is_fixed", { mode: "boolean" }),
     budget_month: text("budget_month"),
+    transit_destination: text("transit_destination"),
     created_at: text("created_at")
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),

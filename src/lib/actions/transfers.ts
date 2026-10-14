@@ -28,7 +28,7 @@ import {
   toUsdPair,
 } from "@/lib/currency";
 import { getTransferSources } from "@/lib/data/sources";
-import { shiftYearMonth } from "@/lib/dates";
+import { isValidCalendarDate, shiftYearMonth } from "@/lib/dates";
 import { transferPosting } from "@/lib/ledger/builders";
 import {
   feeOnlyDraft,
@@ -41,6 +41,7 @@ import {
 import { simpleFlow } from "@/lib/ledger/movements";
 import {
   aggregateFeesBySide,
+  creditDateError,
   inTransitAmount,
   transferFeeAmountsError,
   type ReceivedAmount,
@@ -87,6 +88,7 @@ export interface TransferFeeInput {
 export interface MarkTransferOptions {
   fees?: TransferFeeInput;
   received?: ReceivedAmount;
+  receivedOn?: string | null;
 }
 
 const transferFeeSchema = z.object({
@@ -100,6 +102,7 @@ const recordTransferSchema = z.object({
   source: z.string().trim().min(1).max(32),
   destinationSource: z.string().trim().min(1).max(32),
   occurredOn: z.iso.date("Invalid date (yyyy-MM-dd)"),
+  receivedOn: z.iso.date("Invalid date (yyyy-MM-dd)").nullable().optional(),
   note: z.string().trim().max(280).nullable().optional(),
   tags: z.array(z.string().trim().min(1).max(40)).max(10).optional(),
   fees: z.array(transferFeeSchema).max(2).optional(),
@@ -118,7 +121,13 @@ export async function recordTransfer(
 ): Promise<ActionResult> {
   const parsed = recordTransferSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid data" };
-  const { amount, currency, occurredOn, tags, received } = parsed.data;
+  const { amount, currency, occurredOn, tags } = parsed.data;
+  const receivedOn =
+    parsed.data.receivedOn === undefined ? occurredOn : parsed.data.receivedOn;
+  const pending = receivedOn === null;
+  const received = pending ? undefined : parsed.data.received;
+  const recordDateError = creditDateError(occurredOn, receivedOn);
+  if (recordDateError) return { ok: false, error: recordDateError };
 
   const source = normalizeSource(parsed.data.source);
   const destinationSource = normalizeSource(parsed.data.destinationSource);
@@ -189,12 +198,14 @@ export async function recordTransfer(
     side: "sent",
   });
   if (originError) return { ok: false, error: originError };
-  const destinationError = accountCurrencyError({
-    currency: destinationCurrency,
-    allowed: accountCurrencies[destinationSource],
-    accountLabel: labelForSource(destinationSource),
-    side: "received",
-  });
+  const destinationError = pending
+    ? null
+    : accountCurrencyError({
+        currency: destinationCurrency,
+        allowed: accountCurrencies[destinationSource],
+        accountLabel: labelForSource(destinationSource),
+        side: "received",
+      });
   if (destinationError) return { ok: false, error: destinationError };
 
   try {
@@ -211,6 +222,7 @@ export async function recordTransfer(
         recurringId: null,
         isFixed: null,
         budgetMonth: null,
+        transitDestination: pending ? destinationSource : null,
         lines: transferPosting({
           origin: source,
           destination: destinationSource,
@@ -219,7 +231,7 @@ export async function recordTransfer(
           originFee: fees.origin,
           destinationFee: fees.destination,
           sentOn: occurredOn,
-          receivedOn: occurredOn,
+          receivedOn,
           scaleOf,
         }),
         externalRefs: [mirrorRef(destinationSource, id)],
@@ -271,7 +283,18 @@ export async function markAsTransfer(
     return { ok: false, error: "Can't mirror into a synced account" };
   }
 
-  const received = opts?.received;
+  const isExpense = flow.kind === "expense";
+  const receivedOn =
+    opts?.receivedOn === undefined || !isExpense
+      ? draft.occurredOn
+      : opts.receivedOn;
+  if (receivedOn !== null && !isValidCalendarDate(receivedOn)) {
+    return { ok: false, error: "Invalid date" };
+  }
+  const markDateError = creditDateError(draft.occurredOn, receivedOn);
+  if (markDateError) return { ok: false, error: markDateError };
+  const pending = receivedOn === null;
+  const received = pending ? undefined : opts?.received;
   if (received && received.currency === flow.currency) {
     return {
       ok: false,
@@ -279,7 +302,6 @@ export async function markAsTransfer(
     };
   }
 
-  const isExpense = flow.kind === "expense";
   const mirrorCurrency = received?.currency ?? flow.currency;
 
   const legCurrencies = await getAccountCurrencies(user.id, [
@@ -287,12 +309,14 @@ export async function markAsTransfer(
     flow.source,
   ]);
   const currencyError =
-    accountCurrencyError({
-      currency: mirrorCurrency,
-      allowed: legCurrencies[mirrorSource],
-      accountLabel: labelForSource(mirrorSource),
-      side: isExpense ? "received" : "sent",
-    }) ??
+    (pending
+      ? null
+      : accountCurrencyError({
+          currency: mirrorCurrency,
+          allowed: legCurrencies[mirrorSource],
+          accountLabel: labelForSource(mirrorSource),
+          side: isExpense ? "received" : "sent",
+        })) ??
     accountCurrencyError({
       currency: flow.currency,
       allowed: legCurrencies[flow.source],
@@ -353,7 +377,7 @@ export async function markAsTransfer(
       originFee,
       destinationFee,
       sentOn: draft.occurredOn,
-      receivedOn: draft.occurredOn,
+      receivedOn,
       scaleOf,
     });
     const splitFee = feeOnlyDraft(draft, manualFeeNote(draft.note));
@@ -362,6 +386,7 @@ export async function markAsTransfer(
         user.id,
         {
           ...draft,
+          transitDestination: pending ? mirrorSource : null,
           lines,
           externalRefs: [
             ...draft.externalRefs,

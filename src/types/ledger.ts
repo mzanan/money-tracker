@@ -27,6 +27,7 @@ export interface Movement {
   tags: string[];
   recurringId: string | null;
   isFixed: boolean | null;
+  transitDestination: string | null;
   externalRefs: MovementExternalRef[];
   lines: MovementLine[];
   leg: MovementLeg | null;

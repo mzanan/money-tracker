@@ -1,0 +1,1 @@
+ALTER TABLE `ledger_transactions` ADD `transit_destination` text;

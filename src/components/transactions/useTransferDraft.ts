@@ -14,6 +14,7 @@ import { parseAmountInput } from "@/lib/currency";
 import {
   aggregateFeesBySide,
   creditedPreview,
+  clampCreditDate,
   parseFeeDrafts,
 } from "@/lib/transfer";
 
@@ -25,20 +26,44 @@ export function useTransferDraft({
   txSource,
   txCurrency,
   txAmount,
+  sentOn,
   active,
+  pendingAllowed = true,
 }: {
   txSource: string;
   txCurrency: string;
   txAmount: number;
+  sentOn: string;
   active: boolean;
+  pendingAllowed?: boolean;
 }) {
   const { data: ratesData } = useRates();
   const accountCurrencies = useAccountCurrencies();
   const settings = useSettings();
   const [selected, setSelectedState] = useState("");
-  const [fees, setFees] = useState<FeeDraft[]>(EMPTY_FEES);
+  const [allFees, setAllFees] = useState<FeeDraft[]>(EMPTY_FEES);
   const [receivedAmount, setReceivedAmount] = useState("");
   const [receivedCurrency, setReceivedCurrency] = useState(txCurrency);
+  const [notReceivedChoice, setNotReceivedChoice] = useState(false);
+  const [creditedOverride, setCreditedOn] = useState<string | null>(null);
+  const notReceived = notReceivedChoice && pendingAllowed;
+  const creditedOn = clampCreditDate(creditedOverride ?? sentOn, sentOn);
+  const receivedOn = notReceived ? null : creditedOn;
+
+  const originFees = allFees.filter((fee) => fee.payer === "origin");
+  const fees = notReceived
+    ? originFees.length > 0
+      ? originFees
+      : EMPTY_FEES
+    : allFees;
+
+  function setFees(next: FeeDraft[]) {
+    setAllFees(
+      notReceived
+        ? [...next, ...allFees.filter((fee) => fee.payer !== "origin")]
+        : next,
+    );
+  }
 
   const receivedRequired = !accountAccepts(
     accountCurrencies[selected],
@@ -56,18 +81,24 @@ export function useTransferDraft({
     );
   }
 
-  function reset() {
+  function resetDestination() {
     setSelectedState("");
-    setFees(EMPTY_FEES);
+    setAllFees(EMPTY_FEES);
     setReceivedAmount("");
     setReceivedCurrency(txCurrency);
   }
 
-  const sources = useAccountOptions(txSource, active, reset);
+  function reset() {
+    resetDestination();
+    setNotReceivedChoice(false);
+    setCreditedOn(null);
+  }
+
+  const sources = useAccountOptions(txSource, active, resetDestination);
 
   const parsedReceived = parseAmountInput(receivedAmount);
   const received =
-    parsedReceived !== null && receivedCurrency !== txCurrency
+    !notReceived && parsedReceived !== null && receivedCurrency !== txCurrency
       ? { amount: parsedReceived, currency: receivedCurrency }
       : null;
   const destinationCurrency = received?.currency ?? txCurrency;
@@ -100,7 +131,12 @@ export function useTransferDraft({
     setReceivedCurrency,
     destinationCurrency,
     received,
-    receivedRequired,
+    receivedRequired: receivedRequired && !notReceived,
+    notReceived,
+    setNotReceived: setNotReceivedChoice,
+    creditedOn,
+    setCreditedOn,
+    receivedOn,
     bySide,
     preview,
     reset,

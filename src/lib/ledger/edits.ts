@@ -227,6 +227,7 @@ export function splitTransfer(draft: LedgerDraft): LedgerDraft[] {
     return {
       ...draft,
       ...extra,
+      transitDestination: null,
       occurredOn: leg.occurredOn,
       budgetMonth:
         draft.budgetMonth === leg.occurredOn.slice(0, 7)

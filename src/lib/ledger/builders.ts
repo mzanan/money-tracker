@@ -189,10 +189,15 @@ export function transferPosting({
   originFee: number;
   destinationFee: number;
   sentOn: string;
-  receivedOn: string;
+  receivedOn: string | null;
   role?: LedgerEntryRole;
   scaleOf: ScaleOf;
 }): PostingLine[] {
+  if (receivedOn === null && destinationFee > 0) {
+    throw new AmountPrecisionError(
+      "Add the destination fee when you mark the transfer as credited",
+    );
+  }
   return [
     ...transferLines({
       sent: { source: origin, money: sent, occurredOn: sentOn },
@@ -212,7 +217,7 @@ export function transferPosting({
           scaleOf,
         )
       : []),
-    ...(destinationFee > 0
+    ...(destinationFee > 0 && receivedOn !== null
       ? feeLines(
           destination,
           { amount: destinationFee, currency: received.currency },
@@ -221,4 +226,74 @@ export function transferPosting({
         )
       : []),
   ];
+}
+
+export function creditedLines({
+  lines,
+  destination,
+  received,
+  destinationFee,
+  creditedOn,
+  scaleOf,
+}: {
+  lines: ReadonlyArray<PostingLine>;
+  destination: string;
+  received: Money;
+  destinationFee: number;
+  creditedOn: string;
+  scaleOf: ScaleOf;
+}): PostingLine[] {
+  const transit = lines.filter((entry) => entry.account.kind === "transit");
+  if (transit.length !== 1) {
+    throw new AmountPrecisionError("This transfer isn't in transit");
+  }
+  const [pending] = transit;
+  const sentCurrency = pending.account.currency;
+  const sentMinor = pending.amount;
+  const receivedMinor = minorOf(received, scaleOf);
+  const feeMinor =
+    destinationFee > 0
+      ? minorOf(
+          { amount: destinationFee, currency: received.currency },
+          scaleOf,
+        )
+      : 0;
+  const grossMinor = receivedMinor + feeMinor;
+  const sameCurrency = received.currency === sentCurrency;
+  if (sameCurrency && grossMinor !== sentMinor) {
+    throw new AmountPrecisionError(
+      "Received amount plus destination fee must equal the amount sent",
+    );
+  }
+  const kept = lines.filter((entry) => entry !== pending);
+  const credited: PostingLine[] = [
+    line(
+      assetRef(destination, received.currency),
+      grossMinor,
+      pending.role,
+      creditedOn,
+    ),
+  ];
+  if (!sameCurrency) {
+    credited.push(
+      line(
+        bridgeRef(sentCurrency),
+        sentMinor,
+        pending.role,
+        pending.occurredOn,
+      ),
+      line(bridgeRef(received.currency), -grossMinor, pending.role, creditedOn),
+    );
+  }
+  const fees =
+    feeMinor > 0
+      ? pair(
+          assetRef(destination, received.currency),
+          feesRef(received.currency),
+          feeMinor,
+          "fee",
+          creditedOn,
+        )
+      : [];
+  return [...kept, ...credited, ...fees];
 }

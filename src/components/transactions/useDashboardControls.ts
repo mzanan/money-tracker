@@ -19,7 +19,13 @@ import type { KindFilter } from "./balanceHero";
 
 import { useDayTotalsCurrency } from "./useDayTotalsCurrency";
 
-export type PanelMode = "none" | "filters" | "calendar" | "budget" | "add";
+export type PanelMode =
+  | "none"
+  | "filters"
+  | "calendar"
+  | "budget"
+  | "add"
+  | "transit";
 export type FilterScope = "month" | "all";
 
 function parseAmount(input: string): number | undefined {
@@ -50,7 +56,6 @@ export function useDashboardControls({
     initialSource(
       settings.default_source,
       sources,
-      settings.cash_enabled,
       settings.archived_sources,
     ),
   );

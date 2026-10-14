@@ -4,12 +4,10 @@ import Link from "next/link";
 import {
   ExternalLinkIcon,
   Loader2Icon,
-  PlusIcon,
   RefreshCwIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { TextAction } from "@/components/ui/textAction";
 import { CashActionDrawer } from "@/components/cash/cashActionDrawer";
 import { useCashActionDrawer } from "@/components/cash/useCashActionDrawer";
 
@@ -40,10 +38,8 @@ export function SourceFilter({
     pending,
     allTabSources,
     tabSources,
-    showCashTab,
     labelOf,
     handleSync,
-    handleEnableCash,
   } = useSourceFilter({ sources, selected, onChange });
   const {
     rowRef,
@@ -94,12 +90,6 @@ export function SourceFilter({
                 {labelOf(src)}
               </SourceTab>
             ))}
-            {!showCashTab && (
-              <TextAction onClick={handleEnableCash} disabled={pending}>
-                <PlusIcon className="size-3.5" />
-                Cash
-              </TextAction>
-            )}
           </div>
         </div>
         <div

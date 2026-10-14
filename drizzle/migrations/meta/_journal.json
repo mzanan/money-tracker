@@ -218,6 +218,13 @@
       "when": 1791816393045,
       "tag": "0030_ledger_transit_hard_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1791874063649,
+      "tag": "0031_ledger_transit_destination",
+      "breakpoints": true
     }
   ]
 }

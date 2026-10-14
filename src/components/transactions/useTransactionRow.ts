@@ -28,6 +28,7 @@ import { hasBudgetMonthOverride } from "@/lib/ledger/carriedOver";
 import {
   exchangeSides,
   isFeeRemnant,
+  pendingTransfer,
   transferEnds,
 } from "@/lib/ledger/movements";
 import { rowFacts } from "@/lib/ledger/rowFacts";
@@ -73,6 +74,8 @@ export function useTransactionRow(
   const source = useDialogState(runAfterMenuClose);
   const duplicate = useDialogState(runAfterMenuClose);
   const moveToCash = useDialogState(runAfterMenuClose);
+  const creditDialog = useDialogState(runAfterMenuClose);
+  const inTransit = isFeeRemnant(movement) ? null : pendingTransfer(movement);
 
   const readOnly = isFeeRemnant(movement);
   const isTransfer = tx.isTransfer;
@@ -241,6 +244,8 @@ export function useTransactionRow(
     source,
     duplicate,
     moveToCash,
+    creditDialog,
+    inTransit,
     canMoveToCash,
     canUndoMoveToCash,
     canShiftMonth,

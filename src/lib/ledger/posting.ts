@@ -24,6 +24,7 @@ export interface LedgerDraft {
   recurringId: string | null;
   isFixed: boolean | null;
   budgetMonth: string | null;
+  transitDestination?: string | null;
   lines: PostingLine[];
   externalRefs: ExternalRef[];
 }

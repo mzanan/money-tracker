@@ -138,6 +138,7 @@ function transactionRow(draft: LedgerDraft) {
     recurring_id: draft.recurringId,
     is_fixed: draft.isFixed,
     budget_month: draft.budgetMonth,
+    transit_destination: draft.transitDestination ?? null,
   };
 }
 
@@ -175,35 +176,56 @@ async function snapshotRevision(
 }
 
 function entrySignature(entry: {
+  account: string;
   amount: number;
   role: string;
   occurredOn: string;
-  currency: string;
 }): string {
-  return `${entry.currency}|${entry.amount}|${entry.role}|${entry.occurredOn}`;
+  return `${entry.account}|${entry.amount}|${entry.role}|${entry.occurredOn}`;
 }
 
-function sameEntries(
+async function sameEntries(
+  executor: Executor,
+  userId: string,
   current: ReadonlyArray<LedgerEntry>,
   expected: ReadonlyArray<PostingLine>,
-): boolean {
+): Promise<boolean> {
+  const accountIds = [...new Set(current.map((entry) => entry.account_id))];
+  const accounts =
+    accountIds.length === 0
+      ? []
+      : await executor
+          .select()
+          .from(ledger_accounts)
+          .where(
+            and(
+              eq(ledger_accounts.user_id, userId),
+              inArray(ledger_accounts.id, accountIds),
+            ),
+          );
+  const refIds = new Map(
+    accounts.map((row) => [
+      row.id,
+      accountRefId({ kind: row.kind, key: row.key, currency: row.currency }),
+    ]),
+  );
   const a = current
     .map((entry) =>
       entrySignature({
+        account: refIds.get(entry.account_id) ?? entry.account_id,
         amount: entry.amount,
         role: entry.role,
         occurredOn: entry.occurred_on,
-        currency: entry.currency,
       }),
     )
     .sort();
   const b = expected
     .map((line) =>
       entrySignature({
+        account: accountRefId(line.account),
         amount: line.amount,
         role: line.role,
         occurredOn: line.occurredOn,
-        currency: line.account.currency,
       }),
     )
     .sort();
@@ -219,7 +241,10 @@ async function replaceTransaction(
 ) {
   const snapshot = await snapshotRevision(executor, userId, transactionId);
   if (!snapshot) throw new LedgerPostingError("Transaction not found");
-  if (expected && !sameEntries(snapshot.entries, expected)) {
+  if (
+    expected &&
+    !(await sameEntries(executor, userId, snapshot.entries, expected))
+  ) {
     throw new LedgerPostingError("Transaction changed, reload and retry");
   }
   const owned = and(
@@ -527,6 +552,7 @@ export async function getLedgerRecords(
         recurringId: tx.recurring_id,
         isFixed: tx.is_fixed,
         budgetMonth: tx.budget_month,
+        transitDestination: tx.transit_destination,
         lines,
         externalRefs: movement.externalRefs.map((ref) => ({ ...ref })),
       },

@@ -4,6 +4,7 @@ import {
   assetLines,
   isOwnMovement,
   movementType,
+  pendingTransfer,
   primaryAssetLine,
   touchesSource,
 } from "@/lib/ledger/movements";
@@ -250,4 +251,28 @@ export function byScopedDateDesc(scope: MovementScope) {
   return (a: Movement, b: Movement): number =>
     scopedDate(b, scope).localeCompare(scopedDate(a, scope)) ||
     b.occurredAt.localeCompare(a.occurredAt);
+}
+
+export function pendingIncoming(
+  movements: ReadonlyArray<Movement>,
+  scope: MovementScope,
+  displayCurrency: string,
+  ratesByDate: RatesByDate,
+  asOf: string,
+): number {
+  const native = new Map<string, number>();
+  for (const movement of movements) {
+    const pending = pendingTransfer(movement);
+    if (!pending || (!isAllScope(scope) && pending.to !== scope)) continue;
+    native.set(
+      pending.currency,
+      (native.get(pending.currency) ?? 0) + pending.amount,
+    );
+  }
+  let total = 0;
+  for (const [currency, amount] of native) {
+    total +=
+      convertAsOf(amount, currency, displayCurrency, asOf, ratesByDate) ?? 0;
+  }
+  return total;
 }

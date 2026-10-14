@@ -17,6 +17,7 @@ import {
 } from "@/lib/dates";
 
 import { useDashboardControls } from "./useDashboardControls";
+import { pendingTransfers } from "@/lib/ledger/movements";
 import type { PanelMode } from "./useDashboardControls";
 import { useDaySpend } from "./useDaySpend";
 
@@ -29,6 +30,7 @@ const PANEL_TITLES: Record<Exclude<PanelMode, "none">, string> = {
   calendar: "Calendar",
   budget: "Budget",
   add: "Add transaction",
+  transit: "In transit",
 };
 
 export function useMonthDashboard({
@@ -154,12 +156,8 @@ export function useMonthDashboard({
 
   const addSources = useMemo(
     () =>
-      addableSources(
-        sources,
-        settings.cash_enabled,
-        settings.archived_sources ?? [],
-      ),
-    [sources, settings.cash_enabled, settings.archived_sources],
+      addableSources(sources, settings.archived_sources ?? []),
+    [sources, settings.archived_sources],
   );
 
   const panelOpen = c.panel !== "none";
@@ -184,6 +182,8 @@ export function useMonthDashboard({
   }, [panelMounted, panelOpen]);
   const shownPanel = c.panel !== "none" ? c.panel : lastPanel;
 
+  const inTransit = useMemo(() => pendingTransfers(movements), [movements]);
+
   const recurringNotes = useMemo(
     () =>
       detectRecurringNotes(
@@ -199,6 +199,7 @@ export function useMonthDashboard({
     baseCurrency: settings.base_currency,
     visibleYearMonth,
     recurringNotes,
+    inTransit,
     hasOlder,
     hasNewer,
     shiftMonth,

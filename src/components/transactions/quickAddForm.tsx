@@ -23,6 +23,8 @@ import { SwitchRow } from "@/components/ui/switchRow";
 import { AccountSelect } from "./accountSelect";
 import { EntrySuggestionList } from "./entrySuggestionList";
 import { KindToggle } from "./kindToggle";
+import { DateField } from "@/components/ui/dateField";
+import { TransferCreditFields } from "./transferCreditFields";
 import { TransferFeeSection } from "./transferFeeSection";
 import { useQuickAddForm } from "./useQuickAddForm";
 
@@ -73,6 +75,10 @@ export function QuickAddForm({
     setTransferFees,
     receivedAmount,
     setReceivedAmount,
+    transferNotReceived,
+    setTransferNotReceived,
+    transferCreditedOn,
+    setTransferCreditedOn,
     receivedCurrency,
     transferReceivedRequired,
     setReceivedCurrency,
@@ -258,17 +264,12 @@ export function QuickAddForm({
             )}
           </div>
 
-          <div className="grid gap-1.5">
-            <Label htmlFor={`${formId}-date`}>Date</Label>
-            <Input
-              id={`${formId}-date`}
-              type="date"
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
-              required
-              className="bg-surface-2 h-9 border-none"
-            />
-          </div>
+          <DateField
+            id={`${formId}-date`}
+            label="Date"
+            value={date}
+            onChange={setDate}
+          />
 
           {feeAvailable && (
             <AmountField
@@ -303,6 +304,14 @@ export function QuickAddForm({
                   emptyMessage="No other account to pick. Import or add one first."
                 />
               </div>
+              <TransferCreditFields
+                idPrefix={`${formId}-transfer`}
+                notReceived={transferNotReceived}
+                onNotReceivedChange={setTransferNotReceived}
+                creditedOn={transferCreditedOn}
+                onCreditedOnChange={setTransferCreditedOn}
+                sentOn={date}
+              />
               <TransferFeeSection
                 idPrefix={`${formId}-transfer`}
                 fees={transferFees}
@@ -316,6 +325,7 @@ export function QuickAddForm({
                 receivedRequired={transferReceivedRequired}
                 onReceivedCurrencyChange={setReceivedCurrency}
                 preview={transferPreview}
+                pending={transferNotReceived}
               />
             </>
           )}

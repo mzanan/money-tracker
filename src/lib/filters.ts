@@ -33,12 +33,11 @@ export interface ListFilterOptions {
 export function initialSource(
   defaultSource: string | null,
   sources: string[],
-  cashEnabled: boolean,
   archivedSources: ReadonlyArray<string> = [],
 ): string {
   if (!defaultSource || defaultSource === "all") return "all";
   return withoutArchived(
-    tabSourcesFrom(sources, cashEnabled),
+    tabSourcesFrom(sources),
     archivedSources,
   ).includes(defaultSource)
     ? defaultSource

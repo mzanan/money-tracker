@@ -77,6 +77,7 @@ export function buildRawMovements(
     tags: tx.tags,
     recurringId: tx.recurring_id,
     isFixed: tx.is_fixed,
+    transitDestination: tx.transit_destination,
     externalRefs: refsByTx.get(tx.id) ?? [],
     lines: linesByTx.get(tx.id) ?? [],
     leg: null,
@@ -168,6 +169,7 @@ export function movementType(movement: Movement): MovementType {
   if (movement.leg) return movement.leg.type;
   const lines = movement.lines;
   if (lines.some((line) => line.kind === "pending")) return "unresolved";
+  if (lines.some(isTransitLine)) return "transfer";
   if (lines.some((line) => line.kind === "expense" && !isFeeLine(line))) {
     return "expense";
   }
@@ -233,7 +235,54 @@ export function transferEnds(
   if (!isOwnMovement(movement)) return null;
   const assets = assetLines(movement);
   const from = assets.find((line) => line.amount < 0);
-  const to = assets.find((line) => line.amount > 0 && line.key !== from?.key);
+  const to =
+    assets.find((line) => line.amount > 0 && line.key !== from?.key)?.key ??
+    movement.transitDestination;
   if (!from || !to) return null;
-  return { from: from.key, to: to.key };
+  return { from: from.key, to };
+}
+
+export function isTransitLine(line: MovementLine): boolean {
+  return line.kind === "transit";
+}
+
+export function isInTransit(movement: Movement): boolean {
+  return movement.lines.some(isTransitLine);
+}
+
+export function transitLines(movement: Movement): MovementLine[] {
+  return movement.lines.filter(isTransitLine);
+}
+
+export interface PendingTransfer {
+  id: string;
+  from: string;
+  to: string;
+  amount: number;
+  currency: string;
+  sentOn: string;
+}
+
+export function pendingTransfer(movement: Movement): PendingTransfer | null {
+  const [line] = transitLines(movement);
+  const from = assetLines(movement).find(
+    (asset) => isPrincipalLine(asset) && asset.amount < 0,
+  );
+  if (!line || !from || !movement.transitDestination) return null;
+  return {
+    id: ledgerTransactionId(movement),
+    from: from.key,
+    to: movement.transitDestination,
+    amount: line.amount,
+    currency: line.currency,
+    sentOn: line.occurredOn,
+  };
+}
+
+export function pendingTransfers(
+  movements: ReadonlyArray<Movement>,
+): Movement[] {
+  return movements
+    .filter((movement) => pendingTransfer(movement) !== null)
+    .sort((a, b) => a.occurredOn.localeCompare(b.occurredOn));
 }

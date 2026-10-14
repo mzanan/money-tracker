@@ -4,7 +4,6 @@ import { ArrowLeftIcon, ChevronDownIcon } from "lucide-react";
 import { AnalyticsConsentCard } from "@/components/settings/analyticsConsentCard";
 import { AssistantKeyCard } from "@/components/settings/assistantKeyCard";
 import { CalendarFeedCard } from "@/components/settings/calendarFeedCard";
-import { CashCard } from "@/components/settings/cashCard";
 import { CsvImportCard } from "@/components/settings/csvImportCard";
 import { DayTotalsCard } from "@/components/settings/dayTotalsCard";
 import { NonDailyLabelsCard } from "@/components/settings/nonDailyLabelsCard";
@@ -82,12 +81,6 @@ export default async function SettingsPage({
               hint="Create, rename, remove or wipe an account."
             >
               <ImportedAccountsCard />
-            </Section>
-            <Section
-              title="Cash"
-              hint="A manual account for cash you spend or receive in hand. Withdraw and exchange from the Cash tab menu."
-            >
-              <CashCard />
             </Section>
             <Section
               title="Integrations"

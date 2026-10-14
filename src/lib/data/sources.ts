@@ -4,6 +4,7 @@ import {
   MANUAL_SOURCE,
   kindOfSource,
   tabSourcesFrom,
+  withoutArchived,
 } from "@/lib/constants/sources";
 import { getLedgerRecords } from "@/lib/data/ledgerWrites";
 import { db, type DbTx } from "@/lib/db";
@@ -13,6 +14,7 @@ import {
   ledger_accounts,
   ledger_entries,
   ledger_external_ids,
+  ledger_transactions,
   user_settings,
 } from "@/lib/db/schema";
 import { isCsvExternalId } from "@/lib/externalIds";
@@ -75,7 +77,16 @@ export async function getSourceTransactionIds(
       eq(ledger_entries.account_id, ledger_accounts.id),
     )
     .where(and(assetEntriesOf(userId), eq(ledger_accounts.key, source)));
-  return rows.map((row) => row.id);
+  const pending = await executor
+    .select({ id: ledger_transactions.id })
+    .from(ledger_transactions)
+    .where(
+      and(
+        eq(ledger_transactions.user_id, userId),
+        eq(ledger_transactions.transit_destination, source),
+      ),
+    );
+  return [...new Set([...rows, ...pending].map((row) => row.id))];
 }
 
 export async function staleCsvTransactionIds(
@@ -151,33 +162,33 @@ export async function getTransferSources(
   userId: string,
   excludeSource: string,
 ): Promise<string[]> {
-  const rows = await getImportedSources(userId);
-  return rows
-    .map((r) => r.source)
-    .filter((s) => s !== excludeSource && kindOfSource(s) !== "api");
-}
-
-export async function getUserSources(userId: string): Promise<string[]> {
-  const [rows, accountRows, settings] = await Promise.all([
-    ledgerSources(userId),
+  const [rows, settings] = await Promise.all([
+    getImportedSources(userId),
     db
-      .select({ source: accounts.source })
-      .from(accounts)
-      .where(eq(accounts.user_id, userId)),
-    db
-      .select({ cash_enabled: user_settings.cash_enabled })
+      .select({ archived: user_settings.archived_sources })
       .from(user_settings)
       .where(eq(user_settings.user_id, userId))
       .limit(1)
       .then((r) => r[0]),
   ]);
+  return withoutArchived(
+    tabSourcesFrom(rows.map((r) => r.source)),
+    settings?.archived ?? [],
+  ).filter((s) => s !== excludeSource && kindOfSource(s) !== "api");
+}
+
+export async function getUserSources(userId: string): Promise<string[]> {
+  const [rows, accountRows] = await Promise.all([
+    ledgerSources(userId),
+    db
+      .select({ source: accounts.source })
+      .from(accounts)
+      .where(eq(accounts.user_id, userId)),
+  ]);
 
   const set = new Set(rows.filter(Boolean));
   for (const { source } of accountRows) set.add(source);
-  return tabSourcesFrom(
-    Array.from(set),
-    Boolean(settings?.cash_enabled),
-  ).sort();
+  return tabSourcesFrom(Array.from(set)).sort();
 }
 
 export async function getSelectableSources(userId: string): Promise<string[]> {

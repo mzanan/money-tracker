@@ -1,5 +1,6 @@
 "use client";
 
+import { transferBadgeLabel } from "@/lib/transactionDisplay";
 import {
   BanknoteIcon,
   BellPlusIcon,
@@ -12,6 +13,7 @@ import {
   PinIcon,
   Trash2Icon,
   WalletIcon,
+  CircleCheckIcon,
 } from "lucide-react";
 
 import { formatDayShort } from "@/lib/dates";
@@ -35,6 +37,8 @@ import { TransactionFormDialog } from "./transactionFormDialog";
 import { TransactionFormStep } from "./transactionFormStep";
 import { MarkTransferDialog } from "./markTransferDialog";
 import { MarkTransferStep } from "./markTransferStep";
+import { CreditTransferDialog } from "./creditTransferDialog";
+import { CreditTransferStep } from "./creditTransferStep";
 import { MoveToCashDialog } from "./moveToCashDialog";
 import { MoveToCashStep } from "./moveToCashStep";
 import { SourceEditor } from "./sourceEditor";
@@ -86,6 +90,8 @@ export function TransactionRow({
     source,
     duplicate,
     moveToCash,
+    creditDialog,
+    inTransit,
     canMoveToCash,
     canUndoMoveToCash,
     canShiftMonth,
@@ -211,6 +217,7 @@ export function TransactionRow({
               txSource={tx.source}
               txCurrency={tx.currency}
               txAmount={tx.amount}
+              txDate={tx.occurredOn}
               txKind={tx.kind}
               onBack={stepApi.pop}
             />
@@ -219,6 +226,22 @@ export function TransactionRow({
       );
     } else {
       transferDialog.openDialog();
+    }
+  }
+
+  function openCredit() {
+    if (!inTransit) return;
+    if (stepApi) {
+      runAfterMenuClose(() =>
+        stepApi.push({
+          key: `credit-${tx.id}`,
+          content: (
+            <CreditTransferStep transfer={inTransit} onBack={stepApi.pop} />
+          ),
+        }),
+      );
+    } else {
+      creditDialog.openDialog();
     }
   }
 
@@ -271,7 +294,7 @@ export function TransactionRow({
           </span>
           {(isTransfer || isWithdrawal) && (
             <TransferBadge>
-              {isWithdrawal ? "Withdrawal" : "Transfer"}
+              {transferBadgeLabel(isWithdrawal, Boolean(inTransit))}
             </TransferBadge>
           )}
           {isCarriedOver && (
@@ -347,6 +370,12 @@ export function TransactionRow({
                 <CopyIcon />
                 Duplicate
               </DropdownMenuItem>
+              {inTransit && (
+                <DropdownMenuItem onSelect={openCredit}>
+                  <CircleCheckIcon />
+                  Mark as credited
+                </DropdownMenuItem>
+              )}
               {canUndoMoveToCash ? (
                 <DropdownMenuItem onSelect={handleUndoMoveToCash}>
                   <WalletIcon />
@@ -439,12 +468,20 @@ export function TransactionRow({
           onOpenChange={source.setOpen}
         />
       )}
+      {creditDialog.mounted && inTransit && (
+        <CreditTransferDialog
+          transfer={inTransit}
+          open={creditDialog.open}
+          onOpenChange={creditDialog.setOpen}
+        />
+      )}
       {transferDialog.mounted && (
         <MarkTransferDialog
           txId={tx.id}
           txSource={tx.source}
           txCurrency={tx.currency}
           txAmount={tx.amount}
+          txDate={tx.occurredOn}
           txKind={tx.kind}
           open={transferDialog.open}
           onOpenChange={transferDialog.setOpen}

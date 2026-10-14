@@ -1,5 +1,6 @@
 "use client";
 
+import { pendingHint } from "@/lib/transactionDisplay";
 import { useMemo } from "react";
 
 import { useRatesByDate } from "@/hooks/useRatesByDate";
@@ -16,6 +17,7 @@ import {
   isAllScope,
   linesInMonth,
   periodTotals,
+  pendingIncoming,
   scopeBalance,
 } from "@/lib/ledger/scope";
 
@@ -28,11 +30,13 @@ export function useBalanceHero({
   yearMonth,
   movements,
   lifetimeMovements,
+  pendingMovements,
   scope,
 }: {
   yearMonth: string;
   movements: Movement[];
   lifetimeMovements: Movement[];
+  pendingMovements: Movement[];
   scope: MovementScope;
 }) {
   const settings = useSettings();
@@ -80,8 +84,21 @@ export function useBalanceHero({
     [showBase, lifetimeMovements, scope, base, ratesByDate, today],
   );
 
+  const pending = useMemo(
+    () =>
+      pendingIncoming(
+        pendingMovements,
+        scope,
+        displayCurrency,
+        ratesByDate,
+        today,
+      ),
+    [pendingMovements, scope, displayCurrency, ratesByDate, today],
+  );
+
   return {
     displayCurrency,
+    pendingText: pendingHint(pending, displayCurrency),
     monthTotals,
     totalPositive: total >= 0,
     totalSigned: formatMoney(total, displayCurrency, { signed: true }),

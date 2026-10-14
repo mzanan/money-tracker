@@ -19,3 +19,12 @@ const twMerge = extendTailwindMerge({
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+export function containEscape<E extends { stopPropagation: () => void }>(
+  handler?: (event: E) => void,
+): (event: E) => void {
+  return (event) => {
+    event.stopPropagation();
+    handler?.(event);
+  };
+}

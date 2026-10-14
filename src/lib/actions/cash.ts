@@ -1,6 +1,5 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -21,7 +20,6 @@ import {
   postLedgerTransaction,
 } from "@/lib/data/ledgerWrites";
 import { db } from "@/lib/db";
-import { user_settings } from "@/lib/db/schema";
 import { feeLines, flowLines, transferPosting } from "@/lib/ledger/builders";
 import {
   hasSyncedRef,
@@ -546,15 +544,6 @@ export async function moveWithdrawalToCash(
         executor: dbTx,
         expected: draft.lines,
       });
-      await dbTx
-        .update(user_settings)
-        .set({ cash_enabled: true })
-        .where(
-          and(
-            eq(user_settings.user_id, user.id),
-            eq(user_settings.cash_enabled, false),
-          ),
-        );
     });
     revalidatePath("/", "layout");
     return { ok: true };
