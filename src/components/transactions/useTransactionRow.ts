@@ -26,6 +26,7 @@ import {
 import { isFixedTransaction } from "@/lib/fixedExpenses";
 import { hasBudgetMonthOverride } from "@/lib/ledger/carriedOver";
 import {
+  crossCurrencyFlow,
   exchangeSides,
   isFeeRemnant,
   pendingTransfer,
@@ -35,6 +36,7 @@ import { rowFacts } from "@/lib/ledger/rowFacts";
 import { isAllScope, movementAmount } from "@/lib/ledger/scope";
 import { amountInCurrency } from "@/lib/ledger/valuation";
 import {
+  crossCurrencyTexts,
   exchangeText,
   rowAmountTexts,
   transferLabel,
@@ -87,7 +89,9 @@ export function useTransactionRow(
   const canUndoMoveToCash = isWithdrawal && isTransfer;
   const isSynced = kindOfSource(tx.source) === "api";
   const canDelete = !isSynced && !isTransfer;
-  const lockAmountFields = isSynced || isTransfer || isWithdrawal;
+  const cross = crossCurrencyFlow(movement);
+  const lockAmountFields =
+    isSynced || isTransfer || isWithdrawal || cross !== null;
   const canChangeSource =
     !isTransfer && (!isSynced || !isSyncedExternalId(tx.externalId));
   const canShiftMonth =
@@ -134,10 +138,14 @@ export function useTransactionRow(
     ),
   });
   const sides = exchangeSides(movement);
+  const crossTexts = cross ? crossCurrencyTexts(cross) : null;
   const amountText = mask(
-    sides ? exchangeText(sides) : `${sign}${amounts.primary}`,
+    sides
+      ? exchangeText(sides)
+      : `${sign}${crossTexts?.primary ?? amounts.primary}`,
   );
-  const convertedText = hideAmounts || sides ? null : amounts.secondary;
+  const convertedText =
+    hideAmounts || sides ? null : (crossTexts?.secondary ?? amounts.secondary);
   const ends = isAllScope(scope) ? transferEnds(movement) : null;
   const sourceLabel = ends
     ? transferLabel(ends, accountLabels, movement.leg?.direction)

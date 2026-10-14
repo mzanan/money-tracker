@@ -23,6 +23,8 @@ import {
 import { isSyncable } from "@/lib/integrations";
 import { getUser } from "@/lib/session";
 
+import type { Money } from "@/types/ledger";
+
 import type { ActionResult } from "./transactions";
 
 export interface CsvRow {
@@ -34,6 +36,7 @@ export interface CsvRow {
   description: string | null;
   externalId?: string | null;
   feeAmount?: number;
+  spent?: Money;
 }
 
 export interface CsvImportInput {

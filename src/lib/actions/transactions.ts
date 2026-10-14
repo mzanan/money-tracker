@@ -43,6 +43,7 @@ import {
 import {
   primaryAssetLine,
   principalAssetLines,
+  crossCurrencyFlow,
   simpleFlow,
 } from "@/lib/ledger/movements";
 import { normalizeTags } from "@/lib/transactions";
@@ -190,6 +191,13 @@ export async function updateTransaction(
         ok: false,
         error:
           "Amount, currency and kind are synced automatically, not editable",
+      };
+    }
+    if (crossCurrencyFlow(movement) && amountFieldsChanged) {
+      return {
+        ok: false,
+        error:
+          "Amount, currency and kind aren't editable on a converted card spend",
       };
     }
     if (!flow && amountFieldsChanged) {

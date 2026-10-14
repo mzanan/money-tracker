@@ -181,6 +181,8 @@ export function detectMapping(
     statusCol,
     externalIdCol,
     feeCol: "",
+    targetAmountCol: "",
+    targetCurrencyCol: "",
     sinceDate: "",
   };
 }

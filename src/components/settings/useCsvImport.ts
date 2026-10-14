@@ -49,6 +49,8 @@ const EMPTY_MAPPING: CsvMapping = {
   statusCol: "",
   externalIdCol: "",
   feeCol: "",
+  targetAmountCol: "",
+  targetCurrencyCol: "",
   sinceDate: "",
 };
 

@@ -1,4 +1,4 @@
-import { simpleFlow } from "@/lib/ledger/movements";
+import { simpleFlow, spentFlow } from "@/lib/ledger/movements";
 import { computeNextDue } from "@/lib/reminders";
 
 import type { RecurringPayment } from "@/types/db";
@@ -84,10 +84,12 @@ export function matchesReminderWithoutLink(
   }
   if (reminder.amount == null) return exactLabel;
   if (reminder.currency == null) return false;
-  if (flow.currency !== reminder.currency) return false;
-  return (
-    Math.abs(flow.amount - reminder.amount) <=
-    reminder.amount * REMINDER_AMOUNT_TOLERANCE
+  const amount = reminder.amount;
+  return [flow, spentFlow(movement)].some(
+    (candidate) =>
+      candidate !== null &&
+      candidate.currency === reminder.currency &&
+      Math.abs(candidate.amount - amount) <= amount * REMINDER_AMOUNT_TOLERANCE,
   );
 }
 

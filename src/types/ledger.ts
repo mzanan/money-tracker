@@ -58,6 +58,16 @@ export interface MovementAmount {
   lines: MovementLine[];
 }
 
+export interface Money {
+  amount: number;
+  currency: string;
+}
+
+export interface CrossCurrencyFlow {
+  spent: Money;
+  charged: Money;
+}
+
 export interface SimpleFlow {
   kind: "income" | "expense";
   source: string;

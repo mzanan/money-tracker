@@ -3,6 +3,7 @@ import {
   type AccountLabels,
 } from "@/lib/constants/sources";
 import { formatMoney } from "@/lib/currency";
+import type { CrossCurrencyFlow } from "@/types/ledger";
 
 export const ESTIMATE_PREFIX = "≈ ";
 
@@ -26,6 +27,16 @@ export function rowAmountTexts({
   return accountFirst
     ? { primary: original, secondary: `${ESTIMATE_PREFIX}${base}` }
     : { primary: base, secondary: original };
+}
+
+export function crossCurrencyTexts(flow: CrossCurrencyFlow): {
+  primary: string;
+  secondary: string;
+} {
+  return {
+    primary: formatMoney(flow.spent.amount, flow.spent.currency),
+    secondary: formatMoney(flow.charged.amount, flow.charged.currency),
+  };
 }
 
 export function exchangeText(sides: {
