@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
 import { todayInTz } from "@/lib/dates";
 import type { CandidateMatch } from "@/lib/imageExtract";
+import { candidateMatchOf } from "@/lib/ledger/candidates";
 import { resolveTimezone } from "@/lib/preferences.server";
 import { SHARE_ERROR_CODES, type ShareErrorCode } from "@/lib/screenshotShare";
 
@@ -51,15 +52,7 @@ async function buildInitialCandidates(
   const map: Record<number, CandidateMatch[]> = {};
   result.forEach((entry, index) => {
     if (entry.matches.length === 0) return;
-    map[index] = entry.matches.map((m) => ({
-      id: m.id,
-      source: m.source,
-      occurredOn: m.occurred_on,
-      amount: m.amount_original,
-      currency: m.currency_original,
-      kind: m.kind,
-      note: m.note,
-    }));
+    map[index] = entry.matches.map(candidateMatchOf);
   });
   return map;
 }

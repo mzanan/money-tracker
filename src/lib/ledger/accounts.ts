@@ -9,6 +9,7 @@ export const LEDGER_KEYS = {
   fees: "fees",
   fx: "fx",
   pendingOrigin: "pending-origin",
+  transit: "in-transit",
 } as const;
 
 export interface AccountRef {
@@ -44,12 +45,17 @@ export function pendingRef(currency: string): AccountRef {
   return { kind: "pending", key: LEDGER_KEYS.pendingOrigin, currency };
 }
 
+export function transitRef(currency: string): AccountRef {
+  return { kind: "transit", key: LEDGER_KEYS.transit, currency };
+}
+
 const SYSTEM_ACCOUNT_NAMES: Record<string, string> = {
   [`expense|${LEDGER_KEYS.uncategorized}`]: "Uncategorized",
   [`income|${LEDGER_KEYS.uncategorized}`]: "Uncategorized income",
   [`expense|${LEDGER_KEYS.fees}`]: "Fees",
   [`bridge|${LEDGER_KEYS.fx}`]: "Currency exchange",
   [`pending|${LEDGER_KEYS.pendingOrigin}`]: "Pending origin",
+  [`transit|${LEDGER_KEYS.transit}`]: "In transit",
 };
 
 export function accountInstitution(ref: AccountRef): string | null {

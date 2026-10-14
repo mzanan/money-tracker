@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { cache } from "react";
 
+import { supportedOrDefault } from "@/lib/constants/currencies";
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
 import type { AssistantSettings, ClientSettings } from "@/types/db";
@@ -30,7 +31,11 @@ export const getUserSettings = cache(
     const row = rows[0];
     if (!row) return null;
     const { ai_api_key, ...rest } = row;
-    return { ...rest, hasAiKey: Boolean(ai_api_key) };
+    return {
+      ...rest,
+      currencies: supportedOrDefault(rest.currencies),
+      hasAiKey: Boolean(ai_api_key),
+    };
   },
 );
 

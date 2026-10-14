@@ -14,11 +14,16 @@ import { convert } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { recurring_payments } from "@/lib/db/schema";
 import { getRates } from "@/lib/rates";
-import { getValuedTransactions } from "@/lib/data/valuedTransactions";
+import { getLedgerData } from "@/lib/data/ledgerMovements";
+import { ALL_SOURCES } from "@/lib/constants/sources";
+import { todayInTz } from "@/lib/dates";
+import { dayTotalsList } from "@/lib/ledger/days";
+import { periodTotals, scopeBalance } from "@/lib/ledger/scope";
 import { monthsPerCycle } from "@/lib/reminders";
-import { dayTotalsList, periodTotals } from "@/lib/totals";
-import type { TotalsBreakdown } from "@/lib/totals";
-import type { Transaction, TransactionKind } from "@/types/db";
+import type { TotalsBreakdown } from "@/lib/ledger/scope";
+import type { StatsContext } from "@/lib/assistantStats";
+import type { TransactionKind } from "@/types/db";
+import type { Movement } from "@/types/ledger";
 
 export type {
   MerchantTotal,
@@ -34,30 +39,55 @@ export interface DaySpend {
   net: number;
 }
 
+interface RangeData {
+  movements: Movement[];
+  ctx: StatsContext;
+}
+
 async function fetchRange(
   userId: string,
+  baseCurrency: string,
   from?: string,
   to?: string,
-): Promise<Transaction[]> {
-  const { transactions: valued } = await getValuedTransactions(userId);
-  return valued
-    .filter(
-      (tx) =>
-        (!from || tx.occurred_on >= from) && (!to || tx.occurred_on <= to),
-    )
-    .sort(
-      (a, b) =>
-        b.occurred_on.localeCompare(a.occurred_on) ||
-        b.occurred_at.localeCompare(a.occurred_at),
-    );
+): Promise<RangeData> {
+  const { movements, ratesByDate } = await getLedgerData(
+    userId,
+    todayInTz("UTC"),
+  );
+  return {
+    movements: movements.filter(
+      (movement) =>
+        (!from || movement.occurredOn >= from) &&
+        (!to || movement.occurredOn <= to),
+    ),
+    ctx: { baseCurrency, ratesByDate },
+  };
+}
+
+function totalsOf({ movements, ctx }: RangeData): TotalsBreakdown {
+  return periodTotals(
+    movements,
+    ALL_SOURCES,
+    ctx.baseCurrency,
+    ctx.ratesByDate,
+  );
 }
 
 export async function getBalance(
   userId: string,
   baseCurrency: string,
-): Promise<TotalsBreakdown> {
-  const txs = await fetchRange(userId);
-  return periodTotals(txs, baseCurrency);
+): Promise<TotalsBreakdown & { balance: number }> {
+  const range = await fetchRange(userId, baseCurrency);
+  return {
+    ...totalsOf(range),
+    balance: scopeBalance(
+      range.movements,
+      ALL_SOURCES,
+      baseCurrency,
+      range.ctx.ratesByDate,
+      todayInTz("UTC"),
+    ),
+  };
 }
 
 export async function getPeriodSummary(
@@ -66,8 +96,7 @@ export async function getPeriodSummary(
   from: string,
   to: string,
 ): Promise<TotalsBreakdown> {
-  const txs = await fetchRange(userId, from, to);
-  return periodTotals(txs, baseCurrency);
+  return totalsOf(await fetchRange(userId, baseCurrency, from, to));
 }
 
 export async function getDailySpend(
@@ -76,10 +105,12 @@ export async function getDailySpend(
   from: string,
   to: string,
 ): Promise<DaySpend[]> {
-  const txs = await fetchRange(userId, from, to);
-  return dayTotalsList(txs, baseCurrency).map(
-    ({ date, income, expense, net }) => ({ date, income, expense, net }),
-  );
+  const { movements, ctx } = await fetchRange(userId, baseCurrency, from, to);
+  return dayTotalsList(movements, {
+    scope: ALL_SOURCES,
+    currency: ctx.baseCurrency,
+    ratesByDate: ctx.ratesByDate,
+  }).map(({ date, income, expense, net }) => ({ date, income, expense, net }));
 }
 
 export async function getTopTags(
@@ -93,8 +124,8 @@ export async function getTopTags(
   } = {},
 ): Promise<TagTotal[]> {
   const { from, to, ...statsOptions } = options;
-  const txs = await fetchRange(userId, from, to);
-  return topTags(txs, baseCurrency, statsOptions);
+  const { movements, ctx } = await fetchRange(userId, baseCurrency, from, to);
+  return topTags(movements, ctx, statsOptions);
 }
 
 export async function getTopMerchants(
@@ -107,8 +138,8 @@ export async function getTopMerchants(
   } = {},
 ): Promise<MerchantTotal[]> {
   const { from, to, limit } = options;
-  const txs = await fetchRange(userId, from, to);
-  return topMerchants(txs, baseCurrency, limit);
+  const { movements, ctx } = await fetchRange(userId, baseCurrency, from, to);
+  return topMerchants(movements, ctx, limit);
 }
 
 export interface RecurringPaymentSummary {
@@ -177,8 +208,8 @@ export async function getMonthlyTrend(
   baseCurrency: string,
   months = 6,
 ): Promise<MonthTotal[]> {
-  const txs = await fetchRange(userId);
-  return monthlyTrend(txs, baseCurrency, months);
+  const { movements, ctx } = await fetchRange(userId, baseCurrency);
+  return monthlyTrend(movements, ctx, months);
 }
 
 export async function searchTransactions(
@@ -193,6 +224,6 @@ export async function searchTransactions(
   } = {},
 ): Promise<TransactionSummary[]> {
   const { from, to, ...statsOptions } = options;
-  const txs = await fetchRange(userId, from, to);
-  return filterTransactionSummaries(txs, baseCurrency, statsOptions);
+  const { movements, ctx } = await fetchRange(userId, baseCurrency, from, to);
+  return filterTransactionSummaries(movements, ctx, statsOptions);
 }

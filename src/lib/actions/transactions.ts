@@ -1,41 +1,64 @@
 "use server";
 
-import { and, desc, eq, inArray, or } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { actionErrorMessage } from "@/lib/actionError";
 import { trackActivation } from "@/lib/activation";
 import { amountValidationError, feeAmountError } from "@/lib/currency";
 import { db } from "@/lib/db";
-import { transactions, user_settings } from "@/lib/db/schema";
-import {
-  isSyncedExternalId,
-  isWithdrawalExternalId,
-  manualFeeExternalId,
-} from "@/lib/externalIds";
-import { withRatesErrorHandling } from "@/lib/currencyContext";
-import { getRates } from "@/lib/rates";
+import { ledger_transactions } from "@/lib/db/schema";
 import {
   createTransactionSchema,
   updateTransactionSchema,
   type CreateTransactionInput,
   type UpdateTransactionInput,
 } from "@/lib/schemas/transaction";
-import { repointManualFee } from "@/lib/data/manualFee";
+import {
+  deleteLedgerTransactions,
+  getLedgerRecord,
+  getLedgerRecords,
+  getScaleOf,
+  postLedgerTransaction,
+} from "@/lib/data/ledgerWrites";
 import { getUser } from "@/lib/session";
-import { kindOfSource, normalizeSource } from "@/lib/constants/sources";
+import {
+  MANUAL_SOURCE,
+  kindOfSource,
+  normalizeSource,
+} from "@/lib/constants/sources";
 import { dedupeTags } from "@/lib/tags";
 import { BUDGET_MONTH_LOCK_ERROR } from "@/lib/budgetMonth";
+import { feeLines, flowLines } from "@/lib/ledger/builders";
 import {
-  buildFeeRow,
-  buildTransactionRow,
-  manualFeeNote,
-  normalizeTags,
-} from "@/lib/transactions";
+  hasSyncedRef,
+  isSyncedMovement,
+  isTransferMovement,
+  isWithdrawalMovement,
+  legDate,
+  withFlow,
+  withLegDate,
+  withSource,
+} from "@/lib/ledger/edits";
+import {
+  primaryAssetLine,
+  principalAssetLines,
+  simpleFlow,
+} from "@/lib/ledger/movements";
+import { normalizeTags } from "@/lib/transactions";
 
 export type ActionResult<T = void> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
+
+async function hasLedgerTransactions(userId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: ledger_transactions.id })
+    .from(ledger_transactions)
+    .where(eq(ledger_transactions.user_id, userId))
+    .limit(1);
+  return rows.length > 0;
+}
 
 export async function createTransaction(
   input: CreateTransactionInput,
@@ -66,78 +89,49 @@ export async function createTransaction(
     if (feeError) return { ok: false, error: feeError };
   }
 
-  let source: string | undefined;
+  let source = MANUAL_SOURCE;
   if (parsed.data.source) {
-    source = normalizeSource(parsed.data.source) ?? undefined;
-    if (!source || kindOfSource(source) === "api") {
+    const normalized = normalizeSource(parsed.data.source);
+    if (!normalized || kindOfSource(normalized) === "api") {
       return { ok: false, error: "Invalid source" };
     }
+    source = normalized;
   }
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const settings = await db
-    .select({ currencies: user_settings.currencies })
-    .from(user_settings)
-    .where(eq(user_settings.user_id, user.id))
-    .limit(1)
-    .then((rows) => rows[0]);
-  if (!settings) return { ok: false, error: "Settings not found" };
-
-  const ratesResult = await withRatesErrorHandling(() => getRates());
-  if (!ratesResult.ok) return ratesResult;
-  const rates = ratesResult.data.rates;
-
-  const rowId = crypto.randomUUID();
-  const built = buildTransactionRow(
-    {
-      userId: user.id,
-      kind: parsed.data.kind,
-      amount: parsed.data.amount,
-      currency: parsed.data.currency,
-      occurredOn: parsed.data.occurredOn,
-      tags: parsed.data.tags,
-      note: parsed.data.note,
-      source,
-    },
-    { rates, userCurrencies: settings.currencies },
-  );
-
-  const feeRow =
-    fee === undefined
-      ? null
-      : buildFeeRow(
-          {
-            userId: user.id,
-            amount: fee,
-            currency: parsed.data.currency,
-            occurredOn: parsed.data.occurredOn,
-            note: manualFeeNote(parsed.data.note),
-            source,
-            externalId: manualFeeExternalId(rowId),
-          },
-          { rates, userCurrencies: settings.currencies },
-        );
-
-  const row = built ? { ...built, id: rowId } : null;
-  if (!row || (fee !== undefined && !feeRow)) {
-    return {
-      ok: false,
-      error: `No rate available for ${parsed.data.currency}`,
-    };
-  }
-
   try {
-    const priorRows = await db
-      .select({ id: transactions.id })
-      .from(transactions)
-      .where(eq(transactions.user_id, user.id))
-      .limit(1);
-    await db.insert(transactions).values([row, ...(feeRow ? [feeRow] : [])]);
-    if (priorRows.length === 0) await trackActivation(user.id);
+    const scaleOf = await getScaleOf();
+    const { occurredOn, currency } = parsed.data;
+    const lines = [
+      ...flowLines({
+        kind: parsed.data.kind,
+        source,
+        money: { amount: parsed.data.amount, currency },
+        occurredOn,
+        scaleOf,
+      }),
+      ...(fee === undefined
+        ? []
+        : feeLines(source, { amount: fee, currency }, occurredOn, scaleOf)),
+    ];
+    const firstEntry = !(await hasLedgerTransactions(user.id));
+    const id = await postLedgerTransaction(user.id, {
+      occurredOn,
+      occurredAt: new Date().toISOString(),
+      note: parsed.data.note?.trim() || null,
+      comment: null,
+      tags: normalizeTags(parsed.data.tags),
+      recurringId: null,
+      isFixed: null,
+      budgetMonth: null,
+      lines,
+      externalRefs: [],
+    });
+    if (firstEntry) await trackActivation(user.id);
     revalidatePath("/", "layout");
-    return { ok: true, data: { id: rowId } };
+    return { ok: true, data: { id } };
   } catch (error) {
     return {
       ok: false,
@@ -146,11 +140,6 @@ export async function createTransaction(
   }
 }
 
-/**
- * Updates an existing transaction. Does NOT re-snapshot rates: edits are for
- * fixes (amount/category/note/date), not for "update to today's rate". For that,
- * delete and re-create.
- */
 export async function updateTransaction(
   input: UpdateTransactionInput,
 ): Promise<ActionResult> {
@@ -173,64 +162,77 @@ export async function updateTransaction(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const tx = await db
-    .select()
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.id, parsed.data.id),
-        eq(transactions.user_id, user.id),
-      ),
-    )
-    .limit(1)
-    .then((rows) => rows[0]);
-  if (!tx) return { ok: false, error: "Transaction not found" };
-  const amountFieldsChanged =
-    tx.kind !== parsed.data.kind ||
-    tx.amount_original !== parsed.data.amount ||
-    tx.currency_original !== parsed.data.currency;
-  if (tx.transfer_group && amountFieldsChanged) {
-    return {
-      ok: false,
-      error: "Undo the transfer before editing amount, currency, or kind",
-    };
-  }
-  if (isWithdrawalExternalId(tx.external_id) && amountFieldsChanged) {
-    return {
-      ok: false,
-      error: "Amount, currency and kind aren't editable on a withdrawal",
-    };
-  }
-  if (kindOfSource(tx.source) === "api" && amountFieldsChanged) {
-    return {
-      ok: false,
-      error: "Amount, currency and kind are synced automatically, not editable",
-    };
-  }
-  if (tx.budget_month && tx.occurred_on !== parsed.data.occurredOn) {
-    return {
-      ok: false,
-      error: BUDGET_MONTH_LOCK_ERROR,
-    };
-  }
-
   try {
-    await db
-      .update(transactions)
-      .set({
-        kind: parsed.data.kind,
-        amount_original: parsed.data.amount,
-        currency_original: parsed.data.currency,
-        tags: normalizeTags(parsed.data.tags),
-        note: parsed.data.note?.trim() || null,
-        occurred_on: parsed.data.occurredOn,
-      })
-      .where(
-        and(
-          eq(transactions.id, parsed.data.id),
-          eq(transactions.user_id, user.id),
-        ),
-      );
+    const record = await getLedgerRecord(user.id, parsed.data.id);
+    if (!record) return { ok: false, error: "Transaction not found" };
+    const { movement, draft } = record;
+    const flow = simpleFlow(movement);
+    const amountFieldsChanged = !principalAssetLines(movement).some(
+      (line) =>
+        Math.abs(line.amount) === parsed.data.amount &&
+        line.currency === parsed.data.currency &&
+        (line.amount < 0 ? "expense" : "income") === parsed.data.kind,
+    );
+    if (isTransferMovement(movement) && amountFieldsChanged) {
+      return {
+        ok: false,
+        error: "Undo the transfer before editing amount, currency, or kind",
+      };
+    }
+    if (isWithdrawalMovement(movement) && amountFieldsChanged) {
+      return {
+        ok: false,
+        error: "Amount, currency and kind aren't editable on a withdrawal",
+      };
+    }
+    if (isSyncedMovement(movement) && amountFieldsChanged) {
+      return {
+        ok: false,
+        error:
+          "Amount, currency and kind are synced automatically, not editable",
+      };
+    }
+    if (!flow && amountFieldsChanged) {
+      return {
+        ok: false,
+        error: "Amount, currency and kind aren't editable on this movement",
+      };
+    }
+    const legSource = parsed.data.source
+      ? (normalizeSource(parsed.data.source) ?? undefined)
+      : undefined;
+    const dateChanged = legDate(draft, legSource) !== parsed.data.occurredOn;
+    if (draft.budgetMonth && dateChanged) {
+      return { ok: false, error: BUDGET_MONTH_LOCK_ERROR };
+    }
+
+    const details = {
+      ...draft,
+      tags: normalizeTags(parsed.data.tags),
+      note: parsed.data.note?.trim() || null,
+    };
+    const next =
+      flow && amountFieldsChanged
+        ? withFlow(
+            details,
+            {
+              kind: parsed.data.kind,
+              source: flow.source,
+              money: {
+                amount: parsed.data.amount,
+                currency: parsed.data.currency,
+              },
+              occurredOn: parsed.data.occurredOn,
+            },
+            await getScaleOf(),
+          )
+        : dateChanged
+          ? withLegDate(details, legSource, parsed.data.occurredOn)
+          : details;
+    await postLedgerTransaction(user.id, next, {
+      replaceId: movement.id,
+      expected: draft,
+    });
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -254,28 +256,26 @@ export async function updateTransactionSource(
     return { ok: false, error: "Can't move into a synced account" };
   }
 
-  const tx = await db
-    .select()
-    .from(transactions)
-    .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)))
-    .limit(1)
-    .then((rows) => rows[0]);
-  if (!tx) return { ok: false, error: "Transaction not found" };
-  if (kindOfSource(tx.source) === "api" && isSyncedExternalId(tx.external_id)) {
-    return { ok: false, error: "Synced transactions can't change account" };
-  }
-  if (tx.transfer_group) {
-    return { ok: false, error: "Undo the transfer before changing account" };
-  }
-  if (normalized === tx.source) {
-    return { ok: false, error: "Pick a different account" };
-  }
-
   try {
-    await db
-      .update(transactions)
-      .set({ source: normalized })
-      .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)));
+    const record = await getLedgerRecord(user.id, id);
+    if (!record) return { ok: false, error: "Transaction not found" };
+    const { movement, draft } = record;
+    if (hasSyncedRef(movement)) {
+      return { ok: false, error: "Synced transactions can't change account" };
+    }
+    if (isTransferMovement(movement)) {
+      return { ok: false, error: "Undo the transfer before changing account" };
+    }
+    const current = primaryAssetLine(movement)?.key;
+    if (!current) return { ok: false, error: "Transaction not found" };
+    if (normalized === current) {
+      return { ok: false, error: "Pick a different account" };
+    }
+    await postLedgerTransaction(
+      user.id,
+      withSource(draft, current, normalized),
+      { replaceId: movement.id, expected: draft },
+    );
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -296,19 +296,14 @@ export async function setTransactionFixed(
     return { ok: false, error: "Invalid data" };
   }
 
-  const tx = await db
-    .select()
-    .from(transactions)
-    .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)))
-    .limit(1)
-    .then((rows) => rows[0]);
-  if (!tx) return { ok: false, error: "Transaction not found" };
-
   try {
-    await db
-      .update(transactions)
-      .set({ is_fixed: isFixed })
-      .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)));
+    const record = await getLedgerRecord(user.id, id);
+    if (!record) return { ok: false, error: "Transaction not found" };
+    await postLedgerTransaction(
+      user.id,
+      { ...record.draft, isFixed },
+      { replaceId: record.movement.id, expected: record.draft },
+    );
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -330,63 +325,55 @@ export async function mergeTransactions(
   }
 
   try {
-    const rows = await db
-      .select()
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.user_id, user.id),
-          inArray(transactions.id, [keepId, removeId]),
-        ),
-      );
-    const keep = rows.find((row) => row.id === keepId);
-    const removed = rows.find((row) => row.id === removeId);
+    const records = await getLedgerRecords(user.id, [keepId, removeId]);
+    const keep = records.get(keepId);
+    const removed = records.get(removeId);
     if (!keep || !removed) return { ok: false, error: "Transaction not found" };
-    if (keep.transfer_group || removed.transfer_group) {
+    if (
+      isTransferMovement(keep.movement) ||
+      isTransferMovement(removed.movement)
+    ) {
       return {
         ok: false,
         error: "Undo the transfer before merging this transaction",
       };
     }
-    if (keep.budget_month || removed.budget_month) {
-      return {
-        ok: false,
-        error: BUDGET_MONTH_LOCK_ERROR,
-      };
+    if (keep.draft.budgetMonth || removed.draft.budgetMonth) {
+      return { ok: false, error: BUDGET_MONTH_LOCK_ERROR };
     }
 
     const preferRemovedDetails =
-      kindOfSource(keep.source) === "api" &&
-      kindOfSource(removed.source) !== "api";
-    const patch: Partial<typeof keep> = {};
-    if (removed.note && (preferRemovedDetails || !keep.note)) {
-      patch.note = removed.note;
-    }
-    const mergedTags = normalizeTags(
+      isSyncedMovement(keep.movement) && !isSyncedMovement(removed.movement);
+    const note =
+      removed.draft.note && (preferRemovedDetails || !keep.draft.note)
+        ? removed.draft.note
+        : keep.draft.note;
+    const tags = normalizeTags(
       preferRemovedDetails
-        ? [...removed.tags, ...keep.tags]
-        : [...keep.tags, ...removed.tags],
+        ? [...removed.draft.tags, ...keep.draft.tags]
+        : [...keep.draft.tags, ...removed.draft.tags],
     );
-    if (mergedTags.length !== keep.tags.length) {
-      patch.tags = mergedTags;
-    }
-    if (!keep.comment && removed.comment) patch.comment = removed.comment;
+    const removedFees = removed.draft.lines.filter(
+      (line) => line.role === "fee",
+    );
 
     await db.transaction(async (dbTx) => {
-      if (Object.keys(patch).length > 0) {
-        await dbTx
-          .update(transactions)
-          .set(patch)
-          .where(
-            and(eq(transactions.id, keepId), eq(transactions.user_id, user.id)),
-          );
-      }
-      await repointManualFee(user.id, removeId, keepId, dbTx);
-      await dbTx
-        .delete(transactions)
-        .where(
-          and(eq(transactions.user_id, user.id), eq(transactions.id, removeId)),
-        );
+      await deleteLedgerTransactions(user.id, [removeId], dbTx);
+      await postLedgerTransaction(
+        user.id,
+        {
+          ...keep.draft,
+          note,
+          tags,
+          comment: keep.draft.comment ?? removed.draft.comment,
+          lines: [...keep.draft.lines, ...removedFees],
+          externalRefs: [
+            ...keep.draft.externalRefs,
+            ...removed.draft.externalRefs,
+          ],
+        },
+        { replaceId: keepId, executor: dbTx },
+      );
     });
     revalidatePath("/", "layout");
     return { ok: true };
@@ -402,32 +389,19 @@ export async function deleteTransaction(id: string): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const tx = await db
-    .select()
-    .from(transactions)
-    .where(and(eq(transactions.id, id), eq(transactions.user_id, user.id)))
-    .limit(1)
-    .then((rows) => rows[0]);
-  if (!tx) return { ok: false, error: "Transaction not found" };
-  if (tx.transfer_group) {
-    return {
-      ok: false,
-      error: "Undo the transfer before deleting this transaction",
-    };
-  }
-
   try {
-    await db
-      .delete(transactions)
-      .where(
-        and(
-          eq(transactions.user_id, user.id),
-          or(
-            eq(transactions.id, id),
-            eq(transactions.external_id, manualFeeExternalId(id)),
-          ),
-        ),
-      );
+    const record = await getLedgerRecord(user.id, id);
+    if (!record) return { ok: false, error: "Transaction not found" };
+    if (isTransferMovement(record.movement)) {
+      return {
+        ok: false,
+        error: "Undo the transfer before deleting this transaction",
+      };
+    }
+    if (isSyncedMovement(record.movement)) {
+      return { ok: false, error: "Synced transactions can't be deleted" };
+    }
+    await deleteLedgerTransactions(user.id, [id]);
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -443,10 +417,10 @@ export async function getUsedTags(): Promise<ActionResult<string[]>> {
   if (!user) return { ok: false, error: "Not authenticated" };
 
   const rows = await db
-    .select({ tags: transactions.tags })
-    .from(transactions)
-    .where(eq(transactions.user_id, user.id))
-    .orderBy(desc(transactions.occurred_on));
+    .select({ tags: ledger_transactions.tags })
+    .from(ledger_transactions)
+    .where(eq(ledger_transactions.user_id, user.id))
+    .orderBy(desc(ledger_transactions.occurred_on));
 
   return { ok: true, data: dedupeTags(rows.flatMap((row) => row.tags)) };
 }

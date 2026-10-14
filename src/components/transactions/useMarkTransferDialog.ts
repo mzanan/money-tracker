@@ -9,6 +9,7 @@ export function useMarkTransferDialog({
   txSource,
   txCurrency,
   txAmount,
+  txDate,
   open,
   onOpenChange,
 }: {
@@ -16,6 +17,7 @@ export function useMarkTransferDialog({
   txSource: string;
   txCurrency: string;
   txAmount: number;
+  txDate: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -24,6 +26,7 @@ export function useMarkTransferDialog({
     txSource,
     txCurrency,
     txAmount,
+    sentOn: txDate,
     active: open,
   });
 
@@ -33,6 +36,7 @@ export function useMarkTransferDialog({
       () =>
         markAsTransfer(txId, draft.selected, {
           fees: draft.bySide,
+          receivedOn: draft.receivedOn,
           ...(draft.received ? { received: draft.received } : {}),
         }),
       {
@@ -55,6 +59,10 @@ export function useMarkTransferDialog({
     setReceivedCurrency: draft.setReceivedCurrency,
     destinationCurrency: draft.destinationCurrency,
     preview: draft.preview,
+    notReceived: draft.notReceived,
+    setNotReceived: draft.setNotReceived,
+    creditedOn: draft.creditedOn,
+    setCreditedOn: draft.setCreditedOn,
     pending,
     submit,
   };

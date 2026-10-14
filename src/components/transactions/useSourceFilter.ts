@@ -6,7 +6,6 @@ import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { syncIntegration } from "@/lib/actions/integrations";
-import { setCashEnabled } from "@/lib/actions/settings";
 import {
   kindOfSource,
   resolveSourceLabel,
@@ -31,9 +30,8 @@ export function useSourceFilter({
   const kind = selected === "all" ? null : kindOfSource(selected);
 
   const archivedSources = settings.archived_sources ?? [];
-  const allTabSources = tabSourcesFrom(sources, settings.cash_enabled);
+  const allTabSources = tabSourcesFrom(sources);
   const tabSources = withoutArchived(allTabSources, archivedSources);
-  const showCashTab = allTabSources.includes("manual");
 
   const selectedArchived =
     selected !== "all" && archivedSources.includes(selected);
@@ -53,19 +51,12 @@ export function useSourceFilter({
     });
   }
 
-  function handleEnableCash() {
-    run(() => setCashEnabled(true), { success: "Cash account enabled" });
-    onChange("manual");
-  }
-
   return {
     kind,
     pending,
     allTabSources,
     tabSources,
-    showCashTab,
     labelOf,
     handleSync,
-    handleEnableCash,
   };
 }

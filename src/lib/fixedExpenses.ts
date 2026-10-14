@@ -1,6 +1,8 @@
+import { simpleFlow } from "@/lib/ledger/movements";
 import { computeNextDue } from "@/lib/reminders";
 
-import type { RecurringPayment, Transaction } from "@/types/db";
+import type { RecurringPayment } from "@/types/db";
+import type { Movement } from "@/types/ledger";
 
 export const FIXED_TX_SOURCE = {
   override: "override",
@@ -14,29 +16,32 @@ export function normalizeFixedLabel(note: string | null | undefined): string {
 }
 
 export function isFixedTransaction(
-  tx: Transaction,
+  movement: Movement,
   fixedLabels: string[],
   recurringNotes: Set<string>,
 ): boolean {
-  if (tx.is_fixed === false) return false;
-  if (tx.is_fixed === true) return true;
-  if (tx.recurring_id != null) return true;
-  const normalized = normalizeFixedLabel(tx.note);
+  if (movement.isFixed === false) return false;
+  if (movement.isFixed === true) return true;
+  if (movement.recurringId != null) return true;
+  const normalized = normalizeFixedLabel(movement.note);
   if (normalized === "") return false;
   if (fixedLabels.includes(normalized)) return true;
   return recurringNotes.has(normalized);
 }
 
 export function splitFixedVariable(
-  txs: Transaction[],
+  movements: Movement[],
   fixedLabels: string[],
   recurringNotes: Set<string>,
-): { fixed: Transaction[]; variable: Transaction[] } {
-  const fixed: Transaction[] = [];
-  const variable: Transaction[] = [];
-  for (const tx of txs) {
-    if (isFixedTransaction(tx, fixedLabels, recurringNotes)) fixed.push(tx);
-    else variable.push(tx);
+): { fixed: Movement[]; variable: Movement[] } {
+  const fixed: Movement[] = [];
+  const variable: Movement[] = [];
+  for (const movement of movements) {
+    if (isFixedTransaction(movement, fixedLabels, recurringNotes)) {
+      fixed.push(movement);
+    } else {
+      variable.push(movement);
+    }
   }
   return { fixed, variable };
 }
@@ -63,13 +68,14 @@ function containsAsWords(note: string, label: string): boolean {
 }
 
 export function matchesReminderWithoutLink(
-  tx: Transaction,
+  movement: Movement,
   reminder: RecurringPayment,
 ): boolean {
-  if (tx.recurring_id != null) return false;
-  if (tx.kind !== "expense" || tx.transfer_group) return false;
+  if (movement.recurringId != null) return false;
+  const flow = simpleFlow(movement);
+  if (!flow || flow.kind !== "expense") return false;
   const label = normalizeFixedLabel(reminder.label);
-  const note = normalizeFixedLabel(tx.note);
+  const note = normalizeFixedLabel(movement.note);
   if (label === "" || note === "") return false;
   const exactLabel = note === label;
   if (!exactLabel) {
@@ -78,34 +84,35 @@ export function matchesReminderWithoutLink(
   }
   if (reminder.amount == null) return exactLabel;
   if (reminder.currency == null) return false;
-  if (tx.currency_original !== reminder.currency) return false;
+  if (flow.currency !== reminder.currency) return false;
   return (
-    Math.abs(tx.amount_original - reminder.amount) <=
+    Math.abs(flow.amount - reminder.amount) <=
     reminder.amount * REMINDER_AMOUNT_TOLERANCE
   );
 }
 
 export function matchesReminder(
-  tx: Transaction,
+  movement: Movement,
   reminder: RecurringPayment,
 ): boolean {
   return (
-    tx.recurring_id === reminder.id || matchesReminderWithoutLink(tx, reminder)
+    movement.recurringId === reminder.id ||
+    matchesReminderWithoutLink(movement, reminder)
   );
 }
 
 export function excludePaidReminders(
   reminders: RecurringPayment[],
-  monthTransactions: Transaction[],
+  monthMovements: Movement[],
 ): RecurringPayment[] {
   return reminders.filter((reminder) => {
-    const matchingTxs = monthTransactions.filter((tx) =>
-      matchesReminder(tx, reminder),
+    const matchingTxs = monthMovements.filter((movement) =>
+      matchesReminder(movement, reminder),
     );
     if (matchingTxs.length === 0) return true;
 
     if (reminder.last_paid_on == null) {
-      return !matchingTxs.some((tx) => tx.occurred_on >= reminder.next_due_on);
+      return !matchingTxs.some((tx) => tx.occurredOn >= reminder.next_due_on);
     }
 
     const expectedNextDue = computeNextDue(
@@ -116,10 +123,10 @@ export function excludePaidReminders(
     const nextDueIsTrustworthy = expectedNextDue === reminder.next_due_on;
 
     if (nextDueIsTrustworthy) {
-      return !matchingTxs.some((tx) => tx.occurred_on >= reminder.next_due_on);
+      return !matchingTxs.some((tx) => tx.occurredOn >= reminder.next_due_on);
     }
     return !matchingTxs.some(
-      (tx) => tx.occurred_on >= (reminder.last_paid_on as string),
+      (tx) => tx.occurredOn >= (reminder.last_paid_on as string),
     );
   });
 }

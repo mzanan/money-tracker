@@ -1,25 +1,21 @@
 "use client";
 
-import { useAccountCurrencies } from "@/hooks/useAccountCurrencies";
 import { useDayTotalsInAccount } from "@/hooks/useDayTotalsInAccount";
 import { useSettings } from "@/hooks/useSettings";
-import { accountDisplayCurrency } from "@/lib/accountCurrencies";
-import { ALL_SOURCES } from "@/lib/constants/sources";
+import { isAllScope } from "@/lib/ledger/scope";
 
-import type { Transaction } from "@/types/db";
+import type { MovementScope } from "@/lib/ledger/scope";
+import type { Movement } from "@/types/ledger";
+
+import { useDisplayCurrency } from "./useDisplayCurrency";
 
 export function useDayTotalsCurrency(
-  selectedSource: string,
-  transactions: Transaction[],
+  scope: MovementScope,
+  movements: ReadonlyArray<Movement>,
 ): string {
   const settings = useSettings();
-  const accountCurrencies = useAccountCurrencies();
   const { dayTotalsInAccount } = useDayTotalsInAccount();
-  if (!dayTotalsInAccount || selectedSource === ALL_SOURCES) {
-    return settings.base_currency;
-  }
-  return (
-    accountDisplayCurrency(transactions, accountCurrencies) ??
-    settings.base_currency
-  );
+  const accountCurrency = useDisplayCurrency(movements, scope);
+  if (!dayTotalsInAccount || isAllScope(scope)) return settings.base_currency;
+  return accountCurrency;
 }

@@ -22,6 +22,7 @@ export function TransferFeeSection({
   receivedRequired = false,
   preview,
   txKind = "expense",
+  pending = false,
 }: {
   idPrefix: string;
   fees: FeeDraft[];
@@ -36,6 +37,7 @@ export function TransferFeeSection({
   receivedRequired?: boolean;
   preview: CreditedPreview | null;
   txKind?: "expense" | "income";
+  pending?: boolean;
 }) {
   const isIncome = txKind === "income";
   return (
@@ -46,18 +48,21 @@ export function TransferFeeSection({
         onChange={onFeesChange}
         sourceCurrency={sourceCurrency}
         destinationCurrency={destinationCurrency}
+        originOnly={pending}
       />
-      <AmountCurrencyField
-        id={`${idPrefix}-received`}
-        label={receivedFieldLabel(isIncome, receivedRequired)}
-        value={receivedAmount}
-        onChange={onReceivedAmountChange}
-        currency={receivedCurrency}
-        onCurrencyChange={onReceivedCurrencyChange}
-        currencies={currencies}
-        currencyAriaLabel={isIncome ? "Sent currency" : "Received currency"}
-      />
-      {preview && (
+      {!pending && (
+        <AmountCurrencyField
+          id={`${idPrefix}-received`}
+          label={receivedFieldLabel(isIncome, receivedRequired)}
+          value={receivedAmount}
+          onChange={onReceivedAmountChange}
+          currency={receivedCurrency}
+          onCurrencyChange={onReceivedCurrencyChange}
+          currencies={currencies}
+          currencyAriaLabel={isIncome ? "Sent currency" : "Received currency"}
+        />
+      )}
+      {preview && !pending && (
         <p className="text-muted-foreground text-sm">
           {isIncome ? "Sender sent" : "Recipient gets"}{" "}
           {formatMoney(preview.credited, preview.currency)}

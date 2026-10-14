@@ -12,13 +12,13 @@ import { Surface } from "@/components/ui/surface";
 
 import { useUnusualExpenses } from "./useUnusualExpenses";
 
-import type { Transaction } from "@/types/db";
+import type { Movement } from "@/types/ledger";
 
 export function UnusualExpensesCard({
   monthTransactions,
   recurringNotes,
 }: {
-  monthTransactions: Transaction[];
+  monthTransactions: Movement[];
   recurringNotes: Set<string>;
 }) {
   const money = useMoney();
@@ -46,7 +46,7 @@ export function UnusualExpensesCard({
           <ListRow
             key={tx.id}
             title={title}
-            meta={`${formatDayShort(tx.occurred_on)} · ${money(value)}`}
+            meta={`${formatDayShort(tx.occurredOn)} · ${money(value)}`}
           >
             <div className="flex shrink-0 items-center gap-1.5">
               <Button

@@ -29,12 +29,14 @@ export function TransferFeeFields({
   sourceCurrency,
   destinationCurrency,
   idPrefix,
+  originOnly = false,
 }: {
   fees: FeeDraft[];
   onChange: (fees: FeeDraft[]) => void;
   sourceCurrency: string;
   destinationCurrency: string;
   idPrefix: string;
+  originOnly?: boolean;
 }) {
   function update(index: number, patch: Partial<FeeDraft>) {
     onChange(fees.map((fee, i) => (i === index ? { ...fee, ...patch } : fee)));
@@ -54,30 +56,32 @@ export function TransferFeeFields({
               onChange={(amount) => update(index, { amount })}
               decimals={getCurrency(currency).decimals}
             />
-            <div className="grid flex-1 gap-1.5">
-              <Label htmlFor={`${idPrefix}-fee-payer-${index}`}>
-                Charged by
-              </Label>
-              <Select
-                value={fee.payer}
-                onValueChange={(payer) =>
-                  update(index, { payer: payer as FeePayer })
-                }
-              >
-                <SelectTrigger
-                  id={`${idPrefix}-fee-payer-${index}`}
-                  className="bg-surface-2 h-9 border-none"
+            {!originOnly && (
+              <div className="grid flex-1 gap-1.5">
+                <Label htmlFor={`${idPrefix}-fee-payer-${index}`}>
+                  Charged by
+                </Label>
+                <Select
+                  value={fee.payer}
+                  onValueChange={(payer) =>
+                    update(index, { payer: payer as FeePayer })
+                  }
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="origin">Origin account</SelectItem>
-                  <SelectItem value="destination">
-                    Destination account
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                  <SelectTrigger
+                    id={`${idPrefix}-fee-payer-${index}`}
+                    className="bg-surface-2 h-9 border-none"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="origin">Origin account</SelectItem>
+                    <SelectItem value="destination">
+                      Destination account
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {fees.length > 1 && (
               <Button
                 variant="ghost"
@@ -91,7 +95,7 @@ export function TransferFeeFields({
           </div>
         );
       })}
-      {fees.length < MAX_TRANSFER_FEES && (
+      {!originOnly && fees.length < MAX_TRANSFER_FEES && (
         <Button
           variant="ghost"
           size="sm"

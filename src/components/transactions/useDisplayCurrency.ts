@@ -2,22 +2,18 @@
 
 import { useAccountCurrencies } from "@/hooks/useAccountCurrencies";
 import { useSettings } from "@/hooks/useSettings";
-import { accountDisplayCurrency } from "@/lib/accountCurrencies";
-import { soleCurrencyOf } from "@/lib/totals";
+import { isAllScope, soleScopeCurrency } from "@/lib/ledger/scope";
 
-import type { Transaction } from "@/types/db";
+import type { MovementScope } from "@/lib/ledger/scope";
+import type { Movement } from "@/types/ledger";
 
 export function useDisplayCurrency(
-  transactions: Pick<
-    Transaction,
-    "source" | "currency_original" | "fx_rates_snapshot"
-  >[],
+  movements: ReadonlyArray<Movement>,
+  scope: MovementScope,
 ): string {
   const settings = useSettings();
   const accountCurrencies = useAccountCurrencies();
-  return (
-    accountDisplayCurrency(transactions, accountCurrencies) ??
-    soleCurrencyOf(transactions) ??
-    settings.base_currency
-  );
+  const declared = isAllScope(scope) ? undefined : accountCurrencies[scope];
+  if (declared?.length === 1) return declared[0];
+  return soleScopeCurrency(movements, scope) ?? settings.base_currency;
 }

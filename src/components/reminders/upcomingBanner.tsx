@@ -1,9 +1,9 @@
 "use client";
 
-import { BellRingIcon, ChevronRightIcon } from "lucide-react";
+import { BellRingIcon } from "lucide-react";
 
+import { NoticeBanner } from "@/components/ui/noticeBanner";
 import { daysBetween, dueLabel, dueSoon } from "@/lib/reminders";
-import { cn } from "@/lib/utils";
 import type { RecurringPayment } from "@/types/db";
 
 export function UpcomingBanner({
@@ -25,33 +25,14 @@ export function UpcomingBanner({
   const next = soon[0];
 
   return (
-    <button
-      type="button"
+    <NoticeBanner
+      icon={BellRingIcon}
+      tone={overdue ? "destructive" : "primary"}
+      title={
+        soon.length === 1 ? next.label : `${soon.length} payments due soon`
+      }
+      detail={`${next.label} · ${dueLabel(next.next_due_on, today)}`}
       onClick={onOpen}
-      className={cn(
-        "flex w-full items-center gap-3 rounded-card px-4 py-3 text-left transition-colors",
-        overdue
-          ? "bg-destructive/10 hover:bg-destructive/15"
-          : "bg-primary/10 hover:bg-primary/15",
-      )}
-    >
-      <BellRingIcon
-        className={cn(
-          "size-5 shrink-0",
-          overdue ? "text-destructive" : "text-primary",
-        )}
-      />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold">
-          {soon.length === 1
-            ? next.label
-            : `${soon.length} payments due soon`}
-        </p>
-        <p className="text-muted-foreground truncate text-xs">
-          {next.label} · {dueLabel(next.next_due_on, today)}
-        </p>
-      </div>
-      <ChevronRightIcon className="text-muted-foreground size-4 shrink-0" />
-    </button>
+    />
   );
 }

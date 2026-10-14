@@ -1,24 +1,34 @@
 "use server";
 
-import { and, eq, like } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
-import { isSupportedCurrency } from "@/lib/constants/currencies";
+import { ActionError } from "@/lib/actionError";
 import { normalizeSource } from "@/lib/constants/sources";
 import { isValidAmountForCurrency, roundForCurrency } from "@/lib/currency";
 import { daysBefore, isValidCalendarDate, todayInTz } from "@/lib/dates";
 import { db } from "@/lib/db";
-import { transactions, user_settings } from "@/lib/db/schema";
-import { resolveTimezone } from "@/lib/preferences.server";
-import { getRates, RatesUnavailableError } from "@/lib/rates";
-import { repointManualFee } from "@/lib/data/manualFee";
-import { getUser } from "@/lib/session";
+import { user_settings } from "@/lib/db/schema";
+import { findCrossSourceCandidates } from "@/lib/data/duplicates";
 import {
-  buildTransactionRow,
-  EXTERNAL_ID_PREFIX,
-  transactionContentHash,
-} from "@/lib/transactions";
+  deleteLedgerTransactions,
+  externalIdsWithPrefix,
+  getLedgerRecord,
+  getScaleOf,
+  postLedgerTransaction,
+} from "@/lib/data/ledgerWrites";
+import { EXTERNAL_ID_PREFIX } from "@/lib/externalIds";
+import { candidateMatchOf } from "@/lib/ledger/candidates";
+import { flowLines } from "@/lib/ledger/builders";
+import { feeOnlyDraft, isSyncedMovement } from "@/lib/ledger/edits";
+import { simpleFlow } from "@/lib/ledger/movements";
+import type { LedgerDraft } from "@/lib/ledger/posting";
+import { hasStorageScale } from "@/lib/ledger/scale";
+import { resolveTimezone } from "@/lib/preferences.server";
+import { getRates } from "@/lib/rates";
+import { getUser } from "@/lib/session";
+import { manualFeeNote, transactionContentHash } from "@/lib/transactions";
 
 import type { ActionResult } from "./transactions";
 
@@ -61,20 +71,8 @@ async function nextExternalId(
   baseHash: string,
 ): Promise<string> {
   const prefix = `${EXTERNAL_ID_PREFIX.screenshot}${baseHash}`;
-  const rows = await db
-    .select({ external_id: transactions.external_id })
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.user_id, userId),
-        eq(transactions.source, source),
-        like(transactions.external_id, `${prefix}%`),
-      ),
-    );
-
-  if (rows.length === 0) return prefix;
-
-  const taken = new Set(rows.map((r) => r.external_id));
+  const taken = await externalIdsWithPrefix(userId, source, prefix);
+  if (!taken.has(prefix)) return prefix;
   let i = 1;
   while (taken.has(`${prefix}:${i}`)) i++;
   return `${prefix}:${i}`;
@@ -93,29 +91,14 @@ export async function importScreenshotRows(input: {
   if (!user) return { ok: false, error: "Not authenticated" };
 
   const settings = await db
-    .select({
-      currencies: user_settings.currencies,
-      timezone: user_settings.timezone,
-    })
+    .select({ timezone: user_settings.timezone })
     .from(user_settings)
     .where(eq(user_settings.user_id, user.id))
     .limit(1)
     .then((rows) => rows[0]);
   if (!settings) return { ok: false, error: "Settings not found" };
 
-  let rates;
-  try {
-    rates = (await getRates()).rates;
-  } catch (error) {
-    if (error instanceof RatesUnavailableError) {
-      return {
-        ok: false,
-        error: "Exchange rates unavailable. Try again in a bit.",
-      };
-    }
-    return { ok: false, error: "Error fetching rates" };
-  }
-
+  const scaleOf = await getScaleOf();
   const today = todayInTz(await resolveTimezone(settings.timezone));
   const oldestPlausible = daysBefore(today, 365);
 
@@ -128,7 +111,7 @@ export async function importScreenshotRows(input: {
       results.push({ id: row.id, status: "invalid_source" });
       continue;
     }
-    if (!isSupportedCurrency(row.currency) && !rates[row.currency]) {
+    if (!hasStorageScale(row.currency, scaleOf)) {
       results.push({ id: row.id, status: "invalid_currency" });
       continue;
     }
@@ -148,64 +131,59 @@ export async function importScreenshotRows(input: {
     }
     if (occurredOn > today || occurredOn < oldestPlausible) occurredOn = today;
 
-    const baseHash = transactionContentHash({
-      occurredOn,
-      amount,
-      currency: row.currency,
-      description: row.description,
-      kind: row.kind,
-    }).slice(0, 24);
-    const externalId = await nextExternalId(user.id, source, baseHash);
-
-    const built = buildTransactionRow(
-      {
-        userId: user.id,
-        kind: row.kind,
+    try {
+      const baseHash = transactionContentHash({
+        occurredOn,
         amount,
         currency: row.currency,
+        description: row.description,
+        kind: row.kind,
+      }).slice(0, 24);
+      const externalId = await nextExternalId(user.id, source, baseHash);
+      const draft: LedgerDraft = {
         occurredOn,
-        note: row.description,
-        source,
-        externalId,
-      },
-      { rates, userCurrencies: settings.currencies },
-    );
-    if (!built) {
-      results.push({ id: row.id, status: "invalid_currency" });
-      continue;
-    }
+        occurredAt: new Date().toISOString(),
+        note: row.description?.trim() || null,
+        comment: null,
+        tags: [],
+        recurringId: null,
+        isFixed: null,
+        budgetMonth: null,
+        lines: flowLines({
+          kind: row.kind,
+          source,
+          money: { amount, currency: row.currency },
+          occurredOn,
+          scaleOf,
+        }),
+        externalRefs: [{ origin: source, externalId }],
+      };
 
-    try {
-      const inserted = await db
-        .insert(transactions)
-        .values(built)
-        .onConflictDoNothing({
-          target: [
-            transactions.user_id,
-            transactions.source,
-            transactions.external_id,
-          ],
-        })
-        .returning({ id: transactions.id });
-
-      if (inserted.length === 0) {
-        results.push({ id: row.id, status: "duplicate" });
-        continue;
-      }
-
+      await db.transaction(async (dbTx) => {
+        const replaced = row.replaceId
+          ? await getLedgerRecord(user.id, row.replaceId, dbTx)
+          : null;
+        if (
+          row.replaceId &&
+          (!replaced ||
+            !simpleFlow(replaced.movement) ||
+            isSyncedMovement(replaced.movement))
+        ) {
+          throw new ActionError("Replaced movement not found");
+        }
+        await postLedgerTransaction(user.id, draft, { executor: dbTx });
+        if (!replaced) return;
+        await deleteLedgerTransactions(user.id, [replaced.movement.id], dbTx);
+        const fees = feeOnlyDraft(
+          replaced.draft,
+          manualFeeNote(replaced.draft.note),
+        );
+        if (fees) {
+          await postLedgerTransaction(user.id, fees, { executor: dbTx });
+        }
+      });
       imported += 1;
       results.push({ id: row.id, status: "imported" });
-      if (row.replaceId) {
-        await repointManualFee(user.id, row.replaceId, inserted[0].id);
-        await db
-          .delete(transactions)
-          .where(
-            and(
-              eq(transactions.user_id, user.id),
-              eq(transactions.id, row.replaceId),
-            ),
-          );
-      }
     } catch {
       results.push({ id: row.id, status: "failed" });
     }
@@ -252,7 +230,6 @@ export async function previewCandidatesAction(
     .then((rows) => rows[0]);
   const today = todayInTz(await resolveTimezone(settings?.timezone));
 
-  const { findCrossSourceCandidates } = await import("@/lib/data/duplicates");
   const queries = rows.map((row) => ({
     userId: user.id,
     occurredOn: row.occurredOn ?? today,
@@ -270,15 +247,7 @@ export async function previewCandidatesAction(
     data: {
       candidates: result.map((entry, index) => ({
         index,
-        matches: entry.matches.map((m) => ({
-          id: m.id,
-          source: m.source,
-          occurredOn: m.occurred_on,
-          amount: m.amount_original,
-          currency: m.currency_original,
-          kind: m.kind,
-          note: m.note,
-        })),
+        matches: entry.matches.map(candidateMatchOf),
       })),
     },
   };

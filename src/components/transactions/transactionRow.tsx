@@ -1,5 +1,6 @@
 "use client";
 
+import { transferBadgeLabel } from "@/lib/transactionDisplay";
 import {
   BanknoteIcon,
   BellPlusIcon,
@@ -12,6 +13,7 @@ import {
   PinIcon,
   Trash2Icon,
   WalletIcon,
+  CircleCheckIcon,
 } from "lucide-react";
 
 import { formatDayShort } from "@/lib/dates";
@@ -35,6 +37,8 @@ import { TransactionFormDialog } from "./transactionFormDialog";
 import { TransactionFormStep } from "./transactionFormStep";
 import { MarkTransferDialog } from "./markTransferDialog";
 import { MarkTransferStep } from "./markTransferStep";
+import { CreditTransferDialog } from "./creditTransferDialog";
+import { CreditTransferStep } from "./creditTransferStep";
 import { MoveToCashDialog } from "./moveToCashDialog";
 import { MoveToCashStep } from "./moveToCashStep";
 import { SourceEditor } from "./sourceEditor";
@@ -43,20 +47,26 @@ import { TagChips } from "./tagChips";
 import { TransferBadge } from "./transferBadge";
 import { useTransactionRow } from "./useTransactionRow";
 
-import type { Transaction } from "@/types/db";
+import type { MovementScope } from "@/lib/ledger/scope";
+import type { Movement } from "@/types/ledger";
 
 export function TransactionRow({
-  tx,
+  movement,
+  scope,
   showDate = false,
   showBudgetMonthBadges = true,
   recurringNotes,
 }: {
-  tx: Transaction;
+  movement: Movement;
+  scope: MovementScope;
   showDate?: boolean;
   showBudgetMonthBadges?: boolean;
   recurringNotes?: Set<string>;
 }) {
   const {
+    tx,
+    readOnly,
+    amountKind,
     txSelectMode,
     isSelected,
     toggleSelected,
@@ -80,6 +90,8 @@ export function TransactionRow({
     source,
     duplicate,
     moveToCash,
+    creditDialog,
+    inTransit,
     canMoveToCash,
     canUndoMoveToCash,
     canShiftMonth,
@@ -93,7 +105,13 @@ export function TransactionRow({
     handleShiftBudgetMonth,
     stepApi,
     runAfterMenuClose,
-  } = useTransactionRow(tx, showDate, showBudgetMonthBadges, recurringNotes);
+  } = useTransactionRow(
+    movement,
+    scope,
+    showDate,
+    showBudgetMonthBadges,
+    recurringNotes,
+  );
 
   function openEdit() {
     if (stepApi) {
@@ -170,12 +188,12 @@ export function TransactionRow({
               title="Set a reminder"
               seed={{
                 label: reminderTitle,
-                amount: tx.amount_original,
-                currency: tx.currency_original,
+                amount: tx.amount,
+                currency: tx.currency,
                 source: tx.source,
                 frequency: "MONTHLY",
-                lastPaidOn: tx.occurred_on,
-                nextDueOn: computeNextDue(tx.occurred_on, "MONTHLY"),
+                lastPaidOn: tx.occurredOn,
+                nextDueOn: computeNextDue(tx.occurredOn, "MONTHLY"),
                 note: null,
               }}
               onBack={stepApi.pop}
@@ -197,8 +215,9 @@ export function TransactionRow({
             <MarkTransferStep
               txId={tx.id}
               txSource={tx.source}
-              txCurrency={tx.currency_original}
-              txAmount={tx.amount_original}
+              txCurrency={tx.currency}
+              txAmount={tx.amount}
+              txDate={tx.occurredOn}
               txKind={tx.kind}
               onBack={stepApi.pop}
             />
@@ -207,6 +226,22 @@ export function TransactionRow({
       );
     } else {
       transferDialog.openDialog();
+    }
+  }
+
+  function openCredit() {
+    if (!inTransit) return;
+    if (stepApi) {
+      runAfterMenuClose(() =>
+        stepApi.push({
+          key: `credit-${tx.id}`,
+          content: (
+            <CreditTransferStep transfer={inTransit} onBack={stepApi.pop} />
+          ),
+        }),
+      );
+    } else {
+      creditDialog.openDialog();
     }
   }
 
@@ -259,23 +294,23 @@ export function TransactionRow({
           </span>
           {(isTransfer || isWithdrawal) && (
             <TransferBadge>
-              {isWithdrawal ? "Withdrawal" : "Transfer"}
+              {transferBadgeLabel(isWithdrawal, Boolean(inTransit))}
             </TransferBadge>
           )}
           {isCarriedOver && (
             <BudgetMonthBadge
               direction="from"
-              yearMonth={tx.occurred_on.slice(0, 7)}
+              yearMonth={tx.occurredOn.slice(0, 7)}
             />
           )}
-          {isMovedOut && tx.budget_month && (
-            <BudgetMonthBadge direction="to" yearMonth={tx.budget_month} />
+          {isMovedOut && tx.budgetMonth && (
+            <BudgetMonthBadge direction="to" yearMonth={tx.budgetMonth} />
           )}
           <TagChips tags={tx.tags} />
         </span>
         {(showDate || description) && (
           <span className="text-muted-foreground text-meta mt-0.5 block truncate">
-            {showDate && formatDayShort(tx.occurred_on)}
+            {showDate && formatDayShort(tx.occurredOn)}
             {showDate && description ? " · " : ""}
             {description && sourceLabel}
           </span>
@@ -287,7 +322,7 @@ export function TransactionRow({
             "text-sm leading-tight font-semibold tabular-nums",
             isMovedOut
               ? "text-muted-foreground"
-              : tx.kind === "income"
+              : amountKind === "income"
                 ? "text-income"
                 : "text-foreground",
           )}
@@ -300,92 +335,100 @@ export function TransactionRow({
           </span>
         )}
       </div>
-      <div
-        className={cn(
-          "flex items-center gap-1",
-          txSelectMode && "pointer-events-none opacity-30",
-        )}
-      >
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label="More actions"
-                className="text-muted-foreground hover:text-foreground -mr-0.5"
-              >
-                <EllipsisIcon />
-              </Button>
-            }
-          />
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={openEdit}>
-              <PencilLineIcon />
-              Edit
-            </DropdownMenuItem>
-            {canChangeSource && (
-              <DropdownMenuItem onSelect={openChangeAccount}>
-                <LandmarkIcon />
-                Change account
+      {!readOnly && (
+        <div
+          className={cn(
+            "flex items-center gap-1",
+            txSelectMode && "pointer-events-none opacity-30",
+          )}
+        >
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="More actions"
+                  className="text-muted-foreground hover:text-foreground -mr-0.5"
+                >
+                  <EllipsisIcon />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={openEdit}>
+                <PencilLineIcon />
+                Edit
               </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onSelect={openDuplicate}>
-              <CopyIcon />
-              Duplicate
-            </DropdownMenuItem>
-            {canUndoMoveToCash ? (
-              <DropdownMenuItem onSelect={handleUndoMoveToCash}>
-                <WalletIcon />
-                Undo move to Cash
-              </DropdownMenuItem>
-            ) : isTransfer ? (
-              <DropdownMenuItem onSelect={handleUndoTransfer}>
-                <BanknoteIcon />
-                Undo transfer
-              </DropdownMenuItem>
-            ) : (
-              !isWithdrawal && (
-                <DropdownMenuItem onSelect={openMarkTransfer}>
-                  <BanknoteIcon />
-                  Mark as transfer
+              {canChangeSource && (
+                <DropdownMenuItem onSelect={openChangeAccount}>
+                  <LandmarkIcon />
+                  Change account
                 </DropdownMenuItem>
-              )
-            )}
-            {canMoveToCash && (
-              <DropdownMenuItem onSelect={openMoveToCash}>
-                <WalletIcon />
-                Move to Cash
+              )}
+              <DropdownMenuItem onSelect={openDuplicate}>
+                <CopyIcon />
+                Duplicate
               </DropdownMenuItem>
-            )}
-            {canShiftMonth && (
-              <DropdownMenuItem onSelect={handleShiftBudgetMonth}>
-                <CalendarArrowDownIcon />
-                {budgetMonthLabel}
+              {inTransit && (
+                <DropdownMenuItem onSelect={openCredit}>
+                  <CircleCheckIcon />
+                  Mark as credited
+                </DropdownMenuItem>
+              )}
+              {canUndoMoveToCash ? (
+                <DropdownMenuItem onSelect={handleUndoMoveToCash}>
+                  <WalletIcon />
+                  Undo move to Cash
+                </DropdownMenuItem>
+              ) : isTransfer ? (
+                <DropdownMenuItem onSelect={handleUndoTransfer}>
+                  <BanknoteIcon />
+                  Undo transfer
+                </DropdownMenuItem>
+              ) : (
+                !isWithdrawal && (
+                  <DropdownMenuItem onSelect={openMarkTransfer}>
+                    <BanknoteIcon />
+                    Mark as transfer
+                  </DropdownMenuItem>
+                )
+              )}
+              {canMoveToCash && (
+                <DropdownMenuItem onSelect={openMoveToCash}>
+                  <WalletIcon />
+                  Move to Cash
+                </DropdownMenuItem>
+              )}
+              {canShiftMonth && (
+                <DropdownMenuItem onSelect={handleShiftBudgetMonth}>
+                  <CalendarArrowDownIcon />
+                  {budgetMonthLabel}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onSelect={openSetReminder}>
+                <BellPlusIcon />
+                Set reminder
               </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onSelect={openSetReminder}>
-              <BellPlusIcon />
-              Set reminder
-            </DropdownMenuItem>
-            {!isTransfer && (
-              <DropdownMenuItem onSelect={handleToggleFixed}>
-                <PinIcon />
-                {resolvedFixed ? "Mark as daily" : "Mark as non-daily"}
-              </DropdownMenuItem>
-            )}
-            {canDelete && (
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onSelect={handleDelete}
-              >
-                <Trash2Icon />
-                Delete
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+              {!isTransfer && (
+                <DropdownMenuItem onSelect={handleToggleFixed}>
+                  <PinIcon />
+                  {resolvedFixed ? "Mark as daily" : "Mark as non-daily"}
+                </DropdownMenuItem>
+              )}
+              {canDelete && (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={handleDelete}
+                >
+                  <Trash2Icon />
+                  Delete
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
       {edit.mounted && (
         <TransactionFormDialog
           key={edit.key}
@@ -407,12 +450,12 @@ export function TransactionRow({
           title="Set a reminder"
           seed={{
             label: reminderTitle,
-            amount: tx.amount_original,
-            currency: tx.currency_original,
+            amount: tx.amount,
+            currency: tx.currency,
             source: tx.source,
             frequency: "MONTHLY",
-            lastPaidOn: tx.occurred_on,
-            nextDueOn: computeNextDue(tx.occurred_on, "MONTHLY"),
+            lastPaidOn: tx.occurredOn,
+            nextDueOn: computeNextDue(tx.occurredOn, "MONTHLY"),
             note: null,
           }}
         />
@@ -425,12 +468,20 @@ export function TransactionRow({
           onOpenChange={source.setOpen}
         />
       )}
+      {creditDialog.mounted && inTransit && (
+        <CreditTransferDialog
+          transfer={inTransit}
+          open={creditDialog.open}
+          onOpenChange={creditDialog.setOpen}
+        />
+      )}
       {transferDialog.mounted && (
         <MarkTransferDialog
           txId={tx.id}
           txSource={tx.source}
-          txCurrency={tx.currency_original}
-          txAmount={tx.amount_original}
+          txCurrency={tx.currency}
+          txAmount={tx.amount}
+          txDate={tx.occurredOn}
           txKind={tx.kind}
           open={transferDialog.open}
           onOpenChange={transferDialog.setOpen}

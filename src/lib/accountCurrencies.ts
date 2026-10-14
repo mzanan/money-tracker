@@ -1,6 +1,5 @@
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import { kindOfSource } from "@/lib/constants/sources";
-import type { Transaction } from "@/types/db";
 
 export type AccountCurrencies = Record<string, string[]>;
 
@@ -83,25 +82,6 @@ export function accountCurrencyError({
   }
   const field = side === "charged" ? "the total charged" : `the amount ${side}`;
   return `${accountLabel} uses ${allowed.join(", ")}. Enter ${field} in ${allowed.join(" or ")}.`;
-}
-
-export function accountDisplayCurrency(
-  transactions: ReadonlyArray<
-    Pick<Transaction, "source" | "currency_original" | "fx_rates_snapshot">
-  >,
-  accountCurrencies: AccountCurrencies,
-): string | null {
-  const sources = new Set(transactions.map((tx) => tx.source));
-  if (sources.size !== 1) return null;
-  const declared = accountCurrencies[[...sources][0]];
-  if (declared?.length !== 1) return null;
-  const [currency] = declared;
-  const convertible = transactions.every(
-    (tx) =>
-      tx.currency_original === currency ||
-      Boolean(tx.fx_rates_snapshot?.[currency]),
-  );
-  return convertible ? currency : null;
 }
 
 export function toggleAccountCurrency(

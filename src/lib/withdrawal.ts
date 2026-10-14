@@ -1,12 +1,9 @@
 import {
   amountValidationError,
-  convert,
   feeAmountError,
   formatMoney,
   roundForCurrency,
 } from "@/lib/currency";
-
-import type { FxRates } from "@/types/db";
 
 export const RATE_DECIMALS = 4;
 
@@ -25,27 +22,6 @@ export function cashFromWithdrawalNote(
   const amount = Number(match[1].replace(/,/g, ""));
   if (!Number.isFinite(amount) || amount <= 0) return null;
   return { amount, currency: match[2] };
-}
-
-export function impliedCashRate(
-  charged: { amount: number; currency: string; rates: FxRates },
-  cash: { amount: number; currency: string },
-): number | null {
-  if (cash.currency === charged.currency) return null;
-  let chargedInUsd: number;
-  try {
-    chargedInUsd = convert(
-      charged.amount,
-      charged.currency,
-      "USD",
-      charged.rates,
-    );
-  } catch {
-    return null;
-  }
-  if (!(chargedInUsd > 0)) return null;
-  const rate = cash.amount / chargedInUsd;
-  return Number.isFinite(rate) && rate > 0 ? rate : null;
 }
 
 export function withdrawalNote(
@@ -126,6 +102,22 @@ export function resolveWithdrawalCharge(
   );
   if (convertedAmountError) {
     return { ok: false, error: convertedAmountError };
+  }
+  if (chargedCurrency === input.receivedCurrency) {
+    const gap = roundForCurrency(converted - input.received, chargedCurrency);
+    if (gap < 0) {
+      return {
+        ok: false,
+        error: "The total charged can't be less than the cash received",
+      };
+    }
+    if (gap > 0) {
+      return {
+        ok: true,
+        converted: input.received,
+        fee: roundForCurrency((fee ?? 0) + gap, chargedCurrency),
+      };
+    }
   }
   return { ok: true, converted, fee };
 }

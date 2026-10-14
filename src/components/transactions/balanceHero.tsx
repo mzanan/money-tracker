@@ -10,9 +10,11 @@ import { formatStat } from "@/lib/currency";
 import { formatYearMonthShort } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
-import type { Transaction } from "@/types/db";
+import type { MovementScope } from "@/lib/ledger/scope";
+import type { Movement } from "@/types/ledger";
 
 import { AmountsToggle } from "./amountsToggle";
+import { BalanceLine } from "./balanceLine";
 import { DaySpendView } from "./daySpendView";
 import { MiniStat } from "./miniStat";
 import { PeriodNav } from "./periodNav";
@@ -26,9 +28,10 @@ export type HeroView = "monthly" | "daily";
 
 interface Props {
   yearMonth: string;
-  transactions: Transaction[];
-  lifetimeTransactions: Transaction[];
-  includeTransfers?: boolean;
+  movements: Movement[];
+  lifetimeMovements: Movement[];
+  pendingMovements: Movement[];
+  scope: MovementScope;
   selectedKind: KindFilter;
   onKindChange: (next: KindFilter) => void;
   hasOlder: boolean;
@@ -39,14 +42,14 @@ interface Props {
   view: HeroView;
   onViewChange: (next: HeroView) => void;
   daySpend: ReturnType<typeof useDaySpend>;
-  costBasisSources: string[];
 }
 
 export function BalanceHero({
   yearMonth,
-  transactions,
-  lifetimeTransactions,
-  includeTransfers = false,
+  movements,
+  lifetimeMovements,
+  pendingMovements,
+  scope,
   selectedKind,
   onKindChange,
   hasOlder,
@@ -57,7 +60,6 @@ export function BalanceHero({
   view,
   onViewChange,
   daySpend,
-  costBasisSources,
 }: Props) {
   const { mask } = useHideAmounts();
   const {
@@ -67,18 +69,18 @@ export function BalanceHero({
     totalSigned,
     showBase,
     totalInBase,
-    totalAtTodaysRate,
-    ratesStale,
+    pendingText,
     incomeInBase,
     expenseInBase,
     netInBase,
     monthPositive,
     monthSigned,
   } = useBalanceHero({
-    transactions,
-    lifetimeTransactions,
-    includeTransfers,
-    costBasisSources,
+    yearMonth,
+    movements,
+    lifetimeMovements,
+    pendingMovements,
+    scope,
   });
 
   function toggle(kind: "income" | "expense") {
@@ -131,13 +133,17 @@ export function BalanceHero({
           >
             {mask(totalSigned)}
           </p>
+          {pendingText && (
+            <p className="text-muted-foreground mt-1 text-xs tabular-nums">
+              {mask(pendingText)}
+            </p>
+          )}
           {showBase && (
             <p className="mt-1 h-4">
               {totalInBase && (
                 <RateEstimate
                   value={mask(totalInBase)}
-                  showRate={totalAtTodaysRate}
-                  stale={ratesStale}
+                  showRate={false}
                   variant="hint"
                 />
               )}
@@ -183,27 +189,21 @@ export function BalanceHero({
               />
             </div>
 
-            <div className="mt-4 flex items-baseline justify-between">
-              <span className="text-muted-foreground text-xs">
-                Net this month
-              </span>
-              <span className="grid justify-items-end">
-                <span
-                  className={cn(
-                    "text-sm font-semibold tabular-nums",
-                    monthPositive ? "text-foreground" : "text-expense",
-                  )}
-                >
-                  {mask(monthSigned)}
-                </span>
-                {netInBase && (
-                  <RateEstimate
-                    value={mask(netInBase)}
-                    showRate={false}
-                    variant="hint"
-                  />
-                )}
-              </span>
+            <div className="mt-4 grid gap-2">
+              <BalanceLine
+                label="Net this month"
+                value={mask(monthSigned)}
+                positive={monthPositive}
+                hint={
+                  netInBase && (
+                    <RateEstimate
+                      value={mask(netInBase)}
+                      showRate={false}
+                      variant="hint"
+                    />
+                  )
+                }
+              />
             </div>
           </div>
         </TabsContent>

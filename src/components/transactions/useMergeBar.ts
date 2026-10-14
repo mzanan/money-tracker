@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useServerAction } from "@/hooks/useServerAction";
 import { mergeTransactions } from "@/lib/actions/transactions";
 import { useUiStore } from "@/stores/uiStore";
-import type { Transaction } from "@/types/db";
+import type { RowFacts } from "@/types/ledger";
 
 export function useMergeBar() {
   const txSelectMode = useUiStore((s) => s.txSelectMode);
@@ -20,10 +20,9 @@ export function useMergeBar() {
   const canMarkTransfer = canResolve && first.kind !== second.kind;
   const expenseTx =
     canMarkTransfer && first.kind === "expense" ? first : second;
-  const incomeTx =
-    canMarkTransfer && first.kind === "expense" ? second : first;
+  const incomeTx = canMarkTransfer && first.kind === "expense" ? second : first;
 
-  function keep(keepTx: Transaction, removeTx: Transaction) {
+  function keep(keepTx: RowFacts, removeTx: RowFacts) {
     run(() => mergeTransactions(keepTx.id, removeTx.id), {
       success: "Unified into one transaction",
       onSuccess: () => {

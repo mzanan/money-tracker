@@ -30,13 +30,8 @@ export function resolveSourceLabel(
   return accountLabels[source] ?? labelForSource(source);
 }
 
-export function tabSourcesFrom(
-  sources: ReadonlyArray<string>,
-  cashEnabled: boolean,
-): string[] {
-  return cashEnabled && !sources.includes("manual")
-    ? ["manual", ...sources]
-    : [...sources];
+export function tabSourcesFrom(sources: ReadonlyArray<string>): string[] {
+  return sources.includes("manual") ? [...sources] : ["manual", ...sources];
 }
 
 export function withoutArchived(
@@ -48,10 +43,9 @@ export function withoutArchived(
 
 export function addableSources(
   sources: ReadonlyArray<string>,
-  cashEnabled: boolean,
   archived: ReadonlyArray<string>,
 ): string[] {
-  return withoutArchived(tabSourcesFrom(sources, cashEnabled), archived).filter(
+  return withoutArchived(tabSourcesFrom(sources), archived).filter(
     (source) => kindOfSource(source) !== "api",
   );
 }
@@ -133,6 +127,7 @@ export function sourceForApp(app?: string | null): string {
 
 const SOURCE_RE = /^[a-z0-9][a-z0-9 &_-]{0,31}$/;
 export const ALL_SOURCES = "all";
+export const MANUAL_SOURCE = "manual";
 
 const RESERVED_SOURCES = new Set([ALL_SOURCES]);
 
@@ -163,14 +158,9 @@ export function isAccountNameTaken(
   );
 }
 
-export function transferAvailableFor(
-  source: string,
-  cashEnabled: boolean,
-): boolean {
+export function transferAvailableFor(source: string): boolean {
   if (!source || source === "all") return false;
-  if (kindOfSource(source) === "api") return false;
-  if (source === "manual") return cashEnabled;
-  return true;
+  return kindOfSource(source) !== "api";
 }
 
 export function withdrawalAvailableFor(source: string): boolean {

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  foreignKey,
   index,
   integer,
   primaryKey,
@@ -10,7 +11,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import type { FxRates } from "@/types/db";
+import type { FxRates, LedgerRevisionSnapshot } from "@/types/db";
 
 // ---------------------------------------------------------------------------
 // Better Auth tables. Column names match Better Auth's Drizzle adapter
@@ -396,6 +397,7 @@ export const LEDGER_ACCOUNT_KINDS = [
   "income",
   "bridge",
   "pending",
+  "transit",
 ] as const;
 
 export const ledger_accounts = sqliteTable(
@@ -419,12 +421,17 @@ export const ledger_accounts = sqliteTable(
   (t) => [
     check(
       "ledger_accounts_kind_check",
-      sql`${t.kind} IN ('asset', 'expense', 'income', 'bridge', 'pending')`,
+      sql`${t.kind} IN ('asset', 'expense', 'income', 'bridge', 'pending', 'transit')`,
     ),
     uniqueIndex("ledger_accounts_identity_uniq").on(
       t.user_id,
       t.kind,
       t.key,
+      t.currency,
+    ),
+    uniqueIndex("ledger_accounts_owner_currency_uniq").on(
+      t.user_id,
+      t.id,
       t.currency,
     ),
   ],
@@ -452,15 +459,23 @@ export const ledger_transactions = sqliteTable(
     }),
     is_fixed: integer("is_fixed", { mode: "boolean" }),
     budget_month: text("budget_month"),
-    voided_at: text("voided_at"),
+    transit_destination: text("transit_destination"),
     created_at: text("created_at")
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (t) => [
     index("ledger_transactions_user_occurred_idx").on(t.user_id, t.occurred_on),
+    uniqueIndex("ledger_transactions_owner_uniq").on(t.user_id, t.id),
   ],
 );
+
+export const LEDGER_ENTRY_ROLES = [
+  "amount",
+  "fee",
+  "spread",
+  "withdrawal",
+] as const;
 
 export const ledger_entries = sqliteTable(
   "ledger_entries",
@@ -471,24 +486,67 @@ export const ledger_entries = sqliteTable(
     user_id: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    transaction_id: text("transaction_id")
-      .notNull()
-      .references(() => ledger_transactions.id, { onDelete: "cascade" }),
-    account_id: text("account_id")
-      .notNull()
-      .references(() => ledger_accounts.id),
+    transaction_id: text("transaction_id").notNull(),
+    account_id: text("account_id").notNull(),
+    currency: text("currency").notNull(),
+    role: text("role", { enum: LEDGER_ENTRY_ROLES }).notNull(),
     amount: integer("amount").notNull(),
     occurred_on: text("occurred_on").notNull(),
     legacy_tx_id: text("legacy_tx_id"),
   },
   (t) => [
     check("ledger_entries_amount_nonzero", sql`${t.amount} <> 0`),
+    check(
+      "ledger_entries_role_check",
+      sql`${t.role} IN ('amount', 'fee', 'spread', 'withdrawal')`,
+    ),
+    foreignKey({
+      name: "ledger_entries_account_fk",
+      columns: [t.user_id, t.account_id, t.currency],
+      foreignColumns: [
+        ledger_accounts.user_id,
+        ledger_accounts.id,
+        ledger_accounts.currency,
+      ],
+    }),
+    foreignKey({
+      name: "ledger_entries_transaction_fk",
+      columns: [t.user_id, t.transaction_id],
+      foreignColumns: [ledger_transactions.user_id, ledger_transactions.id],
+    }).onDelete("cascade"),
     index("ledger_entries_account_occurred_idx").on(
       t.account_id,
       t.occurred_on,
     ),
     index("ledger_entries_user_idx").on(t.user_id),
     index("ledger_entries_transaction_idx").on(t.transaction_id),
+  ],
+);
+
+export const ledger_revisions = sqliteTable(
+  "ledger_revisions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    transaction_id: text("transaction_id").notNull(),
+    snapshot: text("snapshot", { mode: "json" })
+      .$type<LedgerRevisionSnapshot>()
+      .notNull(),
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (t) => [
+    foreignKey({
+      name: "ledger_revisions_transaction_fk",
+      columns: [t.user_id, t.transaction_id],
+      foreignColumns: [ledger_transactions.user_id, ledger_transactions.id],
+    }).onDelete("cascade"),
+    index("ledger_revisions_transaction_idx").on(t.transaction_id),
   ],
 );
 

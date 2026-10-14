@@ -177,23 +177,6 @@ export function relativeUsdDiff(usdA: number, usdB: number): number | null {
   return Math.abs(usdA - usdB) / reference;
 }
 
-export function snapshotRatesFor(
-  rates: FxRates,
-  codes: Iterable<string>,
-): FxRates {
-  const out: FxRates = {};
-  for (const code of codes) {
-    if (rates[code] !== undefined) {
-      out[code] = rates[code];
-    }
-  }
-  // Rates are USD-based, so `convert` implicitly needs USD in the snapshot.
-  if (rates.USD !== undefined) {
-    out.USD = rates.USD;
-  }
-  return out;
-}
-
 export function amountToInputDigits(amount: number, code: string): string {
   const { decimals } = getCurrency(code);
   const fixed = amount.toFixed(decimals);
@@ -201,8 +184,28 @@ export function amountToInputDigits(amount: number, code: string): string {
   return parseAmountInput(digits) === null ? "" : digits;
 }
 
-export function kindSign(kind: string): "+" | "-" {
-  return kind === "income" ? "+" : "-";
+export function kindSign(kind: string): "+" | "-" | "" {
+  if (kind === "income") return "+";
+  return kind === "transfer" ? "" : "-";
+}
+
+export function legSign(
+  kind: string,
+  direction: "sent" | "received" | undefined,
+): "+" | "-" | "" {
+  if (direction === "sent") return "-";
+  if (direction === "received") return "+";
+  return kindSign(kind);
+}
+
+export function signedBalance(
+  value: number,
+  currency: string,
+): { signed: string; positive: boolean } {
+  return {
+    signed: formatMoney(value, currency, { signed: true }),
+    positive: value >= 0,
+  };
 }
 
 export function formatConverted(

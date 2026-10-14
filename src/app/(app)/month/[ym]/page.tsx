@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { RatesByDateProvider } from "@/hooks/useRatesByDate";
 
 import { MonthDashboard } from "@/components/transactions/monthDashboard";
 import { cashWithdrawalSourcesByUsage } from "@/lib/filters";
@@ -26,25 +27,26 @@ export default async function MonthPage({
     getRemindersData(),
     listAccountSources(user.id),
   ]);
-  const sources = collectSources(data.lifetimeTxs, accountSources);
-  const csvSources = csvSourcesFrom(data.lifetimeTxs);
+  const sources = collectSources(data.ledger.movements, accountSources);
+  const csvSources = csvSourcesFrom(data.ledger.movements);
 
   return (
-    <MonthDashboard
-      yearMonth={data.yearMonth}
-      lifetimeTransactions={data.lifetimeTxs}
-      sources={sources}
-      csvSources={csvSources}
-      withdrawalSources={cashWithdrawalSourcesByUsage(
-        sources,
-        data.lifetimeTxs,
-      )}
-      places={data.places}
-      costBasisSources={data.costBasisSources}
-      reminders={remindersData.reminders}
-      completedReminders={remindersData.completedReminders}
-      today={remindersData.today}
-      entrySuggestions={buildEntrySuggestions(data.lifetimeTxs)}
-    />
+    <RatesByDateProvider value={data.ledger.ratesByDate}>
+      <MonthDashboard
+        yearMonth={data.yearMonth}
+        movements={data.ledger.movements}
+        sources={sources}
+        csvSources={csvSources}
+        withdrawalSources={cashWithdrawalSourcesByUsage(
+          sources,
+          data.ledger.movements,
+        )}
+        places={data.places}
+        reminders={remindersData.reminders}
+        completedReminders={remindersData.completedReminders}
+        today={remindersData.today}
+        entrySuggestions={buildEntrySuggestions(data.ledger.movements)}
+      />
+    </RatesByDateProvider>
   );
 }

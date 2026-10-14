@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Select as SelectPrimitive } from "radix-ui";
 
-import { cn } from "@/lib/utils";
+import { cn, containEscape } from "@/lib/utils";
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react";
 
 function Select({
@@ -62,6 +62,7 @@ function SelectContent({
   children,
   position = "item-aligned",
   align = "center",
+  onEscapeKeyDown,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
   return (
@@ -77,6 +78,7 @@ function SelectContent({
         )}
         position={position}
         align={align}
+        onEscapeKeyDown={containEscape(onEscapeKeyDown)}
         {...props}
       >
         <SelectScrollUpButton />

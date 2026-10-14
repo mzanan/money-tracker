@@ -17,6 +17,8 @@ export const CSV_FEE_SUFFIX = ":fee";
 
 export const LEG_IN_SUFFIX = ":in";
 
+export const LEG_OUT_SUFFIX = ":out";
+
 export function manualFeeParentFrom(externalId: string): string | null {
   if (!externalId.startsWith(EXTERNAL_ID_PREFIX.manualFee)) return null;
   return externalId.slice(EXTERNAL_ID_PREFIX.manualFee.length);
@@ -87,6 +89,14 @@ const NON_ENTRY_PREFIXES = [
   EXTERNAL_ID_PREFIX.transferFee,
   EXTERNAL_ID_PREFIX.manualFee,
 ];
+
+export function isFeeExternalId(externalId: string): boolean {
+  return (
+    externalId.startsWith(EXTERNAL_ID_PREFIX.transferFee) ||
+    externalId.startsWith(EXTERNAL_ID_PREFIX.manualFee) ||
+    externalId.endsWith(CSV_FEE_SUFFIX)
+  );
+}
 
 export function isManualEntryExternalId(
   id: string | null | undefined,

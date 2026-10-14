@@ -1,9 +1,9 @@
-import { monthExpenseRows } from "@/lib/cancellations";
 import { effectiveYearMonth, shiftYearMonth } from "@/lib/dates";
 import { isFixedTransaction, normalizeFixedLabel } from "@/lib/fixedExpenses";
-import { safeTransactionInDisplay, transactionInDisplay } from "@/lib/totals";
+import { monthExpenseMovements } from "@/lib/ledger/canceledPairs";
+import { movementSpend } from "@/lib/ledger/valuation";
 
-import type { Transaction } from "@/types/db";
+import type { Movement, RatesByDate } from "@/types/ledger";
 
 export const UNUSUAL_MEDIAN_MULTIPLIER = 3;
 export const UNUSUAL_MIN_SAMPLE = 5;
@@ -20,9 +20,10 @@ function median(values: number[]): number {
 }
 
 export function detectRecurringNotes(
-  allTransactions: Transaction[],
+  allMovements: Movement[],
   referenceDate: string,
   baseCurrency: string,
+  ratesByDate: RatesByDate,
 ): Set<string> {
   const currentMonth = referenceDate.slice(0, 7);
   const lookbackMonths = new Set(
@@ -36,7 +37,7 @@ export function detectRecurringNotes(
     -(UNUSUAL_LOOKBACK_MONTHS + 1),
   );
   const latestMonth = shiftYearMonth(currentMonth, 1);
-  const windowed = allTransactions.filter((tx) => {
+  const windowed = allMovements.filter((tx) => {
     const month = effectiveYearMonth(tx);
     return month >= earliestMonth && month <= latestMonth;
   });
@@ -44,10 +45,10 @@ export function detectRecurringNotes(
   const daysByNoteAndMonth = new Map<string, Map<string, Set<string>>>();
   const valuesByNote = new Map<string, number[]>();
   const lookbackValues: number[] = [];
-  for (const tx of monthExpenseRows(windowed)) {
+  for (const tx of monthExpenseMovements(windowed)) {
     const month = effectiveYearMonth(tx);
     if (!lookbackMonths.has(month)) continue;
-    const value = safeTransactionInDisplay(tx, baseCurrency);
+    const value = movementSpend(tx, baseCurrency, ratesByDate);
     if (value == null) continue;
     lookbackValues.push(value);
     const normalized = normalizeFixedLabel(tx.note);
@@ -55,7 +56,7 @@ export function detectRecurringNotes(
     const byMonth =
       daysByNoteAndMonth.get(normalized) ?? new Map<string, Set<string>>();
     const days = byMonth.get(month) ?? new Set<string>();
-    days.add(tx.occurred_on);
+    days.add(tx.occurredOn);
     byMonth.set(month, days);
     daysByNoteAndMonth.set(normalized, byMonth);
     valuesByNote.set(normalized, [
@@ -81,18 +82,16 @@ export function detectRecurringNotes(
 }
 
 export function findUnusualExpenses(
-  monthTransactions: Transaction[],
+  monthMovements: Movement[],
   fixedLabels: string[],
   recurringNotes: Set<string>,
   baseCurrency: string,
-): Transaction[] {
-  const valued: { tx: Transaction; value: number }[] = [];
-  for (const tx of monthExpenseRows(monthTransactions)) {
-    try {
-      valued.push({ tx, value: transactionInDisplay(tx, baseCurrency) });
-    } catch {
-      continue;
-    }
+  ratesByDate: RatesByDate,
+): Movement[] {
+  const valued: { tx: Movement; value: number }[] = [];
+  for (const tx of monthExpenseMovements(monthMovements)) {
+    const value = movementSpend(tx, baseCurrency, ratesByDate);
+    if (value !== null) valued.push({ tx, value });
   }
 
   if (valued.length < UNUSUAL_MIN_SAMPLE) return [];
@@ -104,7 +103,7 @@ export function findUnusualExpenses(
     .filter(
       ({ tx, value }) =>
         value >= threshold &&
-        tx.is_fixed == null &&
+        tx.isFixed == null &&
         isFixedTransaction(tx, fixedLabels, recurringNotes) === false,
     )
     .sort((a, b) => b.value - a.value)

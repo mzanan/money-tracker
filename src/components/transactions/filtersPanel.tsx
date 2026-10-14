@@ -7,7 +7,8 @@ import { Reveal } from "@/components/ui/reveal";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import type { Transaction } from "@/types/db";
+import type { MovementScope } from "@/lib/ledger/scope";
+import type { Movement } from "@/types/ledger";
 
 import { ListFilterSelect } from "./listFilterSelect";
 import { MonthView } from "./monthView";
@@ -24,7 +25,7 @@ export function FiltersPanel({
   onClear,
   amountActive,
   results,
-  includeTransfers = false,
+  movementScope,
   tagOptions,
   selectedTag,
   onSelectTag,
@@ -41,8 +42,8 @@ export function FiltersPanel({
   setScope: (value: FilterScope) => void;
   onClear: () => void;
   amountActive: boolean;
-  results: Transaction[];
-  includeTransfers?: boolean;
+  results: Movement[];
+  movementScope: MovementScope;
   tagOptions: string[];
   selectedTag: string | null;
   onSelectTag: (tag: string | null) => void;
@@ -127,8 +128,8 @@ export function FiltersPanel({
 
       <Reveal open={amountActive}>
         <MonthView
-          transactions={results}
-          includeTransfers={includeTransfers}
+          movements={results}
+          scope={movementScope}
           groupCarriedOver={scope === "month"}
           emptyLabel="No transactions match these filters."
         />

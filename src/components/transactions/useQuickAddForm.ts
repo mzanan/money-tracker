@@ -1,5 +1,6 @@
 "use client";
 
+import { transferToast } from "@/lib/transactionDisplay";
 import { useId, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
@@ -91,8 +92,7 @@ export function useQuickAddForm({
 
   const numericAmount = parseAmountInput(amount);
 
-  const transferAvailable =
-    kind === "expense" && transferAvailableFor(source, settings.cash_enabled);
+  const transferAvailable = kind === "expense" && transferAvailableFor(source);
   const transferActive = transfer && transferAvailable;
   const withdrawalAvailable =
     kind === "expense" && withdrawalAvailableFor(source) && !transferActive;
@@ -106,6 +106,7 @@ export function useQuickAddForm({
     txSource: source,
     txCurrency: currency,
     txAmount: numericAmount ?? 0,
+    sentOn: date,
     active: transferActive,
   });
   const withdrawalDraft = useWithdrawalDraft({
@@ -197,6 +198,7 @@ export function useQuickAddForm({
             source,
             destinationSource: transferDraft.selected,
             occurredOn: date,
+            receivedOn: transferDraft.receivedOn,
             note: description.trim() || null,
             tags: tagsInput
               .split(",")
@@ -208,7 +210,7 @@ export function useQuickAddForm({
               : {}),
           }),
         {
-          success: `Transfer · ${formatMoney(rounded, currency)}`,
+          success: transferToast(rounded, currency, transferDraft.notReceived),
           onSuccess: () => {
             setAmount("");
             setDescription("");
@@ -342,6 +344,10 @@ export function useQuickAddForm({
     transferFees: transferDraft.fees,
     setTransferFees: transferDraft.setFees,
     receivedAmount: transferDraft.receivedAmount,
+    transferNotReceived: transferDraft.notReceived,
+    setTransferNotReceived: transferDraft.setNotReceived,
+    transferCreditedOn: transferDraft.creditedOn,
+    setTransferCreditedOn: transferDraft.setCreditedOn,
     setReceivedAmount: transferDraft.setReceivedAmount,
     receivedCurrency: transferDraft.receivedCurrency,
     transferReceivedRequired: transferDraft.receivedRequired,

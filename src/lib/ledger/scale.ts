@@ -21,3 +21,12 @@ export function scaleResolver(
     throw new Error(`No storage scale for currency ${currency}`);
   };
 }
+
+export function hasStorageScale(currency: string, scaleOf: ScaleOf): boolean {
+  try {
+    scaleOf(currency);
+    return true;
+  } catch {
+    return false;
+  }
+}

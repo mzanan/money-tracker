@@ -1,7 +1,11 @@
-import { convert } from "@/lib/currency";
+import { ALL_SOURCES, MANUAL_SOURCE } from "@/lib/constants/sources";
 import { effectiveYearMonth } from "@/lib/dates";
-import { periodTotals } from "@/lib/totals";
-import type { Transaction, TransactionKind } from "@/types/db";
+import { primaryAssetLine } from "@/lib/ledger/movements";
+import { UNTAGGED_LABEL } from "@/lib/constants/tags";
+import { movementAmount, periodTotals } from "@/lib/ledger/scope";
+import { amountInCurrency } from "@/lib/ledger/valuation";
+import type { TransactionKind } from "@/types/db";
+import type { FlowKind, Movement, RatesByDate } from "@/types/ledger";
 
 export interface TagTotal {
   tag: string;
@@ -11,13 +15,14 @@ export interface TagTotal {
 
 export interface TransactionSummary {
   date: string;
-  kind: TransactionKind;
+  kind: FlowKind;
   amount: number;
   amountOriginal: number;
   currencyOriginal: string;
   tags: string[];
   note: string | null;
   source: string;
+  leg?: "sent" | "received";
 }
 
 export interface MerchantTotal {
@@ -33,34 +38,38 @@ export interface MonthTotal {
   net: number;
 }
 
-function baseValue(tx: Transaction, baseCurrency: string): number | null {
-  try {
-    return convert(
-      tx.amount_original,
-      tx.currency_original,
-      baseCurrency,
-      tx.fx_rates_snapshot,
-    );
-  } catch {
-    return null;
-  }
+export interface StatsContext {
+  baseCurrency: string;
+  ratesByDate: RatesByDate;
+}
+
+function shownAmount(movement: Movement, ctx: StatsContext) {
+  const shown = movementAmount(
+    movement,
+    ALL_SOURCES,
+    ctx.baseCurrency,
+    ctx.ratesByDate,
+  );
+  return {
+    shown,
+    base: amountInCurrency(shown, ctx.baseCurrency, ctx.ratesByDate),
+  };
 }
 
 export function topTags(
-  txs: Transaction[],
-  baseCurrency: string,
+  movements: Movement[],
+  ctx: StatsContext,
   options: { kind?: TransactionKind; limit?: number } = {},
 ): TagTotal[] {
   const { kind = "expense", limit = 5 } = options;
   const byTag = new Map<string, { total: number; count: number }>();
-  for (const tx of txs) {
-    if (tx.kind !== kind) continue;
-    const value = baseValue(tx, baseCurrency);
-    if (value === null) continue;
-    const labels = tx.tags.length > 0 ? tx.tags : ["Untagged"];
+  for (const movement of movements) {
+    const { shown, base } = shownAmount(movement, ctx);
+    if (shown.kind !== kind || base === null) continue;
+    const labels = movement.tags.length > 0 ? movement.tags : [UNTAGGED_LABEL];
     for (const label of labels) {
       const entry = byTag.get(label) ?? { total: 0, count: 0 };
-      entry.total += value;
+      entry.total += base;
       entry.count += 1;
       byTag.set(label, entry);
     }
@@ -72,18 +81,17 @@ export function topTags(
 }
 
 export function topMerchants(
-  txs: Transaction[],
-  baseCurrency: string,
+  movements: Movement[],
+  ctx: StatsContext,
   limit = 10,
 ): MerchantTotal[] {
   const byMerchant = new Map<string, { total: number; count: number }>();
-  for (const tx of txs) {
-    if (tx.kind !== "expense") continue;
-    const value = baseValue(tx, baseCurrency);
-    if (value === null) continue;
-    const label = tx.note?.trim() || "Unlabeled";
+  for (const movement of movements) {
+    const { shown, base } = shownAmount(movement, ctx);
+    if (shown.kind !== "expense" || base === null) continue;
+    const label = movement.note?.trim() || "Unlabeled";
     const entry = byMerchant.get(label) ?? { total: 0, count: 0 };
-    entry.total += value;
+    entry.total += base;
     entry.count += 1;
     byMerchant.set(label, entry);
   }
@@ -94,15 +102,15 @@ export function topMerchants(
 }
 
 export function monthlyTrend(
-  txs: Transaction[],
-  baseCurrency: string,
+  movements: Movement[],
+  ctx: StatsContext,
   months = 6,
 ): MonthTotal[] {
-  const byMonth = new Map<string, Transaction[]>();
-  for (const tx of txs) {
-    const month = effectiveYearMonth(tx);
+  const byMonth = new Map<string, Movement[]>();
+  for (const movement of movements) {
+    const month = effectiveYearMonth(movement);
     const list = byMonth.get(month) ?? [];
-    list.push(tx);
+    list.push(movement);
     byMonth.set(month, list);
   }
   return Array.from(byMonth.entries())
@@ -110,14 +118,19 @@ export function monthlyTrend(
     .slice(0, months)
     .reverse()
     .map(([month, list]) => {
-      const { income, expense, net } = periodTotals(list, baseCurrency);
+      const { income, expense, net } = periodTotals(
+        list,
+        ALL_SOURCES,
+        ctx.baseCurrency,
+        ctx.ratesByDate,
+      );
       return { month, income, expense, net };
     });
 }
 
 export function filterTransactionSummaries(
-  txs: Transaction[],
-  baseCurrency: string,
+  movements: Movement[],
+  ctx: StatsContext,
   options: {
     query?: string;
     kind?: TransactionKind;
@@ -127,21 +140,24 @@ export function filterTransactionSummaries(
   const { query, kind, limit = 10 } = options;
   const needle = query?.trim().toLowerCase();
   const matches: TransactionSummary[] = [];
-  for (const tx of txs) {
-    if (kind && tx.kind !== kind) continue;
+  for (const movement of movements) {
+    const { shown, base } = shownAmount(movement, ctx);
+    if (kind && shown.kind !== kind) continue;
     if (needle) {
-      const haystack = `${tx.note ?? ""} ${tx.tags.join(" ")}`.toLowerCase();
+      const haystack =
+        `${movement.note ?? ""} ${movement.tags.join(" ")}`.toLowerCase();
       if (!haystack.includes(needle)) continue;
     }
     matches.push({
-      date: tx.occurred_on,
-      kind: tx.kind,
-      amount: baseValue(tx, baseCurrency) ?? tx.amount_original,
-      amountOriginal: tx.amount_original,
-      currencyOriginal: tx.currency_original,
-      tags: tx.tags,
-      note: tx.note,
-      source: tx.source,
+      date: movement.occurredOn,
+      kind: shown.kind,
+      amount: base ?? shown.amount,
+      amountOriginal: shown.amount,
+      currencyOriginal: shown.currency,
+      tags: movement.tags,
+      note: movement.note,
+      source: primaryAssetLine(movement)?.key ?? MANUAL_SOURCE,
+      ...(movement.leg ? { leg: movement.leg.direction } : {}),
     });
     if (matches.length >= limit) break;
   }

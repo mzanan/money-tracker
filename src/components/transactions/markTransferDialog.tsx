@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/drawer";
 import { useSettings } from "@/hooks/useSettings";
 
+import { TransferCreditFields } from "./transferCreditFields";
 import { TransferFeeSection } from "./transferFeeSection";
 import { useMarkTransferDialog } from "./useMarkTransferDialog";
 
@@ -24,6 +25,7 @@ export function MarkTransferDialog({
   txSource,
   txCurrency,
   txAmount,
+  txDate,
   txKind,
   open,
   onOpenChange,
@@ -32,6 +34,7 @@ export function MarkTransferDialog({
   txSource: string;
   txCurrency: string;
   txAmount: number;
+  txDate: string;
   txKind: "expense" | "income";
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -50,6 +53,10 @@ export function MarkTransferDialog({
     setReceivedCurrency,
     destinationCurrency,
     preview,
+    notReceived,
+    setNotReceived,
+    creditedOn,
+    setCreditedOn,
     pending,
     submit,
   } = useMarkTransferDialog({
@@ -57,6 +64,7 @@ export function MarkTransferDialog({
     txSource,
     txCurrency,
     txAmount,
+    txDate,
     open,
     onOpenChange,
   });
@@ -79,6 +87,16 @@ export function MarkTransferDialog({
             onValueChange={setSelected}
             emptyMessage="No other account to pick. Import or add one first."
           />
+          {txKind === "expense" && (
+            <TransferCreditFields
+              idPrefix="transfer-dialog"
+              notReceived={notReceived}
+              onNotReceivedChange={setNotReceived}
+              creditedOn={creditedOn}
+              onCreditedOnChange={setCreditedOn}
+              sentOn={txDate}
+            />
+          )}
           <TransferFeeSection
             idPrefix="transfer"
             fees={fees}
@@ -93,6 +111,7 @@ export function MarkTransferDialog({
             onReceivedCurrencyChange={setReceivedCurrency}
             preview={preview}
             txKind={txKind}
+            pending={notReceived}
           />
         </DrawerBody>
         <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">

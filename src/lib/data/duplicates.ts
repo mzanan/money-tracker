@@ -1,11 +1,9 @@
-import { and, between, eq } from "drizzle-orm";
-
 import { dayWindow } from "@/lib/dates";
-import { db } from "@/lib/db";
-import { transactions } from "@/lib/db/schema";
 import { relativeUsdDiff, toUsdPair } from "@/lib/currency";
+import { getLedgerRecordsBetween } from "@/lib/data/ledgerWrites";
+import { flowCandidateOf, type FlowCandidate } from "@/lib/ledger/candidates";
 
-import type { FxRates, Transaction } from "@/types/db";
+import type { FxRates } from "@/types/db";
 
 export interface CandidateQuery {
   userId: string;
@@ -17,7 +15,7 @@ export interface CandidateQuery {
 
 export interface MatchCandidate {
   query: CandidateQuery;
-  matches: Transaction[];
+  matches: FlowCandidate[];
 }
 
 const DEFAULT_WINDOW_DAYS = 2;
@@ -38,6 +36,22 @@ function amountsMatch(
   return diff !== null && diff <= CROSS_CURRENCY_TOLERANCE;
 }
 
+export async function getFlowCandidatesBetween(
+  userId: string,
+  start: string,
+  end: string,
+): Promise<FlowCandidate[]> {
+  const records = await getLedgerRecordsBetween(userId, start, end);
+  return records.flatMap(({ movement }) => {
+    const candidate = flowCandidateOf(movement);
+    return candidate &&
+      candidate.occurredOn >= start &&
+      candidate.occurredOn <= end
+      ? [candidate]
+      : [];
+  });
+}
+
 export async function findCrossSourceCandidates(
   queries: CandidateQuery[],
   rates: FxRates | null = null,
@@ -48,26 +62,17 @@ export async function findCrossSourceCandidates(
   return Promise.all(
     queries.map(async (query) => {
       const { start, end } = dayWindow(query.occurredOn, windowDays);
-
-      const rows = await db
-        .select()
-        .from(transactions)
-        .where(
-          and(
-            eq(transactions.user_id, query.userId),
-            eq(transactions.kind, query.kind),
-            between(transactions.occurred_on, start, end),
-          ),
-        );
-
+      const pool = await getFlowCandidatesBetween(query.userId, start, end);
       return {
         query,
-        matches: rows.filter((tx) =>
-          amountsMatch(
-            { amount: query.amount, currency: query.currency },
-            { amount: tx.amount_original, currency: tx.currency_original },
-            rates,
-          ),
+        matches: pool.filter(
+          (candidate) =>
+            candidate.kind === query.kind &&
+            amountsMatch(
+              { amount: query.amount, currency: query.currency },
+              { amount: candidate.amount, currency: candidate.currency },
+              rates,
+            ),
         ),
       };
     }),

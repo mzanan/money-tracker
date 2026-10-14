@@ -57,7 +57,10 @@ export function hasMissingCryptoRates(rates: FxRates): boolean {
 }
 
 export function hasNoMarketCryptoRates(rates: FxRates): boolean {
-  return CRYPTO_CODES.filter(
+  const market = CRYPTO_CODES.filter(
     (code) => code !== "USDT" && code !== "USDC",
-  ).every((code) => rates[code] === undefined);
+  );
+  return (
+    market.length > 0 && market.every((code) => rates[code] === undefined)
+  );
 }

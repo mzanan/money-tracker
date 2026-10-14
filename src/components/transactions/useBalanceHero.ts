@@ -1,92 +1,110 @@
 "use client";
 
+import { pendingHint } from "@/lib/transactionDisplay";
 import { useMemo } from "react";
 
-import { useRates } from "@/hooks/useRates";
-import { useSettings } from "@/hooks/useSettings";
-import { excludeCanceledPairs } from "@/lib/cancellations";
-import { isSingleFundedSource } from "@/lib/costBasis";
+import { useRatesByDate } from "@/hooks/useRatesByDate";
+import { useSettings, useTimezone } from "@/hooks/useSettings";
 import {
-  formatConverted,
   formatMoney,
   formatSignedOrNull,
   formatStat,
   isNegligible,
 } from "@/lib/currency";
-import { periodTotals } from "@/lib/totals";
+import { todayInTz } from "@/lib/dates";
+import { excludeCanceledPairs } from "@/lib/ledger/canceledPairs";
+import {
+  isAllScope,
+  linesInMonth,
+  periodTotals,
+  pendingIncoming,
+  scopeBalance,
+} from "@/lib/ledger/scope";
 
-import type { Transaction } from "@/types/db";
+import type { MovementScope } from "@/lib/ledger/scope";
+import type { Movement } from "@/types/ledger";
 
 import { useDisplayCurrency } from "./useDisplayCurrency";
 
 export function useBalanceHero({
-  transactions,
-  lifetimeTransactions,
-  includeTransfers,
-  costBasisSources,
+  yearMonth,
+  movements,
+  lifetimeMovements,
+  pendingMovements,
+  scope,
 }: {
-  transactions: Transaction[];
-  lifetimeTransactions: Transaction[];
-  includeTransfers: boolean;
-  costBasisSources: string[];
+  yearMonth: string;
+  movements: Movement[];
+  lifetimeMovements: Movement[];
+  pendingMovements: Movement[];
+  scope: MovementScope;
 }) {
   const settings = useSettings();
-  const ratesQuery = useRates();
+  const timezone = useTimezone();
+  const ratesByDate = useRatesByDate();
   const base = settings.base_currency;
-  const displayCurrency = useDisplayCurrency(lifetimeTransactions);
+  const displayCurrency = useDisplayCurrency(lifetimeMovements, scope);
   const showBase = displayCurrency !== base;
-  const atCost = isSingleFundedSource(lifetimeTransactions, costBasisSources);
+  const today = todayInTz(timezone);
 
+  const accountScoped = !isAllScope(scope);
   const monthRows = useMemo(
-    () => excludeCanceledPairs(transactions),
-    [transactions],
+    () =>
+      excludeCanceledPairs(
+        accountScoped ? linesInMonth(lifetimeMovements, yearMonth) : movements,
+      ),
+    [accountScoped, lifetimeMovements, movements, yearMonth],
   );
 
   const monthTotals = useMemo(
-    () => periodTotals(monthRows, displayCurrency, includeTransfers),
-    [monthRows, displayCurrency, includeTransfers],
+    () => periodTotals(monthRows, scope, displayCurrency, ratesByDate),
+    [monthRows, scope, displayCurrency, ratesByDate],
   );
   const monthBase = useMemo(
-    () => (showBase ? periodTotals(monthRows, base, includeTransfers) : null),
-    [showBase, monthRows, base, includeTransfers],
+    () => (showBase ? periodTotals(monthRows, scope, base, ratesByDate) : null),
+    [showBase, monthRows, scope, base, ratesByDate],
   );
 
-  const lifetimeTotals = useMemo(
-    () => periodTotals(lifetimeTransactions, displayCurrency, includeTransfers),
-    [lifetimeTransactions, displayCurrency, includeTransfers],
-  );
-  const lifetimeAtCost = useMemo(
+  const total = useMemo(
     () =>
-      showBase && atCost
-        ? periodTotals(lifetimeTransactions, base, includeTransfers).net
+      scopeBalance(
+        lifetimeMovements,
+        scope,
+        displayCurrency,
+        ratesByDate,
+        today,
+      ),
+    [lifetimeMovements, scope, displayCurrency, ratesByDate, today],
+  );
+  const totalBase = useMemo(
+    () =>
+      showBase
+        ? scopeBalance(lifetimeMovements, scope, base, ratesByDate, today)
         : null,
-    [showBase, atCost, lifetimeTransactions, base, includeTransfers],
+    [showBase, lifetimeMovements, scope, base, ratesByDate, today],
   );
 
-  const totalInBase =
-    lifetimeAtCost !== null
-      ? formatSignedOrNull(lifetimeAtCost, base)
-      : showBase && !isNegligible(lifetimeTotals.net)
-        ? formatConverted(
-            lifetimeTotals.net,
-            displayCurrency,
-            base,
-            ratesQuery.data?.rates,
-            { signed: true },
-          )
-        : null;
+  const pending = useMemo(
+    () =>
+      pendingIncoming(
+        pendingMovements,
+        scope,
+        displayCurrency,
+        ratesByDate,
+        today,
+      ),
+    [pendingMovements, scope, displayCurrency, ratesByDate, today],
+  );
 
   return {
     displayCurrency,
+    pendingText: pendingHint(pending, displayCurrency),
     monthTotals,
-    totalPositive: lifetimeTotals.net >= 0,
-    totalSigned: formatMoney(lifetimeTotals.net, displayCurrency, {
-      signed: true,
-    }),
+    totalPositive: total >= 0,
+    totalSigned: formatMoney(total, displayCurrency, { signed: true }),
     showBase,
-    totalInBase,
-    totalAtTodaysRate: lifetimeAtCost === null,
-    ratesStale: ratesQuery.data?.stale ?? false,
+    totalInBase:
+      totalBase === null ? null : formatSignedOrNull(totalBase, base),
     incomeInBase:
       monthBase && !isNegligible(monthBase.income)
         ? `+${formatStat(monthBase.income, base)}`

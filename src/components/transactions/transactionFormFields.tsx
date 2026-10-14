@@ -15,6 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { getCurrency } from "@/lib/constants/currencies";
 
 import { KindToggle } from "./kindToggle";
+import { DateField } from "@/components/ui/dateField";
+import { TransferCreditFields } from "./transferCreditFields";
 import { TransferFeeSection } from "./transferFeeSection";
 import type { useTransactionForm } from "./useTransactionForm";
 
@@ -150,16 +152,13 @@ export function TransactionFormFields({
         )}
       </div>
 
-      <div className="grid gap-1.5">
-        <Label htmlFor="tx-form-date">Date</Label>
-        <Input
-          id="tx-form-date"
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          required
-        />
-      </div>
+      <DateField
+        id="tx-form-date"
+        label="Date"
+        value={date}
+        onChange={setDate}
+        inputClassName=""
+      />
 
       {txId && transferToggleAvailable && (
         <SwitchRow
@@ -181,6 +180,16 @@ export function TransactionFormFields({
               emptyMessage="No other account to pick. Import or add one first."
             />
           </div>
+          {kind === "expense" && (
+            <TransferCreditFields
+              idPrefix="tx-form-transfer"
+              notReceived={transferDraft.notReceived}
+              onNotReceivedChange={transferDraft.setNotReceived}
+              creditedOn={transferDraft.creditedOn}
+              onCreditedOnChange={transferDraft.setCreditedOn}
+              sentOn={date}
+            />
+          )}
           <TransferFeeSection
             idPrefix="tx-form-transfer"
             fees={transferDraft.fees}
@@ -195,6 +204,7 @@ export function TransactionFormFields({
             onReceivedCurrencyChange={transferDraft.setReceivedCurrency}
             preview={transferDraft.preview}
             txKind={kind}
+            pending={transferDraft.notReceived}
           />
         </>
       )}

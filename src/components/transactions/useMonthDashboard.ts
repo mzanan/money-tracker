@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useRatesByDate } from "@/hooks/useRatesByDate";
 import { useSettings } from "@/hooks/useSettings";
-import { hasBudgetMonthOverride } from "@/lib/budgetMonth";
+import { hasBudgetMonthOverride } from "@/lib/ledger/carriedOver";
+import { onScopedDate } from "@/lib/ledger/scope";
 import { addableSources } from "@/lib/constants/sources";
 import { activeListFilterCount, listFilterChoices } from "@/lib/filters";
 import { detectRecurringNotes } from "@/lib/unusualExpenses";
 import {
-  effectiveYearMonth,
   forwardMonthCap,
   newestYearMonthFrom,
   oldestYearMonthFrom,
@@ -16,71 +17,53 @@ import {
 } from "@/lib/dates";
 
 import { useDashboardControls } from "./useDashboardControls";
+import { pendingTransfers } from "@/lib/ledger/movements";
 import type { PanelMode } from "./useDashboardControls";
 import { useDaySpend } from "./useDaySpend";
 
 import type { HeroView } from "./balanceHero";
-import type { Location, RecurringPayment, Transaction } from "@/types/db";
+import type { Location, RecurringPayment } from "@/types/db";
+import type { Movement } from "@/types/ledger";
 
 const PANEL_TITLES: Record<Exclude<PanelMode, "none">, string> = {
   filters: "Filters",
   calendar: "Calendar",
   budget: "Budget",
   add: "Add transaction",
+  transit: "In transit",
 };
 
 export function useMonthDashboard({
   yearMonth,
-  lifetimeTransactions,
+  movements,
   places,
   reminders,
   today,
   sources,
 }: {
   yearMonth: string;
-  lifetimeTransactions: Transaction[];
+  movements: Movement[];
   places: Location[];
   reminders: RecurringPayment[];
   today: string;
   sources: string[];
 }) {
   const settings = useSettings();
+  const ratesByDate = useRatesByDate();
   const [selectedYearMonth, setSelectedYearMonth] = useState(yearMonth);
 
   const todayYearMonth = today.slice(0, 7);
   const oldestYearMonth = useMemo(
-    () => oldestYearMonthFrom(lifetimeTransactions),
-    [lifetimeTransactions],
+    () => oldestYearMonthFrom(movements),
+    [movements],
   );
   const newestYearMonth = useMemo(
-    () => newestYearMonthFrom(lifetimeTransactions),
-    [lifetimeTransactions],
+    () => newestYearMonthFrom(movements),
+    [movements],
   );
   const forwardCap = forwardMonthCap(todayYearMonth, newestYearMonth);
   const visibleYearMonth =
     selectedYearMonth > forwardCap ? forwardCap : selectedYearMonth;
-
-  const monthTransactions = useMemo(() => {
-    return lifetimeTransactions
-      .filter((tx) => effectiveYearMonth(tx) === visibleYearMonth)
-      .slice()
-      .sort((a, b) => {
-        if (a.occurred_on !== b.occurred_on) {
-          return a.occurred_on < b.occurred_on ? 1 : -1;
-        }
-        return (a.occurred_at ?? "") < (b.occurred_at ?? "") ? 1 : -1;
-      });
-  }, [lifetimeTransactions, visibleYearMonth]);
-
-  const monthMovedOut = useMemo(
-    () =>
-      lifetimeTransactions.filter(
-        (tx) =>
-          tx.occurred_on.slice(0, 7) === visibleYearMonth &&
-          hasBudgetMonthOverride(tx),
-      ),
-    [lifetimeTransactions, visibleYearMonth],
-  );
 
   const hasOlder =
     oldestYearMonth !== null &&
@@ -105,9 +88,8 @@ export function useMonthDashboard({
   }
 
   const c = useDashboardControls({
-    monthTransactions,
-    monthMovedOut,
-    lifetimeTransactions,
+    yearMonth: visibleYearMonth,
+    lifetimeMovements: movements,
     reminders,
     places,
     sources,
@@ -116,9 +98,9 @@ export function useMonthDashboard({
   const [view, setView] = useState<HeroView>("monthly");
   const daySpend = useDaySpend({
     yearMonth: visibleYearMonth,
-    transactions: c.sourceFilteredMonth,
+    movements: c.sourceFilteredMonth,
+    scope: c.selectedSource,
     today,
-    includeTransfers: c.includeTransfers,
     hasOlderMonth: hasOlder,
     hasNewerMonth: hasNewer,
     onShiftMonth: shiftMonth,
@@ -137,7 +119,7 @@ export function useMonthDashboard({
       listFilterChoices(
         isDaily
           ? c.sourceFilteredMonth.filter(
-              (tx) => tx.occurred_on === daySpend.selectedDate,
+              onScopedDate(c.selectedSource, daySpend.selectedDate),
             )
           : c.sourceFilteredMonth,
         places,
@@ -146,6 +128,7 @@ export function useMonthDashboard({
     [
       isDaily,
       c.sourceFilteredMonth,
+      c.selectedSource,
       daySpend.selectedDate,
       places,
       c.selectedTag,
@@ -153,36 +136,28 @@ export function useMonthDashboard({
     ],
   );
 
-  const feedTransactions = useMemo(
-    () =>
-      isDaily
-        ? c.monthList.filter(
-            (tx) =>
-              tx.occurred_on === daySpend.selectedDate ||
-              hasBudgetMonthOverride(tx),
-          )
-        : c.monthList,
-    [isDaily, c.monthList, daySpend.selectedDate],
-  );
+  const feedMovements = useMemo(() => {
+    if (!isDaily) return c.monthList;
+    const onDay = onScopedDate(c.selectedSource, daySpend.selectedDate);
+    return c.monthList.filter(
+      (movement) => onDay(movement) || hasBudgetMonthOverride(movement),
+    );
+  }, [isDaily, c.monthList, daySpend.selectedDate, c.selectedSource]);
 
   const feedMovedOut = useMemo(
     () =>
       isDaily
         ? c.movedOutList.filter(
-            (tx) => tx.occurred_on === daySpend.selectedDate,
+            onScopedDate(c.selectedSource, daySpend.selectedDate),
           )
         : c.movedOutList,
-    [isDaily, c.movedOutList, daySpend.selectedDate],
+    [isDaily, c.movedOutList, daySpend.selectedDate, c.selectedSource],
   );
 
   const addSources = useMemo(
     () =>
-      addableSources(
-        sources,
-        settings.cash_enabled,
-        settings.archived_sources ?? [],
-      ),
-    [sources, settings.cash_enabled, settings.archived_sources],
+      addableSources(sources, settings.archived_sources ?? []),
+    [sources, settings.archived_sources],
   );
 
   const panelOpen = c.panel !== "none";
@@ -207,20 +182,24 @@ export function useMonthDashboard({
   }, [panelMounted, panelOpen]);
   const shownPanel = c.panel !== "none" ? c.panel : lastPanel;
 
+  const inTransit = useMemo(() => pendingTransfers(movements), [movements]);
+
   const recurringNotes = useMemo(
     () =>
       detectRecurringNotes(
-        lifetimeTransactions,
+        movements,
         `${visibleYearMonth}-01`,
         settings.base_currency,
+        ratesByDate,
       ),
-    [lifetimeTransactions, visibleYearMonth, settings.base_currency],
+    [movements, visibleYearMonth, settings.base_currency, ratesByDate],
   );
 
   return {
     baseCurrency: settings.base_currency,
     visibleYearMonth,
     recurringNotes,
+    inTransit,
     hasOlder,
     hasNewer,
     shiftMonth,
@@ -233,7 +212,7 @@ export function useMonthDashboard({
     isDaily,
     filterChoices,
     activeFilters: activeListFilterCount(c.selectedTag, c.selectedPlace),
-    feedTransactions,
+    feedMovements,
     feedMovedOut,
     panelMounted,
     drawerOpen,

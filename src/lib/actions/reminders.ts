@@ -1,16 +1,28 @@
 "use server";
 
-import { and, desc, eq, isNull, notLike, or } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { ActionError, actionErrorMessage } from "@/lib/actionError";
 import { amountValidationError } from "@/lib/currency";
 import { db } from "@/lib/db";
-import { recurring_payments, transactions, user_settings } from "@/lib/db/schema";
+import { recurring_payments, user_settings } from "@/lib/db/schema";
+import {
+  findCrossSourceCandidates,
+  getFlowCandidatesBetween,
+} from "@/lib/data/duplicates";
+import {
+  existingExternalIds,
+  getLedgerRecord,
+  getScaleOf,
+  postLedgerTransaction,
+} from "@/lib/data/ledgerWrites";
+import { hasReminderRef } from "@/lib/ledger/candidates";
+import { reminderExpenseDraft } from "@/lib/ledger/reminderDraft";
+import type { FlowCandidate } from "@/types/ledger";
 import { resolveTimezone } from "@/lib/preferences.server";
 import { getRates } from "@/lib/rates";
 import { computeNextDue } from "@/lib/reminders";
-import { buildTransactionRow, EXTERNAL_ID_PREFIX } from "@/lib/transactions";
 import {
   createReminderSchema,
   updateReminderSchema,
@@ -42,10 +54,16 @@ export async function createReminder(
 ): Promise<ActionResult<{ id: string }>> {
   const parsed = createReminderSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid data" };
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid data",
+    };
   }
 
-  const amountError = reminderAmountError(parsed.data.amount, parsed.data.currency);
+  const amountError = reminderAmountError(
+    parsed.data.amount,
+    parsed.data.currency,
+  );
   if (amountError) return { ok: false, error: amountError };
 
   const user = await getUser();
@@ -84,10 +102,16 @@ export async function updateReminder(
 ): Promise<ActionResult> {
   const parsed = updateReminderSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid data" };
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid data",
+    };
   }
 
-  const amountError = reminderAmountError(parsed.data.amount, parsed.data.currency);
+  const amountError = reminderAmountError(
+    parsed.data.amount,
+    parsed.data.currency,
+  );
   if (amountError) return { ok: false, error: amountError };
 
   const user = await getUser();
@@ -124,36 +148,6 @@ export async function updateReminder(
   }
 }
 
-async function buildReminderExpenseRow(
-  userId: string,
-  reminder: typeof recurring_payments.$inferSelect,
-  day: string,
-  userCurrencies: string[],
-) {
-  if (reminder.amount == null || !reminder.currency) return null;
-
-  let rates;
-  try {
-    rates = (await getRates()).rates;
-  } catch {
-    return null;
-  }
-
-  return buildTransactionRow(
-    {
-      userId,
-      kind: "expense",
-      amount: reminder.amount,
-      currency: reminder.currency,
-      occurredOn: day,
-      note: reminder.label,
-      externalId: `${EXTERNAL_ID_PREFIX.reminder}${reminder.id}:${day}`,
-      recurringId: reminder.id,
-    },
-    { rates, userCurrencies },
-  );
-}
-
 export interface ReminderPaymentCandidate {
   id: string;
   source: string;
@@ -163,17 +157,23 @@ export interface ReminderPaymentCandidate {
   note: string | null;
 }
 
-function toCandidate(
-  tx: typeof transactions.$inferSelect,
-): ReminderPaymentCandidate {
+function toCandidate(candidate: FlowCandidate): ReminderPaymentCandidate {
   return {
-    id: tx.id,
-    source: tx.source,
-    occurredOn: tx.occurred_on,
-    amount: tx.amount_original,
-    currency: tx.currency_original,
-    note: tx.note,
+    id: candidate.id,
+    source: candidate.source,
+    occurredOn: candidate.occurredOn,
+    amount: candidate.amount,
+    currency: candidate.currency,
+    note: candidate.note,
   };
+}
+
+function isLinkable(candidate: FlowCandidate): boolean {
+  return (
+    candidate.kind === "expense" &&
+    candidate.recurringId == null &&
+    !hasReminderRef(candidate)
+  );
 }
 
 export async function getReminderPayOptions(
@@ -203,29 +203,15 @@ export async function getReminderPayOptions(
     .then((rows) => rows[0]);
   if (!reminder) return { ok: false, error: "Reminder not found" };
 
-  const recentRows = await db
-    .select()
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.user_id, user.id),
-        eq(transactions.kind, "expense"),
-        eq(transactions.occurred_on, day),
-        isNull(transactions.recurring_id),
-        or(
-          isNull(transactions.external_id),
-          notLike(transactions.external_id, `${EXTERNAL_ID_PREFIX.reminder}%`),
-        ),
-      ),
-    )
-    .orderBy(desc(transactions.occurred_at));
+  const recentRows = (await getFlowCandidatesBetween(user.id, day, day))
+    .filter(isLinkable)
+    .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 
   let suggested: ReminderPaymentCandidate[] = [];
   if (reminder.amount != null && reminder.currency) {
     const rates = await getRates()
       .then((r) => r.rates)
       .catch(() => null);
-    const { findCrossSourceCandidates } = await import("@/lib/data/duplicates");
     const [result] = await findCrossSourceCandidates(
       [
         {
@@ -238,13 +224,7 @@ export async function getReminderPayOptions(
       ],
       rates,
     );
-    suggested = result.matches
-      .filter(
-        (m) =>
-          !m.external_id?.startsWith(EXTERNAL_ID_PREFIX.reminder) &&
-          m.recurring_id == null,
-      )
-      .map(toCandidate);
+    suggested = result.matches.filter(isLinkable).map(toCandidate);
   }
 
   const suggestedIds = new Set(suggested.map((s) => s.id));
@@ -254,6 +234,9 @@ export async function getReminderPayOptions(
 
   return { ok: true, data: { suggested, recent } };
 }
+
+const LINKED_ELSEWHERE_ERROR =
+  "This transaction is already linked to another reminder";
 
 export async function markReminderPaid(
   id: string,
@@ -279,10 +262,7 @@ export async function markReminderPaid(
   if (!reminder) return { ok: false, error: "Reminder not found" };
 
   const settings = await db
-    .select({
-      timezone: user_settings.timezone,
-      currencies: user_settings.currencies,
-    })
+    .select({ timezone: user_settings.timezone })
     .from(user_settings)
     .where(eq(user_settings.user_id, user.id))
     .limit(1)
@@ -295,32 +275,16 @@ export async function markReminderPaid(
 
   try {
     const linkId = options?.linkTransactionId;
-    let linkUpdate: {
-      id: string;
-      patch: Partial<typeof transactions.$inferSelect>;
-    } | null = null;
     if (linkId) {
-      const tx = await db
-        .select()
-        .from(transactions)
-        .where(
-          and(eq(transactions.id, linkId), eq(transactions.user_id, user.id)),
-        )
-        .limit(1)
-        .then((rows) => rows[0]);
-      if (!tx) return { ok: false, error: "Transaction not found" };
-      if (tx.recurring_id != null && tx.recurring_id !== id) {
-        return {
-          ok: false,
-          error: "This transaction is already linked to another reminder",
-        };
+      const record = await getLedgerRecord(user.id, linkId);
+      if (!record) return { ok: false, error: "Transaction not found" };
+      if (
+        record.movement.recurringId != null &&
+        record.movement.recurringId !== id
+      ) {
+        return { ok: false, error: LINKED_ELSEWHERE_ERROR };
       }
-
-      const patch: Partial<typeof tx> = {};
-      if (!tx.comment) patch.comment = reminder.label;
-      patch.recurring_id = reminder.id;
-      linkUpdate = { id: linkId, patch };
-      day = tx.occurred_on;
+      day = record.movement.occurredOn;
     }
     const resolvedDay = day;
 
@@ -329,40 +293,29 @@ export async function markReminderPaid(
       reminder.installments_total != null &&
       installmentsPaid >= reminder.installments_total;
 
-    // getRates() runs network I/O, so build the expense row before opening the
-    // transaction — keep only DB writes inside it.
-    const expenseRow =
+    const expenseDraft =
       linkId || options?.skipExpense
         ? null
-        : await buildReminderExpenseRow(
-            user.id,
-            reminder,
-            resolvedDay,
-            settings?.currencies ?? [],
-          );
+        : reminderExpenseDraft(reminder, resolvedDay, await getScaleOf());
 
     let expenseAdded = false;
     await db.transaction(async (dbTx) => {
-      if (linkUpdate) {
-        const linked = await dbTx
-          .update(transactions)
-          .set(linkUpdate.patch)
-          .where(
-            and(
-              eq(transactions.id, linkUpdate.id),
-              eq(transactions.user_id, user.id),
-              or(
-                isNull(transactions.recurring_id),
-                eq(transactions.recurring_id, id),
-              ),
-            ),
-          )
-          .returning({ id: transactions.id });
-        if (linked.length === 0) {
-          throw new ActionError(
-            "This transaction is already linked to another reminder",
-          );
+      if (linkId) {
+        const record = await getLedgerRecord(user.id, linkId, dbTx);
+        if (!record) throw new ActionError("Transaction not found");
+        const { draft } = record;
+        if (draft.recurringId != null && draft.recurringId !== id) {
+          throw new ActionError(LINKED_ELSEWHERE_ERROR);
         }
+        await postLedgerTransaction(
+          user.id,
+          {
+            ...draft,
+            comment: draft.comment || reminder.label,
+            recurringId: reminder.id,
+          },
+          { replaceId: linkId, executor: dbTx, expected: draft },
+        );
       }
       await dbTx
         .update(recurring_payments)
@@ -382,19 +335,20 @@ export async function markReminderPaid(
             eq(recurring_payments.user_id, user.id),
           ),
         );
-      if (expenseRow) {
-        const inserted = await dbTx
-          .insert(transactions)
-          .values(expenseRow)
-          .onConflictDoNothing({
-            target: [
-              transactions.user_id,
-              transactions.source,
-              transactions.external_id,
-            ],
-          })
-          .returning({ id: transactions.id });
-        expenseAdded = inserted.length > 0;
+      if (expenseDraft) {
+        const [ref] = expenseDraft.externalRefs;
+        const taken = await existingExternalIds(
+          user.id,
+          ref.origin,
+          [ref.externalId],
+          dbTx,
+        );
+        if (taken.size === 0) {
+          await postLedgerTransaction(user.id, expenseDraft, {
+            executor: dbTx,
+          });
+          expenseAdded = true;
+        }
       }
     });
     revalidatePath("/", "layout");
