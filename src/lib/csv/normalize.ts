@@ -106,6 +106,24 @@ export function normalizeRowDetailed(
     ? (parseAmount(raw[mapping.feeCol], decimals) ?? undefined)
     : undefined;
 
+  const targetCurrency = mapping.targetCurrencyCol
+    ? (raw[mapping.targetCurrencyCol] ?? "").trim().toUpperCase()
+    : "";
+  const targetAmount =
+    targetCurrency && mapping.targetAmountCol
+      ? parseAmount(
+          raw[mapping.targetAmountCol],
+          getCurrency(targetCurrency).decimals,
+        )
+      : null;
+  const spent =
+    kind === "expense" &&
+    targetAmount &&
+    targetAmount > 0 &&
+    targetCurrency !== currency
+      ? { amount: Math.abs(targetAmount), currency: targetCurrency }
+      : undefined;
+
   return {
     ok: true,
     row: {
@@ -117,6 +135,7 @@ export function normalizeRowDetailed(
       description,
       externalId,
       feeAmount,
+      spent,
     },
   };
 }

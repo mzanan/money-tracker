@@ -22,6 +22,8 @@ export interface CsvMapping {
   statusCol: string;
   externalIdCol: string;
   feeCol: string;
+  targetAmountCol: string;
+  targetCurrencyCol: string;
   sinceDate: string;
 }
 
@@ -48,6 +50,9 @@ export const CSV_PRESETS: CsvPreset[] = [
       directionCol: "Direction",
       statusCol: "Status",
       feeCol: "Source fee amount",
+      externalIdCol: "ID",
+      targetAmountCol: "Target amount (after fees)",
+      targetCurrencyCol: "Target currency",
     },
   },
   {

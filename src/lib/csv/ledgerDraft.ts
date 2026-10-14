@@ -1,17 +1,40 @@
 import type { CsvRow } from "@/lib/actions/csvImport";
 import { isValidAmountForCurrency, roundForCurrency } from "@/lib/currency";
+import { isSupportedCurrency } from "@/lib/constants/currencies";
 import { isValidCalendarDate } from "@/lib/dates";
 import { CSV_FEE_SUFFIX, EXTERNAL_ID_PREFIX } from "@/lib/externalIds";
 import { isExactInMinor } from "@/lib/ledger/amounts";
-import { feeLines, flowLines } from "@/lib/ledger/builders";
+import {
+  crossCurrencyFlowLines,
+  feeLines,
+  flowLines,
+} from "@/lib/ledger/builders";
 import { feeOnlyDraft } from "@/lib/ledger/edits";
 import type { LedgerDraft } from "@/lib/ledger/posting";
 import type { ScaleOf } from "@/lib/ledger/scale";
+import type { Money } from "@/types/ledger";
 import { transactionContentHash } from "@/lib/transactions";
 
 export interface CsvDraft {
   externalIds: string[];
   draft: LedgerDraft;
+}
+
+function csvSpent(row: CsvRow, scaleOf: ScaleOf): Money | null {
+  if (!row.spent || row.spent.currency === row.currency) return null;
+  const { currency } = row.spent;
+  if (!isSupportedCurrency(currency)) return null;
+  let scale: number;
+  try {
+    scale = scaleOf(currency);
+  } catch {
+    return null;
+  }
+  if (!isValidAmountForCurrency(row.spent.amount, currency)) return null;
+  const amount = roundForCurrency(row.spent.amount, currency);
+  return amount > 0 && isExactInMinor(amount, scale)
+    ? { amount, currency }
+    : null;
 }
 
 export function csvDraft(
@@ -37,13 +60,23 @@ export function csvDraft(
     ? `${EXTERNAL_ID_PREFIX.csv}${providedId.toLowerCase().slice(0, 64)}`
     : transactionContentHash({ ...row, amount }).slice(0, 32);
   const money = { amount, currency: row.currency };
-  const lines = flowLines({
-    kind: row.kind,
-    source,
-    money,
-    occurredOn,
-    scaleOf,
-  });
+  const spent = csvSpent(row, scaleOf);
+  const lines = spent
+    ? crossCurrencyFlowLines({
+        kind: row.kind,
+        source,
+        charged: money,
+        spent,
+        occurredOn,
+        scaleOf,
+      })
+    : flowLines({
+        kind: row.kind,
+        source,
+        money,
+        occurredOn,
+        scaleOf,
+      });
   const externalIds = [externalId];
   if (
     row.feeAmount &&

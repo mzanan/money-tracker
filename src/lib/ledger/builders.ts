@@ -11,11 +11,9 @@ import { isExactInMinor, toMinor } from "@/lib/ledger/amounts";
 import type { ScaleOf } from "@/lib/ledger/scale";
 import type { PostingLine } from "@/lib/ledger/posting";
 import type { LedgerEntryRole, TransactionKind } from "@/types/db";
+import type { Money } from "@/types/ledger";
 
-export interface Money {
-  amount: number;
-  currency: string;
-}
+export type { Money };
 
 export class AmountPrecisionError extends ActionError {}
 
@@ -87,6 +85,50 @@ export function flowLines({
   return kind === "expense"
     ? pair(asset, category, minor, role, occurredOn)
     : pair(category, asset, minor, role, occurredOn);
+}
+
+export function crossCurrencyFlowLines({
+  kind,
+  source,
+  charged,
+  spent,
+  occurredOn,
+  scaleOf,
+}: {
+  kind: TransactionKind;
+  source: string;
+  charged: Money;
+  spent: Money;
+  occurredOn: string;
+  scaleOf: ScaleOf;
+}): PostingLine[] {
+  if (charged.currency === spent.currency) {
+    return flowLines({ kind, source, money: charged, occurredOn, scaleOf });
+  }
+  const chargedMinor = minorOf(charged, scaleOf);
+  const spentMinor = minorOf(spent, scaleOf);
+  const sign = kind === "expense" ? 1 : -1;
+  return [
+    line(
+      assetRef(source, charged.currency),
+      -sign * chargedMinor,
+      "amount",
+      occurredOn,
+    ),
+    line(
+      bridgeRef(charged.currency),
+      sign * chargedMinor,
+      "amount",
+      occurredOn,
+    ),
+    line(bridgeRef(spent.currency), -sign * spentMinor, "amount", occurredOn),
+    line(
+      uncategorizedRef(kind, spent.currency),
+      sign * spentMinor,
+      "amount",
+      occurredOn,
+    ),
+  ];
 }
 
 export interface TransferLeg {

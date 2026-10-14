@@ -2,6 +2,8 @@ import { LEDGER_KEYS } from "@/lib/ledger/accounts";
 import { fromMinor } from "@/lib/ledger/amounts";
 import type { ScaleOf } from "@/lib/ledger/scale";
 import type {
+  CrossCurrencyFlow,
+  Money,
   Movement,
   MovementExternalRef,
   MovementLine,
@@ -226,6 +228,34 @@ export function simpleFlow(movement: Movement): SimpleFlow | null {
     currency: line.currency,
     amount: Math.abs(line.amount),
   };
+}
+
+function soleCurrencyTotal(lines: ReadonlyArray<MovementLine>): Money | null {
+  const currencies = new Set(lines.map((line) => line.currency));
+  if (currencies.size !== 1) return null;
+  const amount = lines.reduce((sum, line) => sum + line.amount, 0);
+  return { amount: Math.abs(amount), currency: [...currencies][0] };
+}
+
+export function crossCurrencyFlow(
+  movement: Movement,
+): CrossCurrencyFlow | null {
+  const flow = simpleFlow(movement);
+  if (!flow) return null;
+  const spent = soleCurrencyTotal(
+    movement.lines.filter(
+      (line) => line.kind === flow.kind && !isFeeLine(line),
+    ),
+  );
+  const charged = soleCurrencyTotal(assetLines(movement));
+  if (!spent || !charged || spent.currency === charged.currency) return null;
+  return { spent, charged };
+}
+
+export function spentFlow(movement: Movement): SimpleFlow | null {
+  const flow = simpleFlow(movement);
+  const cross = crossCurrencyFlow(movement);
+  return flow && cross ? { ...flow, ...cross.spent } : flow;
 }
 
 export function transferEnds(

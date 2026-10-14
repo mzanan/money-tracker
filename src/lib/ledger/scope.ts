@@ -2,6 +2,7 @@ import { ALL_SOURCES } from "@/lib/constants/sources";
 import { effectiveYearMonth } from "@/lib/dates";
 import {
   assetLines,
+  crossCurrencyFlow,
   isOwnMovement,
   movementType,
   pendingTransfer,
@@ -188,9 +189,16 @@ export function movementAmount(
     return { ...amount, kind: net >= 0 ? "income" : "expense" };
   }
   const type = movementType(movement);
+  const cross = crossCurrencyFlow(movement);
   if (type === "expense") {
     const lines = movement.lines.filter((line) => line.kind === "expense");
-    return amountOf("expense", lines, 1, baseCurrency, ratesByDate);
+    return amountOf(
+      "expense",
+      lines,
+      1,
+      cross?.spent.currency ?? baseCurrency,
+      ratesByDate,
+    );
   }
   if (type === "income") {
     const lines = movement.lines.filter((line) => line.kind === "income");

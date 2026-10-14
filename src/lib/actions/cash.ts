@@ -26,7 +26,7 @@ import {
   isTransferMovement,
   isWithdrawalMovement,
 } from "@/lib/ledger/edits";
-import { simpleFlow } from "@/lib/ledger/movements";
+import { crossCurrencyFlow, simpleFlow } from "@/lib/ledger/movements";
 import type { LedgerDraft } from "@/lib/ledger/posting";
 import type { ScaleOf } from "@/lib/ledger/scale";
 import {
@@ -423,6 +423,7 @@ export async function convertToWithdrawal(
     if (hasSyncedRef(movement)) {
       return { ok: false, error: "Synced rows can't be converted" };
     }
+    const spent = crossCurrencyFlow(movement)?.spent ?? flow;
     const chargedError = await sourceCurrencyError(
       user.id,
       flow.source,
@@ -435,8 +436,8 @@ export async function convertToWithdrawal(
         source: flow.source,
         occurredOn: draft.occurredOn,
         note: draft.note,
-        receivedAmount: flow.amount,
-        receivedCurrency: flow.currency,
+        receivedAmount: spent.amount,
+        receivedCurrency: spent.currency,
         chargedCurrency,
         total,
         fee,
