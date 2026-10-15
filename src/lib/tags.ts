@@ -56,3 +56,12 @@ export function sameTags(
   const keys = new Set(b.map(tagKey));
   return a.every((tag) => keys.has(tagKey(tag)));
 }
+
+export function mergeTagInput(
+  current: ReadonlyArray<string>,
+  raw: string,
+  max = MAX_TAGS_PER_TRANSACTION,
+): { tags: string[]; overflow: boolean } {
+  const merged = dedupeTags([...current, ...parseTagsInput(raw)]);
+  return { tags: merged.slice(0, max), overflow: merged.length > max };
+}

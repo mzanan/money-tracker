@@ -121,3 +121,10 @@ export function isAccountCurrency(
 ): boolean {
   return declared?.length === 1 && declared[0] === currency;
 }
+
+export function acceptedCurrencies(
+  allowed: string[] | undefined,
+  currencies: ReadonlyArray<string>,
+): string[] {
+  return currencies.filter((code) => accountAccepts(allowed, code));
+}

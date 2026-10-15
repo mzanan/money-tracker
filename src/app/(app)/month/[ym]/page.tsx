@@ -1,12 +1,10 @@
 import { notFound } from "next/navigation";
-import { EntrySuggestionCatalogProvider } from "@/hooks/useEntrySuggestionCatalog";
-import { RatesByDateProvider } from "@/hooks/useRatesByDate";
 
 import { MonthDashboard } from "@/components/transactions/monthDashboard";
+import { LedgerProviders } from "@/components/transactions/ledgerProviders";
 import { cashWithdrawalSourcesByUsage } from "@/lib/filters";
 import { listAccountSources } from "@/lib/data/accounts";
 import { getMonthPageData } from "@/lib/data/monthData";
-import { buildEntrySuggestions } from "@/lib/entrySuggestions";
 import { collectSources, csvSourcesFrom } from "@/lib/transactions";
 import { getRemindersData } from "@/lib/data/reminders";
 import { isValidYearMonth } from "@/lib/dates";
@@ -32,25 +30,21 @@ export default async function MonthPage({
   const csvSources = csvSourcesFrom(data.ledger.movements);
 
   return (
-    <RatesByDateProvider value={data.ledger.ratesByDate}>
-      <EntrySuggestionCatalogProvider
-        value={buildEntrySuggestions(data.ledger.movements)}
-      >
-        <MonthDashboard
-          yearMonth={data.yearMonth}
-          movements={data.ledger.movements}
-          sources={sources}
-          csvSources={csvSources}
-          withdrawalSources={cashWithdrawalSourcesByUsage(
-            sources,
-            data.ledger.movements,
-          )}
-          places={data.places}
-          reminders={remindersData.reminders}
-          completedReminders={remindersData.completedReminders}
-          today={remindersData.today}
-        />
-      </EntrySuggestionCatalogProvider>
-    </RatesByDateProvider>
+    <LedgerProviders ledger={data.ledger}>
+      <MonthDashboard
+        yearMonth={data.yearMonth}
+        movements={data.ledger.movements}
+        sources={sources}
+        csvSources={csvSources}
+        withdrawalSources={cashWithdrawalSourcesByUsage(
+          sources,
+          data.ledger.movements,
+        )}
+        places={data.places}
+        reminders={remindersData.reminders}
+        completedReminders={remindersData.completedReminders}
+        today={remindersData.today}
+      />
+    </LedgerProviders>
   );
 }

@@ -23,7 +23,10 @@ import {
   parseAmountInput,
   parseAndRoundAmount,
 } from "@/lib/currency";
-import { preferredAccountCurrency } from "@/lib/accountCurrencies";
+import {
+  acceptedCurrencies,
+  preferredAccountCurrency,
+} from "@/lib/accountCurrencies";
 import { todayInTz } from "@/lib/dates";
 import { withdrawalChargedAmount } from "@/lib/withdrawal";
 import { parseFeeDrafts } from "@/lib/transfer";
@@ -139,7 +142,10 @@ export function useQuickAddForm({ source, onAdded }: QuickAddFormOptions) {
     disabled: transferActive || withdrawalActive,
     amount,
     tags: parseTagsInput(tagsInput),
-    currencies: settings.currencies,
+    currencies: acceptedCurrencies(
+      accountCurrencies[source],
+      settings.currencies,
+    ),
     fill: {
       setDescription,
       setKind,

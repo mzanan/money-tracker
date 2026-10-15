@@ -274,10 +274,13 @@ drizzle/migrations/           # SQL generado por drizzle-kit
   (Groq o Google, en Settings → Assistant). Sin key del sistema como fallback.
 - **Categorías**: free-text, opcional, con autocomplete (datalist) de las
   recientes.
-- **Sugerencias en QuickAdd**: al escribir la descripción se ofrecen hasta 4
-  entradas manuales previas (`src/lib/entrySuggestions.ts`, sin IA). Elegir una
-  completa descripción, tipo, tags, cuenta y, si el monto no fue tipeado, monto
-  y moneda. Excluye transferencias, retiros, fees, CSV y filas sincronizadas.
+- **Sugerencias de descripción** (QuickAdd y formulario de edición, duplicar y
+  pagar): al escribir la descripción se ofrecen hasta 4 entradas manuales
+  previas (`src/lib/entrySuggestions.ts`, sin IA). Elegir una completa la
+  descripción; el tipo, salvo en filas bloqueadas, transacciones existentes y
+  pagos de recordatorios; monto, moneda y tags solo si están vacíos o los puso
+  una sugerencia anterior, y la moneda solo si la cuenta la acepta. Nunca cambia
+  la cuenta. Excluye transferencias, retiros, fees, CSV y filas sincronizadas.
 - **Sin RLS**: cada query Drizzle filtra `eq(table.user_id, user.id)` en
   código. Patrón obligatorio en `src/lib/actions/*` y `src/lib/data/*`.
 
