@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { getUsedTags } from "@/lib/actions/transactions";
 import {
+  dedupeTags,
   MAX_TAGS_PER_TRANSACTION,
   mergeTagInput,
   parseTagsInput,
@@ -53,7 +54,7 @@ export function useTagPicker({
       return;
     }
     setTagInput("");
-    if (parseTagsInput(raw).length === 0) return;
+    if (dedupeTags(parseTagsInput(raw)).length === 0) return;
     if (mergeTagInput(tags, raw).overflow) toast.error(MAX_TAGS_MESSAGE);
     setTags((prev) => mergeTagInput(prev, raw).tags);
   }
