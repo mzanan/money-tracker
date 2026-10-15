@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -88,6 +89,13 @@ export function useEntrySuggestions({
 
   useLayoutEffect(() => {
     listVisibleRef.current = listVisible;
+  }, [listVisible]);
+
+  useEffect(() => {
+    if (!listVisible || !("CloseWatcher" in window)) return;
+    const watcher = new CloseWatcher();
+    watcher.onclose = () => setOpen(false);
+    return () => watcher.destroy();
   }, [listVisible]);
 
   const ref = useCallback((node: HTMLElement | null) => {
