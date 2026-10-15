@@ -5,7 +5,8 @@ import { AlertTriangleIcon } from "lucide-react";
 import { labelForSource } from "@/lib/constants/sources";
 import type { CandidateMatch, EditableItem } from "@/lib/imageExtract";
 import { cn } from "@/lib/utils";
-import { kindSign } from "@/lib/currency";
+import { useHideAmounts } from "@/hooks/useHideAmounts";
+import { formatMoneyWithCode, kindSign } from "@/lib/currency";
 
 export function DuplicateCandidates({
   candidates,
@@ -16,6 +17,7 @@ export function DuplicateCandidates({
   item: EditableItem;
   onChange: (patch: Partial<EditableItem>) => void;
 }) {
+  const { mask } = useHideAmounts();
   const keepingExisting = !item.selected;
   const keepingBoth = item.selected && item.replaceId === null;
 
@@ -36,7 +38,7 @@ export function DuplicateCandidates({
             </span>
             <span className="shrink-0 font-mono">
               {kindSign(match.kind)}
-              {match.amount} {match.currency}
+              {mask(formatMoneyWithCode(match.amount, match.currency))}
             </span>
           </div>
           <ChoiceButton

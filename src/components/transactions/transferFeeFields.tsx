@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getCurrency } from "@/lib/constants/currencies";
 
 import type { FeePayer } from "@/lib/transfer";
 
@@ -54,7 +53,7 @@ export function TransferFeeFields({
               label={`Fee (${currency})`}
               value={fee.amount}
               onChange={(amount) => update(index, { amount })}
-              decimals={getCurrency(currency).decimals}
+              currency={currency}
             />
             {!originOnly && (
               <div className="grid flex-1 gap-1.5">

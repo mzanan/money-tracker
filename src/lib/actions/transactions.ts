@@ -18,9 +18,9 @@ import {
   deleteLedgerTransactions,
   getLedgerRecord,
   getLedgerRecords,
-  getScaleOf,
   postLedgerTransaction,
 } from "@/lib/data/ledgerWrites";
+import { getScaleOf } from "@/lib/data/cryptoAssets";
 import { getUser } from "@/lib/session";
 import {
   MANUAL_SOURCE,
@@ -36,13 +36,13 @@ import {
   isTransferMovement,
   isWithdrawalMovement,
   legDate,
+  matchesPrincipalFlow,
   withFlow,
   withLegDate,
   withSource,
 } from "@/lib/ledger/edits";
 import {
   primaryAssetLine,
-  principalAssetLines,
   crossCurrencyFlow,
   simpleFlow,
 } from "@/lib/ledger/movements";
@@ -152,10 +152,9 @@ export async function updateTransaction(
     };
   }
 
-  const amountError = amountValidationError(
-    parsed.data.amount,
-    parsed.data.currency,
-  );
+  const requested = parsed.data.flow;
+  const amountError =
+    requested && amountValidationError(requested.amount, requested.currency);
   if (amountError) {
     return { ok: false, error: amountError };
   }
@@ -168,12 +167,9 @@ export async function updateTransaction(
     if (!record) return { ok: false, error: "Transaction not found" };
     const { movement, draft } = record;
     const flow = simpleFlow(movement);
-    const amountFieldsChanged = !principalAssetLines(movement).some(
-      (line) =>
-        Math.abs(line.amount) === parsed.data.amount &&
-        line.currency === parsed.data.currency &&
-        (line.amount < 0 ? "expense" : "income") === parsed.data.kind,
-    );
+    const amountFieldsChanged =
+      requested !== undefined &&
+      !matchesPrincipalFlow(movement, requested, await getScaleOf());
     if (isTransferMovement(movement) && amountFieldsChanged) {
       return {
         ok: false,
@@ -220,15 +216,15 @@ export async function updateTransaction(
       note: parsed.data.note?.trim() || null,
     };
     const next =
-      flow && amountFieldsChanged
+      flow && requested && amountFieldsChanged
         ? withFlow(
             details,
             {
-              kind: parsed.data.kind,
+              kind: requested.kind,
               source: flow.source,
               money: {
-                amount: parsed.data.amount,
-                currency: parsed.data.currency,
+                amount: requested.amount,
+                currency: requested.currency,
               },
               occurredOn: parsed.data.occurredOn,
             },

@@ -23,6 +23,7 @@ import {
 import { parseAmountInput, parseAndRoundAmount } from "@/lib/currency";
 import { EXTERNAL_ID_PREFIX, isWithdrawalExternalId } from "@/lib/externalIds";
 import { canonicalTag, tagKey } from "@/lib/tags";
+import { flowDraftOf, flowEdited } from "@/lib/flowDraft";
 
 import type { Kind } from "./kindToggle";
 import { useAccountCurrencies } from "@/hooks/useAccountCurrencies";
@@ -61,9 +62,10 @@ export function useTransactionForm({
   const settings = useSettings();
   const { run, pending } = useServerAction();
 
-  const [kind, setKind] = useState<Kind>(seed.kind);
-  const [amount, setAmount] = useState(seed.amount.toString());
-  const [currency, setCurrency] = useState(seed.currency);
+  const [seedFlow] = useState(() => flowDraftOf(seed));
+  const [kind, setKind] = useState<Kind>(seedFlow.kind);
+  const [amount, setAmount] = useState(seedFlow.amount);
+  const [currency, setCurrency] = useState(seedFlow.currency);
   const [source, setSource] = useState(
     kindOfSource(seed.source) === "api" ? "manual" : seed.source,
   );
@@ -168,12 +170,88 @@ export function useTransactionForm({
     setTags((prev) => prev.filter((t) => t !== tag));
   }
 
-  function submit() {
+  const runOptions = {
+    success: transferActive
+      ? "Saved and marked as a transfer"
+      : withdrawalActive
+        ? "Saved and marked as a withdrawal"
+        : successMessage,
+    onSuccess: (data: { id: string } | undefined) => {
+      onOpenChange(false);
+      if (data) onCreated?.(data.id);
+    },
+  };
+
+  function submitCreate() {
     const parsed = parseAndRoundAmount(amount, currency);
     if (!parsed.ok) {
       toast.error(parsed.error);
       return;
     }
+    run<{ id: string } | undefined>(
+      () =>
+        createTransaction({
+          kind,
+          amount: parsed.amount,
+          currency,
+          tags,
+          note: description.trim() || null,
+          occurredOn: date,
+          source,
+        }),
+      runOptions,
+    );
+  }
+
+  function submitEdit(id: string) {
+    const parsed = flowEdited(seedFlow, { kind, currency, amount })
+      ? parseAndRoundAmount(amount, currency)
+      : null;
+    if (parsed && !parsed.ok) {
+      toast.error(parsed.error);
+      return;
+    }
+    const flow = parsed ? { kind, amount: parsed.amount, currency } : null;
+
+    run<{ id: string } | undefined>(async () => {
+      const result = await updateTransaction({
+        id,
+        ...(flow && { flow }),
+        tags,
+        note: description.trim() || null,
+        occurredOn: date,
+        source: seed.source,
+      });
+      if (!result.ok) return result;
+
+      if (transferActive) {
+        const markResult = await markAsTransfer(id, transferDraft.selected, {
+          fees: transferDraft.bySide,
+          receivedOn: transferDraft.receivedOn,
+          ...(transferDraft.received
+            ? { received: transferDraft.received }
+            : {}),
+        });
+        return markResult.ok ? { ok: true, data: undefined } : markResult;
+      }
+
+      if (withdrawalActive) {
+        const total = parseAmountInput(withdrawalDraft.total)!;
+        const fee = parseAmountInput(withdrawalDraft.fee) ?? undefined;
+        const convertResult = await convertToWithdrawal({
+          id,
+          chargedCurrency: withdrawalDraft.chargedCurrency,
+          total,
+          fee,
+        });
+        return convertResult.ok ? { ok: true, data: undefined } : convertResult;
+      }
+
+      return { ok: true, data: undefined };
+    }, runOptions);
+  }
+
+  function submit() {
     if (!txId && !source) {
       toast.error("Pick an account");
       return;
@@ -186,75 +264,8 @@ export function useTransactionForm({
       toast.error("Enter the total charged");
       return;
     }
-
-    run<{ id: string } | undefined>(
-      async () => {
-        if (txId) {
-          const result = await updateTransaction({
-            id: txId,
-            kind,
-            amount: parsed.amount,
-            currency,
-            tags,
-            note: description.trim() || null,
-            occurredOn: date,
-            source: seed.source,
-          });
-          if (!result.ok) return result;
-
-          if (transferActive) {
-            const markResult = await markAsTransfer(
-              txId,
-              transferDraft.selected,
-              {
-                fees: transferDraft.bySide,
-                receivedOn: transferDraft.receivedOn,
-                ...(transferDraft.received
-                  ? { received: transferDraft.received }
-                  : {}),
-              },
-            );
-            return markResult.ok ? { ok: true, data: undefined } : markResult;
-          }
-
-          if (withdrawalActive) {
-            const total = parseAmountInput(withdrawalDraft.total)!;
-            const fee = parseAmountInput(withdrawalDraft.fee) ?? undefined;
-            const convertResult = await convertToWithdrawal({
-              id: txId,
-              chargedCurrency: withdrawalDraft.chargedCurrency,
-              total,
-              fee,
-            });
-            return convertResult.ok
-              ? { ok: true, data: undefined }
-              : convertResult;
-          }
-
-          return { ok: true, data: undefined };
-        }
-        return createTransaction({
-          kind,
-          amount: parsed.amount,
-          currency,
-          tags,
-          note: description.trim() || null,
-          occurredOn: date,
-          source,
-        });
-      },
-      {
-        success: transferActive
-          ? "Saved and marked as a transfer"
-          : withdrawalActive
-            ? "Saved and marked as a withdrawal"
-            : successMessage,
-        onSuccess: (data) => {
-          onOpenChange(false);
-          if (data) onCreated?.(data.id);
-        },
-      },
-    );
+    if (txId) submitEdit(txId);
+    else submitCreate();
   }
 
   return {

@@ -7,13 +7,13 @@ import { accountCurrencyError } from "@/lib/accountCurrencies";
 import { actionErrorMessage } from "@/lib/actionError";
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import { labelForSource } from "@/lib/constants/sources";
-import { amountValidationError, roundForCurrency } from "@/lib/currency";
+import { amountValidationError, roundToScale } from "@/lib/currency";
 import { getAccountCurrencies } from "@/lib/data/accounts";
 import {
   getLedgerRecord,
-  getScaleOf,
   postLedgerTransaction,
 } from "@/lib/data/ledgerWrites";
+import { getScaleOf } from "@/lib/data/cryptoAssets";
 import { creditedLines } from "@/lib/ledger/builders";
 import { isInTransit } from "@/lib/ledger/movements";
 import { getUser } from "@/lib/session";
@@ -74,10 +74,10 @@ export async function creditTransfer(
       lines: draft.lines,
       destination,
       received: {
-        amount: roundForCurrency(received.amount, received.currency),
+        amount: roundToScale(received.amount, received.currency),
         currency: received.currency,
       },
-      destinationFee: roundForCurrency(destinationFee, received.currency),
+      destinationFee: roundToScale(destinationFee, received.currency),
       creditedOn,
       scaleOf,
     });

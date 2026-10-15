@@ -14,9 +14,9 @@ import {
 import {
   existingExternalIds,
   getLedgerRecord,
-  getScaleOf,
   postLedgerTransaction,
 } from "@/lib/data/ledgerWrites";
+import { getScaleOf } from "@/lib/data/cryptoAssets";
 import { hasReminderRef } from "@/lib/ledger/candidates";
 import { reminderExpenseDraft } from "@/lib/ledger/reminderDraft";
 import type { FlowCandidate } from "@/types/ledger";

@@ -2,7 +2,7 @@ import {
   isFeeExternalId,
   isManualEntryExternalId,
 } from "@/lib/externalIds";
-import { amountToInputDigits } from "@/lib/currency";
+import { toInputDigits } from "@/lib/currency";
 import { movementType, principalAssetLines } from "@/lib/ledger/movements";
 import { MAX_TAGS_PER_TRANSACTION, tagKey } from "@/lib/tags";
 import type { TransactionKind } from "@/types/db";
@@ -96,7 +96,7 @@ export function suggestionAmountFill(
 ): { amount: string; currency: string | null } | null {
   if (amount !== "" && amount !== filledAmount) return null;
   const digits = currencies.includes(suggestion.currency)
-    ? amountToInputDigits(suggestion.amount, suggestion.currency)
+    ? toInputDigits(suggestion.amount, suggestion.currency)
     : "";
   return { amount: digits, currency: digits ? suggestion.currency : null };
 }

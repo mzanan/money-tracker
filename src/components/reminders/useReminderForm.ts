@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { createReminder, updateReminder } from "@/lib/actions/reminders";
-import { amountValidationError } from "@/lib/currency";
+import { amountValidationError, toInputDigits } from "@/lib/currency";
 import { computeNextDue } from "@/lib/reminders";
 
 import type { RecurringFrequency, RecurringPayment } from "@/types/db";
@@ -64,13 +64,13 @@ export function useReminderForm({
       }
     : (seed ?? {});
 
+  const baseCurrency = base.currency ?? settings.base_currency;
+  const baseAmount =
+    base.amount != null ? toInputDigits(base.amount, baseCurrency) : "";
+
   const [label, setLabel] = useState(base.label ?? "");
-  const [amount, setAmount] = useState(
-    base.amount != null ? String(base.amount) : "",
-  );
-  const [currency, setCurrency] = useState(
-    base.currency ?? settings.base_currency,
-  );
+  const [amount, setAmount] = useState(baseAmount);
+  const [currency, setCurrency] = useState(baseCurrency);
   const [frequency, setFrequency] = useState<RecurringFrequency>(
     base.frequency ?? "MONTHLY",
   );
@@ -103,8 +103,8 @@ export function useReminderForm({
 
   function reset() {
     setLabel(base.label ?? "");
-    setAmount(base.amount != null ? String(base.amount) : "");
-    setCurrency(base.currency ?? settings.base_currency);
+    setAmount(baseAmount);
+    setCurrency(baseCurrency);
     setFrequency(base.frequency ?? "MONTHLY");
     setIntervalMonths(
       base.intervalMonths != null ? String(base.intervalMonths) : "6",

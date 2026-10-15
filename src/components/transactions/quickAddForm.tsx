@@ -3,7 +3,6 @@
 import { ChevronDownIcon, Loader2Icon, PlusIcon } from "lucide-react";
 
 import { useAccountLabels } from "@/hooks/useAccountLabels";
-import { getCurrency } from "@/lib/constants/currencies";
 import { resolveSourceLabel } from "@/lib/constants/sources";
 import type { EntrySuggestion } from "@/lib/entrySuggestions";
 import { cn } from "@/lib/utils";
@@ -178,7 +177,7 @@ export function QuickAddForm({
             placeholder="0"
             value={amount}
             onChange={setAmount}
-            decimals={currencyMeta.decimals}
+            currency={currency}
             aria-label="Amount"
             className="h-11 min-w-0 border-none bg-transparent pl-1.5 text-base focus-visible:ring-0"
             required
@@ -277,7 +276,7 @@ export function QuickAddForm({
               label="Fee (optional)"
               value={fee}
               onChange={setFee}
-              decimals={currencyMeta.decimals}
+              currency={currency}
             />
           )}
 
@@ -356,7 +355,7 @@ export function QuickAddForm({
                 label="Fee (optional)"
                 value={withdrawalFee}
                 onChange={setWithdrawalFee}
-                decimals={getCurrency(chargedCurrency).decimals}
+                currency={chargedCurrency}
               />
               <p className="text-muted-foreground text-xs">
                 Books total minus fee on the account. Cash received goes in the

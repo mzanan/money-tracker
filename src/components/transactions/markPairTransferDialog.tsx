@@ -33,8 +33,16 @@ export function MarkPairTransferDialog({
   incomeTx: RowFacts;
   onSuccess: () => void;
 }) {
-  const { sameCurrency, delta, fees, setFees, deltaMismatch, pending, submit } =
-    useMarkPairTransferDialog({ expenseTx, incomeTx, onSuccess });
+  const {
+    sameCurrency,
+    delta,
+    fees,
+    setFees,
+    deltaMismatch,
+    incomeExceeds,
+    pending,
+    submit,
+  } = useMarkPairTransferDialog({ expenseTx, incomeTx, onSuccess });
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -60,6 +68,12 @@ export function MarkPairTransferDialog({
             sourceCurrency={expenseTx.currency}
             destinationCurrency={incomeTx.currency}
           />
+          {incomeExceeds && (
+            <ErrorText>
+              The income is larger than the expense, so they can&apos;t be one
+              transfer.
+            </ErrorText>
+          )}
           {deltaMismatch && (
             <ErrorText>
               The fees must add up to {formatMoney(delta, expenseTx.currency)}.
@@ -76,7 +90,7 @@ export function MarkPairTransferDialog({
           </Button>
           <Button
             className="sm:flex-1"
-            disabled={pending || deltaMismatch}
+            disabled={pending || deltaMismatch || incomeExceeds}
             onClick={submit}
           >
             {pending && <Loader2Icon className="animate-spin" />}

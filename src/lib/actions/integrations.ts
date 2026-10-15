@@ -12,9 +12,9 @@ import {
   deleteLedgerTransactions,
   existingExternalIds,
   getLedgerRecordsBetween,
-  getScaleOf,
   postLedgerTransactions,
 } from "@/lib/data/ledgerWrites";
+import { getScaleOf } from "@/lib/data/cryptoAssets";
 import { ADAPTERS } from "@/lib/integrations";
 import { decryptSecret, encryptSecret } from "@/lib/integrations/crypto";
 import {

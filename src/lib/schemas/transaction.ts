@@ -3,7 +3,7 @@ import { z } from "zod";
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import { MAX_TAGS_PER_TRANSACTION } from "@/lib/tags";
 
-const transactionFieldsSchema = z.object({
+const flowFieldsSchema = z.object({
   kind: z.enum(["income", "expense"]),
   amount: z
     .number()
@@ -12,6 +12,9 @@ const transactionFieldsSchema = z.object({
   currency: z
     .string()
     .refine(isSupportedCurrency, { message: "Unsupported currency" }),
+});
+
+const detailFieldsSchema = z.object({
   tags: z
     .array(z.string().trim().min(1).max(40))
     .max(MAX_TAGS_PER_TRANSACTION)
@@ -20,6 +23,10 @@ const transactionFieldsSchema = z.object({
   occurredOn: z.iso.date("Invalid date (yyyy-MM-dd)"),
   source: z.string().trim().min(1).max(32).optional(),
 });
+
+const transactionFieldsSchema = flowFieldsSchema.extend(
+  detailFieldsSchema.shape,
+);
 
 export const createTransactionSchema = transactionFieldsSchema.extend({
   fee: z
@@ -31,8 +38,11 @@ export const createTransactionSchema = transactionFieldsSchema.extend({
 
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 
-export const updateTransactionSchema = transactionFieldsSchema.extend({
+export const updateTransactionSchema = detailFieldsSchema.extend({
   id: z.string().uuid("Invalid id"),
+  flow: flowFieldsSchema.optional(),
 });
+
+export type FlowFields = z.infer<typeof flowFieldsSchema>;
 
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;

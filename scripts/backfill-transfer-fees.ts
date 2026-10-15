@@ -3,7 +3,7 @@ import { and, eq, like } from "drizzle-orm";
 
 import { db } from "../src/lib/db";
 import { transactions } from "../src/lib/db/schema";
-import { roundForCurrency } from "../src/lib/currency";
+import { roundToScale } from "../src/lib/currency";
 import {
   EXTERNAL_ID_PREFIX,
   TRANSFER_FEE_DEST_SUFFIX,
@@ -84,7 +84,7 @@ async function main() {
     }
 
     const target = targets[0];
-    const next = roundForCurrency(
+    const next = roundToScale(
       target.amount_original - fee.amount_original,
       target.currency_original,
     );

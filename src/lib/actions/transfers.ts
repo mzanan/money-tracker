@@ -13,9 +13,9 @@ import {
   deleteLedgerTransactions,
   getLedgerRecord,
   getLedgerRecords,
-  getScaleOf,
   postLedgerTransaction,
 } from "@/lib/data/ledgerWrites";
+import { getScaleOf } from "@/lib/data/cryptoAssets";
 import {
   kindOfSource,
   labelForSource,
@@ -24,7 +24,7 @@ import {
 import {
   amountValidationError,
   relativeUsdDiff,
-  roundForCurrency,
+  roundToScale,
   toUsdPair,
 } from "@/lib/currency";
 import { getTransferSources } from "@/lib/data/sources";
@@ -46,6 +46,7 @@ import {
   transferFeeAmountsError,
   type ReceivedAmount,
   type TransferFeeEntry,
+  pairAmountDelta,
 } from "@/lib/transfer";
 import {
   buildCurrencyContext,
@@ -164,9 +165,9 @@ export async function recordTransfer(
     return { ok: false, error: "Fees leave nothing to transfer" };
   }
   const mirrorAmount = received
-    ? roundForCurrency(received.amount + fees.destination, destinationCurrency)
+    ? roundToScale(received.amount + fees.destination, destinationCurrency)
     : inTransit;
-  const credited = roundForCurrency(
+  const credited = roundToScale(
     mirrorAmount - fees.destination,
     destinationCurrency,
   );
@@ -333,18 +334,18 @@ export async function markAsTransfer(
 
   const originFee =
     opts?.fees?.origin && opts.fees.origin > 0
-      ? roundForCurrency(opts.fees.origin, originCurrency)
+      ? roundToScale(opts.fees.origin, originCurrency)
       : 0;
   const destinationFee =
     opts?.fees?.destination && opts.fees.destination > 0
-      ? roundForCurrency(opts.fees.destination, destinationCurrency)
+      ? roundToScale(opts.fees.destination, destinationCurrency)
       : 0;
 
   const inTransit = isExpense
-    ? roundForCurrency(flow.amount - originFee, flow.currency)
-    : roundForCurrency(flow.amount + destinationFee, flow.currency);
+    ? roundToScale(flow.amount - originFee, flow.currency)
+    : roundToScale(flow.amount + destinationFee, flow.currency);
   const mirrorAmount = received
-    ? roundForCurrency(
+    ? roundToScale(
         isExpense
           ? received.amount + destinationFee
           : received.amount - originFee,
@@ -501,19 +502,16 @@ export async function markPairAsTransfer(
 
   const originFee =
     opts?.fees?.origin && opts.fees.origin > 0
-      ? roundForCurrency(opts.fees.origin, expense.flow.currency)
+      ? roundToScale(opts.fees.origin, expense.flow.currency)
       : 0;
   const destinationFee =
     opts?.fees?.destination && opts.fees.destination > 0
-      ? roundForCurrency(opts.fees.destination, income.flow.currency)
+      ? roundToScale(opts.fees.destination, income.flow.currency)
       : 0;
 
   if (sameCurrency) {
-    const delta = roundForCurrency(
-      expense.flow.amount - income.flow.amount,
-      expense.flow.currency,
-    );
-    const given = roundForCurrency(
+    const delta = pairAmountDelta(expense.flow, income.flow);
+    const given = roundToScale(
       originFee + destinationFee,
       expense.flow.currency,
     );
@@ -528,11 +526,11 @@ export async function markPairAsTransfer(
     }
   }
 
-  const expenseInTransit = roundForCurrency(
+  const expenseInTransit = roundToScale(
     expense.flow.amount - originFee,
     expense.flow.currency,
   );
-  const incomeInTransit = roundForCurrency(
+  const incomeInTransit = roundToScale(
     income.flow.amount + destinationFee,
     income.flow.currency,
   );

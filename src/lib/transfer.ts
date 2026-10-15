@@ -1,8 +1,8 @@
 import {
-  amountToInputDigits,
+  toInputDigits,
   convert,
   feeAmountError,
-  roundForCurrency,
+  roundToScale,
 } from "@/lib/currency";
 
 import type { FxRates } from "@/types/db";
@@ -100,8 +100,8 @@ export function aggregateFeesBySide(
     else destination += fee.amount;
   }
   return {
-    origin: roundForCurrency(origin, sourceCurrency),
-    destination: roundForCurrency(destination, destinationCurrency),
+    origin: roundToScale(origin, sourceCurrency),
+    destination: roundToScale(destination, destinationCurrency),
   };
 }
 
@@ -110,7 +110,7 @@ export function inTransitAmount(
   originFee: number,
   currency: string,
 ): number {
-  return roundForCurrency(debited - originFee, currency);
+  return roundToScale(debited - originFee, currency);
 }
 
 export interface CreditedPreview {
@@ -139,7 +139,7 @@ export function creditedPreview({
 
   if (received && received.amount > 0) {
     return {
-      credited: roundForCurrency(received.amount, received.currency),
+      credited: roundToScale(received.amount, received.currency),
       currency: received.currency,
       impliedRate:
         inTransit > 0 ? (received.amount + fees.destination) / inTransit : null,
@@ -148,10 +148,7 @@ export function creditedPreview({
 
   if (sourceCurrency === destinationCurrency) {
     return {
-      credited: roundForCurrency(
-        inTransit - fees.destination,
-        destinationCurrency,
-      ),
+      credited: roundToScale(inTransit - fees.destination, destinationCurrency),
       currency: destinationCurrency,
       impliedRate: null,
     };
@@ -165,10 +162,7 @@ export function creditedPreview({
     return null;
   }
   return {
-    credited: roundForCurrency(
-      converted - fees.destination,
-      destinationCurrency,
-    ),
+    credited: roundToScale(converted - fees.destination, destinationCurrency),
     currency: destinationCurrency,
     impliedRate: null,
   };
@@ -197,8 +191,8 @@ export function creditReceivedDefault(
   fee: number,
 ): string {
   if (receivedCurrency !== sent.currency) return "";
-  const net = roundForCurrency(sent.amount - fee, sent.currency);
-  return net > 0 ? amountToInputDigits(net, sent.currency) : "";
+  const net = roundToScale(sent.amount - fee, sent.currency);
+  return net > 0 ? toInputDigits(net, sent.currency) : "";
 }
 
 export function creditDateError(
@@ -212,4 +206,28 @@ export function creditDateError(
 
 export function clampCreditDate(date: string, sentOn: string): string {
   return date < sentOn ? sentOn : date;
+}
+
+export function pairFeeTarget(
+  expense: { amount: number; currency: string },
+  income: { amount: number; currency: string },
+): number {
+  if (expense.currency !== income.currency) return 0;
+  return Math.max(0, pairAmountDelta(expense, income));
+}
+
+export function pairIncomeExceedsExpense(
+  expense: { amount: number; currency: string },
+  income: { amount: number; currency: string },
+): boolean {
+  return (
+    expense.currency === income.currency && pairAmountDelta(expense, income) < 0
+  );
+}
+
+export function pairAmountDelta(
+  expense: { amount: number; currency: string },
+  income: { amount: number },
+): number {
+  return roundToScale(expense.amount - income.amount, expense.currency);
 }

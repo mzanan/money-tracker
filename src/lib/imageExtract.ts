@@ -1,5 +1,6 @@
 import type { DetectedTransaction } from "@/lib/ai/screenshotExtract";
 import { sourceForApp } from "@/lib/constants/sources";
+import { toPlainDigits } from "@/lib/currency";
 import { compressImage } from "@/lib/imageCompress";
 
 export type ImageImportMode = "screenshot" | "receipt";
@@ -46,7 +47,7 @@ export function detectedToEditable(
     selected: true,
     collapsed,
     kind: detected.kind,
-    amount: detected.amount.toString(),
+    amount: toPlainDigits(detected.amount),
     currency: detected.currency.toUpperCase(),
     occurredOn: detected.occurredOn,
     description: detected.description ?? "",
