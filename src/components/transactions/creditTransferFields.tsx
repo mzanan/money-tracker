@@ -5,7 +5,6 @@ import {
   AmountField,
 } from "@/components/ui/amountCurrencyField";
 import { DateField } from "@/components/ui/dateField";
-import { getCurrency } from "@/lib/constants/currencies";
 import type { PendingTransfer } from "@/lib/ledger/movements";
 
 import type { useCreditTransfer } from "./useCreditTransfer";
@@ -43,7 +42,7 @@ export function CreditTransferFields({
         label={`Destination fee (${form.receivedCurrency}, optional)`}
         value={form.fee}
         onChange={form.setFee}
-        decimals={getCurrency(form.receivedCurrency).decimals}
+        currency={form.receivedCurrency}
       />
     </div>
   );

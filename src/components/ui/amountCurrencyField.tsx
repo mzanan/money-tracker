@@ -1,26 +1,25 @@
 "use client";
 
-import { getCurrency } from "@/lib/constants/currencies";
-
 import { AmountInput } from "@/components/ui/amountInput";
+import type { AmountPrecision } from "@/types/amount";
 import { CurrencySelect } from "@/components/ui/currencySelect";
 import { Label } from "@/components/ui/label";
 
-interface AmountFieldProps {
+interface AmountFieldBaseProps {
   id: string;
   label: React.ReactNode;
   value: string;
   onChange: (raw: string) => void;
-  decimals: number;
   disabled?: boolean;
 }
 
-interface AmountCurrencyFieldProps extends Omit<AmountFieldProps, "decimals"> {
+type AmountFieldProps = AmountFieldBaseProps & AmountPrecision;
+
+interface AmountCurrencyFieldProps extends AmountFieldBaseProps {
   currency: string;
   onCurrencyChange: (value: string) => void;
   currencies: string[];
   currencyAriaLabel: string;
-  decimals?: number;
 }
 
 export function AmountField({
@@ -28,8 +27,8 @@ export function AmountField({
   label,
   value,
   onChange,
-  decimals,
   disabled,
+  ...precision
 }: AmountFieldProps) {
   return (
     <div className="grid flex-1 gap-1.5">
@@ -39,7 +38,7 @@ export function AmountField({
         placeholder="0"
         value={value}
         onChange={onChange}
-        decimals={decimals}
+        {...precision}
         disabled={disabled}
         className="bg-surface-2 h-9 border-none"
       />
@@ -56,7 +55,6 @@ export function AmountCurrencyField({
   onCurrencyChange,
   currencies,
   currencyAriaLabel,
-  decimals,
   disabled,
 }: AmountCurrencyFieldProps) {
   return (
@@ -68,7 +66,7 @@ export function AmountCurrencyField({
           placeholder="0"
           value={value}
           onChange={onChange}
-          decimals={decimals ?? getCurrency(currency).decimals}
+          currency={currency}
           disabled={disabled}
           className="bg-surface-2 h-9 border-none"
         />

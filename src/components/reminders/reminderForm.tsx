@@ -2,7 +2,6 @@
 
 import { Loader2Icon } from "lucide-react";
 
-import { getCurrency } from "@/lib/constants/currencies";
 import { FREQUENCY_OPTIONS } from "@/lib/reminders";
 
 import { AmountInput } from "@/components/ui/amountInput";
@@ -141,7 +140,7 @@ export function ReminderForm({
                 id="reminder-amount"
                 value={amount}
                 onChange={setAmount}
-                decimals={getCurrency(currency).decimals}
+                currency={currency}
                 placeholder="0.00"
               />
             </div>

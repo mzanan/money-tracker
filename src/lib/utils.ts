@@ -28,3 +28,13 @@ export function containEscape<E extends { stopPropagation: () => void }>(
     handler?.(event);
   };
 }
+
+export function omitKeys<T extends object, K extends PropertyKey>(
+  source: T,
+  keys: ReadonlyArray<K>,
+): Omit<T, K> {
+  const skipped = new Set<PropertyKey>(keys);
+  return Object.fromEntries(
+    Object.entries(source).filter(([key]) => !skipped.has(key)),
+  ) as Omit<T, K>;
+}

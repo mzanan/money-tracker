@@ -17,9 +17,9 @@ import { getLastEntryDate, staleCsvTransactionIds } from "@/lib/data/sources";
 import {
   deleteLedgerTransactions,
   existingExternalIds,
-  getScaleOf,
   postLedgerTransactions,
 } from "@/lib/data/ledgerWrites";
+import { getScaleOf } from "@/lib/data/cryptoAssets";
 import { isSyncable } from "@/lib/integrations";
 import { getUser } from "@/lib/session";
 

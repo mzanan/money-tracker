@@ -1,5 +1,5 @@
 import type { CsvRow } from "@/lib/actions/csvImport";
-import { isValidAmountForCurrency, roundForCurrency } from "@/lib/currency";
+import { isValidAmountForCurrency, roundToScale } from "@/lib/currency";
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import { isValidCalendarDate } from "@/lib/dates";
 import { CSV_FEE_SUFFIX, EXTERNAL_ID_PREFIX } from "@/lib/externalIds";
@@ -31,7 +31,7 @@ function csvSpent(row: CsvRow, scaleOf: ScaleOf): Money | null {
     return null;
   }
   if (!isValidAmountForCurrency(row.spent.amount, currency)) return null;
-  const amount = roundForCurrency(row.spent.amount, currency);
+  const amount = roundToScale(row.spent.amount, currency);
   return amount > 0 && isExactInMinor(amount, scale)
     ? { amount, currency }
     : null;
@@ -49,7 +49,7 @@ export function csvDraft(
     return null;
   }
   if (!isValidAmountForCurrency(row.amount, row.currency)) return null;
-  const amount = roundForCurrency(row.amount, row.currency);
+  const amount = roundToScale(row.amount, row.currency);
   if (!Number.isFinite(amount) || amount <= 0) return null;
   if (!isExactInMinor(amount, scale)) return null;
   const occurredOn = row.occurredOn.slice(0, 10);
@@ -83,7 +83,7 @@ export function csvDraft(
     row.feeAmount > 0 &&
     isValidAmountForCurrency(row.feeAmount, row.currency)
   ) {
-    const fee = roundForCurrency(row.feeAmount, row.currency);
+    const fee = roundToScale(row.feeAmount, row.currency);
     if (fee > 0 && isExactInMinor(fee, scale)) {
       lines.push(
         ...feeLines(

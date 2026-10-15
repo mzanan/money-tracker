@@ -4,7 +4,6 @@ import { and, between, eq, inArray, like } from "drizzle-orm";
 import { getAccountLabels } from "@/lib/data/accounts";
 import { db } from "@/lib/db";
 import {
-  crypto_assets,
   ledger_accounts,
   ledger_entries,
   ledger_external_ids,
@@ -23,7 +22,7 @@ import {
   type LedgerDraft,
   type PostingLine,
 } from "@/lib/ledger/posting";
-import { scaleResolver, type ScaleOf } from "@/lib/ledger/scale";
+import { getScaleOf } from "@/lib/data/cryptoAssets";
 import type { DbTx } from "@/lib/db";
 import type { LedgerEntry, LedgerRevisionSnapshot } from "@/types/db";
 import type { Movement } from "@/types/ledger";
@@ -31,13 +30,6 @@ import type { Movement } from "@/types/ledger";
 type Executor = typeof db | DbTx;
 
 export class LedgerPostingError extends ActionError {}
-
-export async function getScaleOf(): Promise<ScaleOf> {
-  const rows = await db
-    .select({ code: crypto_assets.code, scale: crypto_assets.scale })
-    .from(crypto_assets);
-  return scaleResolver(rows);
-}
 
 async function ensureAccounts(
   executor: Executor,

@@ -6,10 +6,12 @@ import {
   LEG_OUT_SUFFIX,
 } from "@/lib/externalIds";
 import { flowLines, minorFlowLines, type Money } from "@/lib/ledger/builders";
+import { sameMinorAmount } from "@/lib/ledger/amounts";
 import {
   assetLines,
   isOwnMovement,
   movementType,
+  principalAssetLines,
 } from "@/lib/ledger/movements";
 import type {
   ExternalRef,
@@ -18,6 +20,7 @@ import type {
 } from "@/lib/ledger/posting";
 import type { ScaleOf } from "@/lib/ledger/scale";
 import type { TransactionKind } from "@/types/db";
+import type { FlowFields } from "@/lib/schemas/transaction";
 import type { Movement } from "@/types/ledger";
 
 export function isSyncedMovement(movement: Movement): boolean {
@@ -243,4 +246,21 @@ export function splitTransfer(draft: LedgerDraft): LedgerDraft[] {
       externalRefs: refsByLeg.get(index) ?? [],
     };
   });
+}
+
+export function matchesPrincipalFlow(
+  movement: Movement,
+  requested: FlowFields,
+  scaleOf: ScaleOf,
+): boolean {
+  return principalAssetLines(movement).some(
+    (line) =>
+      line.currency === requested.currency &&
+      sameMinorAmount(
+        Math.abs(line.amount),
+        requested.amount,
+        scaleOf(line.currency),
+      ) &&
+      (line.amount < 0 ? "expense" : "income") === requested.kind,
+  );
 }

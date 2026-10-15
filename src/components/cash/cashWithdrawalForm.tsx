@@ -3,7 +3,6 @@
 import { Loader2Icon } from "lucide-react";
 
 import { useAccountLabels } from "@/hooks/useAccountLabels";
-import { getCurrency } from "@/lib/constants/currencies";
 import { resolveSourceLabel } from "@/lib/constants/sources";
 import { RATE_DECIMALS } from "@/lib/withdrawal";
 
@@ -131,7 +130,7 @@ export function CashWithdrawalForm({
           label={`Fee (${chargedCurrency}), optional`}
           value={fee}
           onChange={setFee}
-          decimals={getCurrency(chargedCurrency).decimals}
+          currency={chargedCurrency}
         />
       </div>
       <div className="flex items-end gap-2">

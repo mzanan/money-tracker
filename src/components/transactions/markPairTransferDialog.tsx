@@ -16,6 +16,7 @@ import {
 import { ErrorText } from "@/components/ui/errorText";
 import { formatMoney } from "@/lib/currency";
 import type { RowFacts } from "@/types/ledger";
+import { INCOME_EXCEEDS_EXPENSE_ERROR } from "@/lib/transfer";
 
 import { TransferFeeFields } from "./transferFeeFields";
 import { useMarkPairTransferDialog } from "./useMarkPairTransferDialog";
@@ -33,8 +34,16 @@ export function MarkPairTransferDialog({
   incomeTx: RowFacts;
   onSuccess: () => void;
 }) {
-  const { sameCurrency, delta, fees, setFees, deltaMismatch, pending, submit } =
-    useMarkPairTransferDialog({ expenseTx, incomeTx, onSuccess });
+  const {
+    sameCurrency,
+    delta,
+    fees,
+    setFees,
+    deltaMismatch,
+    incomeExceeds,
+    pending,
+    submit,
+  } = useMarkPairTransferDialog({ expenseTx, incomeTx, onSuccess });
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -49,8 +58,9 @@ export function MarkPairTransferDialog({
         <DrawerBody>
           {sameCurrency && delta > 0 && (
             <p className="text-muted-foreground text-sm">
-              The amounts differ by {formatMoney(delta, expenseTx.currency)}.
-              Split it between the accounts that charged it.
+              The amounts differ by{" "}
+              {formatMoney(delta, expenseTx.currency, { precise: true })}. Split
+              it between the accounts that charged it.
             </p>
           )}
           <TransferFeeFields
@@ -60,9 +70,13 @@ export function MarkPairTransferDialog({
             sourceCurrency={expenseTx.currency}
             destinationCurrency={incomeTx.currency}
           />
+          {incomeExceeds && (
+            <ErrorText>{INCOME_EXCEEDS_EXPENSE_ERROR}</ErrorText>
+          )}
           {deltaMismatch && (
             <ErrorText>
-              The fees must add up to {formatMoney(delta, expenseTx.currency)}.
+              The fees must add up to{" "}
+              {formatMoney(delta, expenseTx.currency, { precise: true })}.
             </ErrorText>
           )}
         </DrawerBody>
@@ -76,7 +90,7 @@ export function MarkPairTransferDialog({
           </Button>
           <Button
             className="sm:flex-1"
-            disabled={pending || deltaMismatch}
+            disabled={pending || deltaMismatch || incomeExceeds}
             onClick={submit}
           >
             {pending && <Loader2Icon className="animate-spin" />}

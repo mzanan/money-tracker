@@ -1,41 +1,44 @@
 "use client";
 
 import { useAmountInput } from "@/hooks/useAmountInput";
-import { formatAmountDisplay } from "@/lib/currency";
-import { cn } from "@/lib/utils";
+import { amountInputScale, formatAmountDisplay } from "@/lib/currency";
+import type { AmountPrecision } from "@/types/amount";
+import { cn, omitKeys } from "@/lib/utils";
 
 import { Input } from "./input";
 
 type InputProps = React.ComponentProps<typeof Input>;
 
-interface AmountInputProps extends Omit<InputProps, "value" | "onChange"> {
+type AmountInputProps = Omit<
+  InputProps,
+  "value" | "onChange" | "onKeyDown" | "ref" | "inputMode"
+> & {
   value: string;
   onChange: (raw: string) => void;
-  decimals: number;
-}
+} & AmountPrecision;
 
 export function AmountInput({
   value,
   onChange,
-  decimals,
   className,
-  ...props
+  ...rest
 }: AmountInputProps) {
+  const props = omitKeys(rest, ["currency", "decimals"]);
   const { ref, handleChange, handleKeyDown } = useAmountInput(
     value,
     onChange,
-    decimals,
+    amountInputScale(rest),
   );
 
   return (
     <Input
+      {...props}
       ref={ref}
       inputMode="decimal"
       value={formatAmountDisplay(value)}
       onChange={handleChange}
       onKeyDown={handleKeyDown}
       className={cn("tabular-nums", className)}
-      {...props}
     />
   );
 }

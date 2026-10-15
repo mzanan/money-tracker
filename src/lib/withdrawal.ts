@@ -2,7 +2,7 @@ import {
   amountValidationError,
   feeAmountError,
   formatMoney,
-  roundForCurrency,
+  roundToScale,
 } from "@/lib/currency";
 
 export const RATE_DECIMALS = 4;
@@ -58,9 +58,9 @@ export function withdrawalChargedAmount(
 
   let converted: number;
   if (total !== undefined) {
-    converted = roundForCurrency(total - feeAmount, chargedCurrency);
+    converted = roundToScale(total - feeAmount, chargedCurrency);
   } else if (rate !== undefined) {
-    converted = roundForCurrency(received / rate, chargedCurrency);
+    converted = roundToScale(received / rate, chargedCurrency);
   } else if (chargedCurrency === receivedCurrency) {
     converted = received;
   } else {
@@ -81,7 +81,7 @@ export function resolveWithdrawalCharge(
   const fee =
     input.fee === undefined
       ? undefined
-      : roundForCurrency(input.fee, chargedCurrency);
+      : roundToScale(input.fee, chargedCurrency);
   const converted = withdrawalChargedAmount({ ...input, fee });
   if (converted === null) {
     return { ok: false, error: "Charged amount must be greater than the fee" };
@@ -104,7 +104,7 @@ export function resolveWithdrawalCharge(
     return { ok: false, error: convertedAmountError };
   }
   if (chargedCurrency === input.receivedCurrency) {
-    const gap = roundForCurrency(converted - input.received, chargedCurrency);
+    const gap = roundToScale(converted - input.received, chargedCurrency);
     if (gap < 0) {
       return {
         ok: false,
@@ -115,7 +115,7 @@ export function resolveWithdrawalCharge(
       return {
         ok: true,
         converted: input.received,
-        fee: roundForCurrency((fee ?? 0) + gap, chargedCurrency),
+        fee: roundToScale((fee ?? 0) + gap, chargedCurrency),
       };
     }
   }

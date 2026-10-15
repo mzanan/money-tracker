@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { moveWithdrawalToCash } from "@/lib/actions/cash";
-import { parseAmountInput } from "@/lib/currency";
+import { parseAmountInput, toInputDigits } from "@/lib/currency";
 import { cashFromWithdrawalNote } from "@/lib/withdrawal";
 
 export function useMoveToCash({
@@ -26,7 +26,9 @@ export function useMoveToCash({
     ? settings.currencies
     : [prefilledCurrency, ...settings.currencies];
 
-  const [amount, setAmount] = useState(prefill ? String(prefill.amount) : "");
+  const [amount, setAmount] = useState(
+    prefill ? toInputDigits(prefill.amount, prefilledCurrency) : "",
+  );
   const [currency, setCurrency] = useState(prefilledCurrency);
 
   function submit() {

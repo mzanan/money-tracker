@@ -1,4 +1,5 @@
 import type { RecurringPayment } from "@/types/db";
+import { formatMoneyWithCode, toPlainDigits } from "@/lib/currency";
 
 const PRODID = "-//money-tracker//Reminders//EN";
 
@@ -52,9 +53,9 @@ function rrule(reminder: RecurringPayment): string | null {
 function describe(reminder: RecurringPayment): string {
   const parts: string[] = [];
   if (reminder.amount != null && reminder.currency) {
-    parts.push(`${reminder.currency} ${reminder.amount}`);
+    parts.push(formatMoneyWithCode(reminder.amount, reminder.currency));
   } else if (reminder.amount != null) {
-    parts.push(String(reminder.amount));
+    parts.push(toPlainDigits(reminder.amount));
   }
   if (reminder.note) parts.push(reminder.note);
   if (reminder.source) parts.push(`Source: ${reminder.source}`);

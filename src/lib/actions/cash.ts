@@ -16,9 +16,9 @@ import { accountCurrencyError } from "@/lib/accountCurrencies";
 import { getAccountCurrencies, getAccountLabels } from "@/lib/data/accounts";
 import {
   getLedgerRecord,
-  getScaleOf,
   postLedgerTransaction,
 } from "@/lib/data/ledgerWrites";
+import { getScaleOf } from "@/lib/data/cryptoAssets";
 import { db } from "@/lib/db";
 import { feeLines, flowLines, transferPosting } from "@/lib/ledger/builders";
 import {

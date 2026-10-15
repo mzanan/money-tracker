@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 
 import { ActionError } from "@/lib/actionError";
 import { normalizeSource } from "@/lib/constants/sources";
-import { isValidAmountForCurrency, roundForCurrency } from "@/lib/currency";
+import { isValidAmountForCurrency, roundToScale } from "@/lib/currency";
 import { daysBefore, isValidCalendarDate, todayInTz } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
@@ -15,9 +15,9 @@ import {
   deleteLedgerTransactions,
   externalIdsWithPrefix,
   getLedgerRecord,
-  getScaleOf,
   postLedgerTransaction,
 } from "@/lib/data/ledgerWrites";
+import { getScaleOf } from "@/lib/data/cryptoAssets";
 import { EXTERNAL_ID_PREFIX } from "@/lib/externalIds";
 import { candidateMatchOf } from "@/lib/ledger/candidates";
 import { flowLines } from "@/lib/ledger/builders";
@@ -119,7 +119,7 @@ export async function importScreenshotRows(input: {
       results.push({ id: row.id, status: "fractional_amount" });
       continue;
     }
-    const amount = roundForCurrency(row.amount, row.currency);
+    const amount = roundToScale(row.amount, row.currency);
     if (!Number.isFinite(amount) || amount <= 0) {
       results.push({ id: row.id, status: "invalid_amount" });
       continue;

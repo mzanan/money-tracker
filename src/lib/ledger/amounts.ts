@@ -19,3 +19,7 @@ export function isExactInMinor(amount: number, scale: number): boolean {
   );
   return Math.abs(scaled - rounded) <= tolerance;
 }
+
+export function sameMinorAmount(a: number, b: number, scale: number): boolean {
+  return toMinor(a, scale) === toMinor(b, scale);
+}

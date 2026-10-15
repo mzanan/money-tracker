@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { SwitchRow } from "@/components/ui/switchRow";
 import { TagChip } from "@/components/ui/tagChip";
 import { Textarea } from "@/components/ui/textarea";
-import { getCurrency } from "@/lib/constants/currencies";
 
 import { KindToggle } from "./kindToggle";
 import { DateField } from "@/components/ui/dateField";
@@ -76,7 +75,7 @@ export function TransactionFormFields({
               id="tx-form-amount"
               value={amount}
               onChange={setAmount}
-              decimals={getCurrency(currency).decimals}
+              currency={currency}
               disabled={locked}
             />
             <CurrencySelect
@@ -234,7 +233,7 @@ export function TransactionFormFields({
             label="Fee (optional)"
             value={withdrawalDraft.fee}
             onChange={withdrawalDraft.setFee}
-            decimals={getCurrency(withdrawalDraft.chargedCurrency).decimals}
+            currency={withdrawalDraft.chargedCurrency}
           />
           <p className="text-muted-foreground text-xs">
             Books total minus fee on the account. The current amount becomes the

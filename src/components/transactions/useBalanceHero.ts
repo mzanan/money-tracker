@@ -10,7 +10,7 @@ import {
   formatSignedOrNull,
   formatStat,
   isNegligible,
-  roundForCurrency,
+  roundForDisplay,
 } from "@/lib/currency";
 import { todayInTz } from "@/lib/dates";
 import { excludeCanceledPairs } from "@/lib/ledger/canceledPairs";
@@ -101,7 +101,7 @@ export function useBalanceHero({
     displayCurrency,
     pendingText: pendingHint(pending, displayCurrency),
     monthTotals,
-    totalPositive: roundForCurrency(total, displayCurrency) >= 0,
+    totalPositive: roundForDisplay(total, displayCurrency) >= 0,
     totalSigned: formatMoney(total, displayCurrency, { signed: true }),
     showBase,
     totalInBase:

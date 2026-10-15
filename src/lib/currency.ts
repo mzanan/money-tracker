@@ -1,5 +1,10 @@
 import { ActionError } from "@/lib/actionError";
-import { getCurrency } from "@/lib/constants/currencies";
+import {
+  currencyScaleOrDefault,
+  currencyDisplayDecimals,
+  getCurrency,
+} from "@/lib/constants/currencies";
+import type { AmountPrecision } from "@/types/amount";
 import type { FxRates } from "@/types/db";
 
 export function convert(
@@ -17,18 +22,24 @@ export function convert(
   return (amount / fromRate) * toRate;
 }
 
-export function roundForCurrency(amount: number, code: string): number {
-  const { decimals } = getCurrency(code);
+function roundToDecimals(amount: number, decimals: number): number {
   const factor = 10 ** decimals;
   return Math.round((amount + Number.EPSILON) * factor) / factor;
+}
+
+export function roundToScale(amount: number, code: string): number {
+  return roundToDecimals(amount, currencyScaleOrDefault(code));
+}
+
+export function roundForDisplay(amount: number, code: string): number {
+  return roundToDecimals(amount, currencyDisplayDecimals(code));
 }
 
 export function isValidAmountForCurrency(
   amount: number,
   code: string,
 ): boolean {
-  const { decimals } = getCurrency(code);
-  return decimals > 0 || Number.isInteger(amount);
+  return currencyScaleOrDefault(code) > 0 || Number.isInteger(amount);
 }
 
 export function amountValidationError(
@@ -70,7 +81,7 @@ export function parseAndRoundAmount(
   if (error) {
     return { ok: false, error };
   }
-  return { ok: true, amount: roundForCurrency(numericAmount, code) };
+  return { ok: true, amount: roundToScale(numericAmount, code) };
 }
 
 function stripLeadingZeros(digits: string): string {
@@ -137,6 +148,7 @@ export interface FormatOptions {
   showCode?: boolean;
   signed?: boolean;
   compact?: boolean;
+  precise?: boolean;
 }
 
 export function formatMoney(
@@ -144,7 +156,9 @@ export function formatMoney(
   code: string,
   options: FormatOptions = {},
 ): string {
-  const { decimals, symbol } = getCurrency(code);
+  const { symbol } = getCurrency(code);
+  const decimals = currencyDisplayDecimals(code);
+  const maxDecimals = options.precise ? currencyScaleOrDefault(code) : decimals;
   const abs = Math.abs(amount);
   const num = new Intl.NumberFormat(
     "en-US",
@@ -152,12 +166,19 @@ export function formatMoney(
       ? abs > 0 && abs < 1
         ? { maximumSignificantDigits: 2 }
         : { notation: "compact", maximumFractionDigits: abs >= 1000 ? 1 : 0 }
-      : { minimumFractionDigits: decimals, maximumFractionDigits: decimals },
+      : { minimumFractionDigits: decimals, maximumFractionDigits: maxDecimals },
   ).format(abs);
-  const negative = amount < 0 && roundForCurrency(abs, code) !== 0;
+  const negative = amount < 0 && roundForDisplay(abs, code) !== 0;
   const sign = negative ? "-" : options.signed ? "+" : "";
   const base = `${sign}${symbol}${num}`;
   return options.showCode ? `${base} ${code}` : base;
+}
+
+export function formatMoneyWithCode(amount: number, code: string): string {
+  const formatted = formatMoney(amount, code);
+  return getCurrency(code).symbol.trim() === code
+    ? formatted
+    : `${formatted} ${code}`;
 }
 
 export function toUsdPair(
@@ -178,10 +199,23 @@ export function relativeUsdDiff(usdA: number, usdB: number): number | null {
   return Math.abs(usdA - usdB) / reference;
 }
 
-export function amountToInputDigits(amount: number, code: string): string {
-  const { decimals } = getCurrency(code);
-  const fixed = amount.toFixed(decimals);
-  const digits = decimals > 0 ? fixed.replace(/\.?0+$/, "") : fixed;
+export function toPlainDigits(amount: number): string {
+  return amount.toLocaleString("en-US", {
+    useGrouping: false,
+    maximumFractionDigits: 20,
+  });
+}
+
+export function amountInputScale(precision: AmountPrecision): number {
+  return precision.currency !== undefined
+    ? currencyScaleOrDefault(precision.currency)
+    : precision.decimals;
+}
+
+export function toInputDigits(amount: number, code: string): string {
+  const scale = currencyScaleOrDefault(code);
+  const fixed = amount.toFixed(scale);
+  const digits = scale > 0 ? fixed.replace(/\.?0+$/, "") : fixed;
   return parseAmountInput(digits) === null ? "" : digits;
 }
 
@@ -218,7 +252,7 @@ export function formatConverted(
 ): string | null {
   if (from === to || !rates) return null;
   try {
-    const rounded = roundForCurrency(convert(amount, from, to, rates), to);
+    const rounded = roundForDisplay(convert(amount, from, to, rates), to);
     return formatMoney(rounded === 0 ? 0 : rounded, to, options);
   } catch {
     return null;
@@ -235,7 +269,8 @@ const STAT_COMPACT_FROM = 1_000_000;
 export function formatStat(amount: number, code: string): string {
   const full = formatMoney(amount, code);
   const large =
-    getCurrency(code).decimals === 0 && Math.abs(amount) >= STAT_COMPACT_FROM;
+    currencyDisplayDecimals(code) === 0 &&
+    Math.abs(amount) >= STAT_COMPACT_FROM;
   return large || full.length > STAT_MAX_CHARS
     ? formatMoney(amount, code, { compact: true })
     : full;
