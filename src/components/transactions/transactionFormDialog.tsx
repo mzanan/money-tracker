@@ -43,6 +43,7 @@ export function TransactionFormDialog({
   const form = useTransactionForm({
     seed,
     txId,
+    kindLocked: locked,
     open,
     onOpenChange,
     successMessage,

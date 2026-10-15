@@ -23,6 +23,7 @@ export function PayExpensePanel({
   const money = useMoney();
   const form = useTransactionForm({
     seed,
+    kindLocked: true,
     open: true,
     onOpenChange: (open) => {
       if (!open) onBack();

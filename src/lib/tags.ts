@@ -36,3 +36,23 @@ export function tagHue(tag: string): number {
   }
   return hash % 360;
 }
+
+export function parseTagsInput(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+export function tagsToInput(tags: ReadonlyArray<string>): string {
+  return tags.join(", ");
+}
+
+export function sameTags(
+  a: ReadonlyArray<string>,
+  b: ReadonlyArray<string> | null,
+): boolean {
+  if (b === null || a.length !== b.length) return false;
+  const keys = new Set(b.map(tagKey));
+  return a.every((tag) => keys.has(tagKey(tag)));
+}

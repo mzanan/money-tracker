@@ -1,6 +1,5 @@
 "use client";
 
-import type { EntrySuggestion } from "@/lib/entrySuggestions";
 import type { Location, RecurringPayment } from "@/types/db";
 import type { Movement } from "@/types/ledger";
 
@@ -32,7 +31,6 @@ interface Props {
   completedReminders?: RecurringPayment[];
   today: string;
   recentTags?: string[] | null;
-  entrySuggestions?: EntrySuggestion[];
 }
 
 export function MonthDashboard({
@@ -46,7 +44,6 @@ export function MonthDashboard({
   completedReminders = [],
   today,
   recentTags = null,
-  entrySuggestions = [],
 }: Props) {
   const {
     baseCurrency,
@@ -197,7 +194,6 @@ export function MonthDashboard({
               addSources={addSources}
               selectedSource={c.selectedSource}
               recentTags={recentTags ?? []}
-              entrySuggestions={entrySuggestions}
               onAdded={c.closePanel}
             />
           ) : (
