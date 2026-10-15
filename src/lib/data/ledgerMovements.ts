@@ -6,7 +6,6 @@ import { getUserSettings } from "@/lib/data/userSettings";
 import { db } from "@/lib/db";
 import {
   accounts,
-  crypto_assets,
   fx_rates_daily,
   ledger_accounts,
   ledger_entries,
@@ -14,7 +13,7 @@ import {
   ledger_transactions,
 } from "@/lib/db/schema";
 import { buildMovements } from "@/lib/ledger/movements";
-import { scaleResolver } from "@/lib/ledger/scale";
+import { getScaleOf } from "@/lib/data/cryptoAssets";
 import {
   ratesByDateFor,
   valuationCurrencies,
@@ -30,7 +29,7 @@ export const getLedgerData = cache(
       entryRows,
       accountRows,
       refRows,
-      cryptoRows,
+      scaleOf,
       settings,
       rateRows,
       declaredRows,
@@ -55,9 +54,7 @@ export const getLedgerData = cache(
         })
         .from(ledger_external_ids)
         .where(eq(ledger_external_ids.user_id, userId)),
-      db
-        .select({ code: crypto_assets.code, scale: crypto_assets.scale })
-        .from(crypto_assets),
+      getScaleOf(),
       getUserSettings(userId),
       db
         .select({ date: fx_rates_daily.date, rates: fx_rates_daily.rates })
@@ -75,7 +72,7 @@ export const getLedgerData = cache(
         accounts: accountRows,
         externalIds: refRows,
       },
-      scaleResolver(cryptoRows),
+      scaleOf,
     );
 
     const currencies = valuationCurrencies(

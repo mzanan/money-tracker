@@ -216,6 +216,9 @@ export function pairFeeTarget(
   return Math.max(0, pairAmountDelta(expense, income));
 }
 
+export const INCOME_EXCEEDS_EXPENSE_ERROR =
+  "The income is larger than the expense, so they can't be one transfer.";
+
 export function pairIncomeExceedsExpense(
   expense: { amount: number; currency: string },
   income: { amount: number; currency: string },

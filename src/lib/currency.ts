@@ -148,6 +148,7 @@ export interface FormatOptions {
   showCode?: boolean;
   signed?: boolean;
   compact?: boolean;
+  precise?: boolean;
 }
 
 export function formatMoney(
@@ -157,6 +158,7 @@ export function formatMoney(
 ): string {
   const { symbol } = getCurrency(code);
   const decimals = currencyDisplayDecimals(code);
+  const maxDecimals = options.precise ? currencyScaleOrDefault(code) : decimals;
   const abs = Math.abs(amount);
   const num = new Intl.NumberFormat(
     "en-US",
@@ -164,7 +166,7 @@ export function formatMoney(
       ? abs > 0 && abs < 1
         ? { maximumSignificantDigits: 2 }
         : { notation: "compact", maximumFractionDigits: abs >= 1000 ? 1 : 0 }
-      : { minimumFractionDigits: decimals, maximumFractionDigits: decimals },
+      : { minimumFractionDigits: decimals, maximumFractionDigits: maxDecimals },
   ).format(abs);
   const negative = amount < 0 && roundForDisplay(abs, code) !== 0;
   const sign = negative ? "-" : options.signed ? "+" : "";

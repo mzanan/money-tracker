@@ -48,8 +48,9 @@ export function useMarkPairTransferDialog({
     bySide.origin + bySide.destination,
     expenseTx.currency,
   );
-  const deltaMismatch = sameCurrency && total > 0 && total !== delta;
   const incomeExceeds = pairIncomeExceedsExpense(expenseTx, incomeTx);
+  const deltaMismatch =
+    sameCurrency && !incomeExceeds && total > 0 && total !== delta;
 
   function submit() {
     if (deltaMismatch || incomeExceeds) return;

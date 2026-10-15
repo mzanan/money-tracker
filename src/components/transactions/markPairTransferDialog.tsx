@@ -19,6 +19,7 @@ import type { RowFacts } from "@/types/ledger";
 
 import { TransferFeeFields } from "./transferFeeFields";
 import { useMarkPairTransferDialog } from "./useMarkPairTransferDialog";
+import { INCOME_EXCEEDS_EXPENSE_ERROR } from "@/lib/transfer";
 
 export function MarkPairTransferDialog({
   open,
@@ -57,8 +58,9 @@ export function MarkPairTransferDialog({
         <DrawerBody>
           {sameCurrency && delta > 0 && (
             <p className="text-muted-foreground text-sm">
-              The amounts differ by {formatMoney(delta, expenseTx.currency)}.
-              Split it between the accounts that charged it.
+              The amounts differ by{" "}
+              {formatMoney(delta, expenseTx.currency, { precise: true })}. Split
+              it between the accounts that charged it.
             </p>
           )}
           <TransferFeeFields
@@ -69,14 +71,12 @@ export function MarkPairTransferDialog({
             destinationCurrency={incomeTx.currency}
           />
           {incomeExceeds && (
-            <ErrorText>
-              The income is larger than the expense, so they can&apos;t be one
-              transfer.
-            </ErrorText>
+            <ErrorText>{INCOME_EXCEEDS_EXPENSE_ERROR}</ErrorText>
           )}
           {deltaMismatch && (
             <ErrorText>
-              The fees must add up to {formatMoney(delta, expenseTx.currency)}.
+              The fees must add up to{" "}
+              {formatMoney(delta, expenseTx.currency, { precise: true })}.
             </ErrorText>
           )}
         </DrawerBody>

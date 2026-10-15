@@ -47,6 +47,7 @@ import {
   type ReceivedAmount,
   type TransferFeeEntry,
   pairAmountDelta,
+  INCOME_EXCEEDS_EXPENSE_ERROR,
 } from "@/lib/transfer";
 import {
   buildCurrencyContext,
@@ -511,6 +512,9 @@ export async function markPairAsTransfer(
 
   if (sameCurrency) {
     const delta = pairAmountDelta(expense.flow, income.flow);
+    if (delta < 0) {
+      return { ok: false, error: INCOME_EXCEEDS_EXPENSE_ERROR };
+    }
     const given = roundToScale(
       originFee + destinationFee,
       expense.flow.currency,

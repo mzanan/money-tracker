@@ -155,7 +155,7 @@ src/
   hooks/                      # useSettings, useRates, useTimezone, useCsvImport
   lib/
     actions/                  # server actions (transactions, settings, csv, integrations)
-    constants/currencies.ts   # ISO 4217 con decimals oficial
+    constants/currencies.ts   # scale de almacenamiento (ISO 4217; cripto 6) + displayDecimals opcional (cripto 2)
     schemas/                  # Zod
     db/                       # schema.ts + libSQL client (lazy proxy)
     auth.ts                   # Better Auth server config

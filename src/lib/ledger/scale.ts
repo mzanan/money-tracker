@@ -1,4 +1,8 @@
-import { getCurrency, storageScale } from "@/lib/constants/currencies";
+import {
+  getCurrency,
+  isSupportedCurrency,
+  storageScale,
+} from "@/lib/constants/currencies";
 
 export type ScaleOf = (currency: string) => number;
 
@@ -25,10 +29,7 @@ export function scaleResolver(
 }
 
 export function hasStorageScale(currency: string, scaleOf: ScaleOf): boolean {
-  try {
-    scaleOf(currency);
-    return true;
-  } catch {
-    return false;
-  }
+  if (!isSupportedCurrency(currency)) return false;
+  scaleOf(currency);
+  return true;
 }
