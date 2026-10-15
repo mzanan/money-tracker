@@ -32,6 +32,7 @@ export function TransactionFormStep({
   const form = useTransactionForm({
     seed,
     txId,
+    kindLocked: locked,
     open: true,
     onOpenChange: (open) => {
       if (!open) onBack();

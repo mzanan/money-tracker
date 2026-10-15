@@ -1,5 +1,5 @@
 import { DashboardView } from "@/components/dashboard/dashboardView";
-import { RatesByDateProvider } from "@/hooks/useRatesByDate";
+import { LedgerProviders } from "@/components/transactions/ledgerProviders";
 import { getHomePageData } from "@/lib/data/homeData";
 import { getRemindersData } from "@/lib/data/reminders";
 
@@ -10,7 +10,7 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <RatesByDateProvider value={data.ledger.ratesByDate}>
+    <LedgerProviders ledger={data.ledger}>
       <DashboardView
         yearMonth={data.yearMonth}
         movements={data.ledger.movements}
@@ -19,6 +19,6 @@ export default async function DashboardPage() {
         today={remindersData.today}
         withdrawalSources={data.withdrawalSources}
       />
-    </RatesByDateProvider>
+    </LedgerProviders>
   );
 }

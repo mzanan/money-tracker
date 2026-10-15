@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { useAccountOptions } from "./useAccountOptions";
+import { useEntrySuggestions } from "./useEntrySuggestions";
+import { useTagPicker } from "./useTagPicker";
 import { useTransferDraft } from "./useTransferDraft";
 import { useWithdrawalDraft } from "./useWithdrawalDraft";
 import { useServerAction } from "@/hooks/useServerAction";
@@ -12,7 +14,6 @@ import { convertToWithdrawal } from "@/lib/actions/cash";
 import { markAsTransfer } from "@/lib/actions/transfers";
 import {
   createTransaction,
-  getUsedTags,
   updateTransaction,
 } from "@/lib/actions/transactions";
 import {
@@ -22,15 +23,15 @@ import {
 } from "@/lib/constants/sources";
 import { parseAmountInput, parseAndRoundAmount } from "@/lib/currency";
 import { EXTERNAL_ID_PREFIX, isWithdrawalExternalId } from "@/lib/externalIds";
-import { canonicalTag, tagKey } from "@/lib/tags";
 import { flowDraftOf, flowEdited } from "@/lib/flowDraft";
 
 import type { Kind } from "./kindToggle";
 import { useAccountCurrencies } from "@/hooks/useAccountCurrencies";
-import { preferredAccountCurrency } from "@/lib/accountCurrencies";
-
-const MAX_TAG_SUGGESTIONS = 12;
-const MAX_TAGS = 10;
+import { useEntrySuggestionCatalog } from "@/hooks/useEntrySuggestionCatalog";
+import {
+  acceptedCurrencies,
+  preferredAccountCurrency,
+} from "@/lib/accountCurrencies";
 
 export interface TransactionSeed {
   kind: Kind;
@@ -47,6 +48,7 @@ export interface TransactionSeed {
 export function useTransactionForm({
   seed,
   txId,
+  kindLocked,
   open,
   onOpenChange,
   successMessage,
@@ -54,6 +56,7 @@ export function useTransactionForm({
 }: {
   seed: TransactionSeed;
   txId?: string;
+  kindLocked?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   successMessage?: string;
@@ -71,8 +74,6 @@ export function useTransactionForm({
   );
   const [description, setDescription] = useState(seed.note ?? "");
   const [tags, setTags] = useState(seed.tags);
-  const [tagInput, setTagInput] = useState("");
-  const [usedTags, setUsedTags] = useState<string[] | null>(null);
   const [date, setDate] = useState(seed.occurredOn);
   const [transfer, setTransfer] = useState(false);
   const [withdrawal, setWithdrawal] = useState(false);
@@ -126,16 +127,33 @@ export function useTransactionForm({
     ),
   });
 
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    getUsedTags().then((res) => {
-      if (!cancelled && res.ok) setUsedTags(res.data ?? []);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
+  const entrySuggestions = useEntrySuggestionCatalog();
+  const {
+    suggestions,
+    applySuggestion,
+    inputHandlers: descriptionHandlers,
+  } = useEntrySuggestions({
+    entrySuggestions,
+    description,
+    disabled: transferActive || withdrawalActive,
+    amount,
+    tags,
+    currencies: acceptedCurrencies(
+      accountCurrencies[txId ? seed.source : source],
+      settings.currencies,
+    ),
+    fill: {
+      setDescription,
+      setKind: kindLocked || txId ? undefined : setKind,
+      setTags,
+      setCurrency,
+      setAmount,
+      resetModes: () => {
+        setTransfer(false);
+        setWithdrawal(false);
+      },
+    },
+  });
 
   const currencies = settings.currencies.includes(currency)
     ? settings.currencies
@@ -144,31 +162,7 @@ export function useTransactionForm({
   const sourceOptions =
     sources && !sources.includes(source) ? [source, ...sources] : sources;
 
-  const currentTagKeys = new Set(tags.map(tagKey));
-  const tagLimitReached = tags.length >= MAX_TAGS;
-  const query = tagKey(tagInput);
-  const tagSuggestions = tagLimitReached
-    ? []
-    : (usedTags ?? [])
-        .filter((tag) => !currentTagKeys.has(tagKey(tag)))
-        .filter((tag) => (query ? tagKey(tag).includes(query) : true))
-        .slice(0, MAX_TAG_SUGGESTIONS);
-
-  function addTag(raw: string) {
-    if (tagLimitReached) {
-      toast.error(`Max ${MAX_TAGS} tags`);
-      return;
-    }
-    const canonical = canonicalTag(raw);
-    setTagInput("");
-    if (!canonical) return;
-    if (currentTagKeys.has(tagKey(canonical))) return;
-    setTags((prev) => [...prev, canonical]);
-  }
-
-  function removeTag(tag: string) {
-    setTags((prev) => prev.filter((t) => t !== tag));
-  }
+  const tagPicker = useTagPicker({ open, tags, setTags });
 
   const runOptions = {
     success: transferActive
@@ -281,13 +275,11 @@ export function useTransactionForm({
     setSource,
     description,
     setDescription,
+    suggestions,
+    applySuggestion,
+    descriptionHandlers,
     tags,
-    tagInput,
-    setTagInput,
-    tagSuggestions,
-    tagLimitReached,
-    addTag,
-    removeTag,
+    ...tagPicker,
     date,
     setDate,
     transfer,
