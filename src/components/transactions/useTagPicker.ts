@@ -4,7 +4,12 @@ import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { toast } from "sonner";
 
 import { getUsedTags } from "@/lib/actions/transactions";
-import { MAX_TAGS_PER_TRANSACTION, mergeTagInput, tagKey } from "@/lib/tags";
+import {
+  MAX_TAGS_PER_TRANSACTION,
+  mergeTagInput,
+  parseTagsInput,
+  tagKey,
+} from "@/lib/tags";
 
 const MAX_TAG_SUGGESTIONS = 12;
 const MAX_TAGS_MESSAGE = `Max ${MAX_TAGS_PER_TRANSACTION} tags`;
@@ -48,9 +53,9 @@ export function useTagPicker({
       return;
     }
     setTagInput("");
-    const merged = mergeTagInput(tags, raw);
-    if (merged.overflow) toast.error(MAX_TAGS_MESSAGE);
-    setTags(merged.tags);
+    if (parseTagsInput(raw).length === 0) return;
+    if (mergeTagInput(tags, raw).overflow) toast.error(MAX_TAGS_MESSAGE);
+    setTags((prev) => mergeTagInput(prev, raw).tags);
   }
 
   function removeTag(tag: string) {
