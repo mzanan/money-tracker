@@ -16,10 +16,10 @@ import {
 import { ErrorText } from "@/components/ui/errorText";
 import { formatMoney } from "@/lib/currency";
 import type { RowFacts } from "@/types/ledger";
+import { INCOME_EXCEEDS_EXPENSE_ERROR } from "@/lib/transfer";
 
 import { TransferFeeFields } from "./transferFeeFields";
 import { useMarkPairTransferDialog } from "./useMarkPairTransferDialog";
-import { INCOME_EXCEEDS_EXPENSE_ERROR } from "@/lib/transfer";
 
 export function MarkPairTransferDialog({
   open,
