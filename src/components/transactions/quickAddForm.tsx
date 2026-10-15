@@ -4,7 +4,6 @@ import { ChevronDownIcon, Loader2Icon, PlusIcon } from "lucide-react";
 
 import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { resolveSourceLabel } from "@/lib/constants/sources";
-import type { EntrySuggestion } from "@/lib/entrySuggestions";
 import { cn } from "@/lib/utils";
 
 import { AmountInput } from "@/components/ui/amountInput";
@@ -29,7 +28,6 @@ import { useQuickAddForm } from "./useQuickAddForm";
 
 interface Props {
   recentTags: string[];
-  entrySuggestions: EntrySuggestion[];
   source: string;
   onAdded?: () => void;
   autoFocusAmount?: boolean;
@@ -39,7 +37,6 @@ interface Props {
 
 export function QuickAddForm({
   recentTags,
-  entrySuggestions,
   source,
   onAdded,
   autoFocusAmount = false,
@@ -114,9 +111,6 @@ export function QuickAddForm({
   } = useQuickAddForm({
     source,
     onAdded,
-    entrySuggestions,
-    accountOptions,
-    onSourceChange,
   });
 
   const submitButton = (

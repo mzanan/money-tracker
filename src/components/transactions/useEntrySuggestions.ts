@@ -1,6 +1,13 @@
 "use client";
 
-import { useMemo, useState, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 
 import {
   matchEntrySuggestions,
@@ -8,16 +15,17 @@ import {
   suggestionKey,
   type EntrySuggestion,
 } from "@/lib/entrySuggestions";
+import { sameTags } from "@/lib/tags";
 
 import type { Kind } from "./kindToggle";
 
 interface EntrySuggestionFill {
   setDescription: (value: string) => void;
-  setKind: (value: Kind) => void;
-  setTagsInput: (value: string) => void;
+  setKind?: (value: Kind) => void;
+  setTags: (value: string[]) => void;
   setCurrency: (value: string) => void;
   setAmount: (value: string) => void;
-  resetModes: () => void;
+  resetModes?: () => void;
 }
 
 export function useEntrySuggestions({
@@ -25,25 +33,24 @@ export function useEntrySuggestions({
   description,
   disabled,
   amount,
+  tags,
   currencies,
-  source,
-  accountOptions,
-  onSourceChange,
   fill,
 }: {
   entrySuggestions: EntrySuggestion[];
   description: string;
   disabled: boolean;
   amount: string;
+  tags: string[];
   currencies: string[];
-  source: string;
-  accountOptions: string[];
-  onSourceChange?: (source: string) => void;
   fill: EntrySuggestionFill;
 }) {
-  const [appliedKey, setAppliedKey] = useState<string | null>(null);
+  const [appliedKey, setAppliedKey] = useState<string | null>(() =>
+    description ? suggestionKey(description) : null,
+  );
   const [open, setOpen] = useState(false);
   const [filledAmount, setFilledAmount] = useState<string | null>(null);
+  const [filledTags, setFilledTags] = useState<string[] | null>(null);
 
   if (appliedKey !== null && suggestionKey(description) !== appliedKey) {
     setAppliedKey(null);
@@ -56,9 +63,12 @@ export function useEntrySuggestions({
 
   function applySuggestion(suggestion: EntrySuggestion) {
     fill.setDescription(suggestion.note);
-    fill.setKind(suggestion.kind);
-    fill.setTagsInput(suggestion.tags.join(", "));
-    fill.resetModes();
+    fill.setKind?.(suggestion.kind);
+    if (tags.length === 0 || sameTags(tags, filledTags)) {
+      fill.setTags(suggestion.tags);
+      setFilledTags(suggestion.tags);
+    }
+    fill.resetModes?.();
     setAppliedKey(suggestion.key);
     const amountFill = suggestionAmountFill(suggestion, {
       amount,
@@ -70,27 +80,33 @@ export function useEntrySuggestions({
       fill.setAmount(amountFill.amount);
       setFilledAmount(amountFill.amount || null);
     }
-    if (
-      onSourceChange &&
-      suggestion.source !== source &&
-      accountOptions.includes(suggestion.source)
-    ) {
-      onSourceChange(suggestion.source);
-    }
   }
 
   const hidden = disabled || !open || appliedKey !== null;
+  const listVisible = !hidden && matches.length > 0;
+  const listVisibleRef = useRef(listVisible);
+
+  useLayoutEffect(() => {
+    listVisibleRef.current = listVisible;
+  }, [listVisible]);
+
+  const ref = useCallback((node: HTMLElement | null) => {
+    if (!node) return;
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape" || event.isComposing) return;
+      if (listVisibleRef.current) event.stopPropagation();
+      setOpen(false);
+    };
+    node.addEventListener("keydown", closeOnEscape);
+    return () => node.removeEventListener("keydown", closeOnEscape);
+  }, []);
 
   const inputHandlers = {
+    ref,
     onFocus: () => setOpen(true),
     onBlur: () => setOpen(false),
-    onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => {
-      if (event.key !== "Escape") {
-        setOpen(true);
-        return;
-      }
-      if (!hidden && matches.length > 0) event.stopPropagation();
-      setOpen(false);
+    onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+      if (event.key !== "Escape") setOpen(true);
     },
   };
 

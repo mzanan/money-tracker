@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useAccountOptions } from "./useAccountOptions";
+import { useEntrySuggestions } from "./useEntrySuggestions";
 import { useTransferDraft } from "./useTransferDraft";
 import { useWithdrawalDraft } from "./useWithdrawalDraft";
 import { useServerAction } from "@/hooks/useServerAction";
@@ -22,11 +23,12 @@ import {
 } from "@/lib/constants/sources";
 import { parseAmountInput, parseAndRoundAmount } from "@/lib/currency";
 import { EXTERNAL_ID_PREFIX, isWithdrawalExternalId } from "@/lib/externalIds";
-import { canonicalTag, tagKey } from "@/lib/tags";
+import { canonicalTag, dedupeTags, parseTagsInput, tagKey } from "@/lib/tags";
 import { flowDraftOf, flowEdited } from "@/lib/flowDraft";
 
 import type { Kind } from "./kindToggle";
 import { useAccountCurrencies } from "@/hooks/useAccountCurrencies";
+import { useEntrySuggestionCatalog } from "@/hooks/useEntrySuggestionCatalog";
 import { preferredAccountCurrency } from "@/lib/accountCurrencies";
 
 const MAX_TAG_SUGGESTIONS = 12;
@@ -47,6 +49,7 @@ export interface TransactionSeed {
 export function useTransactionForm({
   seed,
   txId,
+  kindLocked,
   open,
   onOpenChange,
   successMessage,
@@ -54,6 +57,7 @@ export function useTransactionForm({
 }: {
   seed: TransactionSeed;
   txId?: string;
+  kindLocked?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   successMessage?: string;
@@ -126,6 +130,31 @@ export function useTransactionForm({
     ),
   });
 
+  const entrySuggestions = useEntrySuggestionCatalog();
+  const {
+    suggestions,
+    applySuggestion,
+    inputHandlers: descriptionHandlers,
+  } = useEntrySuggestions({
+    entrySuggestions,
+    description,
+    disabled: transferActive || withdrawalActive,
+    amount,
+    tags,
+    currencies: settings.currencies,
+    fill: {
+      setDescription,
+      setKind: kindLocked ? undefined : setKind,
+      setTags,
+      setCurrency,
+      setAmount,
+      resetModes: () => {
+        setTransfer(false);
+        setWithdrawal(false);
+      },
+    },
+  });
+
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -159,11 +188,10 @@ export function useTransactionForm({
       toast.error(`Max ${MAX_TAGS} tags`);
       return;
     }
-    const canonical = canonicalTag(raw);
     setTagInput("");
-    if (!canonical) return;
-    if (currentTagKeys.has(tagKey(canonical))) return;
-    setTags((prev) => [...prev, canonical]);
+    const incoming = parseTagsInput(raw).map(canonicalTag).filter(Boolean);
+    if (incoming.length === 0) return;
+    setTags((prev) => dedupeTags([...prev, ...incoming]).slice(0, MAX_TAGS));
   }
 
   function removeTag(tag: string) {
@@ -281,6 +309,9 @@ export function useTransactionForm({
     setSource,
     description,
     setDescription,
+    suggestions,
+    applySuggestion,
+    descriptionHandlers,
     tags,
     tagInput,
     setTagInput,

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { EntrySuggestionCatalogProvider } from "@/hooks/useEntrySuggestionCatalog";
 import { RatesByDateProvider } from "@/hooks/useRatesByDate";
 
 import { MonthDashboard } from "@/components/transactions/monthDashboard";
@@ -32,21 +33,24 @@ export default async function MonthPage({
 
   return (
     <RatesByDateProvider value={data.ledger.ratesByDate}>
-      <MonthDashboard
-        yearMonth={data.yearMonth}
-        movements={data.ledger.movements}
-        sources={sources}
-        csvSources={csvSources}
-        withdrawalSources={cashWithdrawalSourcesByUsage(
-          sources,
-          data.ledger.movements,
-        )}
-        places={data.places}
-        reminders={remindersData.reminders}
-        completedReminders={remindersData.completedReminders}
-        today={remindersData.today}
-        entrySuggestions={buildEntrySuggestions(data.ledger.movements)}
-      />
+      <EntrySuggestionCatalogProvider
+        value={buildEntrySuggestions(data.ledger.movements)}
+      >
+        <MonthDashboard
+          yearMonth={data.yearMonth}
+          movements={data.ledger.movements}
+          sources={sources}
+          csvSources={csvSources}
+          withdrawalSources={cashWithdrawalSourcesByUsage(
+            sources,
+            data.ledger.movements,
+          )}
+          places={data.places}
+          reminders={remindersData.reminders}
+          completedReminders={remindersData.completedReminders}
+          today={remindersData.today}
+        />
+      </EntrySuggestionCatalogProvider>
     </RatesByDateProvider>
   );
 }

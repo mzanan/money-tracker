@@ -10,6 +10,7 @@ import {
   withdrawalAvailableFor,
 } from "@/lib/constants/sources";
 import { useAccountCurrencies } from "@/hooks/useAccountCurrencies";
+import { useEntrySuggestionCatalog } from "@/hooks/useEntrySuggestionCatalog";
 import { useRates } from "@/hooks/useRates";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
@@ -24,7 +25,6 @@ import {
 } from "@/lib/currency";
 import { preferredAccountCurrency } from "@/lib/accountCurrencies";
 import { todayInTz } from "@/lib/dates";
-import type { EntrySuggestion } from "@/lib/entrySuggestions";
 import { withdrawalChargedAmount } from "@/lib/withdrawal";
 import { parseFeeDrafts } from "@/lib/transfer";
 
@@ -34,24 +34,16 @@ import { useWithdrawalDraft } from "./useWithdrawalDraft";
 import { useUiStore } from "@/stores/uiStore";
 
 import { quickAddExtrasLabel } from "@/lib/quickAddExtras";
+import { parseTagsInput, tagsToInput } from "@/lib/tags";
 
 import type { Kind } from "./kindToggle";
 
 interface QuickAddFormOptions {
   source: string;
   onAdded?: () => void;
-  entrySuggestions: EntrySuggestion[];
-  accountOptions: string[];
-  onSourceChange?: (source: string) => void;
 }
 
-export function useQuickAddForm({
-  source,
-  onAdded,
-  entrySuggestions,
-  accountOptions,
-  onSourceChange,
-}: QuickAddFormOptions) {
+export function useQuickAddForm({ source, onAdded }: QuickAddFormOptions) {
   const settings = useSettings();
   const timezone = useTimezone();
   const ratesQuery = useRates();
@@ -136,6 +128,7 @@ export function useQuickAddForm({
     if (sourceCurrency) setCurrency(sourceCurrency);
   }
 
+  const entrySuggestions = useEntrySuggestionCatalog();
   const {
     suggestions,
     applySuggestion,
@@ -145,14 +138,12 @@ export function useQuickAddForm({
     description,
     disabled: transferActive || withdrawalActive,
     amount,
+    tags: parseTagsInput(tagsInput),
     currencies: settings.currencies,
-    source,
-    accountOptions,
-    onSourceChange,
     fill: {
       setDescription,
       setKind,
-      setTagsInput,
+      setTags: (tags) => setTagsInput(tagsToInput(tags)),
       setCurrency,
       setAmount,
       resetModes,
@@ -200,10 +191,7 @@ export function useQuickAddForm({
             occurredOn: date,
             receivedOn: transferDraft.receivedOn,
             note: description.trim() || null,
-            tags: tagsInput
-              .split(",")
-              .map((tag) => tag.trim())
-              .filter(Boolean),
+            tags: parseTagsInput(tagsInput),
             fees: transferFeeEntries,
             ...(transferDraft.received
               ? { received: transferDraft.received }
@@ -255,10 +243,7 @@ export function useQuickAddForm({
             source,
             occurredOn: date,
             note: description.trim() || null,
-            tags: tagsInput
-              .split(",")
-              .map((tag) => tag.trim())
-              .filter(Boolean),
+            tags: parseTagsInput(tagsInput),
           }),
         {
           success: `Withdrawal · ${formatMoney(booked, withdrawalDraft.chargedCurrency)}`,
@@ -290,10 +275,7 @@ export function useQuickAddForm({
           kind,
           amount: rounded,
           currency,
-          tags: tagsInput
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter(Boolean),
+          tags: parseTagsInput(tagsInput),
           note: description.trim() || null,
           occurredOn: date,
           source,

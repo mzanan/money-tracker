@@ -1,3 +1,4 @@
+import { EntrySuggestionCatalogProvider } from "@/hooks/useEntrySuggestionCatalog";
 import { RatesByDateProvider } from "@/hooks/useRatesByDate";
 import { getHomePageData } from "@/lib/data/homeData";
 import { getRemindersData } from "@/lib/data/reminders";
@@ -13,19 +14,22 @@ export async function HomeDashboard() {
 
   return (
     <RatesByDateProvider value={data.ledger.ratesByDate}>
-      <MonthDashboard
-        yearMonth={data.yearMonth}
-        movements={data.ledger.movements}
-        sources={data.sources}
-        csvSources={data.csvSources}
-        withdrawalSources={data.withdrawalSources}
-        places={data.places}
-        reminders={remindersData.reminders}
-        completedReminders={remindersData.completedReminders}
-        today={remindersData.today}
-        recentTags={data.recentTags}
-        entrySuggestions={buildEntrySuggestions(data.ledger.movements)}
-      />
+      <EntrySuggestionCatalogProvider
+        value={buildEntrySuggestions(data.ledger.movements)}
+      >
+        <MonthDashboard
+          yearMonth={data.yearMonth}
+          movements={data.ledger.movements}
+          sources={data.sources}
+          csvSources={data.csvSources}
+          withdrawalSources={data.withdrawalSources}
+          places={data.places}
+          reminders={remindersData.reminders}
+          completedReminders={remindersData.completedReminders}
+          today={remindersData.today}
+          recentTags={data.recentTags}
+        />
+      </EntrySuggestionCatalogProvider>
     </RatesByDateProvider>
   );
 }

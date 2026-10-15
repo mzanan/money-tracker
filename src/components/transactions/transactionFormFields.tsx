@@ -13,6 +13,7 @@ import { SwitchRow } from "@/components/ui/switchRow";
 import { TagChip } from "@/components/ui/tagChip";
 import { Textarea } from "@/components/ui/textarea";
 
+import { EntrySuggestionList } from "./entrySuggestionList";
 import { KindToggle } from "./kindToggle";
 import { DateField } from "@/components/ui/dateField";
 import { TransferCreditFields } from "./transferCreditFields";
@@ -43,6 +44,9 @@ export function TransactionFormFields({
     setSource,
     description,
     setDescription,
+    suggestions,
+    applySuggestion,
+    descriptionHandlers,
     tags,
     tagInput,
     setTagInput,
@@ -109,12 +113,18 @@ export function TransactionFormFields({
 
       <div className="grid gap-1.5">
         <Label htmlFor="tx-form-description">Description</Label>
-        <Textarea
-          id="tx-form-description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          maxLength={280}
-        />
+        <EntrySuggestionList
+          suggestions={suggestions}
+          onSelect={applySuggestion}
+        >
+          <Textarea
+            id="tx-form-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            {...descriptionHandlers}
+            maxLength={280}
+          />
+        </EntrySuggestionList>
       </div>
 
       <div className="grid gap-1.5">
