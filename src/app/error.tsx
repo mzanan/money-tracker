@@ -3,9 +3,9 @@
 import { ErrorFallback } from "@/components/layout/errorFallback";
 
 export default function Error({
-  unstable_retry,
+  retry,
 }: {
-  unstable_retry: () => void;
+  retry: () => void;
 }) {
-  return <ErrorFallback retry={unstable_retry} />;
+  return <ErrorFallback retry={retry} />;
 }
