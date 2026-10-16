@@ -1,5 +1,6 @@
 import * as bybit from "./bybit";
 import type { IntegrationProvider } from "@/types/db";
+import type { Money } from "@/types/ledger";
 
 export interface NormalizedTx {
   externalId: string;
@@ -9,6 +10,7 @@ export interface NormalizedTx {
   occurredAt: string;
   tags: string[];
   note: string | null;
+  exchange?: { sent: Money; received: Money };
 }
 
 export interface IntegrationCreds {
