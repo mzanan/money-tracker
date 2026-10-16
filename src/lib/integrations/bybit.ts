@@ -39,6 +39,14 @@ interface InternalDepositRow {
   txID?: string;
 }
 
+interface TranslogRow {
+  tradeId: string;
+  currency: string;
+  change: string;
+  transactionTime: string;
+  type: string;
+}
+
 interface BybitResponse<T> {
   retCode: number;
   retMsg: string;
@@ -236,6 +244,79 @@ async function fetchPagedRows<T>(
   return collected;
 }
 
+async function fetchSpotTrades(
+  creds: IntegrationCreds,
+  fromMs: number,
+  toMs: number,
+): Promise<TranslogRow[]> {
+  const collected: TranslogRow[] = [];
+  let cursor: string | undefined;
+  let pages = 0;
+  do {
+    const params: Record<string, string> = {
+      accountType: "UNIFIED",
+      category: "spot",
+      type: "TRADE",
+      startTime: Math.floor(fromMs).toString(),
+      endTime: Math.floor(toMs).toString(),
+      limit: "50",
+    };
+    if (cursor) params.cursor = cursor;
+    const data = await get<TranslogRow>(
+      "/v5/account/transaction-log",
+      params,
+      creds,
+    );
+    collected.push(...(data.result.list ?? []));
+    cursor = data.result.nextPageCursor || undefined;
+    pages += 1;
+  } while (cursor && pages < MAX_PAGES_PER_WINDOW);
+  return collected;
+}
+
+function isPermissionDenied(error: unknown): boolean {
+  return error instanceof Error && /permission denied/i.test(error.message);
+}
+
+export function spotTradesToExchanges(
+  rows: ReadonlyArray<TranslogRow>,
+): NormalizedTx[] {
+  const byTrade = new Map<string, TranslogRow[]>();
+  for (const row of rows) {
+    if (row.type !== "TRADE" || !row.tradeId) continue;
+    byTrade.set(row.tradeId, [...(byTrade.get(row.tradeId) ?? []), row]);
+  }
+  return [...byTrade.entries()].flatMap(([tradeId, fills]) => {
+    const net = new Map<string, number>();
+    for (const fill of fills) {
+      const change = Number(fill.change);
+      if (!Number.isFinite(change)) return [];
+      net.set(fill.currency, (net.get(fill.currency) ?? 0) + change);
+    }
+    const sent = [...net.entries()].filter(([, amount]) => amount < 0);
+    const received = [...net.entries()].filter(([, amount]) => amount > 0);
+    if (sent.length !== 1 || received.length !== 1) return [];
+    const [[sentCurrency, sentAmount]] = sent;
+    const [[receivedCurrency, receivedAmount]] = received;
+    const at = Math.max(...fills.map((fill) => Number(fill.transactionTime)));
+    return [
+      {
+        externalId: `t:${tradeId}`,
+        kind: "expense" as const,
+        amount: Math.abs(sentAmount),
+        currency: sentCurrency,
+        occurredAt: msToOccurredAt(String(at)),
+        tags: [],
+        note: `Bybit exchange ${sentCurrency} → ${receivedCurrency}`,
+        exchange: {
+          sent: { amount: Math.abs(sentAmount), currency: sentCurrency },
+          received: { amount: receivedAmount, currency: receivedCurrency },
+        },
+      },
+    ];
+  });
+}
+
 function depositToNormalized(row: DepositRow): NormalizedTx | null {
   if (row.status !== DEPOSIT_SUCCESS_STATUS) return null;
   const amount = Number(row.amount);
@@ -296,7 +377,7 @@ export async function fetchTransactions(
     const depositFromMs = fromSec * 1000;
     const depositToMs = Math.ceil(to / 1000) * 1000;
 
-    const [rows, onChain, internal] = await Promise.all([
+    const [rows, onChain, internal, trades] = await Promise.all([
       fetchWindow(creds, fromSec, toSec),
       fetchPagedRows<DepositRow>(
         "/v5/asset/deposit/query-record",
@@ -310,7 +391,14 @@ export async function fetchTransactions(
         depositToMs,
         creds,
       ),
+      fetchSpotTrades(creds, depositFromMs, depositToMs).catch(
+        (error: unknown) => {
+          if (isPermissionDenied(error)) return [];
+          throw error;
+        },
+      ),
     ]);
+    out.push(...spotTradesToExchanges(trades));
     for (const row of onChain) {
       const tx = depositToNormalized(row);
       if (tx) {

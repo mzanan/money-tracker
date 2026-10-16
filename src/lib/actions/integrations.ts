@@ -48,9 +48,19 @@ async function postSynced(
     );
     const fresh = freshSynced(drafts, taken);
     if (fresh.length === 0) return { imported: 0, absorbed: 0 };
-    const { start, end } = absorbDateRange(fresh.map(({ row }) => row));
+    const absorbable = fresh.filter((draft) => draft.absorbable);
+    const direct = fresh.filter((draft) => !draft.absorbable);
+    await postLedgerTransactions(
+      userId,
+      direct.map(({ id, draft }) => ({ id, draft })),
+      dbTx,
+    );
+    if (absorbable.length === 0) {
+      return { imported: fresh.length, absorbed: 0 };
+    }
+    const { start, end } = absorbDateRange(absorbable.map(({ row }) => row));
     const records = await getLedgerRecordsBetween(userId, start, end, dbTx);
-    const plan = absorbPlan(fresh, records, syncSource);
+    const plan = absorbPlan(absorbable, records, syncSource);
     await postLedgerTransactions(userId, plan.writes, dbTx);
     await deleteLedgerTransactions(userId, plan.absorbedIds, dbTx);
     if (plan.feeDrafts.length > 0) {
@@ -315,7 +325,10 @@ export async function syncIntegration(
       skippedIncome += 1;
       continue;
     }
-    if (!hasStorageScale(tx.currency, scaleOf)) {
+    const currencies = tx.exchange
+      ? [tx.exchange.sent.currency, tx.exchange.received.currency]
+      : [tx.currency];
+    if (!currencies.every((currency) => hasStorageScale(currency, scaleOf))) {
       skippedNoRate += 1;
       continue;
     }
@@ -323,7 +336,7 @@ export async function syncIntegration(
       tx,
       provider,
       dateInTz(tx.occurredAt, timezone),
-      scaleOf(tx.currency),
+      scaleOf,
     );
     if (draft) drafts.push(draft);
   }
