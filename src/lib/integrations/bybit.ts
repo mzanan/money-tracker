@@ -271,11 +271,6 @@ async function fetchSpotTrades(
     cursor = data.result.nextPageCursor || undefined;
     pages += 1;
   } while (cursor && pages < MAX_PAGES_PER_WINDOW);
-  if (cursor) {
-    throw new Error(
-      "Bybit spot trade history exceeds the page limit for one sync window",
-    );
-  }
   return collected;
 }
 
