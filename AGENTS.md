@@ -20,7 +20,7 @@ Supabase (Postgres + Auth + RLS) was migrated away on 2026-05-25 for portability
 
 ## Conventions that matter
 
-- **Language:** EVERYTHING in English (UI copy, identifiers, code). No code comments.
+- **Language:** EVERYTHING in English (UI copy, identifiers, code).
 - **Next 16 specifics:**
   - `cookies()` and `headers()` are **async**. Always `await`.
   - `params` and `searchParams` in pages are **Promises**. `await props.params`.
@@ -38,7 +38,6 @@ Supabase (Postgres + Auth + RLS) was migrated away on 2026-05-25 for portability
 - **Header height** is the `--spacing-header` token (`h-header`); layout floors measure from it. Never hardcode header offsets.
 - **Analytics:** PostHog EU through the `/relay` rewrite (rewrites defined in `lib/analytics.ts`), production only. Cookie consent banner (`components/consent`, `lib/consent.ts`) with `cookieless_mode: "on_reject"`; identify only after consent; users can change it in Settings (`analyticsConsentCard`). `?notrack=1` opts a browser out (localStorage), `?notrack=0` opts back in.
 - **SEO/AEO:** `app/{robots,sitemap}.ts` + `lib/seo.ts` (`SITE_URL`, `AI_CRAWLERS`, `PRIVATE_PATHS`), `public/llms.txt`. Only the landing and `/privacy` are indexable.
-- **No automatic commits/PRs.** Always ask first (personal-brain vault rule).
 
 ## Data ingestion model
 
