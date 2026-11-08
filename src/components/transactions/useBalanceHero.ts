@@ -3,6 +3,7 @@
 import { heldHint, pendingHint } from "@/lib/transactionDisplay";
 import { useMemo } from "react";
 
+import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { useHeldSources } from "@/hooks/useHeldAccounts";
 import { useRatesByDate } from "@/hooks/useRatesByDate";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
@@ -13,11 +14,13 @@ import {
   isNegligible,
   roundForDisplay,
 } from "@/lib/currency";
+import { resolveSourceLabel } from "@/lib/constants/sources";
 import { todayInTz } from "@/lib/dates";
 import { excludeCanceledPairs } from "@/lib/ledger/canceledPairs";
 import {
   heldBalance,
   isAllScope,
+  openHeldSources,
   linesInMonth,
   periodTotals,
   pendingIncoming,
@@ -46,6 +49,7 @@ export function useBalanceHero({
   const timezone = useTimezone();
   const ratesByDate = useRatesByDate();
   const heldSources = useHeldSources();
+  const accountLabels = useAccountLabels();
   const base = settings.base_currency;
   const displayCurrency = useDisplayCurrency(lifetimeMovements, scope);
   const showBase = displayCurrency !== base;
@@ -123,6 +127,14 @@ export function useBalanceHero({
     [showBase, lifetimeMovements, scope, base, ratesByDate, today, heldSources],
   );
 
+  const heldNames = useMemo(
+    () =>
+      openHeldSources(lifetimeMovements, scope, heldSources).map((source) =>
+        resolveSourceLabel(source, accountLabels),
+      ),
+    [lifetimeMovements, scope, heldSources, accountLabels],
+  );
+
   const pending = useMemo(
     () =>
       pendingIncoming(
@@ -138,7 +150,7 @@ export function useBalanceHero({
   return {
     displayCurrency,
     pendingText: pendingHint(pending, displayCurrency),
-    heldText: heldHint(held, displayCurrency),
+    heldText: heldHint(held, displayCurrency, heldNames),
     monthTotals,
     totalPositive: roundForDisplay(total, displayCurrency) >= 0,
     totalSigned: formatMoney(total, displayCurrency, { signed: true }),

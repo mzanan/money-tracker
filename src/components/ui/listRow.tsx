@@ -14,7 +14,7 @@ export function ListRow({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+    <div className="flex min-w-0 items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
       {leading}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">

@@ -24,7 +24,7 @@ import {
   currencyOptions,
   toggleAccountCurrency,
 } from "@/lib/accountCurrencies";
-import { heldAccountSummary } from "@/lib/accountPurpose";
+import { accountRowMeta } from "@/lib/accountPurpose";
 import type { IntegrationSummary } from "@/types/db";
 
 import { Badge } from "@/components/ui/badge";
@@ -163,18 +163,9 @@ export function ImportedAccountRow({
               Archived
             </Badge>
           )}
-          {held && (
-            <Badge variant="outline" size="xs">
-              {heldAccountSummary(held)}
-            </Badge>
-          )}
         </>
       }
-      meta={
-        count > 0
-          ? `${count} transaction${count === 1 ? "" : "s"}`
-          : "No transactions yet"
-      }
+      meta={accountRowMeta(count, held)}
     >
       {archived && (
         <Button
