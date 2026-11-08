@@ -18,7 +18,7 @@ export function CompletedReminderRow({
   const money = useMoney();
 
   return (
-    <li className="flex items-center gap-3 rounded-inset px-3 py-3 opacity-70">
+    <li className="rounded-inset flex items-center gap-3 px-3 py-3 opacity-70">
       <IconCircle className="bg-surface-2 text-muted-foreground">
         <CheckIcon className="size-4" />
       </IconCircle>
