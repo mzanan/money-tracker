@@ -17,6 +17,8 @@ import {
   normalizeSource,
   SOURCE_NAME_HINT,
 } from "@/lib/constants/sources";
+import { accountPurposeError } from "@/lib/accountPurpose";
+import type { AccountPurpose } from "@/lib/constants/accountPurposes";
 import { listAccounts } from "@/lib/data/accounts";
 import { getImportedSources } from "@/lib/data/sources";
 import { getUser } from "@/lib/session";
@@ -121,6 +123,41 @@ export async function setAccountCurrencies(
     .onConflictDoUpdate({
       target: [accounts.user_id, accounts.source],
       set: { currency },
+    });
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function setAccountPurpose(
+  source: string,
+  purpose: AccountPurpose | null,
+  expectedOn: string | null,
+): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const normalizedSource = normalizeSource(source);
+  if (!normalizedSource) return { ok: false, error: "Invalid account" };
+
+  const guardError = guardEditable(normalizedSource);
+  if (guardError) return { ok: false, error: guardError };
+
+  const inputError = accountPurposeError(purpose, expectedOn);
+  if (inputError) return { ok: false, error: inputError };
+
+  const values = { purpose, expected_on: expectedOn };
+  await db
+    .insert(accounts)
+    .values({
+      user_id: user.id,
+      source: normalizedSource,
+      label: labelForSource(normalizedSource),
+      ...values,
+    })
+    .onConflictDoUpdate({
+      target: [accounts.user_id, accounts.source],
+      set: values,
     });
 
   revalidatePath("/", "layout");

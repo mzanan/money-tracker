@@ -15,6 +15,8 @@ import {
   syncStatus,
 } from "@/lib/constants/sources";
 import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
+import { useDialogState } from "@/hooks/useDialogState";
+import { useHeldAccounts } from "@/hooks/useHeldAccounts";
 import { useInlineEdit } from "@/hooks/useInlineEdit";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
@@ -22,6 +24,7 @@ import {
   currencyOptions,
   toggleAccountCurrency,
 } from "@/lib/accountCurrencies";
+import { heldAccountSummary } from "@/lib/accountPurpose";
 import type { IntegrationSummary } from "@/types/db";
 
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { ListRow } from "@/components/ui/listRow";
 
 import { AccountCurrenciesPicker } from "./accountCurrenciesPicker";
+import { AccountPurposeDialog } from "./accountPurposeDialog";
 
 interface Props {
   source: string;
@@ -60,6 +64,8 @@ export function ImportedAccountRow({
   const { run, pending } = useServerAction();
   const currencyAction = useServerAction();
   const runAfterMenuClose = useDeferredMenuAction();
+  const purposeDialog = useDialogState(runAfterMenuClose);
+  const held = useHeldAccounts()[source];
   const reserved = kindOfSource(source) !== "csv";
   const archived = (settings.archived_sources ?? []).includes(source);
 
@@ -157,6 +163,11 @@ export function ImportedAccountRow({
               Archived
             </Badge>
           )}
+          {held && (
+            <Badge variant="outline" size="xs">
+              {heldAccountSummary(held)}
+            </Badge>
+          )}
         </>
       }
       meta={
@@ -208,6 +219,11 @@ export function ImportedAccountRow({
               Rename
             </DropdownMenuItem>
           )}
+          {!reserved && (
+            <DropdownMenuItem onSelect={purposeDialog.openDialog}>
+              Deposit or loan
+            </DropdownMenuItem>
+          )}
           {!reserved && hasAccount && (
             <DropdownMenuItem
               variant="destructive"
@@ -226,6 +242,16 @@ export function ImportedAccountRow({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      {purposeDialog.mounted && (
+        <AccountPurposeDialog
+          key={purposeDialog.key}
+          source={source}
+          label={label}
+          held={held}
+          open={purposeDialog.open}
+          onOpenChange={purposeDialog.setOpen}
+        />
+      )}
     </ListRow>
   );
 }

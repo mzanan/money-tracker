@@ -225,6 +225,13 @@
       "when": 1791874063649,
       "tag": "0031_ledger_transit_destination",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1794126043129,
+      "tag": "0032_accounts_purpose",
+      "breakpoints": true
     }
   ]
 }

@@ -11,6 +11,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+import { ACCOUNT_PURPOSES } from "@/lib/constants/accountPurposes";
 import type { FxRates, LedgerRevisionSnapshot } from "@/types/db";
 
 // ---------------------------------------------------------------------------
@@ -170,6 +171,8 @@ export const accounts = sqliteTable(
     source: text("source").notNull(),
     label: text("label").notNull(),
     currency: text("currency"),
+    purpose: text("purpose", { enum: ACCOUNT_PURPOSES }),
+    expected_on: text("expected_on"),
     created_at: text("created_at")
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),

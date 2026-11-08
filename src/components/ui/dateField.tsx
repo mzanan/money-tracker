@@ -7,6 +7,7 @@ export function DateField({
   value,
   onChange,
   min,
+  required = true,
   inputClassName = "bg-surface-2 h-9 border-none",
 }: {
   id: string;
@@ -14,6 +15,7 @@ export function DateField({
   value: string;
   onChange: (value: string) => void;
   min?: string;
+  required?: boolean;
   inputClassName?: string;
 }) {
   return (
@@ -25,7 +27,7 @@ export function DateField({
         value={value}
         min={min}
         onChange={(event) => onChange(event.target.value)}
-        required
+        required={required}
         className={inputClassName}
       />
     </div>

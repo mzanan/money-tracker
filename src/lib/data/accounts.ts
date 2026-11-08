@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { cache } from "react";
 
 import { db } from "@/lib/db";
@@ -7,6 +7,7 @@ import {
   declaredAccountCurrencies,
   type AccountCurrencies,
 } from "@/lib/accountCurrencies";
+import { heldAccountsFrom, type HeldAccounts } from "@/lib/accountPurpose";
 import type { AccountLabels } from "@/lib/constants/sources";
 
 import type { Account } from "@/types/db";
@@ -58,4 +59,18 @@ export const getAccountCurrencies = cache(async function getAccountCurrencies(
       ),
     );
   return declaredAccountCurrencies(rows);
+});
+
+export const getHeldAccounts = cache(async function getHeldAccounts(
+  userId: string,
+): Promise<HeldAccounts> {
+  const rows = await db
+    .select({
+      source: accounts.source,
+      purpose: accounts.purpose,
+      expected_on: accounts.expected_on,
+    })
+    .from(accounts)
+    .where(and(eq(accounts.user_id, userId), isNotNull(accounts.purpose)));
+  return heldAccountsFrom(rows);
 });
