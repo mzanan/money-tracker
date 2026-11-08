@@ -95,7 +95,9 @@ export function useTransactionRow(
     isSynced || isTransfer || isWithdrawal || isOpening || cross !== null;
   const isFlowRow = !isOpening;
   const canChangeSource =
-    !isTransfer && (!isSynced || !isSyncedExternalId(tx.externalId));
+    !isTransfer &&
+    !isOpening &&
+    (!isSynced || !isSyncedExternalId(tx.externalId));
   const canShiftMonth =
     isBudgetShiftable(movement) || hasBudgetMonthOverride(movement);
   const realMonth = tx.occurredOn.slice(0, 7);
@@ -175,7 +177,7 @@ export function useTransactionRow(
   const duplicateSeed = { ...editSeed, occurredOn: todayInTz(timezone) };
 
   function toggleSelected() {
-    if (!readOnly) toggleTxSelected(tx);
+    if (!readOnly && !isOpening) toggleTxSelected(tx);
   }
 
   function handleToggleFixed() {

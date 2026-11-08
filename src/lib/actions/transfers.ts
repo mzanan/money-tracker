@@ -38,7 +38,8 @@ import {
   mirrorRef,
   splitTransfer,
 } from "@/lib/ledger/edits";
-import { simpleFlow } from "@/lib/ledger/movements";
+import { isOpeningMovement, simpleFlow } from "@/lib/ledger/movements";
+import { OPENING_LOCK_ERROR } from "@/lib/externalIds";
 import {
   aggregateFeesBySide,
   creditDateError,
@@ -267,6 +268,9 @@ export async function markAsTransfer(
   if (isTransferMovement(movement)) {
     return { ok: false, error: "Already marked as a transfer" };
   }
+  if (isOpeningMovement(movement)) {
+    return { ok: false, error: OPENING_LOCK_ERROR };
+  }
   if (isWithdrawalMovement(movement)) {
     return { ok: false, error: "A withdrawal can't be marked as a transfer" };
   }
@@ -427,6 +431,9 @@ export async function markPairAsTransfer(
   const recordB = records.get(txId2);
   if (!recordA || !recordB) {
     return { ok: false, error: "Transaction not found" };
+  }
+  if ([recordA, recordB].some((r) => isOpeningMovement(r.movement))) {
+    return { ok: false, error: OPENING_LOCK_ERROR };
   }
   if ([recordA, recordB].some((r) => isTransferMovement(r.movement))) {
     return { ok: false, error: "Already marked as a transfer" };

@@ -14,6 +14,13 @@ export function openingExternalId(currency: string): string {
   return `${EXTERNAL_ID_PREFIX.opening}${currency}`;
 }
 
+export function isOpeningExternalId(id: string | null | undefined): boolean {
+  return id != null && id.startsWith(EXTERNAL_ID_PREFIX.opening);
+}
+
+export const OPENING_LOCK_ERROR =
+  "Opening balances only change from the account settings";
+
 export function manualFeeExternalId(parentId: string): string {
   return `${EXTERNAL_ID_PREFIX.manualFee}${parentId}`;
 }

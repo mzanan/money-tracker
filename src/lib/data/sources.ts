@@ -1,4 +1,4 @@
-import { and, eq, max, sql } from "drizzle-orm";
+import { and, eq, like, max, notExists, sql } from "drizzle-orm";
 
 import {
   MANUAL_SOURCE,
@@ -17,7 +17,7 @@ import {
   ledger_transactions,
   user_settings,
 } from "@/lib/db/schema";
-import { isCsvExternalId } from "@/lib/externalIds";
+import { EXTERNAL_ID_PREFIX, isCsvExternalId } from "@/lib/externalIds";
 import { isSyncable } from "@/lib/integrations";
 import { sourcesOf } from "@/lib/ledger/movements";
 import { suggestedAccountCurrencies } from "@/lib/accountCurrencies";
@@ -60,7 +60,29 @@ export async function getLastEntryDate(
       ledger_accounts,
       eq(ledger_entries.account_id, ledger_accounts.id),
     )
-    .where(and(assetEntriesOf(userId), eq(ledger_accounts.key, source)));
+    .where(
+      and(
+        assetEntriesOf(userId),
+        eq(ledger_accounts.key, source),
+        notExists(
+          db
+            .select({ id: ledger_external_ids.transaction_id })
+            .from(ledger_external_ids)
+            .where(
+              and(
+                eq(
+                  ledger_external_ids.transaction_id,
+                  ledger_entries.transaction_id,
+                ),
+                like(
+                  ledger_external_ids.external_id,
+                  `${EXTERNAL_ID_PREFIX.opening}%`,
+                ),
+              ),
+            ),
+        ),
+      ),
+    );
   return row?.last ?? null;
 }
 

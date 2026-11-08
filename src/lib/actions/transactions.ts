@@ -42,10 +42,12 @@ import {
   withSource,
 } from "@/lib/ledger/edits";
 import {
+  isOpeningMovement,
   primaryAssetLine,
   crossCurrencyFlow,
   simpleFlow,
 } from "@/lib/ledger/movements";
+import { OPENING_LOCK_ERROR } from "@/lib/externalIds";
 import { normalizeTags } from "@/lib/transactions";
 
 export type ActionResult<T = void> =
@@ -270,6 +272,9 @@ export async function updateTransactionSource(
     if (isTransferMovement(movement)) {
       return { ok: false, error: "Undo the transfer before changing account" };
     }
+    if (isOpeningMovement(movement)) {
+      return { ok: false, error: OPENING_LOCK_ERROR };
+    }
     const current = primaryAssetLine(movement)?.key;
     if (!current) return { ok: false, error: "Transaction not found" };
     if (normalized === current) {
@@ -341,6 +346,12 @@ export async function mergeTransactions(
         ok: false,
         error: "Undo the transfer before merging this transaction",
       };
+    }
+    if (
+      isOpeningMovement(keep.movement) ||
+      isOpeningMovement(removed.movement)
+    ) {
+      return { ok: false, error: OPENING_LOCK_ERROR };
     }
     if (keep.draft.budgetMonth || removed.draft.budgetMonth) {
       return { ok: false, error: BUDGET_MONTH_LOCK_ERROR };

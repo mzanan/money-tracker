@@ -22,7 +22,11 @@ import {
   withdrawalAvailableFor,
 } from "@/lib/constants/sources";
 import { parseAmountInput, parseAndRoundAmount } from "@/lib/currency";
-import { EXTERNAL_ID_PREFIX, isWithdrawalExternalId } from "@/lib/externalIds";
+import {
+  EXTERNAL_ID_PREFIX,
+  isOpeningExternalId,
+  isWithdrawalExternalId,
+} from "@/lib/externalIds";
 import { flowDraftOf, flowEdited } from "@/lib/flowDraft";
 
 import type { Kind } from "./kindToggle";
@@ -98,6 +102,7 @@ export function useTransactionForm({
   const transferToggleAvailable =
     Boolean(txId) &&
     !seed.transferGroup &&
+    !isOpeningExternalId(seed.externalId) &&
     !isWithdrawalExtId &&
     !isTransferFeeExtId &&
     kindOfSource(seed.source) !== "api" &&
