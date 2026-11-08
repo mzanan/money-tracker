@@ -9,6 +9,7 @@ import {
   primaryAssetLine,
   touchesSource,
 } from "@/lib/ledger/movements";
+import { isNegligible } from "@/lib/currency";
 import { convertAsOf, lineValue } from "@/lib/ledger/valuation";
 import type {
   FlowKind,
@@ -133,6 +134,28 @@ export function scopeBalance(
     ? (line: MovementLine) => !heldSources.has(line.key)
     : (line: MovementLine) => line.key === scope;
   return balanceWhere(movements, counts, displayCurrency, ratesByDate, asOf);
+}
+
+export function openHeldSources(
+  movements: ReadonlyArray<Movement>,
+  scope: MovementScope,
+  heldSources: ReadonlySet<string>,
+): string[] {
+  if (!isAllScope(scope)) return [];
+  const bySource = new Map<string, Map<string, number>>();
+  for (const movement of movements) {
+    for (const line of assetLines(movement)) {
+      if (!heldSources.has(line.key)) continue;
+      const native = bySource.get(line.key) ?? new Map<string, number>();
+      native.set(line.currency, (native.get(line.currency) ?? 0) + line.amount);
+      bySource.set(line.key, native);
+    }
+  }
+  return [...bySource]
+    .filter(([, native]) =>
+      [...native.values()].some((amount) => !isNegligible(amount)),
+    )
+    .map(([source]) => source);
 }
 
 export function heldBalance(

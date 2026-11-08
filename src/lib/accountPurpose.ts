@@ -67,3 +67,14 @@ export function heldAccountSummary(account: HeldAccount): string {
     ? `${label} · back ${formatDateShort(account.expectedOn)}`
     : `${label} · no return date`;
 }
+
+export function accountRowMeta(
+  count: number,
+  held: HeldAccount | undefined,
+): string {
+  const transactions =
+    count > 0
+      ? `${count} transaction${count === 1 ? "" : "s"}`
+      : "No transactions yet";
+  return held ? `${heldAccountSummary(held)} · ${transactions}` : transactions;
+}

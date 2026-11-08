@@ -2,7 +2,7 @@ import {
   resolveSourceLabel,
   type AccountLabels,
 } from "@/lib/constants/sources";
-import { formatMoney, isNegligible } from "@/lib/currency";
+import { formatMoney } from "@/lib/currency";
 import type { CrossCurrencyFlow } from "@/types/ledger";
 
 export const ESTIMATE_PREFIX = "≈ ";
@@ -73,10 +73,13 @@ export function pendingHint(amount: number, currency: string): string | null {
   return amount > 0 ? `+${formatMoney(amount, currency)} pending` : null;
 }
 
-export function heldHint(amount: number, currency: string): string | null {
-  return isNegligible(amount)
-    ? null
-    : `${formatMoney(amount, currency)} in deposits and loans`;
+export function heldHint(
+  amount: number,
+  currency: string,
+  accountNames: ReadonlyArray<string>,
+): string | null {
+  if (accountNames.length === 0) return null;
+  return `${formatMoney(amount, currency)} on hold · ${accountNames.join(", ")}`;
 }
 
 export function transitBannerDetail(amountText: string, route: string): string {
