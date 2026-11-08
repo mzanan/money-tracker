@@ -5,7 +5,11 @@ import { toast } from "sonner";
 
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
-import { createReminder, updateReminder } from "@/lib/actions/reminders";
+import {
+  createReminder,
+  stopReminder,
+  updateReminder,
+} from "@/lib/actions/reminders";
 import { amountValidationError, toInputDigits } from "@/lib/currency";
 import { computeNextDue } from "@/lib/reminders";
 
@@ -159,6 +163,18 @@ export function useReminderForm({
     );
   }
 
+  function stop() {
+    if (!reminder) return;
+    run(() => stopReminder(reminder.id), {
+      confirm: `Stop reminder "${reminder.label}"? It moves to completed and stops repeating.`,
+      success: "Reminder stopped",
+      onSuccess: () => {
+        setOpen(false);
+        onSaved?.();
+      },
+    });
+  }
+
   const currencies = settings.currencies.includes(currency)
     ? settings.currencies
     : [currency, ...settings.currencies];
@@ -190,6 +206,7 @@ export function useReminderForm({
     nextDueOn,
     setNextDueOn,
     submit,
+    stop,
     pending,
   };
 }

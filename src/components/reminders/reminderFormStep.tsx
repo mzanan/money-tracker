@@ -19,6 +19,7 @@ import {
 import { StepShell } from "@/components/ui/stepShell";
 import { Textarea } from "@/components/ui/textarea";
 
+import { StopReminderButton } from "./stopReminderButton";
 import { useReminderForm, type ReminderSeed } from "./useReminderForm";
 
 import type { RecurringFrequency, RecurringPayment } from "@/types/db";
@@ -60,6 +61,7 @@ export function ReminderFormStep({
     nextDueOn,
     setNextDueOn,
     submit,
+    stop,
     pending,
   } = useReminderForm({
     reminder,
@@ -178,7 +180,9 @@ export function ReminderFormStep({
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="reminder-step-installments">Ends after (optional)</Label>
+        <Label htmlFor="reminder-step-installments">
+          Ends after (optional)
+        </Label>
         <Input
           id="reminder-step-installments"
           inputMode="numeric"
@@ -220,6 +224,7 @@ export function ReminderFormStep({
       >
         Recalculate next due from last paid
       </button>
+      {isEdit && <StopReminderButton onClick={stop} disabled={pending} />}
     </StepShell>
   );
 }

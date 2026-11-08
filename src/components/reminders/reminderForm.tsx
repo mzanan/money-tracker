@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+import { StopReminderButton } from "./stopReminderButton";
 import { useReminderForm, type ReminderSeed } from "./useReminderForm";
 
 import type { RecurringFrequency, RecurringPayment } from "@/types/db";
@@ -79,6 +80,7 @@ export function ReminderForm({
     nextDueOn,
     setNextDueOn,
     submit,
+    stop,
     pending,
   } = useReminderForm({
     reminder,
@@ -239,6 +241,7 @@ export function ReminderForm({
           >
             Recalculate next due from last paid
           </button>
+          {isEdit && <StopReminderButton onClick={stop} disabled={pending} />}
         </DrawerBody>
 
         <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">

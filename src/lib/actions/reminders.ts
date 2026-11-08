@@ -364,6 +364,30 @@ export async function markReminderPaid(
   }
 }
 
+export async function stopReminder(id: string): Promise<ActionResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  try {
+    await db
+      .update(recurring_payments)
+      .set({ active: false })
+      .where(
+        and(
+          eq(recurring_payments.id, id),
+          eq(recurring_payments.user_id, user.id),
+        ),
+      );
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: actionErrorMessage(error, "Stop failed"),
+    };
+  }
+}
+
 export async function deleteReminder(id: string): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
