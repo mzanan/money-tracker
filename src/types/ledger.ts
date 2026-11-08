@@ -45,6 +45,7 @@ export type MovementType =
   | "income"
   | "transfer"
   | "exchange"
+  | "opening"
   | "unresolved";
 
 export type RatesByDate = Record<string, FxRates>;
@@ -93,6 +94,7 @@ export interface RowFacts {
   budgetMonth: string | null;
   externalId: string | null;
   isTransfer: boolean;
+  isOpening: boolean;
   transferGroup: string | null;
 }
 

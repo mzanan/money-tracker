@@ -81,6 +81,7 @@ export function useTransactionRow(
 
   const readOnly = isFeeRemnant(movement);
   const isTransfer = tx.isTransfer;
+  const isOpening = tx.isOpening;
   const isWithdrawal = isWithdrawalExternalId(tx.externalId);
   const canMoveToCash =
     isSingleLegWithdrawalExternalId(tx.externalId) &&
@@ -91,7 +92,8 @@ export function useTransactionRow(
   const canDelete = !isSynced && !isTransfer;
   const cross = crossCurrencyFlow(movement);
   const lockAmountFields =
-    isSynced || isTransfer || isWithdrawal || cross !== null;
+    isSynced || isTransfer || isWithdrawal || isOpening || cross !== null;
+  const isFlowRow = !isOpening;
   const canChangeSource =
     !isTransfer && (!isSynced || !isSyncedExternalId(tx.externalId));
   const canShiftMonth =
@@ -235,6 +237,8 @@ export function useTransactionRow(
     avatarSeed,
     description,
     isTransfer,
+    isOpening,
+    isFlowRow,
     isWithdrawal,
     amountText,
     convertedText,

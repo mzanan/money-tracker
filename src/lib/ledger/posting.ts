@@ -29,6 +29,20 @@ export interface LedgerDraft {
   externalRefs: ExternalRef[];
 }
 
+export function emptyDraft(occurredOn: string): Omit<LedgerDraft, "lines"> {
+  return {
+    occurredOn,
+    occurredAt: new Date().toISOString(),
+    note: null,
+    comment: null,
+    tags: [],
+    recurringId: null,
+    isFixed: null,
+    budgetMonth: null,
+    externalRefs: [],
+  };
+}
+
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 export function postingError(draft: LedgerDraft): string | null {

@@ -7,7 +7,12 @@ export const EXTERNAL_ID_PREFIX = {
   reminder: "reminder:",
   transferFee: "transferfee:",
   manualFee: "manualfee:",
+  opening: "opening:",
 } as const;
+
+export function openingExternalId(currency: string): string {
+  return `${EXTERNAL_ID_PREFIX.opening}${currency}`;
+}
 
 export function manualFeeExternalId(parentId: string): string {
   return `${EXTERNAL_ID_PREFIX.manualFee}${parentId}`;

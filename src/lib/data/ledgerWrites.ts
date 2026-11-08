@@ -1,5 +1,5 @@
 import { ActionError } from "@/lib/actionError";
-import { and, between, eq, inArray, like } from "drizzle-orm";
+import { and, between, eq, inArray, like, min } from "drizzle-orm";
 
 import { getAccountLabels } from "@/lib/data/accounts";
 import { db } from "@/lib/db";
@@ -385,6 +385,45 @@ export async function externalIdsWithPrefix(
       ),
     );
   return new Set(rows.map((row) => row.external_id));
+}
+
+export async function transactionIdForExternalId(
+  userId: string,
+  origin: string,
+  externalId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ id: ledger_external_ids.transaction_id })
+    .from(ledger_external_ids)
+    .where(
+      and(
+        eq(ledger_external_ids.user_id, userId),
+        eq(ledger_external_ids.origin, origin),
+        eq(ledger_external_ids.external_id, externalId),
+      ),
+    );
+  return row?.id ?? null;
+}
+
+export async function firstSourceDate(
+  userId: string,
+  source: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ first: min(ledger_entries.occurred_on) })
+    .from(ledger_entries)
+    .innerJoin(
+      ledger_accounts,
+      eq(ledger_entries.account_id, ledger_accounts.id),
+    )
+    .where(
+      and(
+        eq(ledger_entries.user_id, userId),
+        eq(ledger_accounts.kind, "asset"),
+        eq(ledger_accounts.key, source),
+      ),
+    );
+  return row?.first ?? null;
 }
 
 export async function getLedgerRecordsBetween(

@@ -10,6 +10,7 @@ export const LEDGER_KEYS = {
   fx: "fx",
   pendingOrigin: "pending-origin",
   transit: "in-transit",
+  opening: "opening-balance",
 } as const;
 
 export interface AccountRef {
@@ -49,6 +50,10 @@ export function transitRef(currency: string): AccountRef {
   return { kind: "transit", key: LEDGER_KEYS.transit, currency };
 }
 
+export function openingRef(currency: string): AccountRef {
+  return { kind: "equity", key: LEDGER_KEYS.opening, currency };
+}
+
 const SYSTEM_ACCOUNT_NAMES: Record<string, string> = {
   [`expense|${LEDGER_KEYS.uncategorized}`]: "Uncategorized",
   [`income|${LEDGER_KEYS.uncategorized}`]: "Uncategorized income",
@@ -56,6 +61,7 @@ const SYSTEM_ACCOUNT_NAMES: Record<string, string> = {
   [`bridge|${LEDGER_KEYS.fx}`]: "Currency exchange",
   [`pending|${LEDGER_KEYS.pendingOrigin}`]: "Pending origin",
   [`transit|${LEDGER_KEYS.transit}`]: "In transit",
+  [`equity|${LEDGER_KEYS.opening}`]: "Opening balance",
 };
 
 export function accountInstitution(ref: AccountRef): string | null {

@@ -3,6 +3,7 @@ import {
   assetRef,
   bridgeRef,
   feesRef,
+  openingRef,
   transitRef,
   uncategorizedRef,
   type AccountRef,
@@ -60,6 +61,21 @@ export function feeLines(
     feesRef(fee.currency),
     minorOf(fee, scaleOf),
     "fee",
+    occurredOn,
+  );
+}
+
+export function openingLines(
+  source: string,
+  money: Money,
+  occurredOn: string,
+  scaleOf: ScaleOf,
+): PostingLine[] {
+  return pair(
+    openingRef(money.currency),
+    assetRef(source, money.currency),
+    minorOf(money, scaleOf),
+    "amount",
     occurredOn,
   );
 }

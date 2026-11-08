@@ -64,7 +64,9 @@ export function transitBannerTitle(count: number): string {
 export function transferBadgeLabel(
   isWithdrawal: boolean,
   inTransit: boolean,
+  isOpening = false,
 ): string {
+  if (isOpening) return "Opening balance";
   if (isWithdrawal) return "Withdrawal";
   return inTransit ? "In transit" : "Transfer";
 }
