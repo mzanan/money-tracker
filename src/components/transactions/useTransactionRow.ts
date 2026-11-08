@@ -81,6 +81,7 @@ export function useTransactionRow(
 
   const readOnly = isFeeRemnant(movement);
   const isTransfer = tx.isTransfer;
+  const isOpening = tx.isOpening;
   const isWithdrawal = isWithdrawalExternalId(tx.externalId);
   const canMoveToCash =
     isSingleLegWithdrawalExternalId(tx.externalId) &&
@@ -91,9 +92,12 @@ export function useTransactionRow(
   const canDelete = !isSynced && !isTransfer;
   const cross = crossCurrencyFlow(movement);
   const lockAmountFields =
-    isSynced || isTransfer || isWithdrawal || cross !== null;
+    isSynced || isTransfer || isWithdrawal || isOpening || cross !== null;
+  const isFlowRow = !isOpening;
   const canChangeSource =
-    !isTransfer && (!isSynced || !isSyncedExternalId(tx.externalId));
+    !isTransfer &&
+    !isOpening &&
+    (!isSynced || !isSyncedExternalId(tx.externalId));
   const canShiftMonth =
     isBudgetShiftable(movement) || hasBudgetMonthOverride(movement);
   const realMonth = tx.occurredOn.slice(0, 7);
@@ -173,7 +177,7 @@ export function useTransactionRow(
   const duplicateSeed = { ...editSeed, occurredOn: todayInTz(timezone) };
 
   function toggleSelected() {
-    if (!readOnly) toggleTxSelected(tx);
+    if (!readOnly && !isOpening) toggleTxSelected(tx);
   }
 
   function handleToggleFixed() {
@@ -235,6 +239,8 @@ export function useTransactionRow(
     avatarSeed,
     description,
     isTransfer,
+    isOpening,
+    isFlowRow,
     isWithdrawal,
     amountText,
     convertedText,

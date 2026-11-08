@@ -73,6 +73,8 @@ export function TransactionRow({
     avatarSeed,
     description,
     isTransfer,
+    isOpening,
+    isFlowRow,
     isWithdrawal,
     amountText,
     convertedText,
@@ -292,9 +294,9 @@ export function TransactionRow({
           >
             {description || sourceLabel}
           </span>
-          {(isTransfer || isWithdrawal) && (
+          {(isTransfer || isWithdrawal || isOpening) && (
             <TransferBadge>
-              {transferBadgeLabel(isWithdrawal, Boolean(inTransit))}
+              {transferBadgeLabel(isWithdrawal, Boolean(inTransit), isOpening)}
             </TransferBadge>
           )}
           {isCarriedOver && (
@@ -366,10 +368,12 @@ export function TransactionRow({
                   Change account
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onSelect={openDuplicate}>
-                <CopyIcon />
-                Duplicate
-              </DropdownMenuItem>
+              {isFlowRow && (
+                <DropdownMenuItem onSelect={openDuplicate}>
+                  <CopyIcon />
+                  Duplicate
+                </DropdownMenuItem>
+              )}
               {inTransit && (
                 <DropdownMenuItem onSelect={openCredit}>
                   <CircleCheckIcon />
@@ -387,7 +391,8 @@ export function TransactionRow({
                   Undo transfer
                 </DropdownMenuItem>
               ) : (
-                !isWithdrawal && (
+                !isWithdrawal &&
+                isFlowRow && (
                   <DropdownMenuItem onSelect={openMarkTransfer}>
                     <BanknoteIcon />
                     Mark as transfer
@@ -406,11 +411,13 @@ export function TransactionRow({
                   {budgetMonthLabel}
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onSelect={openSetReminder}>
-                <BellPlusIcon />
-                Set reminder
-              </DropdownMenuItem>
-              {!isTransfer && (
+              {isFlowRow && (
+                <DropdownMenuItem onSelect={openSetReminder}>
+                  <BellPlusIcon />
+                  Set reminder
+                </DropdownMenuItem>
+              )}
+              {!isTransfer && isFlowRow && (
                 <DropdownMenuItem onSelect={handleToggleFixed}>
                   <PinIcon />
                   {resolvedFixed ? "Mark as daily" : "Mark as non-daily"}

@@ -3,6 +3,7 @@ import { MANUAL_SOURCE } from "@/lib/constants/sources";
 import { isFeeExternalId, isWithdrawalExternalId } from "@/lib/externalIds";
 import {
   assetLines,
+  isOpeningMovement,
   isOwnMovement,
   isFeeRemnant,
   isPrincipalLine,
@@ -45,6 +46,7 @@ export function rowFacts(movement: Movement, scope: MovementScope): RowFacts {
     budgetMonth: movement.budgetMonth,
     externalId: ref?.externalId ?? null,
     isTransfer,
+    isOpening: isOpeningMovement(movement),
     transferGroup: isTransfer
       ? (movement.leg?.movementId ?? movement.id)
       : null,

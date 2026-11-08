@@ -3,6 +3,7 @@ import { effectiveYearMonth } from "@/lib/dates";
 import {
   assetLines,
   crossCurrencyFlow,
+  isOpeningMovement,
   isOwnMovement,
   movementType,
   pendingTransfer,
@@ -50,6 +51,7 @@ export function countedLines(
   movement: Movement,
   scope: MovementScope,
 ): MovementLine[] {
+  if (isOpeningMovement(movement)) return [];
   if (!isAllScope(scope)) return assetLines(movement, scope);
   return movement.lines.filter(
     (line) => line.kind === "expense" || line.kind === "income",
@@ -262,7 +264,7 @@ export function movementAmount(
   const primary = primaryAssetLine(movement);
   const lines = primary ? [primary] : [];
   return amountOf(
-    isOwnMovement(movement) ? "transfer" : "expense",
+    isOwnMovement(movement) || type === "opening" ? "transfer" : "expense",
     lines,
     1,
     baseCurrency,

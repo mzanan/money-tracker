@@ -167,9 +167,14 @@ export function touchesSource(movement: Movement, source: string): boolean {
   );
 }
 
+export function isOpeningMovement(movement: Movement): boolean {
+  return movement.lines.some((line) => line.kind === "equity");
+}
+
 export function movementType(movement: Movement): MovementType {
   if (movement.leg) return movement.leg.type;
   const lines = movement.lines;
+  if (isOpeningMovement(movement)) return "opening";
   if (lines.some((line) => line.kind === "pending")) return "unresolved";
   if (lines.some(isTransitLine)) return "transfer";
   if (lines.some((line) => line.kind === "expense" && !isFeeLine(line))) {

@@ -4,11 +4,15 @@ import { cache } from "react";
 import { db } from "@/lib/db";
 import { accounts } from "@/lib/db/schema";
 import {
+  accountCurrencyError,
   declaredAccountCurrencies,
   type AccountCurrencies,
 } from "@/lib/accountCurrencies";
 import { heldAccountsFrom, type HeldAccounts } from "@/lib/accountPurpose";
-import type { AccountLabels } from "@/lib/constants/sources";
+import {
+  resolveSourceLabel,
+  type AccountLabels,
+} from "@/lib/constants/sources";
 
 import type { Account } from "@/types/db";
 
@@ -74,3 +78,21 @@ export const getHeldAccounts = cache(async function getHeldAccounts(
     .where(and(eq(accounts.user_id, userId), isNotNull(accounts.purpose)));
   return heldAccountsFrom(rows);
 });
+
+export async function sourceCurrencyError(
+  userId: string,
+  source: string,
+  currency: string,
+  side: "charged" | "own",
+): Promise<string | null> {
+  const [accountCurrencies, accountLabels] = await Promise.all([
+    getAccountCurrencies(userId, [source]),
+    getAccountLabels(userId),
+  ]);
+  return accountCurrencyError({
+    currency,
+    allowed: accountCurrencies[source],
+    accountLabel: resolveSourceLabel(source, accountLabels),
+    side,
+  });
+}

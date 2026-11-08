@@ -12,8 +12,7 @@ import {
   resolveSourceLabel,
 } from "@/lib/constants/sources";
 import { amountValidationError, formatMoney } from "@/lib/currency";
-import { accountCurrencyError } from "@/lib/accountCurrencies";
-import { getAccountCurrencies, getAccountLabels } from "@/lib/data/accounts";
+import { getAccountLabels, sourceCurrencyError } from "@/lib/data/accounts";
 import {
   getLedgerRecord,
   postLedgerTransaction,
@@ -27,7 +26,7 @@ import {
   isWithdrawalMovement,
 } from "@/lib/ledger/edits";
 import { crossCurrencyFlow, simpleFlow } from "@/lib/ledger/movements";
-import type { LedgerDraft } from "@/lib/ledger/posting";
+import { emptyDraft, type LedgerDraft } from "@/lib/ledger/posting";
 import type { ScaleOf } from "@/lib/ledger/scale";
 import {
   bankWithdrawalLine,
@@ -63,20 +62,6 @@ function withdrawableSourceError(source: string): string | null {
     return "Can't withdraw from a synced account";
   }
   return null;
-}
-
-function emptyDraft(occurredOn: string): Omit<LedgerDraft, "lines"> {
-  return {
-    occurredOn,
-    occurredAt: new Date().toISOString(),
-    note: null,
-    comment: null,
-    tags: [],
-    recurringId: null,
-    isFixed: null,
-    budgetMonth: null,
-    externalRefs: [],
-  };
 }
 
 interface WithdrawalConversion {
@@ -141,23 +126,6 @@ function withdrawalConversion(
   };
 }
 
-async function sourceCurrencyError(
-  userId: string,
-  source: string,
-  currency: string,
-): Promise<string | null> {
-  const [accountCurrencies, accountLabels] = await Promise.all([
-    getAccountCurrencies(userId, [source]),
-    getAccountLabels(userId),
-  ]);
-  return accountCurrencyError({
-    currency,
-    allowed: accountCurrencies[source],
-    accountLabel: resolveSourceLabel(source, accountLabels),
-    side: "charged",
-  });
-}
-
 export async function recordCashWithdrawal(
   input: CashWithdrawalInput,
 ): Promise<ActionResult> {
@@ -195,6 +163,7 @@ export async function recordCashWithdrawal(
     user.id,
     source,
     chargedCurrency,
+    "charged",
   );
   if (chargedError) return { ok: false, error: chargedError };
 
@@ -340,6 +309,7 @@ export async function recordWithdrawalExpense(
     user.id,
     source,
     chargedCurrency,
+    "charged",
   );
   if (chargedError) return { ok: false, error: chargedError };
 
@@ -428,6 +398,7 @@ export async function convertToWithdrawal(
       user.id,
       flow.source,
       chargedCurrency,
+      "charged",
     );
     if (chargedError) return { ok: false, error: chargedError };
 

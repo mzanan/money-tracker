@@ -8,6 +8,7 @@ import {
   getImportedSources,
   getSuggestedAccountCurrencies,
 } from "@/lib/data/sources";
+import { getOpeningBalances } from "@/lib/data/openingBalances";
 import { getUserSettings } from "@/lib/data/userSettings";
 import { getUser } from "@/lib/session";
 import type { IntegrationProvider } from "@/types/db";
@@ -28,6 +29,7 @@ export async function ImportedAccountsCard() {
     settings,
     declaredCurrencies,
     suggestedCurrencies,
+    openings,
   ] = await Promise.all([
     getImportedSources(user.id),
     listAccounts(user.id),
@@ -35,6 +37,7 @@ export async function ImportedAccountsCard() {
     getUserSettings(user.id),
     getAccountCurrencies(user.id),
     getSuggestedAccountCurrencies(user.id),
+    getOpeningBalances(user.id),
   ]);
 
   const accountLabels = Object.fromEntries(
@@ -55,6 +58,7 @@ export async function ImportedAccountsCard() {
       hasAccount: source in accountLabels,
       currencies: declaredCurrencies[source] ?? [],
       suggestedCurrency: suggestedCurrencies[source] ?? null,
+      openings: openings[source],
       integration: integrations.get(source as IntegrationProvider) ?? null,
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
@@ -76,6 +80,7 @@ export async function ImportedAccountsCard() {
             hasAccount={row.hasAccount}
             currencies={row.currencies}
             suggestedCurrency={row.suggestedCurrency}
+            openings={row.openings}
             integration={row.integration}
           />
         ))}

@@ -25,6 +25,7 @@ import {
   toggleAccountCurrency,
 } from "@/lib/accountCurrencies";
 import { accountRowMeta } from "@/lib/accountPurpose";
+import type { OpeningBalance } from "@/lib/openingBalance";
 import type { IntegrationSummary } from "@/types/db";
 
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,7 @@ import { ListRow } from "@/components/ui/listRow";
 
 import { AccountCurrenciesPicker } from "./accountCurrenciesPicker";
 import { AccountPurposeDialog } from "./accountPurposeDialog";
+import { OpeningBalanceDialog } from "./openingBalanceDialog";
 
 interface Props {
   source: string;
@@ -49,6 +51,7 @@ interface Props {
   currencies: string[];
   suggestedCurrency: string | null;
   integration: IntegrationSummary | null;
+  openings: Record<string, OpeningBalance> | undefined;
 }
 
 export function ImportedAccountRow({
@@ -59,14 +62,17 @@ export function ImportedAccountRow({
   currencies,
   suggestedCurrency,
   integration,
+  openings,
 }: Props) {
   const settings = useSettings();
   const { run, pending } = useServerAction();
   const currencyAction = useServerAction();
   const runAfterMenuClose = useDeferredMenuAction();
   const purposeDialog = useDialogState(runAfterMenuClose);
+  const openingDialog = useDialogState(runAfterMenuClose);
   const held = useHeldAccounts()[source];
   const reserved = kindOfSource(source) !== "csv";
+  const synced = kindOfSource(source) === "api";
   const archived = (settings.archived_sources ?? []).includes(source);
 
   function handleUnarchive() {
@@ -215,6 +221,11 @@ export function ImportedAccountRow({
               Deposit or loan
             </DropdownMenuItem>
           )}
+          {!synced && (
+            <DropdownMenuItem onSelect={openingDialog.openDialog}>
+              Opening balance
+            </DropdownMenuItem>
+          )}
           {!reserved && hasAccount && (
             <DropdownMenuItem
               variant="destructive"
@@ -241,6 +252,17 @@ export function ImportedAccountRow({
           held={held}
           open={purposeDialog.open}
           onOpenChange={purposeDialog.setOpen}
+        />
+      )}
+      {openingDialog.mounted && (
+        <OpeningBalanceDialog
+          key={openingDialog.key}
+          source={source}
+          label={label}
+          declared={currencies}
+          openings={openings}
+          open={openingDialog.open}
+          onOpenChange={openingDialog.setOpen}
         />
       )}
     </ListRow>
