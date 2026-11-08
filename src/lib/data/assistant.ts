@@ -14,11 +14,13 @@ import { convert } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { recurring_payments } from "@/lib/db/schema";
 import { getRates } from "@/lib/rates";
+import { heldSourceSet } from "@/lib/accountPurpose";
+import { getHeldAccounts } from "@/lib/data/accounts";
 import { getLedgerData } from "@/lib/data/ledgerMovements";
 import { ALL_SOURCES } from "@/lib/constants/sources";
 import { todayInTz } from "@/lib/dates";
 import { dayTotalsList } from "@/lib/ledger/days";
-import { periodTotals, scopeBalance } from "@/lib/ledger/scope";
+import { heldBalance, periodTotals, scopeBalance } from "@/lib/ledger/scope";
 import { monthsPerCycle } from "@/lib/reminders";
 import type { TotalsBreakdown } from "@/lib/ledger/scope";
 import type { StatsContext } from "@/lib/assistantStats";
@@ -76,8 +78,13 @@ function totalsOf({ movements, ctx }: RangeData): TotalsBreakdown {
 export async function getBalance(
   userId: string,
   baseCurrency: string,
-): Promise<TotalsBreakdown & { balance: number }> {
-  const range = await fetchRange(userId, baseCurrency);
+): Promise<TotalsBreakdown & { balance: number; held: number }> {
+  const [range, heldAccounts] = await Promise.all([
+    fetchRange(userId, baseCurrency),
+    getHeldAccounts(userId),
+  ]);
+  const heldSources = heldSourceSet(heldAccounts);
+  const today = todayInTz("UTC");
   return {
     ...totalsOf(range),
     balance: scopeBalance(
@@ -85,7 +92,16 @@ export async function getBalance(
       ALL_SOURCES,
       baseCurrency,
       range.ctx.ratesByDate,
-      todayInTz("UTC"),
+      today,
+      heldSources,
+    ),
+    held: heldBalance(
+      range.movements,
+      ALL_SOURCES,
+      baseCurrency,
+      range.ctx.ratesByDate,
+      today,
+      heldSources,
     ),
   };
 }

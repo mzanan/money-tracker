@@ -99,17 +99,17 @@ export function periodTotals(
   return { income, expense, net: income - expense };
 }
 
-export function scopeBalance(
+function balanceWhere(
   movements: ReadonlyArray<Movement>,
-  scope: MovementScope,
+  counts: (line: MovementLine) => boolean,
   displayCurrency: string,
   ratesByDate: RatesByDate,
   asOf: string,
 ): number {
-  const source = isAllScope(scope) ? undefined : scope;
   const native = new Map<string, number>();
   for (const movement of movements) {
-    for (const line of assetLines(movement, source)) {
+    for (const line of assetLines(movement)) {
+      if (!counts(line)) continue;
       native.set(line.currency, (native.get(line.currency) ?? 0) + line.amount);
     }
   }
@@ -119,6 +119,38 @@ export function scopeBalance(
       convertAsOf(amount, currency, displayCurrency, asOf, ratesByDate) ?? 0;
   }
   return total;
+}
+
+export function scopeBalance(
+  movements: ReadonlyArray<Movement>,
+  scope: MovementScope,
+  displayCurrency: string,
+  ratesByDate: RatesByDate,
+  asOf: string,
+  heldSources: ReadonlySet<string>,
+): number {
+  const counts = isAllScope(scope)
+    ? (line: MovementLine) => !heldSources.has(line.key)
+    : (line: MovementLine) => line.key === scope;
+  return balanceWhere(movements, counts, displayCurrency, ratesByDate, asOf);
+}
+
+export function heldBalance(
+  movements: ReadonlyArray<Movement>,
+  scope: MovementScope,
+  displayCurrency: string,
+  ratesByDate: RatesByDate,
+  asOf: string,
+  heldSources: ReadonlySet<string>,
+): number {
+  if (!isAllScope(scope)) return 0;
+  return balanceWhere(
+    movements,
+    (line) => heldSources.has(line.key),
+    displayCurrency,
+    ratesByDate,
+    asOf,
+  );
 }
 
 export function soleScopeCurrency(

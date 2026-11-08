@@ -1,8 +1,9 @@
 "use client";
 
-import { pendingHint } from "@/lib/transactionDisplay";
+import { heldHint, pendingHint } from "@/lib/transactionDisplay";
 import { useMemo } from "react";
 
+import { useHeldSources } from "@/hooks/useHeldAccounts";
 import { useRatesByDate } from "@/hooks/useRatesByDate";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
 import {
@@ -15,6 +16,7 @@ import {
 import { todayInTz } from "@/lib/dates";
 import { excludeCanceledPairs } from "@/lib/ledger/canceledPairs";
 import {
+  heldBalance,
   isAllScope,
   linesInMonth,
   periodTotals,
@@ -43,6 +45,7 @@ export function useBalanceHero({
   const settings = useSettings();
   const timezone = useTimezone();
   const ratesByDate = useRatesByDate();
+  const heldSources = useHeldSources();
   const base = settings.base_currency;
   const displayCurrency = useDisplayCurrency(lifetimeMovements, scope);
   const showBase = displayCurrency !== base;
@@ -74,15 +77,50 @@ export function useBalanceHero({
         displayCurrency,
         ratesByDate,
         today,
+        heldSources,
       ),
-    [lifetimeMovements, scope, displayCurrency, ratesByDate, today],
+    [
+      lifetimeMovements,
+      scope,
+      displayCurrency,
+      ratesByDate,
+      today,
+      heldSources,
+    ],
+  );
+
+  const held = useMemo(
+    () =>
+      heldBalance(
+        lifetimeMovements,
+        scope,
+        displayCurrency,
+        ratesByDate,
+        today,
+        heldSources,
+      ),
+    [
+      lifetimeMovements,
+      scope,
+      displayCurrency,
+      ratesByDate,
+      today,
+      heldSources,
+    ],
   );
   const totalBase = useMemo(
     () =>
       showBase
-        ? scopeBalance(lifetimeMovements, scope, base, ratesByDate, today)
+        ? scopeBalance(
+            lifetimeMovements,
+            scope,
+            base,
+            ratesByDate,
+            today,
+            heldSources,
+          )
         : null,
-    [showBase, lifetimeMovements, scope, base, ratesByDate, today],
+    [showBase, lifetimeMovements, scope, base, ratesByDate, today, heldSources],
   );
 
   const pending = useMemo(
@@ -100,6 +138,7 @@ export function useBalanceHero({
   return {
     displayCurrency,
     pendingText: pendingHint(pending, displayCurrency),
+    heldText: heldHint(held, displayCurrency),
     monthTotals,
     totalPositive: roundForDisplay(total, displayCurrency) >= 0,
     totalSigned: formatMoney(total, displayCurrency, { signed: true }),

@@ -10,9 +10,14 @@ import { MergeBar } from "@/components/transactions/mergeBar";
 import { AccountCurrenciesProvider } from "@/hooks/useAccountCurrencies";
 import { AccountLabelsProvider } from "@/hooks/useAccountLabels";
 import { DayTotalsInAccountProvider } from "@/hooks/useDayTotalsInAccount";
+import { HeldAccountsProvider } from "@/hooks/useHeldAccounts";
 import { HideAmountsProvider } from "@/hooks/useHideAmounts";
 import { SettingsProvider } from "@/hooks/useSettings";
-import { getAccountCurrencies, getAccountLabels } from "@/lib/data/accounts";
+import {
+  getAccountCurrencies,
+  getAccountLabels,
+  getHeldAccounts,
+} from "@/lib/data/accounts";
 import { getUserSettings } from "@/lib/data/userSettings";
 import {
   readDayTotalsInAccountCookie,
@@ -33,12 +38,14 @@ export async function AppShell({
     dayTotalsInAccount,
     accountLabels,
     accountCurrencies,
+    heldAccounts,
   ] = await Promise.all([
     getUserSettings(user.id),
     readHideAmountsCookie(),
     readDayTotalsInAccountCookie(),
     getAccountLabels(user.id),
     getAccountCurrencies(user.id),
+    getHeldAccounts(user.id),
   ]);
 
   if (!settings || !settings.onboarded_at) {
@@ -49,23 +56,25 @@ export async function AppShell({
     <SettingsProvider value={settings}>
       <AccountLabelsProvider value={accountLabels}>
         <AccountCurrenciesProvider value={accountCurrencies}>
-          <HideAmountsProvider initial={hideAmounts}>
-            <DayTotalsInAccountProvider initial={dayTotalsInAccount}>
-              <ConfirmProvider>
-                <AnalyticsIdentify userId={user.id} />
-                <div className="mx-auto flex w-full max-w-xl flex-1 flex-col lg:max-w-6xl">
-                  <Header />
-                  <main className="flex-1 px-4 pt-2 pb-[calc(var(--spacing-bottom-nav)+2.25rem)] lg:pb-8">
-                    {children}
-                  </main>
-                </div>
-                <BottomNav />
-                <InstallHint />
-                <MergeBar />
-              </ConfirmProvider>
-              <AutoSync />
-            </DayTotalsInAccountProvider>
-          </HideAmountsProvider>
+          <HeldAccountsProvider value={heldAccounts}>
+            <HideAmountsProvider initial={hideAmounts}>
+              <DayTotalsInAccountProvider initial={dayTotalsInAccount}>
+                <ConfirmProvider>
+                  <AnalyticsIdentify userId={user.id} />
+                  <div className="mx-auto flex w-full max-w-xl flex-1 flex-col lg:max-w-6xl">
+                    <Header />
+                    <main className="flex-1 px-4 pt-2 pb-[calc(var(--spacing-bottom-nav)+2.25rem)] lg:pb-8">
+                      {children}
+                    </main>
+                  </div>
+                  <BottomNav />
+                  <InstallHint />
+                  <MergeBar />
+                </ConfirmProvider>
+                <AutoSync />
+              </DayTotalsInAccountProvider>
+            </HideAmountsProvider>
+          </HeldAccountsProvider>
         </AccountCurrenciesProvider>
       </AccountLabelsProvider>
     </SettingsProvider>

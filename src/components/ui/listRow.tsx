@@ -17,8 +17,8 @@ export function ListRow({
     <div className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
       {leading}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-medium">{title}</p>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <p className="min-w-0 truncate text-sm font-medium">{title}</p>
           {badge}
         </div>
         {meta != null && (

@@ -14,6 +14,7 @@ import type { MovementScope } from "@/lib/ledger/scope";
 import type { Movement } from "@/types/ledger";
 
 import { AmountsToggle } from "./amountsToggle";
+import { BalanceHint } from "./balanceHint";
 import { BalanceLine } from "./balanceLine";
 import { DaySpendView } from "./daySpendView";
 import { MiniStat } from "./miniStat";
@@ -70,6 +71,7 @@ export function BalanceHero({
     showBase,
     totalInBase,
     pendingText,
+    heldText,
     incomeInBase,
     expenseInBase,
     netInBase,
@@ -133,11 +135,8 @@ export function BalanceHero({
           >
             {mask(totalSigned)}
           </p>
-          {pendingText && (
-            <p className="text-muted-foreground mt-1 text-xs tabular-nums">
-              {mask(pendingText)}
-            </p>
-          )}
+          {pendingText && <BalanceHint text={mask(pendingText)} />}
+          {heldText && <BalanceHint text={mask(heldText)} />}
           {showBase && (
             <p className="mt-1 h-4">
               {totalInBase && (
