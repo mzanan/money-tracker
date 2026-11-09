@@ -36,6 +36,9 @@ export function heldAccountsFrom(
 
 export const NO_PURPOSE = "none";
 
+export const ON_HOLD_HINT =
+  "Deposits and loans. Yours, but out of your balance.";
+
 export type PurposeChoice = AccountPurpose | typeof NO_PURPOSE;
 
 export function purposeFromChoice(
@@ -87,4 +90,37 @@ export function inAccountGroup(
   group: AccountGroup,
 ): boolean {
   return source in held === (group === "held");
+}
+
+export function heldReturnError({
+  source,
+  destination,
+  held,
+  isSynced,
+  receivedMinor,
+  withheldMinor,
+  balanceMinor,
+}: {
+  source: string;
+  destination: string | null;
+  held: HeldAccounts;
+  isSynced: boolean;
+  receivedMinor: number;
+  withheldMinor: number;
+  balanceMinor: number;
+}): string | null {
+  if (!(source in held)) return "This account isn't on hold";
+  if (receivedMinor === 0 && withheldMinor === 0) {
+    return "Enter the amount received or withheld";
+  }
+  if (receivedMinor > 0) {
+    if (!destination) return "Pick where the money went";
+    if (destination === source) return "Pick a different account";
+    if (destination in held) return "Pick an account that isn't on hold";
+    if (isSynced) return "Can't record into a synced account";
+  }
+  if (receivedMinor + withheldMinor > balanceMinor) {
+    return "That's more than what's on hold";
+  }
+  return null;
 }

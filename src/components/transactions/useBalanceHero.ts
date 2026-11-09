@@ -18,7 +18,7 @@ import { todayInTz } from "@/lib/dates";
 import { excludeCanceledPairs } from "@/lib/ledger/canceledPairs";
 import {
   heldBalance,
-  heldItems,
+  heldItemsInScope,
   isAllScope,
   linesInMonth,
   periodTotals,
@@ -130,13 +130,11 @@ export function useBalanceHero({
 
   const heldList = useMemo(
     () =>
-      isAllScope(scope)
-        ? heldRows(
-            heldItems(lifetimeMovements, heldSources),
-            heldAccounts,
-            accountLabels,
-          )
-        : [],
+      heldRows(
+        heldItemsInScope(lifetimeMovements, scope, heldSources),
+        heldAccounts,
+        accountLabels,
+      ),
     [scope, lifetimeMovements, heldSources, heldAccounts, accountLabels],
   );
 

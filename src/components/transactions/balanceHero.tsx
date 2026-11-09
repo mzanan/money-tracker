@@ -148,6 +148,7 @@ export function BalanceHero({
           )}
           <OnHoldDrawer
             rows={heldRows}
+            movements={lifetimeMovements}
             mask={mask}
             open={heldOpen}
             onOpenChange={setHeldOpen}

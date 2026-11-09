@@ -12,6 +12,7 @@ import { IntegrationsCard } from "@/components/settings/integrationsCard";
 import { SettingsForm } from "@/components/settings/settingsForm";
 import { SettingsTabs } from "@/components/settings/settingsTabs";
 import { Button } from "@/components/ui/button";
+import { ON_HOLD_HINT } from "@/lib/accountPurpose";
 import { getCsvSources } from "@/lib/data/sources";
 import { requireUser } from "@/lib/session";
 
@@ -82,10 +83,7 @@ export default async function SettingsPage({
             >
               <ImportedAccountsCard group="spendable" />
             </Section>
-            <Section
-              title="On hold"
-              hint="Deposits and loans. Yours, but out of your balance."
-            >
+            <Section title="On hold" hint={ON_HOLD_HINT}>
               <ImportedAccountsCard group="held" />
             </Section>
             <Section

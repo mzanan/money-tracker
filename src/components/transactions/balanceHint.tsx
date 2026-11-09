@@ -1,5 +1,7 @@
 import { ChevronRightIcon } from "lucide-react";
 
+import { TextAction } from "@/components/ui/textAction";
+
 export function BalanceHint({
   text,
   onClick,
@@ -13,13 +15,13 @@ export function BalanceHint({
     );
   }
   return (
-    <button
-      type="button"
+    <TextAction
+      size="xs"
       onClick={onClick}
-      className="text-muted-foreground hover:text-foreground relative mt-1 inline-flex items-center gap-0.5 text-left text-xs tabular-nums transition-colors after:absolute after:-inset-x-2 after:-top-1 after:-bottom-6"
+      className="relative mt-1 gap-0.5 text-left font-normal tabular-nums after:absolute after:-inset-x-2 after:-top-1 after:-bottom-6"
     >
       {text}
       <ChevronRightIcon className="size-3.5 shrink-0" />
-    </button>
+    </TextAction>
   );
 }

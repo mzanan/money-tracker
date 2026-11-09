@@ -167,13 +167,12 @@ export function heldItems(
     .filter((item) => item.balances.length > 0);
 }
 
-export function openHeldSources(
+export function heldItemsInScope(
   movements: ReadonlyArray<Movement>,
   scope: MovementScope,
   heldSources: ReadonlySet<string>,
-): string[] {
-  if (!isAllScope(scope)) return [];
-  return heldItems(movements, heldSources).map((item) => item.source);
+): HeldItem[] {
+  return isAllScope(scope) ? heldItems(movements, heldSources) : [];
 }
 
 export function heldBalance(
