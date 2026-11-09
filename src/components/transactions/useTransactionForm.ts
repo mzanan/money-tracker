@@ -267,7 +267,13 @@ export function useTransactionForm({
     else submitCreate();
   }
 
+  const canSubmit =
+    (Boolean(txId) || (Boolean(source) && sourceOptions !== null)) &&
+    (!transferActive || Boolean(transferDraft.selected)) &&
+    (!withdrawalActive || withdrawalDraft.totalFilled);
+
   return {
+    canSubmit,
     sourceOptions,
     kind,
     setKind,

@@ -19,7 +19,7 @@ export function CompletedReminderRow({
 
   return (
     <li className="rounded-inset flex items-center gap-3 px-3 py-3 opacity-70">
-      <IconCircle className="bg-surface-2 text-muted-foreground">
+      <IconCircle tone="muted">
         <CheckIcon className="size-4" />
       </IconCircle>
 

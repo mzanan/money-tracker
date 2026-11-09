@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { useState } from "react";
 
 import {
   DAY_TOTALS_ACCOUNT,
@@ -10,12 +10,17 @@ import {
   readBrowserCookie,
 } from "@/lib/preferences";
 
+import { createStrictContext } from "./createStrictContext";
+
 interface Ctx {
   dayTotalsInAccount: boolean;
   setDayTotalsInAccount: (next: boolean) => void;
 }
 
-const DayTotalsContext = createContext<Ctx | null>(null);
+const [DayTotalsContextProvider, useDayTotalsInAccount] =
+  createStrictContext<Ctx>("useDayTotalsInAccount");
+
+export { useDayTotalsInAccount };
 
 export function DayTotalsInAccountProvider({
   initial,
@@ -39,20 +44,10 @@ export function DayTotalsInAccountProvider({
   }
 
   return (
-    <DayTotalsContext.Provider
+    <DayTotalsContextProvider
       value={{ dayTotalsInAccount, setDayTotalsInAccount }}
     >
       {children}
-    </DayTotalsContext.Provider>
+    </DayTotalsContextProvider>
   );
-}
-
-export function useDayTotalsInAccount(): Ctx {
-  const ctx = useContext(DayTotalsContext);
-  if (!ctx) {
-    throw new Error(
-      "useDayTotalsInAccount must be used inside DayTotalsInAccountProvider",
-    );
-  }
-  return ctx;
 }

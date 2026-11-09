@@ -1,16 +1,14 @@
 "use client";
 
-import { Loader2Icon } from "lucide-react";
 
 import { AmountCurrencyField } from "@/components/ui/amountCurrencyField";
-import { Button } from "@/components/ui/button";
+import { DrawerActions } from "@/components/ui/drawerActions";
 import {
   Drawer,
   DrawerBody,
   DrawerCloseButton,
   DrawerContent,
   DrawerDescription,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
@@ -59,19 +57,12 @@ export function MoveToCashDialog({
             currencyAriaLabel={MOVE_TO_CASH_COPY.currencyAriaLabel}
           />
         </DrawerBody>
-        <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
-          <Button
-            variant="ghost"
-            className="sm:flex-1"
-            onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </Button>
-          <Button className="sm:flex-1" disabled={pending} onClick={submit}>
-            {pending && <Loader2Icon className="animate-spin" />}
-            {MOVE_TO_CASH_COPY.submitLabel}
-          </Button>
-        </DrawerFooter>
+        <DrawerActions
+          onCancel={() => onOpenChange(false)}
+          onSubmit={submit}
+          submitLabel={MOVE_TO_CASH_COPY.submitLabel}
+          pending={pending}
+        />
       </DrawerContent>
     </Drawer>
   );

@@ -1,16 +1,14 @@
 "use client";
 
-import { Loader2Icon } from "lucide-react";
 
 import { AccountSelect } from "./accountSelect";
-import { Button } from "@/components/ui/button";
+import { DrawerActions } from "@/components/ui/drawerActions";
 import {
   Drawer,
   DrawerBody,
   DrawerCloseButton,
   DrawerContent,
   DrawerDescription,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
@@ -53,23 +51,13 @@ export function SourceEditor({
             emptyMessage="No other account to pick. Import or add one first."
           />
         </DrawerBody>
-        <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
-          <Button
-            variant="ghost"
-            className="sm:flex-1"
-            onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </Button>
-          <Button
-            className="sm:flex-1"
-            disabled={!selected || pending}
-            onClick={submit}
-          >
-            {pending && <Loader2Icon className="animate-spin" />}
-            Save
-          </Button>
-        </DrawerFooter>
+        <DrawerActions
+          onCancel={() => onOpenChange(false)}
+          onSubmit={submit}
+          submitLabel="Save"
+          pending={pending}
+          disabled={!selected}
+        />
       </DrawerContent>
     </Drawer>
   );

@@ -1,19 +1,17 @@
 "use client";
 
-import { Loader2Icon } from "lucide-react";
 
 import { FREQUENCY_OPTIONS } from "@/lib/reminders";
 
 import { AmountInput } from "@/components/ui/amountInput";
-import { Button } from "@/components/ui/button";
 import { CurrencySelect } from "@/components/ui/currencySelect";
+import { DrawerActions } from "@/components/ui/drawerActions";
 import {
   Drawer,
   DrawerBody,
   DrawerCloseButton,
   DrawerContent,
   DrawerDescription,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
@@ -244,23 +242,13 @@ export function ReminderForm({
           {isEdit && <StopReminderButton onClick={stop} disabled={pending} />}
         </DrawerBody>
 
-        <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
-          <Button
-            variant="ghost"
-            className="sm:flex-1"
-            onClick={() => setOpen(false)}
-          >
-            Cancel
-          </Button>
-          <Button
-            className="sm:flex-1"
-            onClick={submit}
-            disabled={pending || !label.trim() || !nextDueOn}
-          >
-            {pending && <Loader2Icon className="animate-spin" />}
-            {isEdit ? "Save" : "Add reminder"}
-          </Button>
-        </DrawerFooter>
+        <DrawerActions
+          onCancel={() => setOpen(false)}
+          onSubmit={submit}
+          submitLabel={isEdit ? "Save" : "Add reminder"}
+          pending={pending}
+          disabled={!label.trim() || !nextDueOn}
+        />
       </DrawerContent>
     </Drawer>
   );

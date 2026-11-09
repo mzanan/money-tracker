@@ -25,7 +25,7 @@ export function buildAssistantTools({ userId, baseCurrency }: AssistantContext) 
   return {
     getBalance: tool({
       description:
-        "Lifetime figures for the user in the base currency: total income, total expense and net (each at its own day's rate), and balance (money available to spend across all accounts at today's rate, the number the app shows), and held (money in deposits and loans the user expects back, at today's rate, not part of balance).",
+        "Lifetime figures for the user in the base currency: total income, total expense and net (each at its own day's rate), and balance (money available to spend across all accounts at today's rate, the number the app shows), and held (money in deposits and loans the user expects back, at today's rate, not part of balance). Net and balance differ because balance also counts opening balances and values every account at today's rate.",
       inputSchema: z.object({}),
       execute: () => getBalance(userId, baseCurrency),
     }),

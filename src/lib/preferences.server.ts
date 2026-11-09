@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-import { isValidTimezone } from "./dates";
+import { isValidTimezone, todayInTz } from "./dates";
 import {
   DAY_TOTALS_ACCOUNT,
   DAY_TOTALS_COOKIE,
@@ -25,4 +25,10 @@ export async function resolveTimezone(
   const jar = await cookies();
   const device = jar.get(TIMEZONE_COOKIE)?.value;
   return device && isValidTimezone(device) ? device : "UTC";
+}
+
+export async function userToday(
+  saved: string | null | undefined,
+): Promise<string> {
+  return todayInTz(await resolveTimezone(saved));
 }

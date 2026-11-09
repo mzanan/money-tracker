@@ -1,33 +1,10 @@
 "use client";
 
-import { createContext, useContext } from "react";
-
 import type { Movement } from "@/types/ledger";
 
-const LedgerMovementsContext = createContext<ReadonlyArray<Movement> | null>(
-  null,
-);
+import { createStrictContext } from "./createStrictContext";
 
-export function LedgerMovementsProvider({
-  value,
-  children,
-}: {
-  value: ReadonlyArray<Movement>;
-  children: React.ReactNode;
-}) {
-  return (
-    <LedgerMovementsContext.Provider value={value}>
-      {children}
-    </LedgerMovementsContext.Provider>
-  );
-}
+const [LedgerMovementsProvider, useLedgerMovements] =
+  createStrictContext<ReadonlyArray<Movement>>("useLedgerMovements");
 
-export function useLedgerMovements(): ReadonlyArray<Movement> {
-  const movements = useContext(LedgerMovementsContext);
-  if (!movements) {
-    throw new Error(
-      "useLedgerMovements must be used inside <LedgerMovementsProvider>",
-    );
-  }
-  return movements;
-}
+export { LedgerMovementsProvider, useLedgerMovements };

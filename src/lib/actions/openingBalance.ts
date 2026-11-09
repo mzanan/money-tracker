@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { actionErrorMessage } from "@/lib/actionError";
 import { isSupportedCurrency } from "@/lib/constants/currencies";
-import { kindOfSource, normalizeSource } from "@/lib/constants/sources";
+import { normalizeSource } from "@/lib/constants/sources";
 import { amountValidationError } from "@/lib/currency";
 import { sourceCurrencyError } from "@/lib/data/accounts";
 import { getScaleOf } from "@/lib/data/cryptoAssets";
@@ -16,11 +16,11 @@ import {
   transactionIdForExternalId,
 } from "@/lib/data/ledgerWrites";
 import { getUserSettings } from "@/lib/data/userSettings";
-import { todayInTz } from "@/lib/dates";
 import { openingExternalId } from "@/lib/externalIds";
 import { openingLines } from "@/lib/ledger/builders";
 import { emptyDraft } from "@/lib/ledger/posting";
-import { resolveTimezone } from "@/lib/preferences.server";
+import { canTakeOpening } from "@/lib/openingBalance";
+import { userToday } from "@/lib/preferences.server";
 import { getUser } from "@/lib/session";
 
 import type { ActionResult } from "./transactions";
@@ -42,7 +42,7 @@ export async function setOpeningBalance(
   const { currency, amount } = parsed.data;
   const source = normalizeSource(parsed.data.source);
   if (!source) return { ok: false, error: "Invalid account" };
-  if (kindOfSource(source) === "api") {
+  if (!canTakeOpening(source)) {
     return {
       ok: false,
       error: "Synced accounts can't take an opening balance",
@@ -74,9 +74,7 @@ export async function setOpeningBalance(
     const occurredOn =
       parsed.data.occurredOn ??
       (await firstSourceDate(user.id, source)) ??
-      todayInTz(
-        await resolveTimezone((await getUserSettings(user.id))?.timezone),
-      );
+      (await userToday((await getUserSettings(user.id))?.timezone));
     await postLedgerTransaction(
       user.id,
       {

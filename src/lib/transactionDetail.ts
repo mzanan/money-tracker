@@ -12,7 +12,13 @@ import {
   isTransitLine,
   movementType,
 } from "@/lib/ledger/movements";
-import type { Money, Movement, MovementLine } from "@/types/ledger";
+import { rowBadgeKind, rowBadgeLabel } from "@/lib/transactionDisplay";
+import type {
+  Money,
+  Movement,
+  MovementLine,
+  MovementType,
+} from "@/types/ledger";
 
 export type DetailDirection = "out" | "in" | "move";
 
@@ -38,14 +44,14 @@ export interface TransactionDetail {
   tags: string[];
 }
 
-const TYPE_LABELS = {
+const TYPE_LABELS: Record<MovementType, string> = {
   expense: "Expense",
   income: "Income",
-  transfer: "Transfer",
+  transfer: rowBadgeLabel("transfer"),
   exchange: "Exchange",
-  opening: "Opening balance",
+  opening: rowBadgeLabel("opening"),
   unresolved: "Unresolved",
-} as const;
+};
 
 interface MoneyRow {
   id: string;
@@ -71,12 +77,16 @@ interface FeeSplit {
 type BreakdownRow = MoneyRow | { id: string; label: string; text: string };
 
 function typeLabel(movement: Movement): string {
-  if (movement.lines.some(isTransitLine)) return "In transit";
-  const withdrawal = movement.externalRefs.some((ref) =>
-    isWithdrawalExternalId(ref.externalId),
-  );
-  if (withdrawal) return "Withdrawal";
-  return TYPE_LABELS[movementType(movement)];
+  const type = movementType(movement);
+  const badge = rowBadgeKind({
+    isOpening: type === "opening",
+    isWithdrawal: movement.externalRefs.some((ref) =>
+      isWithdrawalExternalId(ref.externalId),
+    ),
+    inTransit: movement.lines.some(isTransitLine),
+    isTransfer: type === "transfer",
+  });
+  return badge ? rowBadgeLabel(badge) : TYPE_LABELS[type];
 }
 
 function direction(movement: Movement): DetailDirection {

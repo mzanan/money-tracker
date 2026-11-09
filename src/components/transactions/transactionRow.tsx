@@ -1,6 +1,5 @@
 "use client";
 
-import { transferBadgeLabel } from "@/lib/transactionDisplay";
 import {
   BanknoteIcon,
   BellPlusIcon,
@@ -16,11 +15,8 @@ import {
   CircleCheckIcon,
 } from "lucide-react";
 
-import type { MouseEvent } from "react";
-
 import { formatDayShort } from "@/lib/dates";
 import { computeNextDue } from "@/lib/reminders";
-import { isRowOwnClick } from "@/lib/rowClick";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -74,13 +70,15 @@ export function TransactionRow({
     amountKind,
     txSelectMode,
     isSelected,
-    toggleSelected,
     avatarSeed,
     description,
-    isTransfer,
-    isOpening,
-    isFlowRow,
-    isWithdrawal,
+    canDuplicate,
+    canSetReminder,
+    canToggleFixed,
+    canUndoTransfer,
+    canMarkTransfer,
+    badgeLabel,
+    handleRowClick,
     amountText,
     convertedText,
     sourceLabel,
@@ -266,14 +264,6 @@ export function TransactionRow({
     }
   }
 
-  function handleRowClick(event: MouseEvent<HTMLDivElement>) {
-    if (txSelectMode) {
-      toggleSelected();
-    } else if (isRowOwnClick(event.target, event.currentTarget)) {
-      openDetail();
-    }
-  }
-
   function openMoveToCash() {
     if (stepApi) {
       runAfterMenuClose(() =>
@@ -296,7 +286,7 @@ export function TransactionRow({
   return (
     <TappableRow
       as="div"
-      onClick={handleRowClick}
+      onClick={(event) => handleRowClick(event, openDetail)}
       className={cn(
         "group min-w-0 cursor-pointer",
         isSelected && "bg-primary/10 hover:bg-primary/15",
@@ -320,11 +310,7 @@ export function TransactionRow({
           >
             {description || sourceLabel}
           </span>
-          {(isTransfer || isWithdrawal || isOpening) && (
-            <TransferBadge>
-              {transferBadgeLabel(isWithdrawal, Boolean(inTransit), isOpening)}
-            </TransferBadge>
-          )}
+          {badgeLabel && <TransferBadge>{badgeLabel}</TransferBadge>}
           {isCarriedOver && (
             <BudgetMonthBadge
               direction="from"
@@ -394,7 +380,7 @@ export function TransactionRow({
                   Change account
                 </DropdownMenuItem>
               )}
-              {isFlowRow && (
+              {canDuplicate && (
                 <DropdownMenuItem onSelect={openDuplicate}>
                   <CopyIcon />
                   Duplicate
@@ -406,24 +392,23 @@ export function TransactionRow({
                   Mark as credited
                 </DropdownMenuItem>
               )}
-              {canUndoMoveToCash ? (
+              {canUndoMoveToCash && (
                 <DropdownMenuItem onSelect={handleUndoMoveToCash}>
                   <WalletIcon />
                   Undo move to Cash
                 </DropdownMenuItem>
-              ) : isTransfer ? (
+              )}
+              {canUndoTransfer && (
                 <DropdownMenuItem onSelect={handleUndoTransfer}>
                   <BanknoteIcon />
                   Undo transfer
                 </DropdownMenuItem>
-              ) : (
-                !isWithdrawal &&
-                isFlowRow && (
-                  <DropdownMenuItem onSelect={openMarkTransfer}>
-                    <BanknoteIcon />
-                    Mark as transfer
-                  </DropdownMenuItem>
-                )
+              )}
+              {canMarkTransfer && (
+                <DropdownMenuItem onSelect={openMarkTransfer}>
+                  <BanknoteIcon />
+                  Mark as transfer
+                </DropdownMenuItem>
               )}
               {canMoveToCash && (
                 <DropdownMenuItem onSelect={openMoveToCash}>
@@ -437,13 +422,13 @@ export function TransactionRow({
                   {budgetMonthLabel}
                 </DropdownMenuItem>
               )}
-              {isFlowRow && (
+              {canSetReminder && (
                 <DropdownMenuItem onSelect={openSetReminder}>
                   <BellPlusIcon />
                   Set reminder
                 </DropdownMenuItem>
               )}
-              {!isTransfer && isFlowRow && (
+              {canToggleFixed && (
                 <DropdownMenuItem onSelect={handleToggleFixed}>
                   <PinIcon />
                   {resolvedFixed ? "Mark as daily" : "Mark as non-daily"}

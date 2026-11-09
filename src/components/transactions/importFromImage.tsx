@@ -112,7 +112,7 @@ export function ImportFromImage({
                 type="button"
                 onClick={() => pickMode(option.mode)}
               >
-                <IconCircle className="bg-surface-2 text-foreground">
+                <IconCircle tone="neutral">
                   <option.icon className="size-4" />
                 </IconCircle>
                 <span>

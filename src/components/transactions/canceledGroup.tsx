@@ -41,7 +41,7 @@ export function CanceledGroup({
         aria-expanded={open}
         className="focus-visible:ring-ring w-full cursor-pointer opacity-70 focus-visible:ring-2 focus-visible:outline-none"
       >
-        <IconCircle className="bg-surface-2 text-muted-foreground size-9">
+        <IconCircle tone="muted" size="sm">
           <Undo2Icon className="size-4" />
         </IconCircle>
         <span className="min-w-0 flex-1">

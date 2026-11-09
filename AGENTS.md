@@ -47,6 +47,7 @@ Five sources, four ways into the DB:
 - **Wise + Astropay (semi-auto):** CSV with a preset. In `/settings` → "Import or paste CSV" → the "Format" dropdown picks the preset, which prefills columns and sets `source`. If that source already has transactions, `sinceDate` defaults to `max(occurred_on) + 1 day`. Presets in `src/lib/csv/presets.ts`.
 - **Screenshots:** `/screenshot-import` (also a PWA share target) extracts transactions from an image with the user's AI key (`lib/ai/screenshotExtract.ts`, `lib/imageExtract.ts`).
 - **Cash + manual entries:** `QuickAddForm` on home, with autocomplete of categories and merchants (notes) from the last 200 transactions. The description suggestions also run in the edit/duplicate/pay form; the catalog reaches both forms through `EntrySuggestionCatalogProvider` (mounted by `LedgerProviders`). Cash withdrawals and exchanges from Settings → Cash.
+- **Opening balances:** Settings → account menu → "Opening balance" posts one transaction against the `equity` opening account (`lib/openingBalance.ts`, `lib/actions/openingBalance.ts`). Synced (`api`) accounts can't take one (`canTakeOpening`).
 
 All paths end in `buildTransactionRow` (`src/lib/transactions.ts`), which snapshots FX rates and sets source/external_id. Dedup via the unique `(user_id, source, external_id)` (migration 004) makes upserts idempotent.
 

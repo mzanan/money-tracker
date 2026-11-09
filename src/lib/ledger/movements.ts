@@ -168,7 +168,9 @@ export function touchesSource(movement: Movement, source: string): boolean {
 }
 
 export function isOpeningMovement(movement: Movement): boolean {
-  return movement.lines.some((line) => line.kind === "equity");
+  return movement.lines.some(
+    (line) => line.kind === "equity" && line.key === LEDGER_KEYS.opening,
+  );
 }
 
 export function movementType(movement: Movement): MovementType {

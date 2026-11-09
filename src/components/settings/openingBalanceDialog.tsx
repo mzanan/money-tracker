@@ -1,17 +1,15 @@
 "use client";
 
-import { Loader2Icon } from "lucide-react";
 
 import { AmountCurrencyField } from "@/components/ui/amountCurrencyField";
-import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/ui/dateField";
+import { DrawerActions } from "@/components/ui/drawerActions";
 import {
   Drawer,
   DrawerBody,
   DrawerCloseButton,
   DrawerContent,
   DrawerDescription,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
@@ -71,23 +69,12 @@ export function OpeningBalanceDialog({
             required={false}
           />
         </DrawerBody>
-        <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
-          <Button
-            variant="ghost"
-            className="sm:flex-1"
-            onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </Button>
-          <Button
-            className="sm:flex-1"
-            disabled={form.pending}
-            onClick={form.submit}
-          >
-            {form.pending && <Loader2Icon className="animate-spin" />}
-            Save
-          </Button>
-        </DrawerFooter>
+        <DrawerActions
+          onCancel={() => onOpenChange(false)}
+          onSubmit={form.submit}
+          submitLabel="Save"
+          pending={form.pending}
+        />
       </DrawerContent>
     </Drawer>
   );
