@@ -8,8 +8,10 @@ import {
   ledger_external_ids,
 } from "@/lib/db/schema";
 import { EXTERNAL_ID_PREFIX } from "@/lib/externalIds";
-import { fromMinor } from "@/lib/ledger/amounts";
-import type { OpeningBalances } from "@/lib/openingBalance";
+import {
+  openingBalancesFrom,
+  type OpeningBalances,
+} from "@/lib/openingBalance";
 
 export async function getOpeningBalances(
   userId: string,
@@ -43,14 +45,5 @@ export async function getOpeningBalances(
       ),
     getScaleOf(),
   ]);
-  const openings: OpeningBalances = {};
-  for (const row of rows) {
-    const bySource = openings[row.source] ?? {};
-    bySource[row.currency] = {
-      amount: fromMinor(row.amount, scaleOf(row.currency)),
-      occurredOn: row.occurredOn,
-    };
-    openings[row.source] = bySource;
-  }
-  return openings;
+  return openingBalancesFrom(rows, scaleOf);
 }

@@ -25,7 +25,7 @@ import {
   toggleAccountCurrency,
 } from "@/lib/accountCurrencies";
 import { accountRowMeta } from "@/lib/accountPurpose";
-import type { OpeningBalance } from "@/lib/openingBalance";
+import { canTakeOpening, type OpeningBalance } from "@/lib/openingBalance";
 import type { IntegrationSummary } from "@/types/db";
 
 import { Badge } from "@/components/ui/badge";
@@ -72,7 +72,7 @@ export function ImportedAccountRow({
   const openingDialog = useDialogState(runAfterMenuClose);
   const held = useHeldAccounts()[source];
   const reserved = kindOfSource(source) !== "csv";
-  const synced = kindOfSource(source) === "api";
+  const canOpen = canTakeOpening(source);
   const archived = (settings.archived_sources ?? []).includes(source);
 
   function handleUnarchive() {
@@ -221,7 +221,7 @@ export function ImportedAccountRow({
               Deposit or loan
             </DropdownMenuItem>
           )}
-          {!synced && (
+          {canOpen && (
             <DropdownMenuItem onSelect={openingDialog.openDialog}>
               Opening balance
             </DropdownMenuItem>

@@ -1,5 +1,7 @@
 "use client";
 
+import type { MouseEvent } from "react";
+
 import { useAccountCurrencies } from "@/hooks/useAccountCurrencies";
 import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { useDeferredMenuAction } from "@/hooks/useDeferredMenuAction";
@@ -33,12 +35,15 @@ import {
   transferEnds,
 } from "@/lib/ledger/movements";
 import { rowFacts } from "@/lib/ledger/rowFacts";
+import { isRowOwnClick } from "@/lib/rowClick";
 import { isAllScope, movementAmount } from "@/lib/ledger/scope";
 import { amountInCurrency } from "@/lib/ledger/valuation";
 import {
   crossCurrencyTexts,
   exchangeText,
   rowAmountTexts,
+  rowBadgeKind,
+  rowBadgeLabel,
   transferLabel,
 } from "@/lib/transactionDisplay";
 import { useRatesByDate } from "@/hooks/useRatesByDate";
@@ -95,6 +100,19 @@ export function useTransactionRow(
   const lockAmountFields =
     isSynced || isTransfer || isWithdrawal || isOpening || cross !== null;
   const isFlowRow = !isOpening;
+  const canDuplicate = isFlowRow;
+  const canSetReminder = isFlowRow;
+  const canToggleFixed = isFlowRow && !isTransfer;
+  const canUndoTransfer = isTransfer && !canUndoMoveToCash;
+  const canMarkTransfer =
+    isFlowRow && !isTransfer && !isWithdrawal && !canUndoMoveToCash;
+  const badge = rowBadgeKind({
+    isOpening,
+    isWithdrawal,
+    inTransit: isTransfer && Boolean(inTransit),
+    isTransfer,
+  });
+  const badgeLabel = badge ? rowBadgeLabel(badge) : null;
   const canChangeSource =
     !isTransfer &&
     !isOpening &&
@@ -177,6 +195,17 @@ export function useTransactionRow(
   };
   const duplicateSeed = { ...editSeed, occurredOn: todayInTz(timezone) };
 
+  function handleRowClick(
+    event: MouseEvent<HTMLDivElement>,
+    openDetail: () => void,
+  ) {
+    if (txSelectMode) {
+      toggleSelected();
+    } else if (isRowOwnClick(event.target, event.currentTarget)) {
+      openDetail();
+    }
+  }
+
   function toggleSelected() {
     if (!readOnly && !isOpening) toggleTxSelected(tx);
   }
@@ -235,14 +264,16 @@ export function useTransactionRow(
     amountKind: shown.kind,
     txSelectMode,
     isSelected,
-    toggleSelected,
     readOnly,
     avatarSeed,
     description,
-    isTransfer,
-    isOpening,
-    isFlowRow,
-    isWithdrawal,
+    canDuplicate,
+    canSetReminder,
+    canToggleFixed,
+    canUndoTransfer,
+    canMarkTransfer,
+    badgeLabel,
+    handleRowClick,
     amountText,
     convertedText,
     sourceLabel,

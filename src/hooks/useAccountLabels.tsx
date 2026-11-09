@@ -1,31 +1,10 @@
 "use client";
 
-import { createContext, useContext } from "react";
-
 import type { AccountLabels } from "@/lib/data/accounts";
 
-const AccountLabelsContext = createContext<AccountLabels | null>(null);
+import { createStrictContext } from "./createStrictContext";
 
-export function AccountLabelsProvider({
-  value,
-  children,
-}: {
-  value: AccountLabels;
-  children: React.ReactNode;
-}) {
-  return (
-    <AccountLabelsContext.Provider value={value}>
-      {children}
-    </AccountLabelsContext.Provider>
-  );
-}
+const [AccountLabelsProvider, useAccountLabels] =
+  createStrictContext<AccountLabels>("useAccountLabels");
 
-export function useAccountLabels(): AccountLabels {
-  const labels = useContext(AccountLabelsContext);
-  if (!labels) {
-    throw new Error(
-      "useAccountLabels must be used inside <AccountLabelsProvider>",
-    );
-  }
-  return labels;
-}
+export { AccountLabelsProvider, useAccountLabels };

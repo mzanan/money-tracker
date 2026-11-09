@@ -20,7 +20,7 @@ import { getScaleOf } from "@/lib/data/cryptoAssets";
 import { hasReminderRef } from "@/lib/ledger/candidates";
 import { reminderExpenseDraft } from "@/lib/ledger/reminderDraft";
 import type { FlowCandidate } from "@/types/ledger";
-import { resolveTimezone } from "@/lib/preferences.server";
+import { userToday } from "@/lib/preferences.server";
 import { getRates } from "@/lib/rates";
 import { computeNextDue } from "@/lib/reminders";
 import {
@@ -30,7 +30,7 @@ import {
   type UpdateReminderInput,
 } from "@/lib/schemas/reminder";
 import { getUser } from "@/lib/session";
-import { isValidCalendarDate, todayInTz } from "@/lib/dates";
+import { isValidCalendarDate } from "@/lib/dates";
 
 import type { ActionResult } from "./transactions";
 
@@ -270,7 +270,7 @@ export async function markReminderPaid(
 
   let day = paidOn;
   if (!day || !isValidCalendarDate(day)) {
-    day = todayInTz(await resolveTimezone(settings?.timezone));
+    day = await userToday(settings?.timezone);
   }
 
   try {

@@ -1,17 +1,15 @@
 "use client";
 
-import { Loader2Icon } from "lucide-react";
 
 import type { IntegrationProvider, IntegrationSummary } from "@/types/db";
 
-import { Button } from "@/components/ui/button";
+import { DrawerActions } from "@/components/ui/drawerActions";
 import {
   Drawer,
   DrawerBody,
   DrawerCloseButton,
   DrawerContent,
   DrawerDescription,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
@@ -148,25 +146,14 @@ export function IntegrationDialog({
           )}
         </DrawerBody>
 
-        <DrawerFooter className="flex-col-reverse gap-2 sm:flex-row">
-          <Button
-            type="button"
-            variant="ghost"
-            className="sm:flex-1"
-            onClick={() => onOpenChange(false)}
-            disabled={pending}
-          >
-            Cancel
-          </Button>
-          <Button
-            className="sm:flex-1"
-            onClick={handleSubmit}
-            disabled={pending || (isFirstConnect && !apiKey.trim())}
-          >
-            {pending && <Loader2Icon className="animate-spin" />}
-            Save
-          </Button>
-        </DrawerFooter>
+        <DrawerActions
+          onCancel={() => onOpenChange(false)}
+          onSubmit={handleSubmit}
+          submitLabel="Save"
+          pending={pending}
+          disabled={isFirstConnect && !apiKey.trim()}
+          cancelDisabled={pending}
+        />
       </DrawerContent>
     </Drawer>
   );

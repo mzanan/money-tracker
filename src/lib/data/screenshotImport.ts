@@ -4,10 +4,9 @@ import { eq } from "drizzle-orm";
 import type { DetectedTransaction } from "@/lib/ai/screenshotExtract";
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
-import { todayInTz } from "@/lib/dates";
 import type { CandidateMatch } from "@/lib/imageExtract";
 import { candidateMatchOf } from "@/lib/ledger/candidates";
-import { resolveTimezone } from "@/lib/preferences.server";
+import { userToday } from "@/lib/preferences.server";
 import { SHARE_ERROR_CODES, type ShareErrorCode } from "@/lib/screenshotShare";
 
 import { findCrossSourceCandidates } from "./duplicates";
@@ -88,7 +87,7 @@ export async function getScreenshotImportPageData(
       .where(eq(user_settings.user_id, userId))
       .limit(1)
       .then((rows) => rows[0]);
-    const today = todayInTz(await resolveTimezone(settings?.timezone));
+    const today = await userToday(settings?.timezone);
     initialCandidates = await buildInitialCandidates(
       userId,
       initial.items,

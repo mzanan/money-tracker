@@ -35,7 +35,7 @@ export function ImageExtractLoading({
 
   return (
     <div className="grid justify-items-center gap-4 py-6 text-center">
-      <IconCircle className="bg-surface-2 text-foreground relative size-12">
+      <IconCircle tone="neutral" size="lg" className="relative">
         <Icon className="size-5" />
         <Loader2Icon className="text-muted-foreground absolute -inset-1 size-14 animate-spin" />
       </IconCircle>

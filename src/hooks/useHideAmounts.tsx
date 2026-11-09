@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { useState } from "react";
 
 import {
   HIDE_AMOUNTS_COOKIE,
@@ -8,13 +8,18 @@ import {
   preferenceCookie,
 } from "@/lib/preferences";
 
+import { createStrictContext } from "./createStrictContext";
+
 interface Ctx {
   hideAmounts: boolean;
   toggleHideAmounts: () => void;
   mask: (text: string) => string;
 }
 
-const HideAmountsContext = createContext<Ctx | null>(null);
+const [HideAmountsContextProvider, useHideAmounts] =
+  createStrictContext<Ctx>("useHideAmounts");
+
+export { useHideAmounts };
 
 export function HideAmountsProvider({
   initial,
@@ -38,18 +43,10 @@ export function HideAmountsProvider({
   }
 
   return (
-    <HideAmountsContext.Provider
+    <HideAmountsContextProvider
       value={{ hideAmounts, toggleHideAmounts, mask }}
     >
       {children}
-    </HideAmountsContext.Provider>
+    </HideAmountsContextProvider>
   );
-}
-
-export function useHideAmounts(): Ctx {
-  const ctx = useContext(HideAmountsContext);
-  if (!ctx) {
-    throw new Error("useHideAmounts must be used inside HideAmountsProvider");
-  }
-  return ctx;
 }

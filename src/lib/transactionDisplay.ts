@@ -65,14 +65,29 @@ export function transitBannerTitle(count: number): string {
     : `${count} transfers in transit`;
 }
 
-export function transferBadgeLabel(
-  isWithdrawal: boolean,
-  inTransit: boolean,
-  isOpening = false,
-): string {
-  if (isOpening) return "Opening balance";
-  if (isWithdrawal) return "Withdrawal";
-  return inTransit ? "In transit" : "Transfer";
+export type RowBadgeKind = "opening" | "withdrawal" | "transit" | "transfer";
+
+const ROW_BADGE_LABELS: Record<RowBadgeKind, string> = {
+  opening: "Opening balance",
+  withdrawal: "Withdrawal",
+  transit: "In transit",
+  transfer: "Transfer",
+};
+
+export function rowBadgeKind(flags: {
+  isOpening: boolean;
+  isWithdrawal: boolean;
+  inTransit: boolean;
+  isTransfer: boolean;
+}): RowBadgeKind | null {
+  if (flags.isOpening) return "opening";
+  if (flags.isWithdrawal) return "withdrawal";
+  if (flags.inTransit) return "transit";
+  return flags.isTransfer ? "transfer" : null;
+}
+
+export function rowBadgeLabel(kind: RowBadgeKind): string {
+  return ROW_BADGE_LABELS[kind];
 }
 
 export function pendingHint(amount: number, currency: string): string | null {

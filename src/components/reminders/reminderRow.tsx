@@ -75,13 +75,7 @@ export function ReminderRow({
         aria-label={`Edit ${reminder.label}`}
         className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
       >
-        <IconCircle
-          className={cn(
-            diff < 0
-              ? "bg-destructive/10 text-destructive"
-              : "bg-primary/10 text-primary",
-          )}
-        >
+        <IconCircle tone={diff < 0 ? "destructive" : "primary"}>
           <BellPlusIcon className="size-4" />
         </IconCircle>
 

@@ -45,14 +45,7 @@ export function MiniStat({
         dimmed && "opacity-50",
       )}
     >
-      <IconCircle
-        className={cn(
-          "size-8",
-          tone === "income"
-            ? "bg-income text-income"
-            : "bg-expense text-expense",
-        )}
-      >
+      <IconCircle size="xs" tone={tone}>
         {icon}
       </IconCircle>
       <div className="grid min-w-0">

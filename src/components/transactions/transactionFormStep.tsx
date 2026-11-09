@@ -53,12 +53,7 @@ export function TransactionFormStep({
           </Button>
           <Button
             onClick={form.submit}
-            disabled={
-              form.pending ||
-              (!txId && (!form.source || form.sourceOptions === null)) ||
-              (form.transferActive && !form.transferDraft.selected) ||
-              (form.withdrawalActive && !form.withdrawalDraft.totalFilled)
-            }
+            disabled={form.pending || !form.canSubmit}
           >
             {form.pending && <Loader2Icon className="animate-spin" />}
             {submitLabel}

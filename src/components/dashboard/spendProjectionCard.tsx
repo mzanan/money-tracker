@@ -45,7 +45,7 @@ export function SpendProjectionCard({
   return (
     <Surface padding="md">
       <div className="flex items-center gap-3">
-        <IconCircle className="bg-primary/10 text-primary">
+        <IconCircle tone="primary">
           <TrendingUpIcon className="size-4" />
         </IconCircle>
         <span className="text-eyebrow">

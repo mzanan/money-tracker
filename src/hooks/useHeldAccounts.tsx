@@ -1,34 +1,15 @@
 "use client";
 
-import { createContext, useContext, useMemo } from "react";
+import { useMemo } from "react";
 
 import { heldSourceSet, type HeldAccounts } from "@/lib/accountPurpose";
 
-const HeldAccountsContext = createContext<HeldAccounts | null>(null);
+import { createStrictContext } from "./createStrictContext";
 
-export function HeldAccountsProvider({
-  value,
-  children,
-}: {
-  value: HeldAccounts;
-  children: React.ReactNode;
-}) {
-  return (
-    <HeldAccountsContext.Provider value={value}>
-      {children}
-    </HeldAccountsContext.Provider>
-  );
-}
+const [HeldAccountsProvider, useHeldAccounts] =
+  createStrictContext<HeldAccounts>("useHeldAccounts");
 
-export function useHeldAccounts(): HeldAccounts {
-  const held = useContext(HeldAccountsContext);
-  if (!held) {
-    throw new Error(
-      "useHeldAccounts must be used inside <HeldAccountsProvider>",
-    );
-  }
-  return held;
-}
+export { HeldAccountsProvider, useHeldAccounts };
 
 export function useHeldSources(): ReadonlySet<string> {
   const held = useHeldAccounts();

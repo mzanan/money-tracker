@@ -32,7 +32,7 @@ export function UnusualExpensesCard({
   return (
     <Surface padding="md" className="grid gap-3">
       <div className="flex items-center gap-3">
-        <IconCircle className="bg-primary/10 text-primary">
+        <IconCircle tone="primary">
           <AlertTriangleIcon className="size-4" />
         </IconCircle>
         <span className="text-eyebrow">Daily or not?</span>

@@ -7,7 +7,7 @@ import { cookies } from "next/headers";
 import { ActionError } from "@/lib/actionError";
 import { normalizeSource } from "@/lib/constants/sources";
 import { isValidAmountForCurrency, roundToScale } from "@/lib/currency";
-import { daysBefore, isValidCalendarDate, todayInTz } from "@/lib/dates";
+import { daysBefore, isValidCalendarDate } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { user_settings } from "@/lib/db/schema";
 import { findCrossSourceCandidates } from "@/lib/data/duplicates";
@@ -25,7 +25,7 @@ import { feeOnlyDraft, isSyncedMovement } from "@/lib/ledger/edits";
 import { simpleFlow } from "@/lib/ledger/movements";
 import type { LedgerDraft } from "@/lib/ledger/posting";
 import { hasStorageScale } from "@/lib/ledger/scale";
-import { resolveTimezone } from "@/lib/preferences.server";
+import { userToday } from "@/lib/preferences.server";
 import { getRates } from "@/lib/rates";
 import { getUser } from "@/lib/session";
 import { manualFeeNote, transactionContentHash } from "@/lib/transactions";
@@ -99,7 +99,7 @@ export async function importScreenshotRows(input: {
   if (!settings) return { ok: false, error: "Settings not found" };
 
   const scaleOf = await getScaleOf();
-  const today = todayInTz(await resolveTimezone(settings.timezone));
+  const today = await userToday(settings.timezone);
   const oldestPlausible = daysBefore(today, 365);
 
   let imported = 0;
@@ -228,7 +228,7 @@ export async function previewCandidatesAction(
     .where(eq(user_settings.user_id, user.id))
     .limit(1)
     .then((rows) => rows[0]);
-  const today = todayInTz(await resolveTimezone(settings?.timezone));
+  const today = await userToday(settings?.timezone);
 
   const queries = rows.map((row) => ({
     userId: user.id,

@@ -1,14 +1,16 @@
 "use client";
 
-import { createContext, useContext } from "react";
-
 import { getDeviceTimezone } from "@/lib/dates";
 
+import { createStrictContext } from "./createStrictContext";
 import { useDeviceTimezoneCookie } from "./useDeviceTimezoneCookie";
 
 import type { ClientSettings } from "@/types/db";
 
-const SettingsContext = createContext<ClientSettings | null>(null);
+const [SettingsValueProvider, useSettings] =
+  createStrictContext<ClientSettings>("useSettings");
+
+export { useSettings };
 
 export function SettingsProvider({
   value,
@@ -19,18 +21,8 @@ export function SettingsProvider({
 }) {
   useDeviceTimezoneCookie();
   return (
-    <SettingsContext.Provider value={value}>
-      {children}
-    </SettingsContext.Provider>
+    <SettingsValueProvider value={value}>{children}</SettingsValueProvider>
   );
-}
-
-export function useSettings(): ClientSettings {
-  const settings = useContext(SettingsContext);
-  if (!settings) {
-    throw new Error("useSettings must be used inside <SettingsProvider>");
-  }
-  return settings;
 }
 
 export function useTimezone(): string {
