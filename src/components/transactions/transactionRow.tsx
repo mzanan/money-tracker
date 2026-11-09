@@ -16,8 +16,11 @@ import {
   CircleCheckIcon,
 } from "lucide-react";
 
+import type { MouseEvent } from "react";
+
 import { formatDayShort } from "@/lib/dates";
 import { computeNextDue } from "@/lib/reminders";
+import { isRowOwnClick } from "@/lib/rowClick";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -44,6 +47,8 @@ import { MoveToCashStep } from "./moveToCashStep";
 import { SourceEditor } from "./sourceEditor";
 import { SourceEditorStep } from "./sourceEditorStep";
 import { TagChips } from "./tagChips";
+import { TransactionDetailDialog } from "./transactionDetailDialog";
+import { TransactionDetailStep } from "./transactionDetailStep";
 import { TransferBadge } from "./transferBadge";
 import { useTransactionRow } from "./useTransactionRow";
 
@@ -93,6 +98,7 @@ export function TransactionRow({
     duplicate,
     moveToCash,
     creditDialog,
+    detailDialog,
     inTransit,
     canMoveToCash,
     canUndoMoveToCash,
@@ -247,6 +253,27 @@ export function TransactionRow({
     }
   }
 
+  function openDetail() {
+    if (stepApi) {
+      stepApi.push({
+        key: `detail-${tx.id}`,
+        content: (
+          <TransactionDetailStep movement={movement} onBack={stepApi.pop} />
+        ),
+      });
+    } else {
+      detailDialog.openNow();
+    }
+  }
+
+  function handleRowClick(event: MouseEvent<HTMLDivElement>) {
+    if (txSelectMode) {
+      toggleSelected();
+    } else if (isRowOwnClick(event.target, event.currentTarget)) {
+      openDetail();
+    }
+  }
+
   function openMoveToCash() {
     if (stepApi) {
       runAfterMenuClose(() =>
@@ -269,10 +296,9 @@ export function TransactionRow({
   return (
     <TappableRow
       as="div"
-      onClick={txSelectMode ? toggleSelected : undefined}
+      onClick={handleRowClick}
       className={cn(
-        "group min-w-0",
-        txSelectMode && "cursor-pointer",
+        "group min-w-0 cursor-pointer",
         isSelected && "bg-primary/10 hover:bg-primary/15",
       )}
     >
@@ -500,6 +526,13 @@ export function TransactionRow({
           txNote={tx.note}
           open={moveToCash.open}
           onOpenChange={moveToCash.setOpen}
+        />
+      )}
+      {detailDialog.mounted && (
+        <TransactionDetailDialog
+          movement={movement}
+          open={detailDialog.open}
+          onOpenChange={detailDialog.setOpen}
         />
       )}
       {duplicate.mounted && (

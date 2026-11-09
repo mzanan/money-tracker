@@ -1,4 +1,5 @@
 import { EntrySuggestionCatalogProvider } from "@/hooks/useEntrySuggestionCatalog";
+import { LedgerMovementsProvider } from "@/hooks/useLedgerMovements";
 import { RatesByDateProvider } from "@/hooks/useRatesByDate";
 import { buildEntrySuggestions } from "@/lib/entrySuggestions";
 import type { LedgerData } from "@/types/ledger";
@@ -12,11 +13,13 @@ export function LedgerProviders({
 }) {
   return (
     <RatesByDateProvider value={ledger.ratesByDate}>
-      <EntrySuggestionCatalogProvider
-        value={buildEntrySuggestions(ledger.movements)}
-      >
-        {children}
-      </EntrySuggestionCatalogProvider>
+      <LedgerMovementsProvider value={ledger.movements}>
+        <EntrySuggestionCatalogProvider
+          value={buildEntrySuggestions(ledger.movements)}
+        >
+          {children}
+        </EntrySuggestionCatalogProvider>
+      </LedgerMovementsProvider>
     </RatesByDateProvider>
   );
 }

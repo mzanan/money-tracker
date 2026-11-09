@@ -77,6 +77,7 @@ export function useTransactionRow(
   const duplicate = useDialogState(runAfterMenuClose);
   const moveToCash = useDialogState(runAfterMenuClose);
   const creditDialog = useDialogState(runAfterMenuClose);
+  const detailDialog = useDialogState(runAfterMenuClose);
   const inTransit = isFeeRemnant(movement) ? null : pendingTransfer(movement);
 
   const readOnly = isFeeRemnant(movement);
@@ -259,6 +260,7 @@ export function useTransactionRow(
     duplicate,
     moveToCash,
     creditDialog,
+    detailDialog,
     inTransit,
     canMoveToCash,
     canUndoMoveToCash,
