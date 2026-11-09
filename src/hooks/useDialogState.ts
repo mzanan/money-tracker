@@ -19,7 +19,7 @@ export function useDialogState(runAfterMenuClose: (fn: () => void) => void) {
 
   function openNow() {
     mountFresh();
-    setOpen(true);
+    requestAnimationFrame(() => setOpen(true));
   }
 
   return { open, setOpen, mounted, key, openDialog, openNow };

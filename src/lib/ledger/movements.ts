@@ -321,3 +321,29 @@ export function pendingTransfers(
     .filter((movement) => pendingTransfer(movement) !== null)
     .sort((a, b) => a.occurredOn.localeCompare(b.occurredOn));
 }
+
+export function fullMovement(
+  movements: ReadonlyArray<Movement>,
+  movement: Movement,
+): Movement {
+  const id = ledgerTransactionId(movement);
+  const parts = movements.filter(
+    (candidate) =>
+      !isFeeRemnant(candidate) && ledgerTransactionId(candidate) === id,
+  );
+  if (parts.length === 0) return movement;
+  const lines = new Map<string, MovementLine>();
+  for (const part of parts) {
+    for (const line of part.lines) lines.set(line.id, line);
+  }
+  const first = [...parts].sort((a, b) =>
+    a.occurredOn.localeCompare(b.occurredOn),
+  )[0];
+  return {
+    ...first,
+    id,
+    budgetMonth: parts.find((part) => part.budgetMonth)?.budgetMonth ?? null,
+    lines: [...lines.values()],
+    leg: null,
+  };
+}
