@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 
 import { useRatesByDate } from "@/hooks/useRatesByDate";
+import { useHeldSources } from "@/hooks/useHeldAccounts";
 import { useSettings, useTimezone } from "@/hooks/useSettings";
+import { homeHiddenSources } from "@/lib/constants/sources";
 import { ALL_SOURCES } from "@/lib/constants/sources";
 import { todayInTz } from "@/lib/dates";
 import { applyListFilters, filterByAmount, initialSource } from "@/lib/filters";
@@ -47,6 +49,7 @@ export function useDashboardControls({
   sources: string[];
 }) {
   const settings = useSettings();
+  const heldSources = useHeldSources();
   const timezone = useTimezone();
   const ratesByDate = useRatesByDate();
   const today = todayInTz(timezone);
@@ -56,7 +59,7 @@ export function useDashboardControls({
     initialSource(
       settings.default_source,
       sources,
-      settings.archived_sources,
+      homeHiddenSources(settings.archived_sources ?? [], heldSources),
     ),
   );
   const [selectedKind, setSelectedKind] = useState<KindFilter>("all");

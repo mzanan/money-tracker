@@ -2,7 +2,9 @@ import {
   resolveSourceLabel,
   type AccountLabels,
 } from "@/lib/constants/sources";
+import { heldAccountSummary, type HeldAccounts } from "@/lib/accountPurpose";
 import { formatMoney } from "@/lib/currency";
+import type { HeldItem } from "@/lib/ledger/scope";
 import type { CrossCurrencyFlow } from "@/types/ledger";
 
 export const ESTIMATE_PREFIX = "≈ ";
@@ -82,6 +84,31 @@ export function heldHint(
 ): string | null {
   if (accountNames.length === 0) return null;
   return `${formatMoney(amount, currency)} on hold · ${accountNames.join(", ")}`;
+}
+
+export interface HeldRow {
+  source: string;
+  label: string;
+  meta: string | null;
+  amount: string;
+}
+
+export function heldRows(
+  items: ReadonlyArray<HeldItem>,
+  held: HeldAccounts,
+  labels: AccountLabels,
+): HeldRow[] {
+  return items.map((item) => {
+    const account = held[item.source];
+    return {
+      source: item.source,
+      label: resolveSourceLabel(item.source, labels),
+      meta: account ? heldAccountSummary(account) : null,
+      amount: item.balances
+        .map((money) => formatMoney(money.amount, money.currency))
+        .join(" · "),
+    };
+  });
 }
 
 export function transitBannerDetail(amountText: string, route: string): string {

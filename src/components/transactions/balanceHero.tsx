@@ -18,6 +18,7 @@ import { BalanceHint } from "./balanceHint";
 import { BalanceLine } from "./balanceLine";
 import { DaySpendView } from "./daySpendView";
 import { MiniStat } from "./miniStat";
+import { OnHoldDrawer } from "./onHoldDrawer";
 import { PeriodNav } from "./periodNav";
 import { TodayButton } from "./todayButton";
 import { useBalanceHero } from "./useBalanceHero";
@@ -72,6 +73,9 @@ export function BalanceHero({
     totalInBase,
     pendingText,
     heldText,
+    heldRows,
+    heldOpen,
+    setHeldOpen,
     incomeInBase,
     expenseInBase,
     netInBase,
@@ -136,7 +140,18 @@ export function BalanceHero({
             {mask(totalSigned)}
           </p>
           {pendingText && <BalanceHint text={mask(pendingText)} />}
-          {heldText && <BalanceHint text={mask(heldText)} />}
+          {heldText && (
+            <BalanceHint
+              text={mask(heldText)}
+              onClick={() => setHeldOpen(true)}
+            />
+          )}
+          <OnHoldDrawer
+            rows={heldRows}
+            mask={mask}
+            open={heldOpen}
+            onOpenChange={setHeldOpen}
+          />
           {showBase && (
             <p className="mt-1 h-4">
               {totalInBase && (

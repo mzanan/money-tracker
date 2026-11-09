@@ -1,5 +1,7 @@
+import { inAccountGroup, type AccountGroup } from "@/lib/accountPurpose";
 import {
   getAccountCurrencies,
+  getHeldAccounts,
   listAccounts,
   resolveSourceLabel,
 } from "@/lib/data/accounts";
@@ -18,7 +20,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AddAccountRow } from "./addAccountRow";
 import { ImportedAccountRow } from "./importedAccountRow";
 
-export async function ImportedAccountsCard() {
+export async function ImportedAccountsCard({ group }: { group: AccountGroup }) {
   const user = await getUser();
   if (!user) return null;
 
@@ -30,6 +32,7 @@ export async function ImportedAccountsCard() {
     declaredCurrencies,
     suggestedCurrencies,
     openings,
+    held,
   ] = await Promise.all([
     getImportedSources(user.id),
     listAccounts(user.id),
@@ -38,6 +41,7 @@ export async function ImportedAccountsCard() {
     getAccountCurrencies(user.id),
     getSuggestedAccountCurrencies(user.id),
     getOpeningBalances(user.id),
+    getHeldAccounts(user.id),
   ]);
 
   const accountLabels = Object.fromEntries(
@@ -51,6 +55,7 @@ export async function ImportedAccountsCard() {
   ]);
 
   const rows = Array.from(sources)
+    .filter((source) => inAccountGroup(source, held, group))
     .map((source) => ({
       source,
       count: counts.get(source) ?? 0,
@@ -68,7 +73,7 @@ export async function ImportedAccountsCard() {
       <CardContent className="grid divide-y">
         {rows.length === 0 && (
           <p className="text-muted-foreground py-2 text-xs">
-            No transactions yet.
+            {group === "held" ? "Nothing on hold." : "No transactions yet."}
           </p>
         )}
         {rows.map((row) => (
@@ -84,7 +89,7 @@ export async function ImportedAccountsCard() {
             integration={row.integration}
           />
         ))}
-        <AddAccountRow />
+        {group === "spendable" && <AddAccountRow />}
       </CardContent>
     </Card>
   );

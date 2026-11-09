@@ -78,3 +78,13 @@ export function accountRowMeta(
       : "No transactions yet";
   return held ? `${heldAccountSummary(held)} · ${transactions}` : transactions;
 }
+
+export type AccountGroup = "spendable" | "held";
+
+export function inAccountGroup(
+  source: string,
+  held: HeldAccounts,
+  group: AccountGroup,
+): boolean {
+  return source in held === (group === "held");
+}

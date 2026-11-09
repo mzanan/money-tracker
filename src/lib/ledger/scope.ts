@@ -14,6 +14,7 @@ import { isNegligible } from "@/lib/currency";
 import { convertAsOf, lineValue } from "@/lib/ledger/valuation";
 import type {
   FlowKind,
+  Money,
   Movement,
   MovementAmount,
   MovementLine,
@@ -138,12 +139,15 @@ export function scopeBalance(
   return balanceWhere(movements, counts, displayCurrency, ratesByDate, asOf);
 }
 
-export function openHeldSources(
+export interface HeldItem {
+  source: string;
+  balances: Money[];
+}
+
+export function heldItems(
   movements: ReadonlyArray<Movement>,
-  scope: MovementScope,
   heldSources: ReadonlySet<string>,
-): string[] {
-  if (!isAllScope(scope)) return [];
+): HeldItem[] {
   const bySource = new Map<string, Map<string, number>>();
   for (const movement of movements) {
     for (const line of assetLines(movement)) {
@@ -154,10 +158,22 @@ export function openHeldSources(
     }
   }
   return [...bySource]
-    .filter(([, native]) =>
-      [...native.values()].some((amount) => !isNegligible(amount)),
-    )
-    .map(([source]) => source);
+    .map(([source, native]) => ({
+      source,
+      balances: [...native]
+        .filter(([, amount]) => !isNegligible(amount))
+        .map(([currency, amount]) => ({ amount, currency })),
+    }))
+    .filter((item) => item.balances.length > 0);
+}
+
+export function openHeldSources(
+  movements: ReadonlyArray<Movement>,
+  scope: MovementScope,
+  heldSources: ReadonlySet<string>,
+): string[] {
+  if (!isAllScope(scope)) return [];
+  return heldItems(movements, heldSources).map((item) => item.source);
 }
 
 export function heldBalance(

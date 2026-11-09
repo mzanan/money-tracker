@@ -41,6 +41,13 @@ export function withoutArchived(
   return sources.filter((source) => !archived.includes(source));
 }
 
+export function homeHiddenSources(
+  archived: ReadonlyArray<string>,
+  held: ReadonlySet<string>,
+): string[] {
+  return [...archived, ...held];
+}
+
 export function addableSources(
   sources: ReadonlyArray<string>,
   archived: ReadonlyArray<string>,

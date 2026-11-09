@@ -80,7 +80,13 @@ export default async function SettingsPage({
               title="Accounts"
               hint="Create, rename, remove or wipe an account."
             >
-              <ImportedAccountsCard />
+              <ImportedAccountsCard group="spendable" />
+            </Section>
+            <Section
+              title="On hold"
+              hint="Deposits and loans. Yours, but out of your balance."
+            >
+              <ImportedAccountsCard group="held" />
             </Section>
             <Section
               title="Integrations"
