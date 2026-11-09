@@ -304,7 +304,7 @@ export function TransactionRow({
         <span className="flex min-w-0 items-center gap-1.5">
           <span
             className={cn(
-              "text-foreground text-sm leading-tight font-medium",
+              "text-foreground text-sm leading-tight font-medium first-letter:uppercase",
               description ? "min-w-0 truncate" : "shrink-0",
             )}
           >
