@@ -3,10 +3,12 @@
 import { useEffect } from "react";
 
 import { useAccountLabels } from "@/hooks/useAccountLabels";
+import { useHeldSources } from "@/hooks/useHeldAccounts";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
 import { syncIntegration } from "@/lib/actions/integrations";
 import {
+  homeHiddenSources,
   kindOfSource,
   resolveSourceLabel,
   tabSourcesFrom,
@@ -29,16 +31,19 @@ export function useSourceFilter({
   const { run, pending } = useServerAction();
   const kind = selected === "all" ? null : kindOfSource(selected);
 
-  const archivedSources = settings.archived_sources ?? [];
+  const heldSources = useHeldSources();
+  const hiddenSources = homeHiddenSources(
+    settings.archived_sources ?? [],
+    heldSources,
+  );
   const allTabSources = tabSourcesFrom(sources);
-  const tabSources = withoutArchived(allTabSources, archivedSources);
+  const tabSources = withoutArchived(allTabSources, hiddenSources);
 
-  const selectedArchived =
-    selected !== "all" && archivedSources.includes(selected);
+  const selectedHidden = selected !== "all" && hiddenSources.includes(selected);
 
   useEffect(() => {
-    if (selectedArchived) onChange("all");
-  }, [selectedArchived, onChange]);
+    if (selectedHidden) onChange("all");
+  }, [selectedHidden, onChange]);
 
   function labelOf(source: string) {
     return resolveSourceLabel(source, accountLabels);

@@ -2,8 +2,12 @@ import {
   resolveSourceLabel,
   type AccountLabels,
 } from "@/lib/constants/sources";
+import { heldAccountSummary, type HeldAccounts } from "@/lib/accountPurpose";
 import { formatMoney } from "@/lib/currency";
-import type { CrossCurrencyFlow } from "@/types/ledger";
+import { formatDateShort } from "@/lib/dates";
+import { assetLines, sourcesOf } from "@/lib/ledger/movements";
+import type { HeldItem } from "@/lib/ledger/scope";
+import type { CrossCurrencyFlow, Movement } from "@/types/ledger";
 
 export const ESTIMATE_PREFIX = "≈ ";
 
@@ -82,6 +86,67 @@ export function heldHint(
 ): string | null {
   if (accountNames.length === 0) return null;
   return `${formatMoney(amount, currency)} on hold · ${accountNames.join(", ")}`;
+}
+
+export interface HeldRow {
+  source: string;
+  label: string;
+  meta: string | null;
+  amount: string;
+  currencies: string[];
+}
+
+export function heldRows(
+  items: ReadonlyArray<HeldItem>,
+  held: HeldAccounts,
+  labels: AccountLabels,
+): HeldRow[] {
+  return items.map((item) => {
+    const account = held[item.source];
+    return {
+      source: item.source,
+      label: resolveSourceLabel(item.source, labels),
+      meta: account ? heldAccountSummary(account) : null,
+      amount: item.balances
+        .map((money) => formatMoney(money.amount, money.currency))
+        .join(" · "),
+      currencies: item.balances.map((money) => money.currency),
+    };
+  });
+}
+
+export interface HeldHistoryRow {
+  id: string;
+  date: string;
+  label: string;
+  amount: string;
+  positive: boolean;
+}
+
+export function heldHistory(
+  movements: ReadonlyArray<Movement>,
+  source: string,
+  labels: AccountLabels,
+): HeldHistoryRow[] {
+  return movements.flatMap((movement) => {
+    const lines = assetLines(movement, source);
+    if (lines.length === 0) return [];
+    const currency = lines[0].currency;
+    const amount = lines
+      .filter((line) => line.currency === currency)
+      .reduce((total, line) => total + line.amount, 0);
+    const other = sourcesOf(movement).find((key) => key !== source);
+    return [
+      {
+        id: movement.id,
+        date: formatDateShort(movement.occurredOn),
+        label:
+          movement.note?.trim() || resolveSourceLabel(other ?? source, labels),
+        amount: formatMoney(amount, currency, { signed: true }),
+        positive: amount >= 0,
+      },
+    ];
+  });
 }
 
 export function transitBannerDetail(amountText: string, route: string): string {

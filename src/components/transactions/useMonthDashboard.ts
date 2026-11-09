@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useRatesByDate } from "@/hooks/useRatesByDate";
+import { useHeldSources } from "@/hooks/useHeldAccounts";
 import { useSettings } from "@/hooks/useSettings";
 import { hasBudgetMonthOverride } from "@/lib/ledger/carriedOver";
 import { onScopedDate } from "@/lib/ledger/scope";
-import { addableSources } from "@/lib/constants/sources";
+import { addableSources, homeHiddenSources } from "@/lib/constants/sources";
 import { activeListFilterCount, listFilterChoices } from "@/lib/filters";
 import { detectRecurringNotes } from "@/lib/unusualExpenses";
 import {
@@ -49,6 +50,7 @@ export function useMonthDashboard({
   sources: string[];
 }) {
   const settings = useSettings();
+  const heldSources = useHeldSources();
   const ratesByDate = useRatesByDate();
   const [selectedYearMonth, setSelectedYearMonth] = useState(yearMonth);
 
@@ -156,8 +158,11 @@ export function useMonthDashboard({
 
   const addSources = useMemo(
     () =>
-      addableSources(sources, settings.archived_sources ?? []),
-    [sources, settings.archived_sources],
+      addableSources(
+        sources,
+        homeHiddenSources(settings.archived_sources ?? [], heldSources),
+      ),
+    [sources, settings.archived_sources, heldSources],
   );
 
   const panelOpen = c.panel !== "none";

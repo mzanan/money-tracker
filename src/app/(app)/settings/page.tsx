@@ -12,6 +12,7 @@ import { IntegrationsCard } from "@/components/settings/integrationsCard";
 import { SettingsForm } from "@/components/settings/settingsForm";
 import { SettingsTabs } from "@/components/settings/settingsTabs";
 import { Button } from "@/components/ui/button";
+import { ON_HOLD_HINT } from "@/lib/accountPurpose";
 import { getCsvSources } from "@/lib/data/sources";
 import { requireUser } from "@/lib/session";
 
@@ -80,7 +81,10 @@ export default async function SettingsPage({
               title="Accounts"
               hint="Create, rename, remove or wipe an account."
             >
-              <ImportedAccountsCard />
+              <ImportedAccountsCard group="spendable" />
+            </Section>
+            <Section title="On hold" hint={ON_HOLD_HINT}>
+              <ImportedAccountsCard group="held" />
             </Section>
             <Section
               title="Integrations"

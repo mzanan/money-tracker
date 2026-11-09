@@ -1,5 +1,5 @@
 import { ActionError } from "@/lib/actionError";
-import { and, between, eq, inArray, like, min } from "drizzle-orm";
+import { and, between, eq, inArray, like, min, sum } from "drizzle-orm";
 
 import { getAccountLabels } from "@/lib/data/accounts";
 import { db } from "@/lib/db";
@@ -403,6 +403,29 @@ export async function transactionIdForExternalId(
       ),
     );
   return row?.id ?? null;
+}
+
+export async function sourceBalanceMinor(
+  userId: string,
+  source: string,
+  currency: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ total: sum(ledger_entries.amount) })
+    .from(ledger_entries)
+    .innerJoin(
+      ledger_accounts,
+      eq(ledger_entries.account_id, ledger_accounts.id),
+    )
+    .where(
+      and(
+        eq(ledger_entries.user_id, userId),
+        eq(ledger_accounts.kind, "asset"),
+        eq(ledger_accounts.key, source),
+        eq(ledger_accounts.currency, currency),
+      ),
+    );
+  return Number(row?.total ?? 0);
 }
 
 export async function firstSourceDate(
