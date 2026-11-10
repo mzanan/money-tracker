@@ -29,9 +29,13 @@ export function TagChip({
         onClick={onSelect}
         aria-label={`Add ${tag}`}
         style={style}
-        className={cn(base, "max-w-[10rem] cursor-pointer truncate", className)}
+        className={cn(
+          base,
+          "max-w-[10rem] cursor-pointer overflow-hidden",
+          className,
+        )}
       >
-        {tag}
+        <span className="truncate">{tag}</span>
       </button>
     );
   }

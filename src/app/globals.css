@@ -318,9 +318,6 @@
     background-color: hsl(var(--tag-h, 0) 32% 22%);
     color: hsl(var(--tag-h, 0) 60% 78%);
   }
-  .tag-dot {
-    background-color: hsl(var(--tag-h, 0) 55% 55%);
-  }
 }
 
 body[data-scroll-locked] {

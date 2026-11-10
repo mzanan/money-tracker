@@ -50,8 +50,9 @@ export function OverflowRow({
           hiddenCount === 0 && "invisible absolute",
         )}
       >
-        <Badge variant="secondary" aria-label={`${hiddenCount} more`}>
-          +{hiddenCount}
+        <Badge variant="secondary">
+          <span aria-hidden>+{hiddenCount}</span>
+          <span className="sr-only">{hiddenCount} more</span>
         </Badge>
       </span>
     </div>

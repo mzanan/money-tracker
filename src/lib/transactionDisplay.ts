@@ -176,7 +176,11 @@ export function transferToast(
   return `${inTransit ? "In transit" : "Transfer"} · ${formatMoney(amount, currency)}`;
 }
 
-export type RowChipItem = { key: string; kind: "badge" | "tag"; label: string };
+export interface RowChipItem {
+  key: string;
+  kind: "badge" | "tag";
+  label: string;
+}
 
 export function rowChipItems({
   badgeLabel,
