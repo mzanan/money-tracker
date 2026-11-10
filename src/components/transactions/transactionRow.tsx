@@ -26,12 +26,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { OverflowRow } from "@/components/ui/overflowRow";
 import { TappableRow } from "@/components/ui/tappableRow";
 import { ReminderForm } from "@/components/reminders/reminderForm";
 import { ReminderFormStep } from "@/components/reminders/reminderFormStep";
 
 import { Avatar } from "./avatar";
-import { BudgetMonthBadge } from "./budgetMonthBadge";
 import { TransactionFormDialog } from "./transactionFormDialog";
 import { TransactionFormStep } from "./transactionFormStep";
 import { MarkTransferDialog } from "./markTransferDialog";
@@ -42,10 +42,9 @@ import { MoveToCashDialog } from "./moveToCashDialog";
 import { MoveToCashStep } from "./moveToCashStep";
 import { SourceEditor } from "./sourceEditor";
 import { SourceEditorStep } from "./sourceEditorStep";
-import { TagChips } from "./tagChips";
 import { TransactionDetailDialog } from "./transactionDetailDialog";
 import { TransactionDetailStep } from "./transactionDetailStep";
-import { TransferBadge } from "./transferBadge";
+import { RowChip } from "./rowChip";
 import { useTransactionRow } from "./useTransactionRow";
 
 import type { MovementScope } from "@/lib/ledger/scope";
@@ -77,7 +76,6 @@ export function TransactionRow({
     canToggleFixed,
     canUndoTransfer,
     canMarkTransfer,
-    badgeLabel,
     handleRowClick,
     amountText,
     convertedText,
@@ -102,7 +100,7 @@ export function TransactionRow({
     canUndoMoveToCash,
     canShiftMonth,
     isMovedOut,
-    isCarriedOver,
+    chips,
     budgetMonthLabel,
     handleUndoTransfer,
     handleUndoMoveToCash,
@@ -256,7 +254,11 @@ export function TransactionRow({
       stepApi.push({
         key: `detail-${tx.id}`,
         content: (
-          <TransactionDetailStep movement={movement} onBack={stepApi.pop} />
+          <TransactionDetailStep
+            movement={movement}
+            chips={chips}
+            onBack={stepApi.pop}
+          />
         ),
       });
     } else {
@@ -301,27 +303,14 @@ export function TransactionRow({
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <span
-            className={cn(
-              "text-foreground text-sm leading-tight font-medium first-letter:uppercase",
-              description ? "min-w-0 truncate" : "shrink-0",
-            )}
-          >
-            {description || sourceLabel}
-          </span>
-          {badgeLabel && <TransferBadge>{badgeLabel}</TransferBadge>}
-          {isCarriedOver && (
-            <BudgetMonthBadge
-              direction="from"
-              yearMonth={tx.occurredOn.slice(0, 7)}
-            />
-          )}
-          {isMovedOut && tx.budgetMonth && (
-            <BudgetMonthBadge direction="to" yearMonth={tx.budgetMonth} />
-          )}
-          <TagChips tags={tx.tags} />
+        <span className="text-foreground block truncate text-sm leading-tight font-medium first-letter:uppercase">
+          {description || sourceLabel}
         </span>
+        <OverflowRow className="mt-1">
+          {chips.map((chip) => (
+            <RowChip key={chip.key} chip={chip} />
+          ))}
+        </OverflowRow>
         {(showDate || description) && (
           <span className="text-muted-foreground text-meta mt-0.5 block truncate">
             {showDate && formatDayShort(tx.occurredOn)}
@@ -516,6 +505,7 @@ export function TransactionRow({
       {detailDialog.mounted && (
         <TransactionDetailDialog
           movement={movement}
+          chips={chips}
           open={detailDialog.open}
           onOpenChange={detailDialog.setOpen}
         />

@@ -6,14 +6,15 @@ import {
 
 import { IconCircle } from "@/components/ui/iconCircle";
 import { Separator } from "@/components/ui/separator";
-import { TagChip } from "@/components/ui/tagChip";
 import type {
   DetailDirection,
   TransactionDetail,
 } from "@/lib/transactionDetail";
+import type { RowChipItem } from "@/lib/transactionDisplay";
 import { cn } from "@/lib/utils";
 
 import copy from "./transactionDetail.json";
+import { RowChip } from "./rowChip";
 import { TransactionDetailRows } from "./transactionDetailRows";
 import { TransactionDetailSection } from "./transactionDetailSection";
 
@@ -25,9 +26,11 @@ const DIRECTION_ICONS: Record<DetailDirection, typeof ArrowUpRightIcon> = {
 
 export function TransactionDetailBody({
   detail,
+  chips,
   mask,
 }: {
   detail: TransactionDetail;
+  chips: RowChipItem[];
   mask: (text: string) => string;
 }) {
   const Icon = DIRECTION_ICONS[detail.direction];
@@ -77,11 +80,11 @@ export function TransactionDetailBody({
           </p>
         </TransactionDetailSection>
       )}
-      {detail.tags.length > 0 && (
+      {chips.length > 0 && (
         <TransactionDetailSection label={copy.tags}>
           <div className="flex flex-wrap gap-1">
-            {detail.tags.map((tag) => (
-              <TagChip key={tag} tag={tag} />
+            {chips.map((chip) => (
+              <RowChip key={chip.key} chip={chip} />
             ))}
           </div>
         </TransactionDetailSection>
