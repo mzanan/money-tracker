@@ -41,7 +41,6 @@ export interface TransactionDetail {
   breakdown: DetailRow[];
   result: DetailRow[];
   comment: string | null;
-  tags: string[];
 }
 
 const TYPE_LABELS: Record<MovementType, string> = {
@@ -363,6 +362,5 @@ export function transactionDetail(
     breakdown: breakdown.map((row) => toDetailRow(row, movement, multiDate)),
     result: result.map((row) => toDetailRow(row, movement, multiDate)),
     comment: movement.comment?.trim() || null,
-    tags: movement.tags,
   };
 }

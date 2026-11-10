@@ -40,9 +40,9 @@ export function TagChip({
     return (
       <span
         style={style}
-        className={cn(base, "max-w-[10rem] truncate", className)}
+        className={cn(base, "max-w-[10rem] overflow-hidden", className)}
       >
-        {tag}
+        <span className="truncate">{tag}</span>
       </span>
     );
   }

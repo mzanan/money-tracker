@@ -9,6 +9,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import type { RowChipItem } from "@/lib/transactionDisplay";
 import type { Movement } from "@/types/ledger";
 
 import copy from "./transactionDetail.json";
@@ -17,10 +18,12 @@ import { useTransactionDetail } from "./useTransactionDetail";
 
 export function TransactionDetailDialog({
   movement,
+  chips,
   open,
   onOpenChange,
 }: {
   movement: Movement;
+  chips: RowChipItem[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -35,7 +38,7 @@ export function TransactionDetailDialog({
           <DrawerDescription>{detail.date}</DrawerDescription>
         </DrawerHeader>
         <DrawerBody>
-          <TransactionDetailBody detail={detail} mask={mask} />
+          <TransactionDetailBody detail={detail} chips={chips} mask={mask} />
         </DrawerBody>
       </DrawerContent>
     </Drawer>

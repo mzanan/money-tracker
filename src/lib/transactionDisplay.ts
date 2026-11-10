@@ -4,7 +4,7 @@ import {
 } from "@/lib/constants/sources";
 import { heldAccountSummary, type HeldAccounts } from "@/lib/accountPurpose";
 import { formatMoney } from "@/lib/currency";
-import { formatDateShort } from "@/lib/dates";
+import { formatDateShort, formatMonthShort } from "@/lib/dates";
 import { assetLines, sourcesOf } from "@/lib/ledger/movements";
 import type { HeldItem } from "@/lib/ledger/scope";
 import type { CrossCurrencyFlow, Movement } from "@/types/ledger";
@@ -174,4 +174,38 @@ export function transferToast(
   inTransit: boolean,
 ): string {
   return `${inTransit ? "In transit" : "Transfer"} · ${formatMoney(amount, currency)}`;
+}
+
+export type RowChipItem = { key: string; kind: "badge" | "tag"; label: string };
+
+export function rowChipItems({
+  badgeLabel,
+  carriedFrom,
+  movedTo,
+  tags,
+}: {
+  badgeLabel: string | null;
+  carriedFrom: string | null;
+  movedTo: string | null;
+  tags: string[];
+}): RowChipItem[] {
+  const badges: RowChipItem[] = [
+    badgeLabel && { key: "kind", kind: "badge", label: badgeLabel },
+    carriedFrom && {
+      key: "from",
+      kind: "badge",
+      label: `From ${formatMonthShort(carriedFrom)}`,
+    },
+    movedTo && {
+      key: "to",
+      kind: "badge",
+      label: `Moved to ${formatMonthShort(movedTo)}`,
+    },
+  ].filter((chip): chip is RowChipItem => Boolean(chip));
+  return [
+    ...badges,
+    ...tags.map(
+      (tag): RowChipItem => ({ key: `tag-${tag}`, kind: "tag", label: tag }),
+    ),
+  ];
 }

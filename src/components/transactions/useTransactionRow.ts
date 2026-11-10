@@ -44,6 +44,7 @@ import {
   rowAmountTexts,
   rowBadgeKind,
   rowBadgeLabel,
+  rowChipItems,
   transferLabel,
 } from "@/lib/transactionDisplay";
 import { useRatesByDate } from "@/hooks/useRatesByDate";
@@ -124,6 +125,12 @@ export function useTransactionRow(
     showBudgetMonthBadges && !showDate && hasBudgetMonthOverride(movement);
   const isCarriedOver =
     showBudgetMonthBadges && showDate && hasBudgetMonthOverride(movement);
+  const chips = rowChipItems({
+    badgeLabel,
+    carriedFrom: isCarriedOver ? realMonth : null,
+    movedTo: isMovedOut ? (tx.budgetMonth ?? null) : null,
+    tags: tx.tags,
+  });
   const budgetMonthLabel = tx.budgetMonth
     ? `Move back to ${formatMonthShort(realMonth)}`
     : "Move to next month";
@@ -272,7 +279,6 @@ export function useTransactionRow(
     canToggleFixed,
     canUndoTransfer,
     canMarkTransfer,
-    badgeLabel,
     handleRowClick,
     amountText,
     convertedText,
@@ -297,7 +303,7 @@ export function useTransactionRow(
     canUndoMoveToCash,
     canShiftMonth,
     isMovedOut,
-    isCarriedOver,
+    chips,
     budgetMonthLabel,
     handleUndoTransfer,
     handleUndoMoveToCash,

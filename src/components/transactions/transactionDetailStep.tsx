@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { StepShell } from "@/components/ui/stepShell";
+import type { RowChipItem } from "@/lib/transactionDisplay";
 import type { Movement } from "@/types/ledger";
 
 import copy from "./transactionDetail.json";
@@ -10,9 +11,11 @@ import { useTransactionDetail } from "./useTransactionDetail";
 
 export function TransactionDetailStep({
   movement,
+  chips,
   onBack,
 }: {
   movement: Movement;
+  chips: RowChipItem[];
   onBack: () => void;
 }) {
   const { detail, mask } = useTransactionDetail(movement);
@@ -28,7 +31,7 @@ export function TransactionDetailStep({
         </Button>
       }
     >
-      <TransactionDetailBody detail={detail} mask={mask} />
+      <TransactionDetailBody detail={detail} chips={chips} mask={mask} />
     </StepShell>
   );
 }
