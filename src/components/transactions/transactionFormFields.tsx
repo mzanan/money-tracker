@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { EntrySuggestionList } from "./entrySuggestionList";
 import { KindToggle } from "./kindToggle";
+import { MOVE_TO_CASH_COPY } from "./moveToCashCopy";
 import { DateField } from "@/components/ui/dateField";
 import { TransferCreditFields } from "./transferCreditFields";
 import { TransferFeeSection } from "./transferFeeSection";
@@ -42,6 +43,7 @@ export function TransactionFormFields({
     currencies,
     source,
     setSource,
+    accountEditable,
     description,
     setDescription,
     suggestions,
@@ -66,6 +68,11 @@ export function TransactionFormFields({
     withdrawalToggleAvailable,
     withdrawalActive,
     withdrawalDraft,
+    moveToCash,
+    setMoveToCash,
+    moveToCashAvailable,
+    moveToCashActive,
+    moveToCashDraft,
   } = form;
 
   return (
@@ -99,7 +106,7 @@ export function TransactionFormFields({
         </p>
       )}
 
-      {!txId && (
+      {(!txId || accountEditable) && (
         <div className="grid gap-1.5">
           <Label htmlFor="tx-form-source">Account</Label>
           <AccountSelect
@@ -180,7 +187,9 @@ export function TransactionFormFields({
       {txId && transferActive && (
         <>
           <div className="grid gap-1.5">
-            <Label htmlFor="tx-form-transfer-destination">To account</Label>
+            <Label htmlFor="tx-form-transfer-destination">
+              {kind === "income" ? "From account" : "To account"}
+            </Label>
             <AccountSelect
               id="tx-form-transfer-destination"
               sources={transferDraft.sources}
@@ -248,6 +257,32 @@ export function TransactionFormFields({
           <p className="text-muted-foreground text-xs">
             Books total minus fee on the account. The current amount becomes the
             cash received in the note.
+          </p>
+        </>
+      )}
+
+      {txId && moveToCashAvailable && (
+        <SwitchRow
+          id="tx-form-move-to-cash"
+          label={MOVE_TO_CASH_COPY.title}
+          checked={moveToCash}
+          onCheckedChange={setMoveToCash}
+        />
+      )}
+      {txId && moveToCashActive && (
+        <>
+          <AmountCurrencyField
+            id="tx-form-move-to-cash"
+            label={MOVE_TO_CASH_COPY.amountLabel}
+            value={moveToCashDraft.amount}
+            onChange={moveToCashDraft.setAmount}
+            currency={moveToCashDraft.currency}
+            onCurrencyChange={moveToCashDraft.setCurrency}
+            currencies={moveToCashDraft.currencies}
+            currencyAriaLabel={MOVE_TO_CASH_COPY.currencyAriaLabel}
+          />
+          <p className="text-muted-foreground text-xs">
+            {MOVE_TO_CASH_COPY.description}
           </p>
         </>
       )}

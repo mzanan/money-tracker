@@ -7,7 +7,6 @@ import {
   CheckIcon,
   CopyIcon,
   EllipsisIcon,
-  LandmarkIcon,
   PencilLineIcon,
   PinIcon,
   Trash2Icon,
@@ -34,14 +33,8 @@ import { ReminderFormStep } from "@/components/reminders/reminderFormStep";
 import { Avatar } from "./avatar";
 import { TransactionFormDialog } from "./transactionFormDialog";
 import { TransactionFormStep } from "./transactionFormStep";
-import { MarkTransferDialog } from "./markTransferDialog";
-import { MarkTransferStep } from "./markTransferStep";
 import { CreditTransferDialog } from "./creditTransferDialog";
 import { CreditTransferStep } from "./creditTransferStep";
-import { MoveToCashDialog } from "./moveToCashDialog";
-import { MoveToCashStep } from "./moveToCashStep";
-import { SourceEditor } from "./sourceEditor";
-import { SourceEditorStep } from "./sourceEditorStep";
 import { TransactionDetailDialog } from "./transactionDetailDialog";
 import { TransactionDetailStep } from "./transactionDetailStep";
 import { RowChip } from "./rowChip";
@@ -75,28 +68,23 @@ export function TransactionRow({
     canSetReminder,
     canToggleFixed,
     canUndoTransfer,
-    canMarkTransfer,
     handleRowClick,
     amountText,
     convertedText,
     sourceLabel,
     reminderTitle,
-    canChangeSource,
     canDelete,
     lockAmountFields,
     resolvedFixed,
     editSeed,
     duplicateSeed,
+    editActions,
     reminder,
     edit,
-    transferDialog,
-    source,
     duplicate,
-    moveToCash,
     creditDialog,
     detailDialog,
     inTransit,
-    canMoveToCash,
     canUndoMoveToCash,
     canShiftMonth,
     isMovedOut,
@@ -127,6 +115,7 @@ export function TransactionRow({
               txId={tx.id}
               seed={editSeed}
               locked={lockAmountFields}
+              actions={editActions}
               title="Edit transaction"
               description="Update the details for this transaction."
               submitLabel="Save"
@@ -163,25 +152,6 @@ export function TransactionRow({
     }
   }
 
-  function openChangeAccount() {
-    if (stepApi) {
-      runAfterMenuClose(() =>
-        stepApi.push({
-          key: `source-${tx.id}`,
-          content: (
-            <SourceEditorStep
-              txId={tx.id}
-              txSource={tx.source}
-              onBack={stepApi.pop}
-            />
-          ),
-        }),
-      );
-    } else {
-      source.openDialog();
-    }
-  }
-
   function openSetReminder() {
     if (stepApi) {
       runAfterMenuClose(() =>
@@ -207,29 +177,6 @@ export function TransactionRow({
       );
     } else {
       reminder.openDialog();
-    }
-  }
-
-  function openMarkTransfer() {
-    if (stepApi) {
-      runAfterMenuClose(() =>
-        stepApi.push({
-          key: `transfer-${tx.id}`,
-          content: (
-            <MarkTransferStep
-              txId={tx.id}
-              txSource={tx.source}
-              txCurrency={tx.currency}
-              txAmount={tx.amount}
-              txDate={tx.occurredOn}
-              txKind={tx.kind}
-              onBack={stepApi.pop}
-            />
-          ),
-        }),
-      );
-    } else {
-      transferDialog.openDialog();
     }
   }
 
@@ -263,25 +210,6 @@ export function TransactionRow({
       });
     } else {
       detailDialog.openNow();
-    }
-  }
-
-  function openMoveToCash() {
-    if (stepApi) {
-      runAfterMenuClose(() =>
-        stepApi.push({
-          key: `move-to-cash-${tx.id}`,
-          content: (
-            <MoveToCashStep
-              txId={tx.id}
-              txNote={tx.note}
-              onBack={stepApi.pop}
-            />
-          ),
-        }),
-      );
-    } else {
-      moveToCash.openDialog();
     }
   }
 
@@ -363,12 +291,6 @@ export function TransactionRow({
                 <PencilLineIcon />
                 Edit
               </DropdownMenuItem>
-              {canChangeSource && (
-                <DropdownMenuItem onSelect={openChangeAccount}>
-                  <LandmarkIcon />
-                  Change account
-                </DropdownMenuItem>
-              )}
               {canDuplicate && (
                 <DropdownMenuItem onSelect={openDuplicate}>
                   <CopyIcon />
@@ -391,18 +313,6 @@ export function TransactionRow({
                 <DropdownMenuItem onSelect={handleUndoTransfer}>
                   <BanknoteIcon />
                   Undo transfer
-                </DropdownMenuItem>
-              )}
-              {canMarkTransfer && (
-                <DropdownMenuItem onSelect={openMarkTransfer}>
-                  <BanknoteIcon />
-                  Mark as transfer
-                </DropdownMenuItem>
-              )}
-              {canMoveToCash && (
-                <DropdownMenuItem onSelect={openMoveToCash}>
-                  <WalletIcon />
-                  Move to Cash
                 </DropdownMenuItem>
               )}
               {canShiftMonth && (
@@ -442,6 +352,7 @@ export function TransactionRow({
           txId={tx.id}
           seed={editSeed}
           locked={lockAmountFields}
+          actions={editActions}
           open={edit.open}
           onOpenChange={edit.setOpen}
           title="Edit transaction"
@@ -467,39 +378,11 @@ export function TransactionRow({
           }}
         />
       )}
-      {source.mounted && (
-        <SourceEditor
-          txId={tx.id}
-          txSource={tx.source}
-          open={source.open}
-          onOpenChange={source.setOpen}
-        />
-      )}
       {creditDialog.mounted && inTransit && (
         <CreditTransferDialog
           transfer={inTransit}
           open={creditDialog.open}
           onOpenChange={creditDialog.setOpen}
-        />
-      )}
-      {transferDialog.mounted && (
-        <MarkTransferDialog
-          txId={tx.id}
-          txSource={tx.source}
-          txCurrency={tx.currency}
-          txAmount={tx.amount}
-          txDate={tx.occurredOn}
-          txKind={tx.kind}
-          open={transferDialog.open}
-          onOpenChange={transferDialog.setOpen}
-        />
-      )}
-      {moveToCash.mounted && (
-        <MoveToCashDialog
-          txId={tx.id}
-          txNote={tx.note}
-          open={moveToCash.open}
-          onOpenChange={moveToCash.setOpen}
         />
       )}
       {detailDialog.mounted && (

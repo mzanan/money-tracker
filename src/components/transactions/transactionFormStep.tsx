@@ -6,12 +6,17 @@ import { Button } from "@/components/ui/button";
 import { StepShell } from "@/components/ui/stepShell";
 
 import { TransactionFormFields } from "./transactionFormFields";
-import { useTransactionForm, type TransactionSeed } from "./useTransactionForm";
+import {
+  useTransactionForm,
+  type EditActions,
+  type TransactionSeed,
+} from "./useTransactionForm";
 
 export function TransactionFormStep({
   seed,
   txId,
   locked,
+  actions,
   title,
   description,
   submitLabel,
@@ -22,6 +27,7 @@ export function TransactionFormStep({
   seed: TransactionSeed;
   txId?: string;
   locked?: boolean;
+  actions?: EditActions;
   title: string;
   description: string;
   submitLabel: string;
@@ -33,6 +39,7 @@ export function TransactionFormStep({
     seed,
     txId,
     kindLocked: locked,
+    actions,
     open: true,
     onOpenChange: (open) => {
       if (!open) onBack();

@@ -13,12 +13,17 @@ import {
 } from "@/components/ui/drawer";
 
 import { TransactionFormFields } from "./transactionFormFields";
-import { useTransactionForm, type TransactionSeed } from "./useTransactionForm";
+import {
+  useTransactionForm,
+  type EditActions,
+  type TransactionSeed,
+} from "./useTransactionForm";
 
 export function TransactionFormDialog({
   seed,
   txId,
   locked,
+  actions,
   open,
   onOpenChange,
   title,
@@ -30,6 +35,7 @@ export function TransactionFormDialog({
   seed: TransactionSeed;
   txId?: string;
   locked?: boolean;
+  actions?: EditActions;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
@@ -42,6 +48,7 @@ export function TransactionFormDialog({
     seed,
     txId,
     kindLocked: locked,
+    actions,
     open,
     onOpenChange,
     successMessage,
