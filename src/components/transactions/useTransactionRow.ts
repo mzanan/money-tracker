@@ -78,10 +78,7 @@ export function useTransactionRow(
   const stepApi = useDrawerStep();
   const reminder = useDialogState(runAfterMenuClose);
   const edit = useDialogState(runAfterMenuClose);
-  const transferDialog = useDialogState(runAfterMenuClose);
-  const source = useDialogState(runAfterMenuClose);
   const duplicate = useDialogState(runAfterMenuClose);
-  const moveToCash = useDialogState(runAfterMenuClose);
   const creditDialog = useDialogState(runAfterMenuClose);
   const detailDialog = useDialogState(runAfterMenuClose);
   const inTransit = isFeeRemnant(movement) ? null : pendingTransfer(movement);
@@ -201,6 +198,11 @@ export function useTransactionRow(
     externalId: tx.externalId,
   };
   const duplicateSeed = { ...editSeed, occurredOn: todayInTz(timezone) };
+  const editActions = {
+    changeAccount: canChangeSource,
+    markTransfer: canMarkTransfer,
+    moveToCash: canMoveToCash,
+  };
 
   function handleRowClick(
     event: MouseEvent<HTMLDivElement>,
@@ -278,28 +280,23 @@ export function useTransactionRow(
     canSetReminder,
     canToggleFixed,
     canUndoTransfer,
-    canMarkTransfer,
     handleRowClick,
     amountText,
     convertedText,
     sourceLabel,
     reminderTitle,
-    canChangeSource,
     canDelete,
     lockAmountFields,
     resolvedFixed,
     editSeed,
     duplicateSeed,
+    editActions,
     reminder,
     edit,
-    transferDialog,
-    source,
     duplicate,
-    moveToCash,
     creditDialog,
     detailDialog,
     inTransit,
-    canMoveToCash,
     canUndoMoveToCash,
     canShiftMonth,
     isMovedOut,

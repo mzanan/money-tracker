@@ -5,20 +5,21 @@ import { toast } from "sonner";
 
 import { useAccountOptions } from "./useAccountOptions";
 import { useEntrySuggestions } from "./useEntrySuggestions";
+import { useMoveToCashDraft } from "./useMoveToCashDraft";
 import { useTagPicker } from "./useTagPicker";
 import { useTransferDraft } from "./useTransferDraft";
 import { useWithdrawalDraft } from "./useWithdrawalDraft";
 import { useServerAction } from "@/hooks/useServerAction";
 import { useSettings } from "@/hooks/useSettings";
-import { convertToWithdrawal } from "@/lib/actions/cash";
+import { convertToWithdrawal, moveWithdrawalToCash } from "@/lib/actions/cash";
 import { markAsTransfer } from "@/lib/actions/transfers";
 import {
   createTransaction,
   updateTransaction,
+  updateTransactionSource,
 } from "@/lib/actions/transactions";
 import {
   kindOfSource,
-  transferAvailableFor,
   withdrawalAvailableFor,
 } from "@/lib/constants/sources";
 import { parseAmountInput, parseAndRoundAmount } from "@/lib/currency";
@@ -49,10 +50,17 @@ export interface TransactionSeed {
   externalId: string | null;
 }
 
+export interface EditActions {
+  changeAccount: boolean;
+  markTransfer: boolean;
+  moveToCash: boolean;
+}
+
 export function useTransactionForm({
   seed,
   txId,
   kindLocked,
+  actions,
   open,
   onOpenChange,
   successMessage,
@@ -61,6 +69,7 @@ export function useTransactionForm({
   seed: TransactionSeed;
   txId?: string;
   kindLocked?: boolean;
+  actions?: EditActions;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   successMessage?: string;
@@ -74,15 +83,19 @@ export function useTransactionForm({
   const [amount, setAmount] = useState(seedFlow.amount);
   const [currency, setCurrency] = useState(seedFlow.currency);
   const [source, setSource] = useState(
-    kindOfSource(seed.source) === "api" ? "manual" : seed.source,
+    !txId && kindOfSource(seed.source) === "api" ? "manual" : seed.source,
   );
   const [description, setDescription] = useState(seed.note ?? "");
   const [tags, setTags] = useState(seed.tags);
   const [date, setDate] = useState(seed.occurredOn);
   const [transfer, setTransfer] = useState(false);
   const [withdrawal, setWithdrawal] = useState(false);
+  const [moveToCash, setMoveToCash] = useState(false);
 
-  const sources = useAccountOptions("", open && !txId);
+  const accountEditable = Boolean(txId) && Boolean(actions?.changeAccount);
+  const accountChanged = accountEditable && source !== seed.source;
+  const effectiveSource = !txId || accountEditable ? source : seed.source;
+  const sources = useAccountOptions("", open && (!txId || accountEditable));
 
   const isWithdrawalExtId = isWithdrawalExternalId(seed.externalId);
   const isTransferFeeExtId = Boolean(
@@ -95,18 +108,18 @@ export function useTransactionForm({
     !seed.transferGroup &&
     !isWithdrawalExtId &&
     !isTransferFeeExtId &&
-    withdrawalAvailableFor(seed.source);
+    withdrawalAvailableFor(effectiveSource);
   const withdrawalWouldBeActive =
     withdrawal && withdrawalToggleAvailableIgnoringTransfer;
 
   const transferToggleAvailable =
     Boolean(txId) &&
+    Boolean(actions?.markTransfer) &&
     !seed.transferGroup &&
     !isOpeningExternalId(seed.externalId) &&
     !isWithdrawalExtId &&
     !isTransferFeeExtId &&
-    kindOfSource(seed.source) !== "api" &&
-    transferAvailableFor(seed.source) &&
+    Boolean(effectiveSource) &&
     !withdrawalWouldBeActive;
   const transferActive = transfer && transferToggleAvailable;
 
@@ -114,8 +127,12 @@ export function useTransactionForm({
     withdrawalToggleAvailableIgnoringTransfer && !transferActive;
   const withdrawalActive = withdrawal && withdrawalToggleAvailable;
 
+  const moveToCashAvailable = Boolean(txId) && Boolean(actions?.moveToCash);
+  const moveToCashActive = moveToCash && moveToCashAvailable;
+  const moveToCashDraft = useMoveToCashDraft(seed.note);
+
   const transferDraft = useTransferDraft({
-    txSource: seed.source,
+    txSource: effectiveSource,
     txCurrency: currency,
     txAmount: parseAmountInput(amount) ?? 0,
     sentOn: date,
@@ -126,7 +143,7 @@ export function useTransactionForm({
   const withdrawalDraft = useWithdrawalDraft({
     currencies: settings.currencies,
     preferred: preferredAccountCurrency(
-      accountCurrencies[seed.source],
+      accountCurrencies[effectiveSource],
       settings.currencies,
       seed.currency,
     ),
@@ -144,7 +161,7 @@ export function useTransactionForm({
     amount,
     tags,
     currencies: acceptedCurrencies(
-      accountCurrencies[txId ? seed.source : source],
+      accountCurrencies[effectiveSource],
       settings.currencies,
     ),
     fill: {
@@ -156,6 +173,7 @@ export function useTransactionForm({
       resetModes: () => {
         setTransfer(false);
         setWithdrawal(false);
+        setMoveToCash(false);
       },
     },
   });
@@ -174,7 +192,9 @@ export function useTransactionForm({
       ? "Saved and marked as a transfer"
       : withdrawalActive
         ? "Saved and marked as a withdrawal"
-        : successMessage,
+        : moveToCashActive
+          ? "Saved and moved to Cash"
+          : successMessage,
     onSuccess: (data: { id: string } | undefined) => {
       onOpenChange(false);
       if (data) onCreated?.(data.id);
@@ -223,6 +243,11 @@ export function useTransactionForm({
       });
       if (!result.ok) return result;
 
+      if (accountChanged) {
+        const sourceResult = await updateTransactionSource(id, source);
+        if (!sourceResult.ok) return sourceResult;
+      }
+
       if (transferActive) {
         const markResult = await markAsTransfer(id, transferDraft.selected, {
           fees: transferDraft.bySide,
@@ -246,6 +271,15 @@ export function useTransactionForm({
         return convertResult.ok ? { ok: true, data: undefined } : convertResult;
       }
 
+      if (moveToCashActive) {
+        const moveResult = await moveWithdrawalToCash({
+          id,
+          cashAmount: moveToCashDraft.parsedAmount!,
+          cashCurrency: moveToCashDraft.currency,
+        });
+        return moveResult.ok ? { ok: true, data: undefined } : moveResult;
+      }
+
       return { ok: true, data: undefined };
     }, runOptions);
   }
@@ -263,6 +297,10 @@ export function useTransactionForm({
       toast.error("Enter the total charged");
       return;
     }
+    if (moveToCashActive && moveToCashDraft.parsedAmount === null) {
+      toast.error("Enter the cash you got");
+      return;
+    }
     if (txId) submitEdit(txId);
     else submitCreate();
   }
@@ -270,7 +308,8 @@ export function useTransactionForm({
   const canSubmit =
     (Boolean(txId) || (Boolean(source) && sourceOptions !== null)) &&
     (!transferActive || Boolean(transferDraft.selected)) &&
-    (!withdrawalActive || withdrawalDraft.totalFilled);
+    (!withdrawalActive || withdrawalDraft.totalFilled) &&
+    (!moveToCashActive || moveToCashDraft.parsedAmount !== null);
 
   return {
     canSubmit,
@@ -284,6 +323,7 @@ export function useTransactionForm({
     currencies,
     source,
     setSource,
+    accountEditable,
     description,
     setDescription,
     suggestions,
@@ -303,6 +343,11 @@ export function useTransactionForm({
     withdrawalToggleAvailable,
     withdrawalActive,
     withdrawalDraft,
+    moveToCash,
+    setMoveToCash,
+    moveToCashAvailable,
+    moveToCashActive,
+    moveToCashDraft,
     pending,
     submit,
   };
