@@ -1,0 +1,423 @@
+{
+  "sheet1": {
+    "tables": [
+      {
+        "sheet": "Gastos",
+        "import": true,
+        "layout": "rows",
+        "firstDataRow": 4,
+        "lastDataRow": null,
+        "skipIfContains": ["total"],
+        "date": {
+          "column": "A",
+          "kind": "full",
+          "order": "dmy",
+          "year": 2026,
+          "month": null
+        },
+        "numberFormat": {
+          "decimal": ",",
+          "thousands": "."
+        },
+        "amount": {
+          "mode": "signed",
+          "column": "C",
+          "expenseSign": "positive"
+        },
+        "descriptionColumns": ["B"],
+        "currencyColumn": null,
+        "grid": null
+      }
+    ]
+  },
+  "sheet2": {
+    "tables": [
+      {
+        "sheet": "Budget 2026",
+        "import": true,
+        "layout": "rows",
+        "firstDataRow": 4,
+        "lastDataRow": 20,
+        "skipIfContains": ["total"],
+        "date": {
+          "column": "A",
+          "kind": "full",
+          "order": "mdy",
+          "year": 2026,
+          "month": null
+        },
+        "numberFormat": {
+          "decimal": ".",
+          "thousands": ","
+        },
+        "amount": {
+          "mode": "split",
+          "expenseColumn": "D",
+          "incomeColumn": "E"
+        },
+        "descriptionColumns": ["B"],
+        "currencyColumn": null,
+        "grid": null
+      }
+    ]
+  },
+  "sheet3": {
+    "tables": [
+      {
+        "sheet": "Resumen",
+        "import": false,
+        "layout": "rows",
+        "firstDataRow": 1,
+        "lastDataRow": null,
+        "skipIfContains": [],
+        "date": {
+          "column": "A",
+          "kind": "full",
+          "order": "dmy",
+          "year": null,
+          "month": null
+        },
+        "numberFormat": {
+          "decimal": ".",
+          "thousands": ""
+        },
+        "amount": null,
+        "descriptionColumns": [],
+        "currencyColumn": null,
+        "grid": null
+      },
+      {
+        "sheet": "Enero",
+        "import": true,
+        "layout": "rows",
+        "firstDataRow": 4,
+        "lastDataRow": null,
+        "skipIfContains": [],
+        "date": {
+          "column": "A",
+          "kind": "day_of_month",
+          "order": "dmy",
+          "year": 2026,
+          "month": 1
+        },
+        "numberFormat": {
+          "decimal": ",",
+          "thousands": "."
+        },
+        "amount": {
+          "mode": "signed",
+          "column": "D",
+          "expenseSign": "positive"
+        },
+        "descriptionColumns": ["B"],
+        "currencyColumn": null,
+        "grid": null
+      },
+      {
+        "sheet": "Febrero",
+        "import": true,
+        "layout": "rows",
+        "firstDataRow": 4,
+        "lastDataRow": null,
+        "skipIfContains": [],
+        "date": {
+          "column": "A",
+          "kind": "day_of_month",
+          "order": "dmy",
+          "year": 2026,
+          "month": 2
+        },
+        "numberFormat": {
+          "decimal": ",",
+          "thousands": "."
+        },
+        "amount": {
+          "mode": "signed",
+          "column": "D",
+          "expenseSign": "positive"
+        },
+        "descriptionColumns": ["B"],
+        "currencyColumn": null,
+        "grid": null
+      },
+      {
+        "sheet": "Marzo",
+        "import": true,
+        "layout": "rows",
+        "firstDataRow": 4,
+        "lastDataRow": null,
+        "skipIfContains": [],
+        "date": {
+          "column": "A",
+          "kind": "day_of_month",
+          "order": "dmy",
+          "year": 2026,
+          "month": 3
+        },
+        "numberFormat": {
+          "decimal": ",",
+          "thousands": "."
+        },
+        "amount": {
+          "mode": "signed",
+          "column": "D",
+          "expenseSign": "positive"
+        },
+        "descriptionColumns": ["B"],
+        "currencyColumn": null,
+        "grid": null
+      }
+    ]
+  },
+  "sheet4": {
+    "tables": [
+      {
+        "sheet": "Noviembre 2026",
+        "import": true,
+        "layout": "grid",
+        "firstDataRow": 3,
+        "lastDataRow": 32,
+        "skipIfContains": ["total"],
+        "date": {
+          "column": "A",
+          "kind": "day_of_month",
+          "order": "dmy",
+          "year": 2026,
+          "month": 11
+        },
+        "numberFormat": {
+          "decimal": ".",
+          "thousands": ","
+        },
+        "amount": null,
+        "descriptionColumns": [],
+        "currencyColumn": null,
+        "grid": {
+          "orientation": "dates_down",
+          "headerRow": 2,
+          "categoryColumn": null,
+          "valueColumns": ["B", "C", "D", "E", "F"],
+          "kind": "expense"
+        }
+      }
+    ]
+  },
+  "sheet5": {
+    "tables": [
+      {
+        "sheet": "Movimientos",
+        "import": true,
+        "layout": "rows",
+        "firstDataRow": 3,
+        "lastDataRow": null,
+        "skipIfContains": [],
+        "date": {
+          "column": "A",
+          "kind": "full",
+          "order": "dmy",
+          "year": 2026,
+          "month": null
+        },
+        "numberFormat": {
+          "decimal": ",",
+          "thousands": "."
+        },
+        "amount": {
+          "mode": "type_column",
+          "column": "C",
+          "typeColumn": "E",
+          "incomeValues": ["ingreso"],
+          "expenseValues": ["gasto"],
+          "default": "expense"
+        },
+        "descriptionColumns": ["B"],
+        "currencyColumn": "D",
+        "grid": null
+      }
+    ]
+  },
+  "sheet6": {
+    "tables": [
+      {
+        "sheet": "March",
+        "import": true,
+        "layout": "rows",
+        "firstDataRow": 4,
+        "lastDataRow": null,
+        "skipIfContains": ["total"],
+        "date": {
+          "column": "A",
+          "kind": "full",
+          "order": "mdy",
+          "year": 2026,
+          "month": null
+        },
+        "numberFormat": {
+          "decimal": ".",
+          "thousands": ","
+        },
+        "amount": {
+          "mode": "signed",
+          "column": "C",
+          "expenseSign": "positive"
+        },
+        "descriptionColumns": ["B"],
+        "currencyColumn": null,
+        "grid": null
+      },
+      {
+        "sheet": "March",
+        "import": true,
+        "layout": "rows",
+        "firstDataRow": 4,
+        "lastDataRow": null,
+        "skipIfContains": ["total"],
+        "date": {
+          "column": "F",
+          "kind": "full",
+          "order": "mdy",
+          "year": 2026,
+          "month": null
+        },
+        "numberFormat": {
+          "decimal": ".",
+          "thousands": ","
+        },
+        "amount": {
+          "mode": "signed",
+          "column": "H",
+          "expenseSign": "negative"
+        },
+        "descriptionColumns": ["G"],
+        "currencyColumn": null,
+        "grid": null
+      }
+    ]
+  },
+  "sheet7": {
+    "tables": [
+      {
+        "sheet": "2025",
+        "import": true,
+        "layout": "rows",
+        "firstDataRow": 1,
+        "lastDataRow": null,
+        "skipIfContains": [],
+        "date": {
+          "column": "A",
+          "kind": "full",
+          "order": "dmy",
+          "year": 2025,
+          "month": null
+        },
+        "numberFormat": {
+          "decimal": ",",
+          "thousands": "."
+        },
+        "amount": {
+          "mode": "signed",
+          "column": "C",
+          "expenseSign": "positive"
+        },
+        "descriptionColumns": ["B"],
+        "currencyColumn": null,
+        "grid": null
+      }
+    ]
+  },
+  "sheet8": {
+    "tables": [
+      {
+        "sheet": "Presupuesto 2026",
+        "import": true,
+        "layout": "grid",
+        "firstDataRow": 4,
+        "lastDataRow": 9,
+        "skipIfContains": ["total"],
+        "date": {
+          "column": "A",
+          "kind": "month",
+          "order": "dmy",
+          "year": 2026,
+          "month": null
+        },
+        "numberFormat": {
+          "decimal": ",",
+          "thousands": "."
+        },
+        "amount": null,
+        "descriptionColumns": [],
+        "currencyColumn": null,
+        "grid": {
+          "orientation": "dates_across",
+          "headerRow": 3,
+          "categoryColumn": "A",
+          "valueColumns": ["B", "C", "D", "E", "F", "G"],
+          "kind": "expense"
+        }
+      }
+    ]
+  },
+  "sheet9": {
+    "tables": [
+      {
+        "sheet": "Movimientos",
+        "import": true,
+        "layout": "rows",
+        "firstDataRow": 8,
+        "lastDataRow": 19,
+        "skipIfContains": ["saldo"],
+        "date": {
+          "column": "A",
+          "kind": "full",
+          "order": "dmy",
+          "year": 2026,
+          "month": null
+        },
+        "numberFormat": {
+          "decimal": ",",
+          "thousands": "."
+        },
+        "amount": {
+          "mode": "signed",
+          "column": "E",
+          "expenseSign": "negative"
+        },
+        "descriptionColumns": ["C", "D"],
+        "currencyColumn": null,
+        "grid": null
+      }
+    ]
+  },
+  "sheet10": {
+    "tables": [
+      {
+        "sheet": "Gastos",
+        "import": true,
+        "layout": "rows",
+        "firstDataRow": 4,
+        "lastDataRow": null,
+        "skipIfContains": ["subtotal"],
+        "date": {
+          "column": "A",
+          "kind": "day_with_section_month",
+          "order": "dmy",
+          "year": 2026,
+          "month": null
+        },
+        "numberFormat": {
+          "decimal": ",",
+          "thousands": "."
+        },
+        "amount": {
+          "mode": "signed",
+          "column": "C",
+          "expenseSign": "positive"
+        },
+        "descriptionColumns": ["B"],
+        "currencyColumn": null,
+        "grid": null
+      }
+    ]
+  }
+}

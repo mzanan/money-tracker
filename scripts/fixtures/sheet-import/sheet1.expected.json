@@ -1,0 +1,82 @@
+[
+ {
+  "date": "2026-01-02",
+  "amount": -45230.5,
+  "desc": "Supermecado Coto"
+ },
+ {
+  "date": "2026-01-03",
+  "amount": -32000,
+  "desc": "Nafta"
+ },
+ {
+  "date": "2026-01-05",
+  "amount": -8750,
+  "desc": "Farmacia"
+ },
+ {
+  "date": "2026-01-05",
+  "amount": -4500,
+  "desc": "Cafe con medialunas"
+ },
+ {
+  "date": "2026-01-08",
+  "amount": -650000,
+  "desc": "Alquiler"
+ },
+ {
+  "date": "2026-01-09",
+  "amount": -98500,
+  "desc": "Expensas"
+ },
+ {
+  "date": "2026-01-10",
+  "amount": -12300.75,
+  "desc": "Verduleria"
+ },
+ {
+  "date": "2026-01-12",
+  "amount": -3200,
+  "desc": "faramacia"
+ },
+ {
+  "date": "2026-01-14",
+  "amount": -9999,
+  "desc": "Netflix"
+ },
+ {
+  "date": "2026-01-15",
+  "amount": -45000,
+  "desc": "Gimnasio"
+ },
+ {
+  "date": "2026-01-18",
+  "amount": -38400,
+  "desc": "Cena con amigos"
+ },
+ {
+  "date": "2026-01-20",
+  "amount": -6780.3,
+  "desc": "Uber"
+ },
+ {
+  "date": "2026-01-22",
+  "amount": -27650,
+  "desc": "Supermercado Dia"
+ },
+ {
+  "date": "2026-01-25",
+  "amount": -25000,
+  "desc": "Regalo cumple Sofi"
+ },
+ {
+  "date": "2026-01-28",
+  "amount": -18900.4,
+  "desc": "Luz Edenor"
+ },
+ {
+  "date": "2026-01-30",
+  "amount": -21500,
+  "desc": "Internet"
+ }
+]

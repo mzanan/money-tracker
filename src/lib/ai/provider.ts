@@ -1,7 +1,12 @@
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
 
-import { AI_PROVIDERS, type AiProvider } from "@/lib/constants/aiProviders";
+import {
+  AI_PROVIDERS,
+  SHEET_IMPORT_AI,
+  type AiProvider,
+} from "@/lib/constants/aiProviders";
 
 export interface ChatModelConfig {
   provider: AiProvider;
@@ -27,4 +32,13 @@ export function resolveChatModel({ provider, model, apiKey }: ChatModelConfig) {
 
 export function resolveVisionModel({ provider, apiKey }: VisionModelConfig) {
   return clientFor(provider, apiKey)(AI_PROVIDERS[provider].visionModel);
+}
+
+export function resolveSheetImportModel() {
+  const apiKey = process.env.EXPLABS_API_KEY;
+  if (!apiKey) throw new Error("EXPLABS_API_KEY is not set");
+  return createAnthropic({
+    authToken: apiKey,
+    baseURL: SHEET_IMPORT_AI.baseURL,
+  })(SHEET_IMPORT_AI.model);
 }

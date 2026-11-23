@@ -1,0 +1,62 @@
+[
+ {
+  "date": "2025-03-02",
+  "amount": -8500,
+  "desc": "super chino"
+ },
+ {
+  "date": "2025-03-04",
+  "amount": -2000,
+  "desc": "sube"
+ },
+ {
+  "date": "2025-03-07",
+  "amount": -12300,
+  "desc": "pizza"
+ },
+ {
+  "date": "2025-03-09",
+  "amount": -5640.5,
+  "desc": "farmacia"
+ },
+ {
+  "date": "2025-03-11",
+  "amount": -1800,
+  "desc": "kiosco"
+ },
+ {
+  "date": "2025-03-25",
+  "amount": -420000,
+  "desc": "alquiler"
+ },
+ {
+  "date": "2025-04-01",
+  "amount": -22150,
+  "desc": "luz"
+ },
+ {
+  "date": "2025-04-03",
+  "amount": -9120,
+  "desc": "super chino"
+ },
+ {
+  "date": "2025-04-06",
+  "amount": -35000,
+  "desc": "nafta"
+ },
+ {
+  "date": "2025-04-08",
+  "amount": -9000,
+  "desc": "cine"
+ },
+ {
+  "date": "2025-04-10",
+  "amount": -15000,
+  "desc": "regalo"
+ },
+ {
+  "date": "2025-04-18",
+  "amount": -87300,
+  "desc": "expensas"
+ }
+]

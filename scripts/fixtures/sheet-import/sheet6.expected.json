@@ -1,0 +1,77 @@
+[
+ {
+  "date": "2026-03-02",
+  "amount": -76.45,
+  "desc": "Groceries - Kroger"
+ },
+ {
+  "date": "2026-03-03",
+  "amount": -41.2,
+  "desc": "Gas"
+ },
+ {
+  "date": "2026-03-05",
+  "amount": -14.75,
+  "desc": "Lunch"
+ },
+ {
+  "date": "2026-03-07",
+  "amount": -1380,
+  "desc": "Rent"
+ },
+ {
+  "date": "2026-03-09",
+  "amount": -55,
+  "desc": "Phone bill"
+ },
+ {
+  "date": "2026-03-11",
+  "amount": -63.18,
+  "desc": "Target"
+ },
+ {
+  "date": "2026-03-13",
+  "amount": -28,
+  "desc": "Haircut"
+ },
+ {
+  "date": "2026-03-16",
+  "amount": -52.9,
+  "desc": "Groceries - Aldi"
+ },
+ {
+  "date": "2026-03-18",
+  "amount": -19.6,
+  "desc": "Uber"
+ },
+ {
+  "date": "2026-03-21",
+  "amount": -45,
+  "desc": "Birthday gift"
+ },
+ {
+  "date": "2026-03-25",
+  "amount": -39.99,
+  "desc": "Gym"
+ },
+ {
+  "date": "2026-03-29",
+  "amount": -32.5,
+  "desc": "Pizza night"
+ },
+ {
+  "date": "2026-03-01",
+  "amount": 2950,
+  "desc": "Salary"
+ },
+ {
+  "date": "2026-03-15",
+  "amount": 2950,
+  "desc": "Salary"
+ },
+ {
+  "date": "2026-03-20",
+  "amount": 120,
+  "desc": "Sold bike on FB"
+ }
+]

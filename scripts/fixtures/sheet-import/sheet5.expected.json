@@ -1,0 +1,86 @@
+[
+ {
+  "date": "2026-01-03",
+  "amount": -65000,
+  "desc": "Pho",
+  "currency": "VND"
+ },
+ {
+  "date": "2026-01-04",
+  "amount": -38000,
+  "desc": "Grab",
+  "currency": "VND"
+ },
+ {
+  "date": "2026-01-05",
+  "amount": 1200,
+  "desc": "Sueldo",
+  "currency": "USD"
+ },
+ {
+  "date": "2026-01-07",
+  "amount": -9500000,
+  "desc": "Alquiler",
+  "currency": "VND"
+ },
+ {
+  "date": "2026-01-08",
+  "amount": -45000,
+  "desc": "Cafe",
+  "currency": "VND"
+ },
+ {
+  "date": "2026-01-10",
+  "amount": -10.99,
+  "desc": "Netflix",
+  "currency": "USD"
+ },
+ {
+  "date": "2026-01-11",
+  "amount": -412500,
+  "desc": "Super Winmart",
+  "currency": "VND"
+ },
+ {
+  "date": "2026-01-12",
+  "amount": 50000,
+  "desc": "Transferencia de mamá",
+  "currency": "ARS"
+ },
+ {
+  "date": "2026-01-15",
+  "amount": -95,
+  "desc": "Visa run",
+  "currency": "USD"
+ },
+ {
+  "date": "2026-01-16",
+  "amount": -700000,
+  "desc": "Gimnasio",
+  "currency": "VND"
+ },
+ {
+  "date": "2026-01-20",
+  "amount": 20,
+  "desc": "Devolucion Visa run",
+  "currency": "USD"
+ },
+ {
+  "date": "2026-01-22",
+  "amount": -2800000,
+  "desc": "Moto",
+  "currency": "VND"
+ },
+ {
+  "date": "2026-01-25",
+  "amount": -5.99,
+  "desc": "Spotify",
+  "currency": "USD"
+ },
+ {
+  "date": "2026-01-28",
+  "amount": -120000,
+  "desc": "Farmacia",
+  "currency": "VND"
+ }
+]

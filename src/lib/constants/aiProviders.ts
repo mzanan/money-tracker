@@ -17,3 +17,8 @@ export const AI_PROVIDER_IDS = Object.keys(AI_PROVIDERS) as [
   AiProvider,
   ...AiProvider[],
 ];
+
+export const SHEET_IMPORT_AI = {
+  baseURL: "https://api.experientiallabs.ai/v1",
+  model: "claude-haiku-5.5",
+} as const;

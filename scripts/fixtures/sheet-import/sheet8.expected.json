@@ -1,0 +1,122 @@
+[
+ {
+  "date": "2026-01-01",
+  "amount": -600000,
+  "desc": "Alquiler"
+ },
+ {
+  "date": "2026-02-01",
+  "amount": -600000,
+  "desc": "Alquiler"
+ },
+ {
+  "date": "2026-03-01",
+  "amount": -600000,
+  "desc": "Alquiler"
+ },
+ {
+  "date": "2026-04-01",
+  "amount": -600000,
+  "desc": "Alquiler"
+ },
+ {
+  "date": "2026-01-01",
+  "amount": -95000,
+  "desc": "Expensas"
+ },
+ {
+  "date": "2026-02-01",
+  "amount": -95000,
+  "desc": "Expensas"
+ },
+ {
+  "date": "2026-03-01",
+  "amount": -98000,
+  "desc": "Expensas"
+ },
+ {
+  "date": "2026-04-01",
+  "amount": -98000,
+  "desc": "Expensas"
+ },
+ {
+  "date": "2026-01-01",
+  "amount": -18500,
+  "desc": "Luz"
+ },
+ {
+  "date": "2026-02-01",
+  "amount": -21300,
+  "desc": "Luz"
+ },
+ {
+  "date": "2026-03-01",
+  "amount": -19800,
+  "desc": "Luz"
+ },
+ {
+  "date": "2026-04-01",
+  "amount": -15600,
+  "desc": "Luz"
+ },
+ {
+  "date": "2026-01-01",
+  "amount": -6200,
+  "desc": "Gas"
+ },
+ {
+  "date": "2026-02-01",
+  "amount": -5900,
+  "desc": "Gas"
+ },
+ {
+  "date": "2026-03-01",
+  "amount": -7100,
+  "desc": "Gas"
+ },
+ {
+  "date": "2026-04-01",
+  "amount": -9800,
+  "desc": "Gas"
+ },
+ {
+  "date": "2026-01-01",
+  "amount": -21500,
+  "desc": "Internet"
+ },
+ {
+  "date": "2026-02-01",
+  "amount": -21500,
+  "desc": "Internet"
+ },
+ {
+  "date": "2026-03-01",
+  "amount": -21500,
+  "desc": "Internet"
+ },
+ {
+  "date": "2026-04-01",
+  "amount": -21500,
+  "desc": "Internet"
+ },
+ {
+  "date": "2026-01-01",
+  "amount": -12000,
+  "desc": "Celular"
+ },
+ {
+  "date": "2026-02-01",
+  "amount": -12000,
+  "desc": "Celular"
+ },
+ {
+  "date": "2026-03-01",
+  "amount": -12000,
+  "desc": "Celular"
+ },
+ {
+  "date": "2026-04-01",
+  "amount": -13500,
+  "desc": "Celular"
+ }
+]

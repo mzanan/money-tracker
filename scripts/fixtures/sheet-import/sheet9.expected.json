@@ -1,0 +1,62 @@
+[
+ {
+  "date": "2026-10-01",
+  "amount": 1850.0,
+  "desc": "TRANSFERENCIA RECIBIDA NOMINA OCTUBRE"
+ },
+ {
+  "date": "2026-10-02",
+  "amount": -62.4,
+  "desc": "COMPRA TARJ. 4821 MERCADONA"
+ },
+ {
+  "date": "2026-10-03",
+  "amount": -750.0,
+  "desc": "RECIBO ALQUILER"
+ },
+ {
+  "date": "2026-10-05",
+  "amount": -48.15,
+  "desc": "COMPRA TARJ. 4821 REPSOL"
+ },
+ {
+  "date": "2026-10-07",
+  "amount": -22.5,
+  "desc": "BIZUM ENVIADO CENA"
+ },
+ {
+  "date": "2026-10-09",
+  "amount": -58.73,
+  "desc": "RECIBO IBERDROLA"
+ },
+ {
+  "date": "2026-10-12",
+  "amount": -34.99,
+  "desc": "COMPRA TARJ. 4821 AMAZON"
+ },
+ {
+  "date": "2026-10-14",
+  "amount": 15.0,
+  "desc": "BIZUM RECIBIDO"
+ },
+ {
+  "date": "2026-10-18",
+  "amount": -45.95,
+  "desc": "COMPRA TARJ. 4821 ZARA"
+ },
+ {
+  "date": "2026-10-22",
+  "amount": -30.0,
+  "desc": "RECIBO VODAFONE"
+ },
+ {
+  "date": "2026-10-27",
+  "amount": -41.27,
+  "desc": "COMPRA TARJ. 4821 LIDL"
+ },
+ {
+  "date": "2026-10-30",
+  "amount": -4.5,
+  "desc": "COMISION MANTENIMIENTO"
+ }
+]

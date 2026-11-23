@@ -1,0 +1,62 @@
+[
+ {
+  "date": "2026-01-04",
+  "amount": -15400,
+  "desc": "Super"
+ },
+ {
+  "date": "2026-01-09",
+  "amount": -8000,
+  "desc": "Cumple Juan"
+ },
+ {
+  "date": "2026-01-15",
+  "amount": -3200,
+  "desc": "Colectivo"
+ },
+ {
+  "date": "2026-01-22",
+  "amount": -25000,
+  "desc": "Médico"
+ },
+ {
+  "date": "2026-02-01",
+  "amount": -450000,
+  "desc": "Alquiler"
+ },
+ {
+  "date": "2026-02-10",
+  "amount": -17250.5,
+  "desc": "Super"
+ },
+ {
+  "date": "2026-02-14",
+  "amount": -9500,
+  "desc": "Flores"
+ },
+ {
+  "date": "2026-02-28",
+  "amount": -30000,
+  "desc": "Gimnasio"
+ },
+ {
+  "date": "2026-03-03",
+  "amount": -42800,
+  "desc": "Útiles colegio"
+ },
+ {
+  "date": "2026-03-12",
+  "amount": -16900,
+  "desc": "Super"
+ },
+ {
+  "date": "2026-03-19",
+  "amount": -12000,
+  "desc": "Peluquería"
+ },
+ {
+  "date": "2026-03-30",
+  "amount": -8999,
+  "desc": "Netflix"
+ }
+]

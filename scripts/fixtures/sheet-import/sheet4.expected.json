@@ -1,0 +1,97 @@
+[
+ {
+  "date": "2026-11-01",
+  "amount": -185.5,
+  "desc": "Comida"
+ },
+ {
+  "date": "2026-11-01",
+  "amount": -9500,
+  "desc": "Casa"
+ },
+ {
+  "date": "2026-11-02",
+  "amount": -85,
+  "desc": "Transporte"
+ },
+ {
+  "date": "2026-11-03",
+  "amount": -240,
+  "desc": "Comida"
+ },
+ {
+  "date": "2026-11-06",
+  "amount": -1250,
+  "desc": "Comida"
+ },
+ {
+  "date": "2026-11-07",
+  "amount": -560,
+  "desc": "Salidas"
+ },
+ {
+  "date": "2026-11-08",
+  "amount": -85,
+  "desc": "Transporte"
+ },
+ {
+  "date": "2026-11-09",
+  "amount": -132,
+  "desc": "Comida"
+ },
+ {
+  "date": "2026-11-10",
+  "amount": -650,
+  "desc": "Casa"
+ },
+ {
+  "date": "2026-11-12",
+  "amount": -1200,
+  "desc": "Otros"
+ },
+ {
+  "date": "2026-11-14",
+  "amount": -310.75,
+  "desc": "Comida"
+ },
+ {
+  "date": "2026-11-15",
+  "amount": -420,
+  "desc": "Transporte"
+ },
+ {
+  "date": "2026-11-18",
+  "amount": -389,
+  "desc": "Casa"
+ },
+ {
+  "date": "2026-11-20",
+  "amount": -198,
+  "desc": "Comida"
+ },
+ {
+  "date": "2026-11-21",
+  "amount": -890.5,
+  "desc": "Salidas"
+ },
+ {
+  "date": "2026-11-22",
+  "amount": -85,
+  "desc": "Transporte"
+ },
+ {
+  "date": "2026-11-25",
+  "amount": -99,
+  "desc": "Otros"
+ },
+ {
+  "date": "2026-11-27",
+  "amount": -1075.4,
+  "desc": "Comida"
+ },
+ {
+  "date": "2026-11-28",
+  "amount": -340,
+  "desc": "Salidas"
+ }
+]
