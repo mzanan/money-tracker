@@ -60,7 +60,9 @@ async function main() {
   ) as Record<string, unknown>;
   let failures = 0;
   for (const name of SHEETS) {
-    const grids = readWorkbook(readFileSync(path.join(DIR, `${name}.xlsx`)));
+    const grids = readWorkbook(
+      readFileSync(path.join(DIR, `${name}.xlsx`)),
+    ).sheets;
     const expected = JSON.parse(
       readFileSync(path.join(DIR, `${name}.expected.json`), "utf8"),
     ) as Expected[];

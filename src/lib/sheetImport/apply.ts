@@ -22,6 +22,7 @@ export interface SheetRow {
   amount: number;
   description: string;
   currency: string | null;
+  dateCarried: boolean;
   fingerprintKey: string;
 }
 
@@ -125,28 +126,17 @@ function describe(grid: SheetGrid, row: number, columns: string[]): string {
     .join(" - ");
 }
 
-function blockText(grid: SheetGrid, row: number, column: string): string {
-  const cells = grid.rowCells(row);
-  const target = cells.findIndex((c) => c.column === column);
-  if (target < 0) return "";
-  let start = target;
-  let end = target;
-  while (start > 0 && cells[start - 1].index === cells[start].index - 1)
-    start--;
-  while (
-    end < cells.length - 1 &&
-    cells[end + 1].index === cells[end].index + 1
-  )
-    end++;
-  return cells
-    .slice(start, end + 1)
-    .map((c) => (c.value === null ? (c.error ?? "") : fold(c.value)))
-    .join("|");
+function fingerprintKey(
+  occurredOn: string,
+  money: Money,
+  description: string,
+): string {
+  const signed = money.kind === "expense" ? -money.amount : money.amount;
+  return `${occurredOn}|${signed}|${fold(description)}`;
 }
 
-function signedKey(occurredOn: string, money: Money): string {
-  const signed = money.kind === "expense" ? -money.amount : money.amount;
-  return `${occurredOn}|${signed}`;
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function skipWordIn(
@@ -156,15 +146,16 @@ function skipWordIn(
   table: TableRecipe,
 ): string | null {
   const words = table.skipIfContains.map(fold).filter(Boolean);
-  const descriptions = new Set(table.descriptionColumns);
   for (const column of columns) {
     const text = fold(grid.cell(column, row));
     if (!text) continue;
-    for (const word of words) {
-      if (text === word) return word;
-      const prefix = text.startsWith(`${word} `) || text.startsWith(`${word}:`);
-      if (prefix && !descriptions.has(column)) return word;
-    }
+    const found = words.find((word) =>
+      new RegExp(
+        `(^|[^\\p{L}\\p{N}])${escapeRegex(word)}($|[^\\p{L}\\p{N}])`,
+        "u",
+      ).test(text),
+    );
+    if (found) return found;
   }
   return null;
 }
@@ -201,23 +192,39 @@ class TableReader {
     return true;
   }
 
-  private sectionRow(row: number, report = true): boolean {
+  private sectionRow(row: number): boolean {
     if (this.dateSpec.kind !== "day_with_section_month") return false;
     const section = sectionMonth(this.grid.cell(this.dateSpec.column, row));
     if (!section) return false;
     if (section.year) {
       this.dateSpec.year = section.year;
-    } else if (
-      this.lastSectionMonth !== null &&
-      section.month < this.lastSectionMonth &&
-      this.dateSpec.year !== null
-    ) {
-      this.dateSpec.year += 1;
+    } else if (this.lastSectionMonth !== null && this.dateSpec.year !== null) {
+      const order = this.dateSpec.sectionOrder;
+      if (order === "ascending" && section.month < this.lastSectionMonth) {
+        this.dateSpec.year += 1;
+      }
+      if (order === "descending" && section.month > this.lastSectionMonth) {
+        this.dateSpec.year -= 1;
+      }
     }
     this.dateSpec.month = section.month;
     this.lastSectionMonth = section.month;
-    if (report) this.out.skipped.push(this.issue(row, "month section"));
+    this.carriedDate = null;
+    this.out.skipped.push(this.issue(row, "month section"));
     return true;
+  }
+
+  private seedSectionAbove() {
+    if (this.dateSpec.kind !== "day_with_section_month") return;
+    const above = this.grid
+      .rows()
+      .filter((row) => row < this.table.firstDataRow)
+      .at(-1);
+    if (above === undefined) return;
+    const section = sectionMonth(this.grid.cell(this.dateSpec.column, above));
+    if (!section) return;
+    this.dateSpec.month = section.month;
+    if (section.year) this.dateSpec.year = section.year;
   }
 
   private push(
@@ -225,7 +232,7 @@ class TableReader {
     money: Money,
     occurredOn: string,
     description: string,
-    key: string,
+    dateCarried = false,
   ) {
     if (!this.claim(row, money.column)) return;
     const currency = this.table.currencyColumn
@@ -243,7 +250,8 @@ class TableReader {
         currency === null || isBlank(currency)
           ? null
           : cellText(currency).toUpperCase(),
-      fingerprintKey: `${signedKey(occurredOn, money)}|${key}`,
+      dateCarried,
+      fingerprintKey: fingerprintKey(occurredOn, money, description),
     });
   }
 
@@ -255,26 +263,18 @@ class TableReader {
     }
     const description = describe(this.grid, row, this.table.descriptionColumns);
     const rawDate = this.grid.cell(this.dateSpec.column, row);
-    let occurredOn: string;
-    if (isBlank(rawDate)) {
-      if (!this.carriedDate || !description) {
-        this.out.errors.push(this.issue(row, "amount without a date"));
-        return;
-      }
-      occurredOn = this.carriedDate;
-    } else {
-      occurredOn = parseSheetDate(rawDate, this.dateSpec);
-      this.carriedDate = occurredOn;
+    const carried = isBlank(rawDate);
+    if (carried && (!this.dateSpec.fillDown || !this.carriedDate)) {
+      this.out.errors.push(this.issue(row, "amount without a date"));
+      return;
     }
+    const occurredOn = carried
+      ? (this.carriedDate as string)
+      : parseSheetDate(rawDate, this.dateSpec);
     for (const item of money) {
-      this.push(
-        row,
-        item,
-        occurredOn,
-        description,
-        blockText(this.grid, row, item.column),
-      );
+      this.push(row, item, occurredOn, description, carried);
     }
+    this.carriedDate = occurredOn;
   }
 
   private gridRow(row: number) {
@@ -288,6 +288,12 @@ class TableReader {
     let rowDate: string | null = null;
     let found = false;
     for (const column of spec.valueColumns) {
+      const broken = this.grid.cellError(column, row);
+      if (broken !== null) {
+        found = true;
+        this.out.errors.push(this.issue(row, `${column}${row}: ${broken}`));
+        continue;
+      }
       try {
         const value = parseSheetAmount(
           this.grid.cell(column, row),
@@ -311,7 +317,7 @@ class TableReader {
             ? ""
             : cellText(header);
         const money = withKind(column, value, spec.kind);
-        this.push(row, money, occurredOn, description, fold(description));
+        this.push(row, money, occurredOn, description);
       } catch (error) {
         found = true;
         this.out.errors.push(
@@ -323,41 +329,66 @@ class TableReader {
     if (!found) this.out.skipped.push(this.issue(row, "no amount"));
   }
 
+  private dateOnlyRow(row: number) {
+    if (this.table.layout !== "rows" || !this.dateSpec.fillDown) return;
+    try {
+      this.carriedDate = parseSheetDate(
+        this.grid.cell(this.dateSpec.column, row),
+        this.dateSpec,
+      );
+    } catch (error) {
+      this.carriedDate = null;
+      this.out.errors.push(this.issue(row, messageOf(error)));
+    }
+  }
+
+  private readRow(row: number, used: string[]) {
+    if (this.sectionRow(row)) return;
+    if (used.length === 1 && used[0] === this.dateSpec.column) {
+      this.dateOnlyRow(row);
+      return;
+    }
+    const word = skipWordIn(this.grid, row, used, this.table);
+    if (word) {
+      this.out.skipped.push(this.issue(row, `contains "${word}"`));
+      return;
+    }
+    const valueColumns = new Set(
+      this.table.layout === "grid" ? (this.table.grid?.valueColumns ?? []) : [],
+    );
+    const broken = used.find(
+      (c) => !valueColumns.has(c) && this.grid.cellError(c, row) !== null,
+    );
+    if (broken) {
+      this.out.errors.push(
+        this.issue(row, `${broken}${row}: ${this.grid.cellError(broken, row)}`),
+      );
+      return;
+    }
+    try {
+      if (this.table.layout === "grid") this.gridRow(row);
+      else this.listRow(row);
+    } catch (error) {
+      this.out.errors.push(this.issue(row, messageOf(error)));
+    }
+  }
+
   read() {
+    this.seedSectionAbove();
     const last = this.table.lastDataRow ?? this.grid.rowCount;
     for (const row of this.grid.rows()) {
-      if (row > last) continue;
-      if (row < this.table.firstDataRow) {
-        this.sectionRow(row, false);
-        continue;
-      }
+      if (row < this.table.firstDataRow || row > last) continue;
       const used = this.columns.filter(
         (c) =>
           this.grid.cellError(c, row) !== null ||
           !isBlank(this.grid.cell(c, row)),
       );
-      if (!used.length || this.sectionRow(row)) continue;
-      if (used.length === 1 && used[0] === this.dateSpec.column) continue;
-      const word = skipWordIn(this.grid, row, used, this.table);
-      if (word) {
-        this.out.skipped.push(this.issue(row, `contains "${word}"`));
-        continue;
-      }
-      const broken = used.find((c) => this.grid.cellError(c, row) !== null);
-      if (broken) {
-        this.out.errors.push(
-          this.issue(
-            row,
-            `${broken}${row}: ${this.grid.cellError(broken, row)}`,
-          ),
-        );
-        continue;
-      }
-      try {
-        if (this.table.layout === "grid") this.gridRow(row);
-        else this.listRow(row);
-      } catch (error) {
-        this.out.errors.push(this.issue(row, messageOf(error)));
+      if (!used.length) continue;
+      const imported = this.out.rows.length;
+      this.readRow(row, used);
+      const dateOnly = used.length === 1 && used[0] === this.dateSpec.column;
+      if (this.out.rows.length === imported && !dateOnly) {
+        this.carriedDate = null;
       }
     }
   }
@@ -385,7 +416,14 @@ export function applyRecipe(
   const out: AppliedRecipe = { rows: [], skipped: [], errors: [] };
   const claimed = new Set<string>();
   for (const table of recipe.tables) {
-    if (!table.import) continue;
+    if (!table.import) {
+      out.skipped.push({
+        sheet: table.sheet,
+        row: 0,
+        reason: "tab not imported",
+      });
+      continue;
+    }
     const grid = findGrid(grids, table.sheet);
     if (!grid) {
       out.errors.push({ sheet: table.sheet, row: 0, reason: "unknown sheet" });

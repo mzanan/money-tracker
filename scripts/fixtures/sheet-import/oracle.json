@@ -13,7 +13,9 @@
           "kind": "full",
           "order": "dmy",
           "year": 2026,
-          "month": null
+          "month": null,
+          "fillDown": false,
+          "sectionOrder": null
         },
         "numberFormat": {
           "decimal": ",",
@@ -44,7 +46,9 @@
           "kind": "full",
           "order": "mdy",
           "year": 2026,
-          "month": null
+          "month": null,
+          "fillDown": false,
+          "sectionOrder": null
         },
         "numberFormat": {
           "decimal": ".",
@@ -75,7 +79,9 @@
           "kind": "full",
           "order": "dmy",
           "year": null,
-          "month": null
+          "month": null,
+          "fillDown": false,
+          "sectionOrder": null
         },
         "numberFormat": {
           "decimal": ".",
@@ -98,7 +104,9 @@
           "kind": "day_of_month",
           "order": "dmy",
           "year": 2026,
-          "month": 1
+          "month": 1,
+          "fillDown": false,
+          "sectionOrder": null
         },
         "numberFormat": {
           "decimal": ",",
@@ -125,7 +133,9 @@
           "kind": "day_of_month",
           "order": "dmy",
           "year": 2026,
-          "month": 2
+          "month": 2,
+          "fillDown": false,
+          "sectionOrder": null
         },
         "numberFormat": {
           "decimal": ",",
@@ -152,7 +162,9 @@
           "kind": "day_of_month",
           "order": "dmy",
           "year": 2026,
-          "month": 3
+          "month": 3,
+          "fillDown": false,
+          "sectionOrder": null
         },
         "numberFormat": {
           "decimal": ",",
@@ -183,7 +195,9 @@
           "kind": "day_of_month",
           "order": "dmy",
           "year": 2026,
-          "month": 11
+          "month": 11,
+          "fillDown": false,
+          "sectionOrder": null
         },
         "numberFormat": {
           "decimal": ".",
@@ -216,7 +230,9 @@
           "kind": "full",
           "order": "dmy",
           "year": 2026,
-          "month": null
+          "month": null,
+          "fillDown": false,
+          "sectionOrder": null
         },
         "numberFormat": {
           "decimal": ",",
@@ -250,7 +266,9 @@
           "kind": "full",
           "order": "mdy",
           "year": 2026,
-          "month": null
+          "month": null,
+          "fillDown": false,
+          "sectionOrder": null
         },
         "numberFormat": {
           "decimal": ".",
@@ -277,7 +295,9 @@
           "kind": "full",
           "order": "mdy",
           "year": 2026,
-          "month": null
+          "month": null,
+          "fillDown": false,
+          "sectionOrder": null
         },
         "numberFormat": {
           "decimal": ".",
@@ -308,7 +328,9 @@
           "kind": "full",
           "order": "dmy",
           "year": 2025,
-          "month": null
+          "month": null,
+          "fillDown": false,
+          "sectionOrder": null
         },
         "numberFormat": {
           "decimal": ",",
@@ -339,7 +361,9 @@
           "kind": "month",
           "order": "dmy",
           "year": 2026,
-          "month": null
+          "month": null,
+          "fillDown": false,
+          "sectionOrder": null
         },
         "numberFormat": {
           "decimal": ",",
@@ -372,7 +396,9 @@
           "kind": "full",
           "order": "dmy",
           "year": 2026,
-          "month": null
+          "month": null,
+          "fillDown": false,
+          "sectionOrder": null
         },
         "numberFormat": {
           "decimal": ",",
@@ -403,7 +429,9 @@
           "kind": "day_with_section_month",
           "order": "dmy",
           "year": 2026,
-          "month": null
+          "month": null,
+          "fillDown": false,
+          "sectionOrder": "ascending"
         },
         "numberFormat": {
           "decimal": ",",

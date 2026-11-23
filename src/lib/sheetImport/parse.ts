@@ -227,7 +227,22 @@ export function parseSheetDate(
   return parseTextDate(text, spec, dayOnly);
 }
 
+const DEBIT_CREDIT_MARK = /\b(?:cr|dr)\.?$/i;
 const CURRENCY_CODE_EDGE = /^[a-z]{2,3}\s*|\s*[a-z]{2,3}$/gi;
+const SIGNED_NUMBER = /^([+-])?\s*(\()?\s*(\d[\d.,\s  ]*?)\s*(\))?\s*(-)?$/;
+const SPACE_GROUP = "[ \\u00a0\\u202f]";
+
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function numberBody(format: NumberFormat): RegExp {
+  const decimal = `(?:${escapeRegex(format.decimal)}\\d+)?`;
+  if (!format.thousands) return new RegExp(`^\\d+${decimal}$`);
+  const group =
+    format.thousands === " " ? SPACE_GROUP : escapeRegex(format.thousands);
+  return new RegExp(`^(?:\\d{1,3}(?:${group}\\d{3})+|\\d+)${decimal}$`);
+}
 
 export function parseSheetAmount(
   value: CellValue | null,
@@ -237,27 +252,29 @@ export function parseSheetAmount(
   if (typeof value === "number") return value;
   if (typeof value !== "string") throw new Error(`amount ${String(value)}`);
   const original = value.trim();
-  if (/^[-\u2013\u2014\s]*$/.test(original)) return null;
+  if (/^[-–—\s]*$/.test(original)) return null;
+  if (DEBIT_CREDIT_MARK.test(original)) throw new Error(`amount ${original}`);
   const text = original
     .replace(/−/g, "-")
     .replace(/\p{Sc}/gu, "")
     .replace(CURRENCY_CODE_EDGE, "")
     .trim();
-  if (!/^[\d.,\s'  ()+-]+$/.test(text) || !/\d/.test(text)) {
+  const match = text.match(SIGNED_NUMBER);
+  if (!match) throw new Error(`amount ${original}`);
+  const [, lead, open, rawBody, close, trail] = match;
+  const signs = [lead, open, trail].filter(Boolean).length;
+  if (Boolean(open) !== Boolean(close) || signs > 1) {
     throw new Error(`amount ${original}`);
   }
-  const negative =
-    /^[^\d]*-/.test(text) ||
-    /-\s*$/.test(text) ||
-    /\([^)]*\d[^)]*\)/.test(text);
-  let digits = text.replace(/[^\d.,\s'  ]/g, "");
-  if (format.thousands) digits = digits.split(format.thousands).join("");
-  digits = digits.replace(/[\s'  ]/g, "");
-  digits =
-    format.decimal === "."
-      ? digits.replace(/,/g, "")
-      : digits.replace(/\./g, "").replace(",", ".");
+  const body = rawBody.trim();
+  if (!numberBody(format).test(body)) throw new Error(`amount ${original}`);
+  const ungrouped =
+    format.thousands === " "
+      ? body.replace(/[   ]/g, "")
+      : body.split(format.thousands || "\u0000").join("");
+  const digits = ungrouped.replace(format.decimal, ".");
   if (!/^\d+(\.\d+)?$/.test(digits)) throw new Error(`amount ${original}`);
   const amount = Number(digits);
+  const negative = lead === "-" || trail === "-" || Boolean(open);
   return negative ? -amount : amount;
 }

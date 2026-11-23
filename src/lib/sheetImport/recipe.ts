@@ -20,6 +20,17 @@ const DateSpecSchema = z.object({
     .max(12)
     .nullable()
     .describe("Month for day_of_month dates"),
+  fillDown: z
+    .boolean()
+    .describe(
+      "true only when the sheet writes a date once and leaves the date cell blank on the following rows of that day (or merges the date cells)",
+    ),
+  sectionOrder: z
+    .enum(["ascending", "descending"])
+    .nullable()
+    .describe(
+      "For day_with_section_month: whether month sections go forward (Enero, Febrero) or backward (Diciembre, Noviembre) down the sheet; null otherwise",
+    ),
 });
 
 const NumberFormatSchema = z

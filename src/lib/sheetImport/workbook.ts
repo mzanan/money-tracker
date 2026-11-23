@@ -4,6 +4,7 @@ import * as cptable from "xlsx/dist/cpexcel.full";
 XLSX.set_cptable(cptable);
 
 export const MAX_WORKBOOK_CELLS = 200_000;
+export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 export type CellValue = string | number | boolean | Date;
 
@@ -27,6 +28,11 @@ export interface SheetGrid {
 
 export class SheetFileError extends Error {}
 
+export interface ReadWorkbook {
+  sheets: SheetGrid[];
+  warnings: string[];
+}
+
 const ZIP_SIGNATURE = [0x50, 0x4b, 0x03, 0x04];
 const OLE_SIGNATURE = [0xd0, 0xcf, 0x11, 0xe0];
 const PDF_SIGNATURE = [0x25, 0x50, 0x44, 0x46];
@@ -35,12 +41,43 @@ function hasSignature(bytes: Uint8Array, signature: number[]): boolean {
   return signature.every((byte, i) => bytes[i] === byte);
 }
 
-function decodeText(bytes: Uint8Array): string {
-  try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-  } catch {
-    return new TextDecoder("windows-1252").decode(bytes);
+const UTF16LE_BOM = [0xff, 0xfe];
+const UTF16BE_BOM = [0xfe, 0xff];
+const NEWLINE = 0x0a;
+
+function decodeLines(bytes: Uint8Array, warnings: string[]): string {
+  const strict = new TextDecoder("utf-8", { fatal: true });
+  const legacy = new TextDecoder("windows-1252");
+  const lines: string[] = [];
+  const fallbackLines: number[] = [];
+  let start = 0;
+  for (let i = 0; i <= bytes.length; i++) {
+    if (i < bytes.length && bytes[i] !== NEWLINE) continue;
+    const line = bytes.subarray(start, i);
+    try {
+      lines.push(strict.decode(line));
+    } catch {
+      lines.push(legacy.decode(line));
+      fallbackLines.push(lines.length);
+    }
+    start = i + 1;
   }
+  if (fallbackLines.length) {
+    warnings.push(
+      `Lines ${fallbackLines.join(", ")} are not valid UTF-8 and were read as Windows-1252`,
+    );
+  }
+  return lines.join("\n").replace(/^\uFEFF/, "");
+}
+
+function decodeText(bytes: Uint8Array, warnings: string[]): string {
+  if (hasSignature(bytes, UTF16LE_BOM)) {
+    return new TextDecoder("utf-16le").decode(bytes.subarray(2));
+  }
+  if (hasSignature(bytes, UTF16BE_BOM)) {
+    return new TextDecoder("utf-16be").decode(bytes.subarray(2));
+  }
+  return decodeLines(bytes, warnings);
 }
 
 function cellFrom(raw: XLSX.CellObject): Pick<SheetCell, "value" | "error"> {
@@ -92,7 +129,7 @@ function gridFrom(
   };
 }
 
-function parse(bytes: Uint8Array): XLSX.WorkBook {
+function parse(bytes: Uint8Array, warnings: string[]): XLSX.WorkBook {
   const options = { cellDates: true, raw: true, nodim: true } as const;
   if (
     hasSignature(bytes, ZIP_SIGNATURE) ||
@@ -103,26 +140,31 @@ function parse(bytes: Uint8Array): XLSX.WorkBook {
   if (hasSignature(bytes, PDF_SIGNATURE)) {
     throw new SheetFileError("PDF files are not spreadsheets");
   }
-  const text = decodeText(bytes);
+  const text = decodeText(bytes, warnings);
   if (!text.trim() || text.includes("\u0000")) {
     throw new SheetFileError("The file is empty or not a spreadsheet");
   }
   return XLSX.read(text, { ...options, type: "string" });
 }
 
-export function readWorkbook(data: ArrayBuffer | Uint8Array): SheetGrid[] {
+export function readWorkbook(data: ArrayBuffer | Uint8Array): ReadWorkbook {
   const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+  if (bytes.length > MAX_FILE_BYTES) {
+    throw new SheetFileError("The file is too large to import");
+  }
+  const warnings: string[] = [];
   let workbook: XLSX.WorkBook;
   try {
-    workbook = parse(bytes);
+    workbook = parse(bytes, warnings);
   } catch (error) {
     if (error instanceof SheetFileError) throw error;
     throw new SheetFileError("The file could not be read as a spreadsheet");
   }
   const budget = { cells: 0 };
-  return workbook.SheetNames.map((name) =>
+  const sheets = workbook.SheetNames.map((name) =>
     gridFrom(name, workbook.Sheets[name], budget),
   );
+  return { sheets, warnings };
 }
 
 export function columnLetter(index: number): string {
