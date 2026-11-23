@@ -67,15 +67,13 @@ async function main() {
     const recipe: SheetRecipe = useAi
       ? await proposeSheetRecipe(encodeWorkbook(grids))
       : SheetRecipeSchema.parse(oracle[name]);
-    const { rows, errors } = applyRecipe(grids, recipe);
+    const { rows, errors, skipped } = applyRecipe(grids, recipe);
     const result = score(rows, expected);
-    const ids = sheetFingerprints(
-      rows.map((r) => ({ ...r, currency: r.currency ?? "XXX" })),
-    );
+    const ids = sheetFingerprints(rows);
     const uniqueIds = new Set(ids).size === ids.length;
     if (!result.perfect || !uniqueIds) failures++;
     console.log(
-      `${name} ${result.perfect && uniqueIds ? "PASS" : "FAIL"} ${result.summary}, ids unique ${uniqueIds}, row errors ${errors.length}`,
+      `${name} ${result.perfect && uniqueIds ? "PASS" : "FAIL"} ${result.summary}, ids unique ${uniqueIds}, ${skipped.length} skipped, ${errors.length} not read${errors.length ? ` (${errors.map((e) => `${e.sheet}!R${e.row} ${e.reason}`).join("; ")})` : ""}`,
     );
   }
   console.log(failures ? `${failures} failing` : "all passing");

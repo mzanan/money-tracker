@@ -22,10 +22,14 @@ const DateSpecSchema = z.object({
     .describe("Month for day_of_month dates"),
 });
 
-const NumberFormatSchema = z.object({
-  decimal: z.enum([",", "."]),
-  thousands: z.enum([".", ",", " ", ""]),
-});
+const NumberFormatSchema = z
+  .object({
+    decimal: z.enum([",", "."]),
+    thousands: z.enum([".", ",", " ", ""]),
+  })
+  .refine((format) => format.decimal !== format.thousands, {
+    message: "decimal and thousands separators must differ",
+  });
 
 const SignedAmountSchema = z.object({
   mode: z.literal("signed"),

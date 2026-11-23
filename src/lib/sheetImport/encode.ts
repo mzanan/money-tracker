@@ -1,35 +1,33 @@
+import { isBlank, utcYmd } from "@/lib/sheetImport/parse";
 import {
   columnLetter,
-  type CellValue,
+  type SheetCell,
   type SheetGrid,
 } from "@/lib/sheetImport/workbook";
-import { isBlank } from "@/lib/sheetImport/parse";
 
 const HEAD_ROWS = 40;
 const TAIL_ROWS = 5;
+const MAX_CELL_CHARS = 120;
 
-function render(value: CellValue): string {
-  if (value instanceof Date) return `date(${value.toISOString().slice(0, 10)})`;
-  if (typeof value === "number" || typeof value === "boolean")
+function render(cell: SheetCell): string {
+  if (cell.error !== null) return `error(${cell.error})`;
+  const value = cell.value;
+  if (value instanceof Date) return `date(${utcYmd(value)})`;
+  if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
-  return JSON.stringify(value);
+  }
+  return JSON.stringify(String(value).slice(0, MAX_CELL_CHARS));
 }
 
 function encodeSheet(grid: SheetGrid): string {
-  const columns = Array.from({ length: grid.columnCount }, (_, i) =>
-    columnLetter(i),
-  );
-  const rows: string[] = [];
-  for (let row = 1; row <= grid.rowCount; row++) {
-    const cells = columns.flatMap((column) => {
-      const value = grid.cell(column, row);
-      return value === null || isBlank(value)
-        ? []
-        : [`${column}:${render(value)}`];
-    });
-    if (cells.length) rows.push(`R${row} | ${cells.join(" | ")}`);
-  }
-  const lastColumn = columns.at(-1) ?? "A";
+  const rows = grid.rows().flatMap((row) => {
+    const cells = grid
+      .rowCells(row)
+      .filter((cell) => cell.error !== null || !isBlank(cell.value))
+      .map((cell) => `${cell.column}:${render(cell)}`);
+    return cells.length ? [`R${row} | ${cells.join(" | ")}`] : [];
+  });
+  const lastColumn = columnLetter(Math.max(grid.columnCount - 1, 0));
   const lines = [
     `Sheet ${JSON.stringify(grid.name)} (rows 1-${grid.rowCount}, columns A-${lastColumn})`,
   ];

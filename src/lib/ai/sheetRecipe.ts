@@ -8,7 +8,7 @@ const SYSTEM = `You read a personal finance spreadsheet that a person built by h
 Code applies your recipe to every row of the file. Never list transactions yourself; describe where the data is.
 
 You get each sheet as rows. Each row starts with its 1-based number (R4) and lists its non-empty cells as COLUMN:value.
-Strings are quoted, numbers are bare, real date cells appear as date(YYYY-MM-DD). Rows may be omitted in the middle of long sheets.
+Strings are quoted, numbers are bare, real date cells appear as date(YYYY-MM-DD), broken cells appear as error(...). Rows may be omitted in the middle of long sheets. When a date is written only on the first row of a day (or in merged cells), code carries it down to the rows below.
 
 Return only one JSON object, no prose and no code fences, valid against this JSON Schema:
 ${JSON.stringify(z.toJSONSchema(SheetRecipeSchema))}
