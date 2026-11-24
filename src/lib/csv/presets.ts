@@ -1,3 +1,5 @@
+import Papa from "papaparse";
+
 export type DateFormat = "iso" | "dmy" | "mdy";
 
 export type SignConvention =
@@ -66,3 +68,20 @@ export const CSV_PRESETS: CsvPreset[] = [
 export const CSV_PRESET_BY_ID: Record<string, CsvPreset> = Object.fromEntries(
   CSV_PRESETS.map((preset) => [preset.id, preset]),
 );
+
+export function presetForCsvText(text: string): CsvPreset | null {
+  const [headers] = Papa.parse<string[]>(text, { preview: 1 }).data;
+  return headers ? presetForHeaders(headers) : null;
+}
+
+export function presetForHeaders(headers: string[]): CsvPreset | null {
+  const present = new Set(headers.map((h) => h.trim()));
+  return (
+    CSV_PRESETS.find((preset) => {
+      const columns = Object.entries(preset.mapping)
+        .filter(([key, value]) => key.endsWith("Col") && value)
+        .map(([, value]) => String(value));
+      return columns.length > 0 && columns.every((c) => present.has(c));
+    }) ?? null
+  );
+}

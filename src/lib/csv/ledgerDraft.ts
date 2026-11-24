@@ -37,6 +37,10 @@ function csvSpent(row: CsvRow, scaleOf: ScaleOf): Money | null {
     : null;
 }
 
+export function csvExternalId(providedId: string): string {
+  return `${EXTERNAL_ID_PREFIX.csv}${providedId.trim().toLowerCase().slice(0, 64)}`;
+}
+
 export function csvDraft(
   row: CsvRow,
   source: string,
@@ -57,7 +61,7 @@ export function csvDraft(
 
   const providedId = row.externalId?.trim();
   const externalId = providedId
-    ? `${EXTERNAL_ID_PREFIX.csv}${providedId.toLowerCase().slice(0, 64)}`
+    ? csvExternalId(providedId)
     : transactionContentHash({ ...row, amount }).slice(0, 32);
   const money = { amount, currency: row.currency };
   const spent = csvSpent(row, scaleOf);

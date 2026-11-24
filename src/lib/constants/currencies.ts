@@ -90,6 +90,10 @@ export const CURRENCIES: CurrencyMeta[] = [
   },
 ];
 
+export const CURRENCY_CODES: ReadonlyArray<string> = CURRENCIES.map(
+  (c) => c.code,
+);
+
 export const CRYPTO_CODES: ReadonlyArray<string> = CURRENCIES.filter(
   (currency) => currency.crypto,
 ).map((currency) => currency.code);

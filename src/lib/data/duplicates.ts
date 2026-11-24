@@ -1,4 +1,4 @@
-import { dayWindow } from "@/lib/dates";
+import { dayWindow, daysAround } from "@/lib/dates";
 import { relativeUsdDiff, toUsdPair } from "@/lib/currency";
 import { getLedgerRecordsBetween } from "@/lib/data/ledgerWrites";
 import { flowCandidateOf, type FlowCandidate } from "@/lib/ledger/candidates";
@@ -76,5 +76,38 @@ export async function findCrossSourceCandidates(
         ),
       };
     }),
+  );
+}
+
+export type FlowQuery = Omit<CandidateQuery, "userId">;
+
+export async function findCandidatesForMany(
+  userId: string,
+  queries: FlowQuery[],
+  rates: FxRates | null = null,
+  windowDays = DEFAULT_WINDOW_DAYS,
+): Promise<FlowCandidate[][]> {
+  if (queries.length === 0) return [];
+  const days = queries.map((q) => q.occurredOn).sort();
+  const start = dayWindow(days[0], windowDays).start;
+  const end = dayWindow(days[days.length - 1], windowDays).end;
+  const byDay = new Map<string, FlowCandidate[]>();
+  for (const candidate of await getFlowCandidatesBetween(userId, start, end)) {
+    const list = byDay.get(candidate.occurredOn) ?? [];
+    list.push(candidate);
+    byDay.set(candidate.occurredOn, list);
+  }
+  return queries.map((query) =>
+    daysAround(query.occurredOn, windowDays).flatMap((day) =>
+      (byDay.get(day) ?? []).filter(
+        (candidate) =>
+          candidate.kind === query.kind &&
+          amountsMatch(
+            { amount: query.amount, currency: query.currency },
+            { amount: candidate.amount, currency: candidate.currency },
+            rates,
+          ),
+      ),
+    ),
   );
 }

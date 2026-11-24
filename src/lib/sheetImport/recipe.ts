@@ -109,3 +109,7 @@ export type DateSpec = z.infer<typeof DateSpecSchema>;
 export type NumberFormat = z.infer<typeof NumberFormatSchema>;
 export type TableRecipe = z.infer<typeof TableRecipeSchema>;
 export type SheetRecipe = z.infer<typeof SheetRecipeSchema>;
+
+export function mergeRecipes(parts: SheetRecipe[]): SheetRecipe {
+  return { tables: parts.flatMap((part) => part.tables) };
+}

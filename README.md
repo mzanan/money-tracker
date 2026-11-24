@@ -5,7 +5,7 @@ nómade (cargás en VND y ves los totales en USD, por ejemplo). Mobile + desktop
 instalable como PWA. Live: [money.itsmatias.com](https://money.itsmatias.com).
 
 Incluye: landing pública en `/`, sync de Bybit, import CSV (Wise, Astropay),
-import desde screenshots (también como share target de la PWA), cuenta de
+import de planillas (.xlsx, .xls, .ods, CSV) leídas por IA, import desde screenshots (también como share target de la PWA), cuenta de
 efectivo con retiros y cambios, reminders con feed iCal, asistente de chat con
 la API key propia del usuario (Groq o Google), analytics con PostHog EU y
 banner de cookies, y baseline de SEO/AEO (sitemap, robots, JSON-LD, `llms.txt`).
@@ -57,6 +57,9 @@ GOOGLE_CLIENT_ID=...apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-...
 AUTH_DISABLE_SIGNUPS=
 
+# import de planillas (Experiential Labs, key del servidor)
+EXPLABS_API_KEY=
+
 # opcional, solo produccion
 NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=
 ```
@@ -105,6 +108,7 @@ onboarding pide al menos 1 moneda + la moneda base.
    - `NEXT_PUBLIC_BETTER_AUTH_URL` (igual)
    - `GOOGLE_CLIENT_ID`
    - `GOOGLE_CLIENT_SECRET`
+   - `EXPLABS_API_KEY` (import de planillas)
 4. Deploy.
 5. Crear tu cuenta una vez (Google).
 6. **Single-user lockdown:** una vez creada tu cuenta, setear
@@ -272,6 +276,12 @@ drizzle/migrations/           # SQL generado por drizzle-kit
   excluye ese navegador (`?notrack=0` lo vuelve a incluir).
 - **Asistente**: chat opcional que corre con la API key propia del usuario
   (Groq o Google, en Settings → Assistant). Sin key del sistema como fallback.
+- **Import de planillas**: la IA (claude-haiku-5.5 vía Experiential Labs, key
+  del servidor, gratis para el usuario) lee las primeras y últimas filas de cada
+  pestaña y devuelve una receta (qué columna es fecha, monto, descripción);
+  código determinístico la aplica a todas las filas y el usuario confirma una
+  vista previa. Experiential Labs puede guardar ese contenido según su política;
+  figura en `/privacy`. Si se quedan sin créditos, el import falla (429).
 - **Categorías**: free-text, opcional, con autocomplete (datalist) de las
   recientes.
 - **Sugerencias de descripción** (QuickAdd y formulario de edición, duplicar y

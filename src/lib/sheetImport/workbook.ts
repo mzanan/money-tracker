@@ -1,6 +1,13 @@
 import * as XLSX from "xlsx";
 import * as cptable from "xlsx/dist/cpexcel.full";
 
+import { columnLetter } from "@/lib/sheetImport/columns";
+import {
+  hasSignature,
+  isSpreadsheetBinary,
+  PDF_SIGNATURE,
+} from "@/lib/sheetImport/signature";
+
 XLSX.set_cptable(cptable);
 
 export const MAX_WORKBOOK_CELLS = 200_000;
@@ -31,14 +38,6 @@ export class SheetFileError extends Error {}
 export interface ReadWorkbook {
   sheets: SheetGrid[];
   warnings: string[];
-}
-
-const ZIP_SIGNATURE = [0x50, 0x4b, 0x03, 0x04];
-const OLE_SIGNATURE = [0xd0, 0xcf, 0x11, 0xe0];
-const PDF_SIGNATURE = [0x25, 0x50, 0x44, 0x46];
-
-function hasSignature(bytes: Uint8Array, signature: number[]): boolean {
-  return signature.every((byte, i) => bytes[i] === byte);
 }
 
 const UTF16LE_BOM = [0xff, 0xfe];
@@ -131,10 +130,7 @@ function gridFrom(
 
 function parse(bytes: Uint8Array, warnings: string[]): XLSX.WorkBook {
   const options = { cellDates: true, raw: true, nodim: true } as const;
-  if (
-    hasSignature(bytes, ZIP_SIGNATURE) ||
-    hasSignature(bytes, OLE_SIGNATURE)
-  ) {
+  if (isSpreadsheetBinary(bytes)) {
     return XLSX.read(bytes, { ...options, type: "array" });
   }
   if (hasSignature(bytes, PDF_SIGNATURE)) {
@@ -167,6 +163,4 @@ export function readWorkbook(data: ArrayBuffer | Uint8Array): ReadWorkbook {
   return { sheets, warnings };
 }
 
-export function columnLetter(index: number): string {
-  return XLSX.utils.encode_col(index);
-}
+export { columnLetter };

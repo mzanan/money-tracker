@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2Icon, SlidersHorizontalIcon } from "lucide-react";
 
 import { useInlineEdit } from "@/hooks/useInlineEdit";
+import type { CsvInitialFile } from "@/lib/csv/initialImport";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,10 +25,14 @@ import { useCsvImport } from "./useCsvImport";
 
 export function CsvImportCard({
   existingSources = [],
+  initial,
+  onReset,
 }: {
   existingSources?: string[];
+  initial?: CsvInitialFile;
+  onReset?: () => void;
 }) {
-  const csv = useCsvImport();
+  const csv = useCsvImport(initial, onReset);
   const [showMapping, setShowMapping] = useState(false);
   const sourceEdit = useInlineEdit(csv.setSource);
 

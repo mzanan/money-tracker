@@ -4,7 +4,7 @@ import { ArrowLeftIcon, ChevronDownIcon } from "lucide-react";
 import { AnalyticsConsentCard } from "@/components/settings/analyticsConsentCard";
 import { AssistantKeyCard } from "@/components/settings/assistantKeyCard";
 import { CalendarFeedCard } from "@/components/settings/calendarFeedCard";
-import { CsvImportCard } from "@/components/settings/csvImportCard";
+import { SheetImportCard } from "@/components/settings/sheetImportCard";
 import { DayTotalsCard } from "@/components/settings/dayTotalsCard";
 import { NonDailyLabelsCard } from "@/components/settings/nonDailyLabelsCard";
 import { ImportedAccountsCard } from "@/components/settings/importedAccountsCard";
@@ -94,9 +94,9 @@ export default async function SettingsPage({
             </Section>
             <Section
               title="Data import"
-              hint="One-off CSV import from any bank or wallet."
+              hint="One-off import of a spreadsheet or CSV from any bank or wallet."
             >
-              <CsvImportCard existingSources={existingSources} />
+              <SheetImportCard existingSources={existingSources} />
             </Section>
           </>
         }
