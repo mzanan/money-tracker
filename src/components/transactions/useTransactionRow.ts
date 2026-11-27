@@ -178,8 +178,8 @@ export function useTransactionRow(
     ? transferLabel(ends, accountLabels, movement.leg?.direction)
     : resolveSourceLabel(tx.source, accountLabels);
   const avatarSeed = tx.tags[0] || sourceLabel;
-  const reminderTitle = tx.tags[0] || sourceLabel;
   const description = tx.note?.trim();
+  const reminderTitle = description || tx.tags[0] || sourceLabel;
   const resolvedFixed = isFixedTransaction(
     movement,
     settings.fixed_labels,
