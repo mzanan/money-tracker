@@ -14,7 +14,7 @@ For the general overview read `README.md`. This is what an agent needs to know t
 
 ## Stack
 
-Next 16 (App Router) + React 19 + TS strict + Tailwind v4 + shadcn/ui (`base-nova`: Base UI for `dropdown-menu`, `dialog` and `drawer`, Radix for the rest; `vaul` removed) + **Turso (libSQL) + Drizzle ORM** + **Better Auth** (Google OAuth only) + TanStack React Query v5 + Zustand v5 + react-hook-form + Zod + date-fns / date-fns-tz + sonner + next-themes + lucide-react + Vercel AI SDK (Groq / Google, per-user key). Package manager: npm. Node 22 (`.nvmrc`). Dev server on port 3020.
+Next 16 (App Router) + React 19 + TS strict + Tailwind v4 + shadcn/ui (`base-nova`: Base UI for `dropdown-menu`, `dialog` and `drawer`, Radix for the rest; `vaul` removed) + **Turso (libSQL) + Drizzle ORM** + **Better Auth** (Google OAuth only) + TanStack React Query v5 + Zustand v5 + react-hook-form + Zod + date-fns / date-fns-tz + sonner + next-themes + lucide-react + Vercel AI SDK (chat and screenshots: Groq / Google with the user's key; spreadsheet import and its duplicate judge: claude-haiku-5.5 through Experiential Labs with the server key `EXPLABS_API_KEY`, `@ai-sdk/anthropic`). Package manager: npm. Node 22 (`.nvmrc`). Dev server on port 3020.
 
 Supabase (Postgres + Auth + RLS) was migrated away on 2026-05-25 for portability. Schema and the one-shot migration are documented in the vault (`01-Projects/02-money-tracker/`).
 
@@ -41,10 +41,11 @@ Supabase (Postgres + Auth + RLS) was migrated away on 2026-05-25 for portability
 
 ## Data ingestion model
 
-Five sources, four ways into the DB:
+Sources and how they reach the DB:
 
 - **Bybit (automated):** API sync via `/v5/asset/fundinghistory`. Captures QR Pay debits, deposits/withdrawals, Earn rewards. Types whose `showBusiTypeEn` matches `/transfer|trf|asset.*exchange|sub.account/i` are excluded (internal moves between the same user's accounts). Adapter in `src/lib/integrations/bybit.ts`. Auto sync can be paused per integration and a source tab can be archived.
-- **Wise + Astropay (semi-auto):** CSV with a preset. In `/settings` → "Import or paste CSV" → the "Format" dropdown picks the preset, which prefills columns and sets `source`. If that source already has transactions, `sinceDate` defaults to `max(occurred_on) + 1 day`. Presets in `src/lib/csv/presets.ts`.
+- **Spreadsheets and CSV (any user, account and file):** Settings → Accounts → "Data import" (`components/settings/sheetImportCard.tsx`, `useSheetImport.ts`, `sheet/*`). An AI recipe (`lib/ai/sheetRecipe.ts`) says which columns hold date, amount and description; `lib/sheetImport/*` applies it to every row; the user reviews a preview and imports. Saved readings per header signature are revalidated on re-upload (`lib/sheetImport/layout.ts`). Duplicates: own stable id, old CSV content hash, re-read row, whole-word description match, then the AI judge (`lib/ai/duplicateJudge.ts`); rows matched by their own id reserve their transaction first (`claimSheetRows`). Import log and Undo in `lib/actions/sheetImportLog.ts`, `lib/data/sheetImports.ts`. Keep it generic: no per-bank or per-user logic.
+- **Wise exports (only fixed format):** an exact Wise CSV is detected by `presetForCsvText` (`src/lib/csv/presets.ts`) and goes to the preset CSV flow (`csvImportCard`), which sets `source` and defaults `sinceDate` to `max(occurred_on) + 1 day`. A Wise file with a changed column goes down the AI path like any other.
 - **Screenshots:** `/screenshot-import` (also a PWA share target) extracts transactions from an image with the user's AI key (`lib/ai/screenshotExtract.ts`, `lib/imageExtract.ts`).
 - **Cash + manual entries:** `QuickAddForm` on home, with autocomplete of categories and merchants (notes) from the last 200 transactions. The description suggestions also run in the edit/duplicate/pay form; the catalog reaches both forms through `EntrySuggestionCatalogProvider` (mounted by `LedgerProviders`). Cash withdrawals and exchanges from Settings → Cash.
 - **Opening balances:** Settings → account menu → "Opening balance" posts one transaction against the `equity` opening account (`lib/openingBalance.ts`, `lib/actions/openingBalance.ts`). Synced (`api`) accounts can't take one (`canTakeOpening`).

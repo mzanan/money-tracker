@@ -16,6 +16,10 @@ import {
   normalizeRow,
   normalizeRowDetailed,
 } from "@/lib/csv/normalize";
+import {
+  initialCsvState,
+  type CsvInitialFile,
+} from "@/lib/csv/initialImport";
 import { addOneDay } from "@/lib/csv/parsing";
 import {
   CSV_PRESETS,
@@ -54,18 +58,23 @@ const EMPTY_MAPPING: CsvMapping = {
   sinceDate: "",
 };
 
-export function useCsvImport() {
+export function useCsvImport(initial?: CsvInitialFile, onReset?: () => void) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
 
   const [mode, setMode] = useState<Mode>("file");
-  const [fileName, setFileName] = useState("");
-  const [headers, setHeaders] = useState<string[]>([]);
-  const [rawRows, setRawRows] = useState<Record<string, string>[]>([]);
-  const [mapping, setMapping] = useState<CsvMapping>(EMPTY_MAPPING);
-  const [source, setSource] = useState("");
-  const [formatId, setFormatId] = useState<string>("custom");
+  const [boot] = useState(() => (initial ? initialCsvState(initial) : null));
+  const [fileName, setFileName] = useState(boot?.fileName ?? "");
+  const [headers, setHeaders] = useState<string[]>(boot?.headers ?? []);
+  const [rawRows, setRawRows] = useState<Record<string, string>[]>(
+    boot?.rawRows ?? [],
+  );
+  const [mapping, setMapping] = useState<CsvMapping>(
+    boot?.mapping ?? EMPTY_MAPPING,
+  );
+  const [source, setSource] = useState(boot?.source ?? "");
+  const [formatId, setFormatId] = useState<string>(boot?.formatId ?? "custom");
   const [pasted, setPasted] = useState("");
   const [replace, setReplace] = useState(false);
 
@@ -93,6 +102,7 @@ export function useCsvImport() {
     setPasted("");
     setReplace(false);
     if (inputRef.current) inputRef.current.value = "";
+    onReset?.();
   }
 
   async function applyCutoff(presetSource: string) {

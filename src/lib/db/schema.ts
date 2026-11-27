@@ -12,6 +12,10 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { ACCOUNT_PURPOSES } from "@/lib/constants/accountPurposes";
+import {
+  DUPLICATE_STEPS,
+  SHEET_ROW_STATUSES,
+} from "@/lib/constants/sheetImport";
 import type { FxRates, LedgerRevisionSnapshot } from "@/types/db";
 
 // ---------------------------------------------------------------------------
@@ -261,6 +265,72 @@ export const csv_import_locks = sqliteTable(
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (t) => [primaryKey({ columns: [t.user_id, t.source] })],
+);
+
+export const sheet_import_layouts = sqliteTable(
+  "sheet_import_layouts",
+  {
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    signature: text("signature").notNull(),
+    recipe_version: integer("recipe_version").notNull(),
+    conventions: text("conventions", { mode: "json" }).notNull(),
+    last_source: text("last_source").notNull(),
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    updated_at: text("updated_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString()),
+  },
+  (t) => [primaryKey({ columns: [t.user_id, t.signature] })],
+);
+
+export const sheet_imports = sqliteTable(
+  "sheet_imports",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    source: text("source").notNull(),
+    file_name: text("file_name").notNull(),
+    imported_count: integer("imported_count").notNull().default(0),
+    skipped_count: integer("skipped_count").notNull().default(0),
+    not_read_count: integer("not_read_count").notNull().default(0),
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    undone_at: text("undone_at"),
+  },
+  (t) => [index("sheet_imports_user_idx").on(t.user_id, t.created_at)],
+);
+
+export const sheet_import_rows = sqliteTable(
+  "sheet_import_rows",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    import_id: text("import_id")
+      .notNull()
+      .references(() => sheet_imports.id, { onDelete: "cascade" }),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    sheet: text("sheet").notNull(),
+    row: integer("row").notNull(),
+    status: text("status", { enum: SHEET_ROW_STATUSES }).notNull(),
+    step: text("step", { enum: DUPLICATE_STEPS }),
+    reason: text("reason"),
+    external_id: text("external_id"),
+    matched_transaction_id: text("matched_transaction_id"),
+  },
+  (t) => [index("sheet_import_rows_import_idx").on(t.import_id)],
 );
 
 export const fx_rates_cache = sqliteTable("fx_rates_cache", {

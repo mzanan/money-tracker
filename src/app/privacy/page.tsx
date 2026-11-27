@@ -40,7 +40,19 @@ export default function PrivacyPage() {
           <p>
             <strong className="text-foreground">Financial records.</strong> The
             transactions, accounts, reminders and notes you enter, import from
-            CSV files or extract from screenshots you upload.
+            CSV or spreadsheet files or extract from screenshots you upload.
+          </p>
+          <p>
+            <strong className="text-foreground">Spreadsheet imports.</strong>{" "}
+            When you import a spreadsheet, the first and last rows of each tab
+            are sent to Experiential Labs, which passes them to Anthropic&apos;s
+            Claude to work out which column holds the date, the amount and the
+            description. To spot rows you already have, it may also receive the
+            description of an incoming row next to the description of one of
+            your existing records with the same amount around the same date,
+            and how many days apart they are, without the amounts. Experiential
+            Labs may store that content under its own privacy policy. Everything
+            else is read on our side and is not sent to them.
           </p>
           <p>
             <strong className="text-foreground">Integrations.</strong> If you
@@ -74,8 +86,9 @@ export default function PrivacyPage() {
           <p>
             Vercel (hosting), Turso (database), Google (sign-in), Bybit (sync
             you connect), Google Gemini or Groq (only when you use AI features
-            with your key) and PostHog EU (analytics, see Cookies). Exchange
-            rates come from open.er-api.com without any personal data.
+            with your key), Experiential Labs and Anthropic (only when you
+            import a spreadsheet) and PostHog EU (analytics, see Cookies).
+            Exchange rates come from open.er-api.com without any personal data.
           </p>
         </LegalSection>
 

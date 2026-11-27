@@ -67,7 +67,11 @@ async function main() {
       readFileSync(path.join(DIR, `${name}.expected.json`), "utf8"),
     ) as Expected[];
     const recipe: SheetRecipe = useAi
-      ? await proposeSheetRecipe(encodeWorkbook(grids))
+      ? {
+          tables: (
+            await Promise.all(encodeWorkbook(grids).map(proposeSheetRecipe))
+          ).flatMap((part) => part.tables),
+        }
       : SheetRecipeSchema.parse(oracle[name]);
     const { rows, errors, skipped } = applyRecipe(grids, recipe);
     const result = score(rows, expected);

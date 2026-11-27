@@ -82,7 +82,7 @@ export function AccountNamePicker({
         <Input
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="wise / wise-personal / astropay"
+          placeholder="wise / wise-personal / savings"
           required
           aria-invalid={error ? true : undefined}
         />

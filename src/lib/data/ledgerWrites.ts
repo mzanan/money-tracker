@@ -247,12 +247,7 @@ async function replaceTransaction(
   if (
     expected &&
     (!sameHeader(snapshot.transaction, expected) ||
-      !(await sameEntries(
-        executor,
-        userId,
-        snapshot.entries,
-        expected.lines,
-      )))
+      !(await sameEntries(executor, userId, snapshot.entries, expected.lines)))
   ) {
     throw new LedgerPostingError("Transaction changed, reload and retry");
   }
@@ -365,6 +360,31 @@ export async function existingExternalIds(
         ),
       );
     for (const row of rows) found.add(row.external_id);
+  }
+  return found;
+}
+
+export async function existingExternalRefs(
+  userId: string,
+  origin: string,
+  externalIds: ReadonlyArray<string>,
+): Promise<Map<string, string>> {
+  const found = new Map<string, string>();
+  for (const batch of chunked([...new Set(externalIds)], 500)) {
+    const rows = await db
+      .select({
+        external_id: ledger_external_ids.external_id,
+        transaction_id: ledger_external_ids.transaction_id,
+      })
+      .from(ledger_external_ids)
+      .where(
+        and(
+          eq(ledger_external_ids.user_id, userId),
+          eq(ledger_external_ids.origin, origin),
+          inArray(ledger_external_ids.external_id, batch),
+        ),
+      );
+    for (const row of rows) found.set(row.external_id, row.transaction_id);
   }
   return found;
 }

@@ -13,7 +13,13 @@ export function FilePicker({
   onPastedChange,
   onFile,
   onPaste,
+  accept = ".csv,text/csv",
+  pastePlaceholder = "date,amount,currency,description\n2026-05-18,-12.50,USD,Coffee",
+  pasteLabel = "Parse pasted CSV",
 }: {
+  accept?: string;
+  pastePlaceholder?: string;
+  pasteLabel?: string;
   mode: "file" | "paste";
   pasted: string;
   inputRef: React.RefObject<HTMLInputElement | null>;
@@ -27,7 +33,7 @@ export function FilePicker({
       <input
         ref={inputRef}
         type="file"
-        accept=".csv,text/csv"
+        accept={accept}
         onChange={onFile}
         className="hidden"
         id="csv-file"
@@ -57,14 +63,12 @@ export function FilePicker({
           <Textarea
             value={pasted}
             onChange={(event) => onPastedChange(event.target.value)}
-            placeholder={
-              "date,amount,currency,description\n2026-05-18,-12.50,USD,Coffee"
-            }
+            placeholder={pastePlaceholder}
             rows={8}
             className="font-mono text-xs"
           />
           <Button variant="outline" onClick={onPaste} className="w-fit">
-            Parse pasted CSV
+            {pasteLabel}
           </Button>
         </div>
       )}

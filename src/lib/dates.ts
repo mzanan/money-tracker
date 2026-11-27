@@ -53,6 +53,13 @@ export function dayDiff(a: string, b: string): number {
   );
 }
 
+export function daysAround(occurredOn: string, windowDays: number): string[] {
+  const center = new Date(`${occurredOn}T00:00:00Z`);
+  return Array.from({ length: windowDays * 2 + 1 }, (_, i) =>
+    format(addDays(center, i - windowDays), "yyyy-MM-dd"),
+  );
+}
+
 export function dayWindow(
   occurredOn: string,
   windowDays: number,
