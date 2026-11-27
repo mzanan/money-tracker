@@ -1,5 +1,6 @@
 import { columnLetter } from "@/lib/sheetImport/columns";
-import { fold, isBlank, utcYmd } from "@/lib/sheetImport/parse";
+import { layoutSignature } from "@/lib/sheetImport/layout";
+import { isBlank, utcYmd } from "@/lib/sheetImport/parse";
 import type { SheetCell, SheetGrid } from "@/lib/sheetImport/workbook";
 
 export const MAX_ENCODED_CHARS = 150_000;
@@ -11,7 +12,6 @@ const SAMPLE_LEVELS = [
   { head: 5, tail: 1, repeatHead: 2, repeatTail: 0 },
 ];
 const MAX_CELL_CHARS = 120;
-const MIN_HEADER_CELLS = 2;
 const TRUNCATED_NOTE = "\n... rest of this sheet omitted ...";
 
 interface Sample {
@@ -37,18 +37,6 @@ function encodedRows(grid: SheetGrid): string[] {
       .map((cell) => `${cell.column}:${render(cell)}`);
     return cells.length ? [`R${row} | ${cells.join(" | ")}`] : [];
   });
-}
-
-function headerSignature(grid: SheetGrid): string | null {
-  for (const row of grid.rows()) {
-    const labels = grid
-      .rowCells(row)
-      .filter((cell) => typeof cell.value === "string" && fold(cell.value));
-    if (labels.length >= MIN_HEADER_CELLS) {
-      return labels.map((cell) => `${cell.column}=${fold(cell.value)}`).join("|");
-    }
-  }
-  return null;
 }
 
 function encodeSheet(
@@ -110,7 +98,7 @@ export function encodeWorkbook(grids: SheetGrid[]): string[] {
   const rows = grids.map(encodedRows);
   const firstWithHeader = new Map<string, string>();
   const sameAs = grids.map((grid) => {
-    const signature = headerSignature(grid);
+    const signature = layoutSignature(grid);
     if (!signature) return null;
     const first = firstWithHeader.get(signature);
     if (first) return first;

@@ -16,6 +16,7 @@ import { AccountNamePicker } from "../csv/accountNamePicker";
 import { FileHeader } from "../csv/fileHeader";
 import type { useSheetImport } from "../useSheetImport";
 import { NotReadList } from "./notReadList";
+import { ReadingConflicts } from "./readingConflicts";
 import { ReadingCorrections } from "./readingCorrections";
 import { SheetPreviewTable } from "./sheetPreviewTable";
 
@@ -76,6 +77,12 @@ export function SheetReview({
         )}
       </div>
 
+      <ReadingConflicts
+        conflicts={sheet.conflicts}
+        choices={sheet.choices}
+        onChoose={sheet.chooseReading}
+      />
+
       {sheet.recipe && (
         <div className="grid gap-3">
           <Button
@@ -107,13 +114,20 @@ export function SheetReview({
       <SheetPreviewTable
         rows={sheet.rows}
         checks={sheet.checks}
-        excluded={sheet.excluded}
+        toggled={sheet.toggled}
         currency={sheet.currency}
         currencyMap={sheet.currencyMap}
         onToggle={sheet.toggleRow}
       />
 
-      {sheet.checkError && <ErrorText>{sheet.checkError}</ErrorText>}
+      {sheet.checkError && (
+        <div className="flex items-center gap-2">
+          <ErrorText>{sheet.checkError}</ErrorText>
+          <Button variant="ghost" size="sm" onClick={sheet.retryCheck}>
+            Try again
+          </Button>
+        </div>
+      )}
 
       <div className="flex gap-2">
         <Button

@@ -4,8 +4,8 @@ App web personal para trackear **income + expenses** multi-moneda. Pensada para
 nómade (cargás en VND y ves los totales en USD, por ejemplo). Mobile + desktop,
 instalable como PWA. Live: [money.itsmatias.com](https://money.itsmatias.com).
 
-Incluye: landing pública en `/`, sync de Bybit, import CSV (Wise, Astropay),
-import de planillas (.xlsx, .xls, .ods, CSV) leídas por IA, import desde screenshots (también como share target de la PWA), cuenta de
+Incluye: landing pública en `/`, sync de Bybit, import de planillas y CSV de
+cualquier banco o billetera (.xlsx, .xls, .ods, .numbers, CSV) leídas por IA, import desde screenshots (también como share target de la PWA), cuenta de
 efectivo con retiros y cambios, reminders con feed iCal, asistente de chat con
 la API key propia del usuario (Groq o Google), analytics con PostHog EU y
 banner de cookies, y baseline de SEO/AEO (sitemap, robots, JSON-LD, `llms.txt`).
@@ -276,12 +276,26 @@ drizzle/migrations/           # SQL generado por drizzle-kit
   excluye ese navegador (`?notrack=0` lo vuelve a incluir).
 - **Asistente**: chat opcional que corre con la API key propia del usuario
   (Groq o Google, en Settings → Assistant). Sin key del sistema como fallback.
-- **Import de planillas**: la IA (claude-haiku-5.5 vía Experiential Labs, key
-  del servidor, gratis para el usuario) lee las primeras y últimas filas de cada
-  pestaña y devuelve una receta (qué columna es fecha, monto, descripción);
-  código determinístico la aplica a todas las filas y el usuario confirma una
-  vista previa. Experiential Labs puede guardar ese contenido según su política;
-  figura en `/privacy`. Si se quedan sin créditos, el import falla (429).
+- **Import de planillas y CSV**: genérico para cualquier usuario, cuenta y
+  archivo. La IA (claude-haiku-5.5 vía Experiential Labs, key del servidor,
+  gratis para el usuario) lee las primeras y últimas filas de cada pestaña y
+  devuelve una receta (qué columna es fecha, monto, descripción); código
+  determinístico la aplica a todas las filas y el usuario confirma una vista
+  previa. Un export exacto de Wise es el único formato fijo y va al import CSV
+  con preset (`src/lib/csv/presets.ts`); si cambia una columna, pasa por la IA.
+  - **Lectura guardada**: la receta se guarda por usuario y encabezados
+    (`sheet_import_layouts`). Al volver a subir, si la lectura nueva da otras
+    filas que la guardada, la vista previa pide elegir cuál usar.
+  - **Repetidos**: cada fila lleva un id estable (fecha + monto + descripción +
+    ocurrencia). Orden de chequeo: id propio, hash del import CSV viejo, misma
+    fila releída en la misma cuenta, descripción con palabras completas, y por
+    último la IA compara descripciones. Las filas ya importadas reservan su
+    movimiento antes del chequeo. Lo repetido sale destildado.
+  - **Historial y deshacer**: cada import queda en `sheet_imports` /
+    `sheet_import_rows` y se puede deshacer desde "Recent imports".
+  - **Privacidad**: Experiential Labs recibe esas filas de muestra y, para los
+    repetidos, pares de descripciones sin montos; puede guardarlos según su
+    política. Figura en `/privacy`. Si se quedan sin créditos, el import falla.
 - **Categorías**: free-text, opcional, con autocomplete (datalist) de las
   recientes.
 - **Sugerencias de descripción** (QuickAdd y formulario de edición, duplicar y

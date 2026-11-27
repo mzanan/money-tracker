@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const column = z.string().regex(/^[A-Z]{1,3}$/);
 
-const DateSpecSchema = z.object({
+export const DateSpecSchema = z.object({
   column: column.describe(
     "Column holding the date (or the month names, for dates across a grid)",
   ),
@@ -67,7 +67,7 @@ const TypeColumnAmountSchema = z.object({
   default: z.enum(["expense", "income"]),
 });
 
-const GridSchema = z.object({
+export const GridSchema = z.object({
   orientation: z.enum(["dates_down", "dates_across"]),
   headerRow: z.number().int().positive(),
   categoryColumn: column.nullable().describe("Row labels, for dates_across"),
@@ -109,6 +109,8 @@ export type DateSpec = z.infer<typeof DateSpecSchema>;
 export type NumberFormat = z.infer<typeof NumberFormatSchema>;
 export type TableRecipe = z.infer<typeof TableRecipeSchema>;
 export type SheetRecipe = z.infer<typeof SheetRecipeSchema>;
+
+export const RECIPE_VERSION = 1;
 
 export function mergeRecipes(parts: SheetRecipe[]): SheetRecipe {
   return { tables: parts.flatMap((part) => part.tables) };

@@ -43,9 +43,8 @@ export function CsvImportCard({
       <CardHeader>
         <CardTitle>Import or paste CSV</CardTitle>
         <CardDescription>
-          Upload or paste a statement from any bank or wallet (Wise, Astropay,
-          etc.). You label the source; re-importing the same data does not
-          duplicate.
+          Upload or paste a statement from any bank or wallet. You label the
+          source; re-importing the same data does not duplicate.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -77,7 +76,7 @@ export function CsvImportCard({
                     <Input
                       {...sourceEdit.inputProps}
                       onBlur={sourceEdit.submit}
-                      placeholder="wise / astropay"
+                      placeholder="wise / savings"
                       className="h-7 text-sm"
                     />
                   ) : (

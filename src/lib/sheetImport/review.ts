@@ -1,4 +1,8 @@
 import type { CsvRow } from "@/lib/actions/csvImport";
+import type {
+  DuplicateStep,
+  SheetRowStatus,
+} from "@/lib/constants/sheetImport";
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import type { SheetRow, SheetRowIssue } from "@/lib/sheetImport/apply";
 import { fingerprintOccurrences } from "@/lib/sheetImport/occurrence";
@@ -29,8 +33,8 @@ export function recognizedCurrency(row: SheetRow): string | null {
 export function isUnsupportedCurrency(row: SheetRow): boolean {
   return Boolean(
     row.currency &&
-      !isSupportedCurrency(row.currency) &&
-      CURRENCY_CODE.test(row.currency),
+    !isSupportedCurrency(row.currency) &&
+    CURRENCY_CODE.test(row.currency),
   );
 }
 
@@ -53,6 +57,18 @@ export function rowCurrency(
   if (row.currency === null) return fallback || null;
   const mapped = map[row.currency];
   return mapped && mapped !== SKIP_CURRENCY ? mapped : null;
+}
+
+export function checkRowOf(row: ReviewRow, fallback: string, map: CurrencyMap) {
+  return {
+    occurredOn: row.occurredOn,
+    kind: row.kind,
+    amount: row.amount,
+    currency: rowCurrency(row, fallback, map),
+    description: row.description,
+    fingerprintKey: row.fingerprintKey,
+    occurrence: row.occurrence,
+  };
 }
 
 export function isSkippedRow(row: SheetRow, map: CurrencyMap): boolean {
@@ -104,4 +120,79 @@ export function inChunks<T>(items: T[], size = SHEET_REQUEST_ROWS): T[][] {
 
 export function signedAmount(row: SheetRow): number {
   return row.kind === "expense" ? -row.amount : row.amount;
+}
+
+export interface RowCheckState {
+  state: "new" | "already_imported" | "duplicate";
+  step: DuplicateStep | null;
+  externalId: string;
+  match: { id: string } | null;
+}
+
+export function isRowLocked(check: RowCheckState | undefined): boolean {
+  return check?.state === "already_imported";
+}
+
+export function isRowSelected(
+  index: number,
+  check: RowCheckState | undefined,
+  toggled: ReadonlySet<number>,
+): boolean {
+  if (!check || isRowLocked(check)) return false;
+  const byDefault = check.state === "new";
+  return toggled.has(index) ? !byDefault : byDefault;
+}
+
+export function skippedRowLog(
+  row: SheetRow,
+  check: RowCheckState,
+): SheetRowLogInput {
+  return {
+    sheet: row.sheet,
+    row: row.row,
+    status: check.state === "new" ? "excluded" : check.state,
+    step: check.step,
+    reason: null,
+    externalId: null,
+    matchedTransactionId: check.match?.id ?? null,
+  };
+}
+
+export function notReadLog(issue: SheetRowIssue): SheetRowLogInput {
+  return {
+    sheet: issue.sheet,
+    row: issue.row,
+    status: "not_read",
+    step: null,
+    reason: issue.reason,
+    externalId: null,
+    matchedTransactionId: null,
+  };
+}
+
+export function sourceFromFileName(name: string): string {
+  return name
+    .replace(/\.[^.]+$/, "")
+    .trim()
+    .toLowerCase();
+}
+
+export interface SheetRowLogInput {
+  sheet: string;
+  row: number;
+  status: SheetRowStatus;
+  step: DuplicateStep | null;
+  reason: string | null;
+  externalId: string | null;
+  matchedTransactionId: string | null;
+}
+
+export function duplicateLabel(match: {
+  source: string;
+  occurredOn: string;
+  note: string | null;
+}): string {
+  return [match.source, match.occurredOn, match.note]
+    .filter(Boolean)
+    .join(" · ");
 }

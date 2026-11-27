@@ -239,6 +239,13 @@
       "when": 1794149823895,
       "tag": "0033_ledger_equity_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1795518216974,
+      "tag": "0034_sheet_import_log",
+      "breakpoints": true
     }
   ]
 }

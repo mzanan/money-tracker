@@ -5,6 +5,7 @@ import { AnalyticsConsentCard } from "@/components/settings/analyticsConsentCard
 import { AssistantKeyCard } from "@/components/settings/assistantKeyCard";
 import { CalendarFeedCard } from "@/components/settings/calendarFeedCard";
 import { SheetImportCard } from "@/components/settings/sheetImportCard";
+import { getRecentSheetImports } from "@/lib/data/sheetImports";
 import { DayTotalsCard } from "@/components/settings/dayTotalsCard";
 import { NonDailyLabelsCard } from "@/components/settings/nonDailyLabelsCard";
 import { ImportedAccountsCard } from "@/components/settings/importedAccountsCard";
@@ -23,7 +24,10 @@ export default async function SettingsPage({
 }) {
   const user = await requireUser();
   const { tab } = await searchParams;
-  const existingSources = await getCsvSources(user.id);
+  const [existingSources, recentImports] = await Promise.all([
+    getCsvSources(user.id),
+    getRecentSheetImports(user.id),
+  ]);
 
   return (
     <div className="mx-auto grid w-full max-w-xl gap-6">
@@ -96,7 +100,10 @@ export default async function SettingsPage({
               title="Data import"
               hint="One-off import of a spreadsheet or CSV from any bank or wallet."
             >
-              <SheetImportCard existingSources={existingSources} />
+              <SheetImportCard
+                existingSources={existingSources}
+                recentImports={recentImports}
+              />
             </Section>
           </>
         }

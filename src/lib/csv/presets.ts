@@ -57,12 +57,6 @@ export const CSV_PRESETS: CsvPreset[] = [
       targetCurrencyCol: "Target currency",
     },
   },
-  {
-    id: "astropay",
-    label: "Astropay",
-    source: "astropay",
-    mapping: {},
-  },
 ];
 
 export const CSV_PRESET_BY_ID: Record<string, CsvPreset> = Object.fromEntries(

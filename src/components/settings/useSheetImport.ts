@@ -4,34 +4,56 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { getLastImportDate, importCsvRows } from "@/lib/actions/csvImport";
+import { getLastImportDate } from "@/lib/actions/csvImport";
 import {
   checkSheetRows,
+  claimSheetRows,
   readSheetLayout,
   type SheetRowCheck,
 } from "@/lib/actions/sheetImport";
+import {
+  finishSheetImport,
+  getSheetLayouts,
+  importSheetChunk,
+  startSheetImport,
+} from "@/lib/actions/sheetImportLog";
 import type { CsvInitialFile } from "@/lib/csv/initialImport";
 import { presetForCsvText } from "@/lib/csv/presets";
 import { applyRecipe } from "@/lib/sheetImport/apply";
+import {
+  layoutSource,
+  layoutsToSave,
+  readingsChosen,
+  reconcileRecipe,
+  tableLayoutKeys,
+  withTable,
+  type Conventions,
+  type ReadingChoice,
+  type ReadingConflict,
+} from "@/lib/sheetImport/layout";
 import {
   mergeRecipes,
   type SheetRecipe,
   type TableRecipe,
 } from "@/lib/sheetImport/recipe";
 import {
+  checkRowOf,
   inChunks,
+  isRowSelected,
   isSkippedRow,
+  notReadLog,
   reviewRows,
   rowCurrency,
   rowsWithoutCurrency,
   skippedCurrencyIssues,
+  skippedRowLog,
+  sourceFromFileName,
   toCsvRow,
   unknownCurrencyValues,
   type CurrencyMap,
 } from "@/lib/sheetImport/review";
 import { isSpreadsheetBinary } from "@/lib/sheetImport/signature";
 import type { SheetGrid } from "@/lib/sheetImport/workbook";
-
 
 type Mode = "file" | "paste";
 type Phase = "idle" | "reading" | "ready";
@@ -56,11 +78,18 @@ export function useSheetImport() {
   const [source, setSource] = useState("");
   const [currency, setCurrency] = useState("");
   const [currencyMap, setCurrencyMap] = useState<CurrencyMap>({});
-  const [excluded, setExcluded] = useState<ReadonlySet<number>>(new Set());
+  const [toggled, setToggled] = useState<ReadonlySet<number>>(new Set());
+  const [checkRun, setCheckRun] = useState(0);
   const [checks, setChecks] = useState<SheetRowCheck[] | null>(null);
   const [checkError, setCheckError] = useState<string | null>(null);
   const [showCorrections, setShowCorrections] = useState(false);
+  const [conflicts, setConflicts] = useState<ReadingConflict[]>([]);
+  const [choices, setChoices] = useState<Record<number, ReadingChoice>>({});
 
+  const layoutKeys = useMemo(
+    () => (recipe ? tableLayoutKeys(recipe, grids) : []),
+    [recipe, grids],
+  );
   const applied = useMemo(
     () => (recipe ? applyRecipe(grids, recipe) : null),
     [grids, recipe],
@@ -91,26 +120,31 @@ export function useSheetImport() {
     let cancelled = false;
     const timer = setTimeout(async () => {
       const found: SheetRowCheck[] = [];
+      const used: string[] = [];
+      const chunks = inChunks(
+        rows.map((row) => checkRowOf(row, currency, currencyMap)),
+      );
       try {
-        for (const chunk of inChunks(rows)) {
-          const result = await checkSheetRows({
-            source,
-            rows: chunk.map((row) => ({
-              occurredOn: row.occurredOn,
-              kind: row.kind,
-              amount: row.amount,
-              currency: rowCurrency(row, currency, currencyMap),
-              description: row.description,
-              fingerprintKey: row.fingerprintKey,
-              occurrence: row.occurrence,
-            })),
-          });
+        for (const chunk of chunks) {
+          const claimed = await claimSheetRows({ source, rows: chunk });
+          if (cancelled) return;
+          if (!claimed.ok) {
+            setCheckError(claimed.error);
+            return;
+          }
+          used.push(...(claimed.data?.transactionIds ?? []));
+        }
+        for (const chunk of chunks) {
+          const result = await checkSheetRows({ source, used, rows: chunk });
           if (cancelled) return;
           if (!result.ok) {
             setCheckError(result.error);
             return;
           }
-          found.push(...(result.data?.checks ?? []));
+          for (const check of result.data?.checks ?? []) {
+            found.push(check);
+            if (check.match) used.push(check.match.id);
+          }
         }
       } catch {
         if (!cancelled) setCheckError(CHECK_FAILED);
@@ -124,7 +158,7 @@ export function useSheetImport() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [rows, source, currency, currencyMap]);
+  }, [rows, source, currency, currencyMap, checkRun]);
 
   function reset() {
     setPhase("idle");
@@ -137,10 +171,12 @@ export function useSheetImport() {
     setSource("");
     setCurrency("");
     setCurrencyMap({});
-    setExcluded(new Set());
+    setToggled(new Set());
     setChecks(null);
     setCheckError(null);
     setShowCorrections(false);
+    setConflicts([]);
+    setChoices({});
     setPasted("");
     if (inputRef.current) inputRef.current.value = "";
   }
@@ -191,10 +227,27 @@ export function useSheetImport() {
         }
         recipes.push(result.data!.recipe);
       }
+      const merged = mergeRecipes(recipes);
+      const keys = tableLayoutKeys(merged, read.sheets);
+      const signatures = [...new Set(keys.filter((k): k is string => !!k))];
+      const saved = await getSheetLayouts(signatures);
+      const layouts = saved.ok ? (saved.data?.layouts ?? []) : [];
       setGrids(read.sheets);
       setWarnings(read.warnings);
-      setRecipe(mergeRecipes(recipes));
-      setSource(name.replace(/\.[^.]+$/, "").toLowerCase());
+      const reconciled = reconcileRecipe(
+        merged,
+        keys,
+        new Map<string, Conventions>(
+          layouts.map((l) => [l.signature, l.conventions]),
+        ),
+        read.sheets,
+      );
+      setRecipe(reconciled.recipe);
+      setConflicts(reconciled.conflicts);
+      setSource(
+        layoutSource(layouts, reconciled.matchedKeys) ??
+          sourceFromFileName(name),
+      );
       setPhase("ready");
     } catch {
       setError("Could not read this spreadsheet right now. Try again later.");
@@ -229,8 +282,13 @@ export function useSheetImport() {
 
   function mapCurrency(raw: string, code: string) {
     setCurrencyMap((current) => ({ ...current, [raw]: code }));
-    setExcluded(new Set());
+    setToggled(new Set());
     setChecks(null);
+  }
+
+  function retryCheck() {
+    setCheckError(null);
+    setCheckRun((run) => run + 1);
   }
 
   function updateTable(index: number, patch: Partial<TableRecipe>) {
@@ -243,12 +301,27 @@ export function useSheetImport() {
           }
         : current,
     );
-    setExcluded(new Set());
+    setToggled(new Set());
+    setChecks(null);
+  }
+
+  function chooseReading(conflict: ReadingConflict, choice: ReadingChoice) {
+    setRecipe((current) =>
+      current
+        ? withTable(
+            current,
+            conflict.table,
+            choice === "saved" ? conflict.saved : conflict.fresh,
+          )
+        : current,
+    );
+    setChoices((current) => ({ ...current, [conflict.table]: choice }));
+    setToggled(new Set());
     setChecks(null);
   }
 
   function toggleRow(index: number) {
-    setExcluded((current) => {
+    setToggled((current) => {
       const next = new Set(current);
       if (next.has(index)) next.delete(index);
       else next.add(index);
@@ -256,32 +329,50 @@ export function useSheetImport() {
     });
   }
 
-  const selected = rows.filter(
-    (_, index) => !excluded.has(index) && !checks?.[index]?.alreadyImported,
-  );
+  const selectedCount = checks
+    ? rows.filter((_, index) => isRowSelected(index, checks[index], toggled))
+        .length
+    : 0;
   const needsCurrency =
     (missingCurrency > 0 && !currency) ||
     unknownCurrencies.some((raw) => !currencyMap[raw]);
   const canSubmit = Boolean(
-    source.trim() && checks && selected.length > 0 && !needsCurrency,
+    source.trim() &&
+    checks &&
+    selectedCount > 0 &&
+    !needsCurrency &&
+    readingsChosen(conflicts, choices),
   );
 
   function submit() {
-    if (!checks) return;
+    if (!checks || !recipe) return;
     const toImport = rows.flatMap((row, index) => {
       const check = checks[index];
       const resolved = rowCurrency(row, currency, currencyMap);
-      if (excluded.has(index) || !check || check.alreadyImported || !resolved) {
-        return [];
-      }
-      return [toCsvRow(row, resolved, check.externalId)];
+      if (!isRowSelected(index, check, toggled) || !resolved) return [];
+      return [
+        {
+          sheet: row.sheet,
+          row: row.row,
+          csv: toCsvRow(row, resolved, check.externalId),
+        },
+      ];
     });
+    const skippedLogs = rows.flatMap((row, index) =>
+      checks[index] && !isRowSelected(index, checks[index], toggled)
+        ? [skippedRowLog(row, checks[index])]
+        : [],
+    );
     startTransition(async () => {
+      const started = await startSheetImport({ source, fileName });
+      if (!started.ok) {
+        toast.error(started.error);
+        return;
+      }
+      const importId = started.data!.importId;
       let imported = 0;
-      let skipped = 0;
-      let errors = 0;
       for (const chunk of inChunks(toImport)) {
-        const result = await importCsvRows({ source, rows: chunk });
+        const result = await importSheetChunk({ importId, rows: chunk });
         if (!result.ok) {
           toast.error(
             imported > 0
@@ -292,13 +383,18 @@ export function useSheetImport() {
           return;
         }
         imported += result.data!.imported;
-        skipped += result.data!.skipped;
-        errors += result.data!.errors;
       }
+      const finished = await finishSheetImport({
+        importId,
+        rows: [...skippedLogs, ...notRead.map(notReadLog)],
+        layouts: layoutsToSave(recipe, layoutKeys),
+      });
+      if (!finished.ok) toast.error(finished.error);
       toast.success(
         `Imported ${imported}` +
-          (skipped > 0 ? `, ${skipped} duplicate` : "") +
-          (errors > 0 ? `, ${errors} errors` : ""),
+          (skippedLogs.length > 0
+            ? `, ${skippedLogs.length} already in your records`
+            : ""),
       );
       reset();
       router.refresh();
@@ -325,15 +421,18 @@ export function useSheetImport() {
     missingCurrency,
     unknownCurrencies,
     notRead,
-    excluded,
+    toggled,
     checks,
     checkError,
-    selectedCount: selected.length,
+    selectedCount,
     canSubmit,
     setMode,
     setPasted,
     showCorrections,
     setShowCorrections,
+    conflicts,
+    choices,
+    chooseReading,
     changeSource,
     changeCurrency,
     mapCurrency,
@@ -341,6 +440,7 @@ export function useSheetImport() {
     handlePaste,
     updateTable,
     toggleRow,
+    retryCheck,
     reset,
     submit,
   };

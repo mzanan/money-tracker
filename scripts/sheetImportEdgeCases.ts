@@ -1,8 +1,19 @@
 import * as XLSX from "xlsx";
 
 import { applyRecipe } from "@/lib/sheetImport/apply";
+import {
+  descriptionsMatch,
+  deterministicMatches,
+  judgeTokens,
+} from "@/lib/sheetImport/dedupe";
 import { encodeWorkbook } from "@/lib/sheetImport/encode";
 import { sheetFingerprints } from "@/lib/sheetImport/fingerprint";
+import {
+  conventionsOf,
+  reconcileRecipe,
+  tableLayoutKeys,
+  withTable,
+} from "@/lib/sheetImport/layout";
 import {
   parseSheetAmount,
   parseSheetDate,
@@ -696,6 +707,292 @@ const checks: [string, () => boolean][] = [
       } catch (error) {
         return error instanceof SheetFileError && Date.now() - started < 500;
       }
+    },
+  ],
+  [
+    "31 a different AI reading is flagged and picking the saved one gives identical ids",
+    () => {
+      const sheet = sheetOf([
+        ["Fecha", "Concepto", "Importe"],
+        ["03/01/2024", "Mercadona", "1.250,50"],
+        ["04/01/2024", "Taxi", "12,00"],
+      ]);
+      const grids = readWorkbook(bytesOf(sheet)).sheets;
+      const good = { tables: [BASE] };
+      const keys = tableLayoutKeys(good, grids);
+      const saved = new Map([[keys[0]!, conventionsOf(BASE)]]);
+      const flaky = {
+        tables: [
+          {
+            ...BASE,
+            import: false,
+            numberFormat: { decimal: "." as const, thousands: "," as const },
+            date: { ...BASE.date, order: "mdy" as const },
+            descriptionColumns: [],
+          },
+        ],
+      };
+      const reconciled = reconcileRecipe(
+        flaky,
+        tableLayoutKeys(flaky, grids),
+        saved,
+        grids,
+      );
+      const conflict = reconciled.conflicts[0];
+      if (!conflict || reconciled.recipe.tables[0] !== flaky.tables[0]) {
+        return false;
+      }
+      const picked = withTable(reconciled.recipe, 0, conflict.saved);
+      const ids = (recipe: typeof good) =>
+        sheetFingerprints(applyRecipe(grids, recipe).rows).join();
+      return ids(good) === ids(picked) && ids(good).length > 0;
+    },
+  ],
+  [
+    "32 saved conventions keep new rows below the old end",
+    () => {
+      const old = readWorkbook(
+        bytesOf(sheetOf([["Fecha", "Concepto", "Importe"], ["03/01/2024", "A", "5"]])),
+      ).sheets;
+      const grown = readWorkbook(
+        bytesOf(
+          sheetOf([
+            ["Fecha", "Concepto", "Importe"],
+            ["03/01/2024", "A", "5"],
+            ["05/01/2024", "B", "7"],
+          ]),
+        ),
+      ).sheets;
+      const saved = new Map([
+        [tableLayoutKeys({ tables: [BASE] }, old)[0]!, conventionsOf(BASE)],
+      ]);
+      const fresh = { tables: [{ ...BASE, lastDataRow: 3 }] };
+      const reconciled = reconcileRecipe(
+        fresh,
+        tableLayoutKeys(fresh, grown),
+        saved,
+        grown,
+      );
+      return (
+        reconciled.conflicts.length === 0 &&
+        applyRecipe(grown, reconciled.recipe).rows.length === 2
+      );
+    },
+  ],
+  [
+    "33 one existing entry absorbs only one of two identical rows",
+    () => {
+      const existing = {
+        id: "t1",
+        kind: "expense" as const,
+        source: "cash",
+        amount: 3.5,
+        currency: "EUR",
+        occurredOn: "2024-01-03",
+        occurredAt: "",
+        note: "Cafe",
+        recurringId: null,
+        externalRefs: [],
+      };
+      const row = {
+        occurredOn: "2024-01-03",
+        kind: "expense" as const,
+        amount: 3.5,
+        currency: "EUR",
+        description: "Café",
+      };
+      const { matches } = deterministicMatches(
+        [row, row],
+        [[existing], [existing]],
+        "bank",
+      );
+      return matches.filter(Boolean).length === 1;
+    },
+  ],
+  [
+    "34 same columns with another date order are flagged, not silently re-read",
+    () => {
+      const grids = readWorkbook(
+        bytesOf(sheetOf([["Date", "Description", "Amount"], ["03/01/2024", "A", "5"]])),
+      ).sheets;
+      const keys = tableLayoutKeys({ tables: [BASE] }, grids);
+      const saved = new Map([[keys[0]!, conventionsOf(BASE)]]);
+      const fresh = {
+        tables: [{ ...BASE, date: { ...BASE.date, order: "mdy" as const } }],
+      };
+      const reconciled = reconcileRecipe(fresh, keys, saved, grids);
+      return (
+        reconciled.conflicts.length === 1 &&
+        reconciled.conflicts[0]!.changes.join() === "dates" &&
+        reconciled.recipe.tables[0]!.date.order === "mdy" &&
+        reconciled.matchedKeys.length === 0
+      );
+    },
+  ],
+  [
+    "35 a tab the AI leaves out is not imported again by a saved reading",
+    () => {
+      const grids = readWorkbook(
+        bytesOf(sheetOf([["Date", "Description", "Amount"], ["03/01/2024", "A", "5"]])),
+      ).sheets;
+      const keys = tableLayoutKeys({ tables: [BASE] }, grids);
+      const saved = new Map([[keys[0]!, conventionsOf(BASE)]]);
+      const reconciled = reconcileRecipe(
+        { tables: [{ ...BASE, import: false }] },
+        keys,
+        saved,
+        grids,
+      );
+      return (
+        reconciled.conflicts[0]?.changes.join() === "tab" &&
+        reconciled.recipe.tables[0]!.import === false
+      );
+    },
+  ],
+  [
+    "36 a matching reading keeps the saved skip words",
+    () => {
+      const grids = readWorkbook(
+        bytesOf(sheetOf([["Date", "Description", "Amount"], ["03/01/2024", "A", "5"]])),
+      ).sheets;
+      const keys = tableLayoutKeys({ tables: [BASE] }, grids);
+      const saved = new Map([
+        [keys[0]!, conventionsOf({ ...BASE, skipIfContains: ["total"] })],
+      ]);
+      const reconciled = reconcileRecipe(
+        { tables: [{ ...BASE, skipIfContains: ["sum"] }] },
+        keys,
+        saved,
+        grids,
+      );
+      return (
+        reconciled.conflicts.length === 0 &&
+        reconciled.matchedKeys.length === 1 &&
+        reconciled.recipe.tables[0]!.skipIfContains.join() === "total"
+      );
+    },
+  ],
+  [
+    "37 a different reading that changes no row keeps the saved one silently",
+    () => {
+      const grids = readWorkbook(
+        bytesOf(sheetOf([["Date", "Description", "Amount"], ["05/01/2024", "A", "4,50"]])),
+      ).sheets;
+      const keys = tableLayoutKeys({ tables: [BASE] }, grids);
+      const saved = new Map([[keys[0]!, conventionsOf(BASE)]]);
+      const reconciled = reconcileRecipe(
+        {
+          tables: [
+            { ...BASE, numberFormat: { decimal: ",", thousands: "" } },
+          ],
+        },
+        keys,
+        saved,
+        grids,
+      );
+      return (
+        reconciled.conflicts.length === 0 &&
+        reconciled.matchedKeys.length === 1 &&
+        reconciled.recipe.tables[0]!.numberFormat.thousands === "."
+      );
+    },
+  ],
+  [
+    "38 descriptions match on whole words only",
+    () => {
+      const cases: Array<[string, string, boolean]> = [
+        ["gas", "Las Vegas Hotel", false],
+        ["Bar", "Barber shop", false],
+        ["A", "Amazon", false],
+        ["Rent", "Parental gift", false],
+        ["Netflix", "Netflix.com subscription", true],
+        ["Shell gas", "Shell gas station 123", true],
+        ["gas shell", "Shell gas station", false],
+        ["", "anything", false],
+        ["x".repeat(30) + " " + "y".repeat(40), "x".repeat(30) + " " + "y".repeat(40), true],
+      ];
+      return cases.every(
+        ([a, b, expected]) =>
+          descriptionsMatch(judgeTokens(a), judgeTokens(b)) === expected,
+      );
+    },
+  ],
+  [
+    "39 a short word inside a longer one goes to the AI, not the rule",
+    () => {
+      const existing = {
+        id: "t1",
+        kind: "expense" as const,
+        source: "cash",
+        amount: 10,
+        currency: "EUR",
+        occurredOn: "2024-01-03",
+        occurredAt: "",
+        note: "Las Vegas Hotel",
+        recurringId: null,
+        externalRefs: [],
+      };
+      const row = {
+        occurredOn: "2024-01-03",
+        kind: "expense" as const,
+        amount: 10,
+        currency: "EUR",
+        description: "gas",
+      };
+      const { matches, pairs } = deterministicMatches([row], [[existing]], "bank");
+      return matches[0] === null && pairs.length === 1;
+    },
+  ],
+  [
+    "40 a new skip word the saved reading lacks is flagged, not imported",
+    () => {
+      const grids = readWorkbook(
+        bytesOf(
+          sheetOf([
+            ["Date", "Description", "Amount"],
+            ["03/01/2024", "Cafe", "5"],
+            ["04/01/2024", "Subtotal enero", "5"],
+          ]),
+        ),
+      ).sheets;
+      const keys = tableLayoutKeys({ tables: [BASE] }, grids);
+      const saved = new Map([
+        [keys[0]!, conventionsOf({ ...BASE, skipIfContains: ["total"] })],
+      ]);
+      const reconciled = reconcileRecipe(
+        { tables: [{ ...BASE, skipIfContains: ["total", "subtotal"] }] },
+        keys,
+        saved,
+        grids,
+      );
+      const used = applyRecipe(grids, reconciled.recipe).rows.map(
+        (row) => row.description,
+      );
+      return (
+        reconciled.conflicts[0]?.changes.join() === "skipped" &&
+        used.join() === "Cafe"
+      );
+    },
+  ],
+  [
+    "41 a tab the AI leaves out stays out even when it has no rows",
+    () => {
+      const grids = readWorkbook(
+        bytesOf(sheetOf([["Date", "Description", "Amount"]])),
+      ).sheets;
+      const keys = tableLayoutKeys({ tables: [BASE] }, grids);
+      const saved = new Map([[keys[0]!, conventionsOf(BASE)]]);
+      const reconciled = reconcileRecipe(
+        { tables: [{ ...BASE, import: false }] },
+        keys,
+        saved,
+        grids,
+      );
+      return (
+        reconciled.conflicts.length === 0 &&
+        reconciled.recipe.tables[0]!.import === false &&
+        reconciled.matchedKeys.length === 0
+      );
     },
   ],
 ];

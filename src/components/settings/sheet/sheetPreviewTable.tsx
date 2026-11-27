@@ -3,6 +3,9 @@
 import { formatMoney } from "@/lib/currency";
 import type { SheetRowCheck } from "@/lib/actions/sheetImport";
 import {
+  duplicateLabel,
+  isRowLocked,
+  isRowSelected,
   rowCurrency,
   signedAmount,
   type CurrencyMap,
@@ -15,7 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 export function SheetPreviewTable({
   rows,
   checks,
-  excluded,
+  toggled,
   currency,
   currencyMap,
   onToggle,
@@ -23,7 +26,7 @@ export function SheetPreviewTable({
   currencyMap: CurrencyMap;
   rows: ReviewRow[];
   checks: SheetRowCheck[] | null;
-  excluded: ReadonlySet<number>;
+  toggled: ReadonlySet<number>;
   currency: string;
   onToggle: (index: number) => void;
 }) {
@@ -45,7 +48,7 @@ export function SheetPreviewTable({
             const check = checks?.[index];
             const code = rowCurrency(row, currency, currencyMap);
             const signed = signedAmount(row);
-            const match = check?.matches[0];
+            const match = check?.match;
             return (
               <tr
                 key={`${row.sheet}-${row.row}-${row.column}`}
@@ -53,8 +56,8 @@ export function SheetPreviewTable({
               >
                 <td className="px-2 py-1.5">
                   <Checkbox
-                    checked={!excluded.has(index) && !check?.alreadyImported}
-                    disabled={check?.alreadyImported}
+                    checked={isRowSelected(index, check, toggled)}
+                    disabled={!check || isRowLocked(check)}
                     onCheckedChange={() => onToggle(index)}
                     aria-label={`Import row ${row.row}`}
                   />
@@ -69,11 +72,14 @@ export function SheetPreviewTable({
                   {code ? formatMoney(signed, code) : signed}
                 </td>
                 <td className="px-2 py-1.5">
-                  {check?.alreadyImported ? (
+                  {isRowLocked(check) ? (
                     <Badge variant="secondary">Already imported</Badge>
                   ) : match ? (
-                    <Badge variant="destructive">
-                      Possible duplicate: {match.source} {match.occurredOn}
+                    <Badge
+                      variant="outline"
+                      title="Tick the row to import it anyway"
+                    >
+                      Already in your records: {duplicateLabel(match)}
                     </Badge>
                   ) : null}
                 </td>

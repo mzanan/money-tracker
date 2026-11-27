@@ -2,6 +2,7 @@
 
 import { Loader2Icon } from "lucide-react";
 
+import type { SheetImportSummary } from "@/lib/data/sheetImports";
 import { SHEET_FILE_ACCEPT } from "@/lib/sheetImport/corrections";
 
 import {
@@ -15,13 +16,16 @@ import { ErrorText } from "@/components/ui/errorText";
 
 import { CsvImportCard } from "./csvImportCard";
 import { FilePicker } from "./csv/filePicker";
+import { RecentImports } from "./sheet/recentImports";
 import { SheetReview } from "./sheet/sheetReview";
 import { useSheetImport } from "./useSheetImport";
 
 export function SheetImportCard({
   existingSources = [],
+  recentImports = [],
 }: {
   existingSources?: string[];
+  recentImports?: SheetImportSummary[];
 }) {
   const sheet = useSheetImport();
 
@@ -63,6 +67,7 @@ export function SheetImportCard({
               onPaste={sheet.handlePaste}
             />
             {sheet.error && <ErrorText>{sheet.error}</ErrorText>}
+            <RecentImports imports={recentImports} />
           </>
         )}
         {sheet.phase === "reading" && (

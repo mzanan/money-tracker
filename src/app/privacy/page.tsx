@@ -47,9 +47,12 @@ export default function PrivacyPage() {
             When you import a spreadsheet, the first and last rows of each tab
             are sent to Experiential Labs, which passes them to Anthropic&apos;s
             Claude to work out which column holds the date, the amount and the
-            description. Experiential Labs may store that content under its own
-            privacy policy. The rest of the file is read on our side and is not
-            sent to them.
+            description. To spot rows you already have, it may also receive the
+            description of an incoming row next to the description of one of
+            your existing records with the same amount around the same date,
+            and how many days apart they are, without the amounts. Experiential
+            Labs may store that content under its own privacy policy. Everything
+            else is read on our side and is not sent to them.
           </p>
           <p>
             <strong className="text-foreground">Integrations.</strong> If you
