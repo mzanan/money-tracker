@@ -1,10 +1,9 @@
 "use client";
 
-import { Loader2Icon } from "lucide-react";
-
 import { useAccountLabels } from "@/hooks/useAccountLabels";
 import { resolveSourceLabel } from "@/lib/constants/sources";
 
+import { LoadingText } from "@/components/ui/loadingText";
 import {
   Select,
   SelectContent,
@@ -30,11 +29,7 @@ export function AccountSelect({
 }) {
   const accountLabels = useAccountLabels();
   if (sources === null) {
-    return (
-      <p className="text-muted-foreground flex items-center gap-2 text-sm">
-        <Loader2Icon className="size-4 animate-spin" /> Loading accounts…
-      </p>
-    );
+    return <LoadingText>Loading accounts…</LoadingText>;
   }
   if (emptyMessage && sources.length === 0) {
     return <p className="text-muted-foreground text-sm">{emptyMessage}</p>;

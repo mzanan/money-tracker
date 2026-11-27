@@ -1,21 +1,24 @@
-import { createHash } from "node:crypto";
 import { and, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 
-import type {
-  DuplicateStep,
-  SheetRowStatus,
+import { chunk } from "@/lib/arrays";
+import {
+  SHEET_REQUEST_ROWS,
+  type SheetRowStatus,
 } from "@/lib/constants/sheetImport";
 import { db } from "@/lib/db";
 import {
-  ledger_external_ids,
   sheet_import_layouts,
   sheet_import_rows,
   sheet_imports,
 } from "@/lib/db/schema";
-import { deleteLedgerTransactions } from "@/lib/data/ledgerWrites";
+import {
+  deleteLedgerTransactions,
+  transactionIdsForExternalIds,
+} from "@/lib/data/ledgerWrites";
 import { ConventionsSchema, type Conventions } from "@/lib/sheetImport/layout";
+import { layoutHash } from "@/lib/sheetImport/layoutHash";
+import type { SheetRowLog } from "@/lib/sheetImport/log";
 import { RECIPE_VERSION } from "@/lib/sheetImport/recipe";
-import { inChunks } from "@/lib/sheetImport/review";
 
 const RECENT_IMPORTS = 5;
 
@@ -29,28 +32,15 @@ export interface SheetImportSummary {
   createdAt: string;
 }
 
-export interface SheetRowLog {
-  sheet: string;
-  row: number;
-  status: SheetRowStatus;
-  step: DuplicateStep | null;
-  reason: string | null;
-  externalId: string | null;
-  matchedTransactionId: string | null;
-}
-
-export function layoutHash(signature: string): string {
-  return createHash("sha256")
-    .update(`v${RECIPE_VERSION}|${signature}`)
-    .digest("hex");
-}
-
 export async function getSavedLayouts(
   userId: string,
   signatures: string[],
 ): Promise<Map<string, { conventions: Conventions; lastSource: string }>> {
   const byHash = new Map(signatures.map((s) => [layoutHash(s), s]));
-  const out = new Map<string, { conventions: Conventions; lastSource: string }>();
+  const out = new Map<
+    string,
+    { conventions: Conventions; lastSource: string }
+  >();
   if (!byHash.size) return out;
   const rows = await db
     .select()
@@ -80,27 +70,27 @@ export async function saveLayouts(
   source: string,
   layouts: ReadonlyArray<{ signature: string; conventions: Conventions }>,
 ): Promise<void> {
-  for (const layout of layouts) {
-    const values = {
-      user_id: userId,
-      signature: layoutHash(layout.signature),
-      recipe_version: RECIPE_VERSION,
-      conventions: layout.conventions,
-      last_source: source,
-    };
-    await db
-      .insert(sheet_import_layouts)
-      .values(values)
-      .onConflictDoUpdate({
-        target: [sheet_import_layouts.user_id, sheet_import_layouts.signature],
-        set: {
-          recipe_version: values.recipe_version,
-          conventions: values.conventions,
-          last_source: values.last_source,
-          updated_at: new Date().toISOString(),
-        },
-      });
-  }
+  if (!layouts.length) return;
+  await db
+    .insert(sheet_import_layouts)
+    .values(
+      layouts.map((layout) => ({
+        user_id: userId,
+        signature: layoutHash(layout.signature),
+        recipe_version: RECIPE_VERSION,
+        conventions: layout.conventions,
+        last_source: source,
+      })),
+    )
+    .onConflictDoUpdate({
+      target: [sheet_import_layouts.user_id, sheet_import_layouts.signature],
+      set: {
+        recipe_version: sql`excluded.recipe_version`,
+        conventions: sql`excluded.conventions`,
+        last_source: sql`excluded.last_source`,
+        updated_at: new Date().toISOString(),
+      },
+    });
 }
 
 export async function createSheetImport(
@@ -137,7 +127,7 @@ export async function recordSheetRows(
   importId: string,
   rows: ReadonlyArray<SheetRowLog>,
 ): Promise<void> {
-  for (const batch of inChunks([...rows])) {
+  for (const batch of chunk(rows, SHEET_REQUEST_ROWS)) {
     await db.insert(sheet_import_rows).values(
       batch.map((row) => ({
         import_id: importId,
@@ -222,21 +212,14 @@ export async function undoSheetImport(
         eq(sheet_import_rows.status, "imported"),
       ),
     );
-  const externalIds = logged.flatMap((r) => (r.externalId ? [r.externalId] : []));
-  const transactionIds = new Set<string>();
-  for (const batch of inChunks(externalIds)) {
-    const found = await db
-      .select({ id: ledger_external_ids.transaction_id })
-      .from(ledger_external_ids)
-      .where(
-        and(
-          eq(ledger_external_ids.user_id, userId),
-          eq(ledger_external_ids.origin, open.source),
-          inArray(ledger_external_ids.external_id, batch),
-        ),
-      );
-    for (const row of found) transactionIds.add(row.id);
-  }
+  const externalIds = logged.flatMap((r) =>
+    r.externalId ? [r.externalId] : [],
+  );
+  const transactionIds = await transactionIdsForExternalIds(
+    userId,
+    open.source,
+    externalIds,
+  );
   const deleted = await db.transaction(async (tx) => {
     const removed = await deleteLedgerTransactions(
       userId,

@@ -1,9 +1,7 @@
 "use client";
 
-import { Loader2Icon } from "lucide-react";
-
 import type { SheetImportSummary } from "@/lib/data/sheetImports";
-import { SHEET_FILE_ACCEPT } from "@/lib/sheetImport/corrections";
+import { SHEET_FILE_ACCEPT } from "@/lib/constants/sheetImport";
 
 import {
   Card,
@@ -13,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ErrorText } from "@/components/ui/errorText";
+import { LoadingText } from "@/components/ui/loadingText";
 
 import { CsvImportCard } from "./csvImportCard";
 import { FilePicker } from "./csv/filePicker";
@@ -71,10 +70,7 @@ export function SheetImportCard({
           </>
         )}
         {sheet.phase === "reading" && (
-          <p className="text-muted-foreground flex items-center gap-2 text-sm">
-            <Loader2Icon className="size-4 animate-spin" />
-            Reading {sheet.fileName}
-          </p>
+          <LoadingText>Reading {sheet.fileName}</LoadingText>
         )}
         {sheet.phase === "ready" && (
           <SheetReview sheet={sheet} existingSources={existingSources} />

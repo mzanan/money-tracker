@@ -1,6 +1,7 @@
 import { generateText } from "ai";
 import { z } from "zod";
 
+import { extractJsonObject } from "@/lib/ai/json";
 import { resolveSheetImportModel } from "@/lib/ai/provider";
 import { SheetRecipeSchema, type SheetRecipe } from "@/lib/sheetImport/recipe";
 
@@ -31,12 +32,7 @@ Rules:
 const ATTEMPTS = 2;
 
 function recipeFrom(text: string): SheetRecipe {
-  const body = text.replace(/```(?:json)?/g, "");
-  const start = body.indexOf("{");
-  const end = body.lastIndexOf("}");
-  if (start < 0 || end < start)
-    throw new Error("no JSON object in the model reply");
-  return SheetRecipeSchema.parse(JSON.parse(body.slice(start, end + 1)));
+  return SheetRecipeSchema.parse(extractJsonObject(text));
 }
 
 export async function proposeSheetRecipe(

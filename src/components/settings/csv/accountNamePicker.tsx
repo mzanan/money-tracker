@@ -3,7 +3,11 @@
 import { useState } from "react";
 
 import { useAccountLabels } from "@/hooks/useAccountLabels";
-import { kindOfSource, labelForSource, resolveSourceLabel } from "@/lib/constants/sources";
+import {
+  kindOfSource,
+  labelForSource,
+  resolveSourceLabel,
+} from "@/lib/constants/sources";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,9 +49,7 @@ export function AccountNamePicker({
 
   return (
     <div className="grid gap-1.5">
-      <Label>
-        Account name <span className="text-destructive">*</span>
-      </Label>
+      <Label required>Account name</Label>
       {hasOptions && (
         <Select
           value={

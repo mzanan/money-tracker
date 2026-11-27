@@ -1,0 +1,66 @@
+import { isSupportedCurrency } from "@/lib/constants/currencies";
+import { SKIP_CURRENCY } from "@/lib/constants/sheetImport";
+import type { SheetRow, SheetRowIssue } from "@/lib/sheetImport/apply";
+
+export type CurrencyMap = Readonly<Record<string, string>>;
+
+const CURRENCY_CODE = /^[A-Z]{3}$/;
+
+export function recognizedCurrency(row: SheetRow): string | null {
+  return row.currency && isSupportedCurrency(row.currency)
+    ? row.currency
+    : null;
+}
+
+export function isUnsupportedCurrency(row: SheetRow): boolean {
+  return Boolean(
+    row.currency &&
+    !isSupportedCurrency(row.currency) &&
+    CURRENCY_CODE.test(row.currency),
+  );
+}
+
+export function unknownCurrencyValues(rows: SheetRow[]): string[] {
+  const values = rows.flatMap((row) =>
+    row.currency && !recognizedCurrency(row) && !isUnsupportedCurrency(row)
+      ? [row.currency]
+      : [],
+  );
+  return [...new Set(values)];
+}
+
+export function rowCurrency(
+  row: SheetRow,
+  fallback: string,
+  map: CurrencyMap,
+): string | null {
+  const recognized = recognizedCurrency(row);
+  if (recognized) return recognized;
+  if (row.currency === null) return fallback || null;
+  const mapped = map[row.currency];
+  return mapped && mapped !== SKIP_CURRENCY ? mapped : null;
+}
+
+export function isSkippedRow(row: SheetRow, map: CurrencyMap): boolean {
+  return (
+    isUnsupportedCurrency(row) ||
+    Boolean(row.currency && map[row.currency] === SKIP_CURRENCY)
+  );
+}
+
+export function skippedCurrencyIssues(
+  rows: SheetRow[],
+  map: CurrencyMap,
+): SheetRowIssue[] {
+  return rows
+    .filter((row) => isSkippedRow(row, map))
+    .map((row) => ({
+      sheet: row.sheet,
+      row: row.row,
+      reason: `currency ${row.currency} is not supported`,
+    }));
+}
+
+export function rowsWithoutCurrency(rows: SheetRow[]): number {
+  return rows.filter((row) => row.currency === null).length;
+}

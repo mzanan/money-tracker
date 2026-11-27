@@ -6,9 +6,13 @@ import {
   DECIMAL_OPTIONS,
   EXPENSE_SIGN_OPTIONS,
   NO_COLUMN,
+} from "@/lib/constants/sheetImport";
+import {
   withAmount,
   withDate,
   withDecimal,
+  withDescription,
+  withFirstRow,
 } from "@/lib/sheetImport/corrections";
 import type {
   DateSpec,
@@ -20,6 +24,7 @@ import type { SheetGrid } from "@/lib/sheetImport/workbook";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LabeledSelect } from "@/components/ui/labeledSelect";
+import { Surface } from "@/components/ui/surface";
 import { SwitchRow } from "@/components/ui/switchRow";
 
 export function TableCorrections({
@@ -36,7 +41,7 @@ export function TableCorrections({
   const columns = columnOptions(grid, table.firstDataRow);
   const amount = table.amount;
   return (
-    <div className="grid gap-3 rounded-lg border p-3">
+    <Surface tone="outline" padding="xs" className="grid gap-3">
       <SwitchRow
         id={`sheet-table-${index}`}
         label={`Tab "${table.sheet}"`}
@@ -55,10 +60,8 @@ export function TableCorrections({
               min={1}
               value={table.firstDataRow}
               onChange={(event) => {
-                const row = Number(event.target.value);
-                if (Number.isInteger(row) && row > 0) {
-                  onChange({ firstDataRow: row });
-                }
+                const patch = withFirstRow(event.target.value);
+                if (patch) onChange(patch);
               }}
             />
           </div>
@@ -150,15 +153,11 @@ export function TableCorrections({
               label="Description column"
               value={table.descriptionColumns[0] ?? NO_COLUMN}
               options={[{ value: NO_COLUMN, label: "None" }, ...columns]}
-              onChange={(column) =>
-                onChange({
-                  descriptionColumns: column === NO_COLUMN ? [] : [column],
-                })
-              }
+              onChange={(column) => onChange(withDescription(column))}
             />
           )}
         </div>
       )}
-    </div>
+    </Surface>
   );
 }

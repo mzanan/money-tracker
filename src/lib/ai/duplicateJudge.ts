@@ -1,8 +1,10 @@
 import { generateText } from "ai";
 import { z } from "zod";
 
+import { extractJsonObject } from "@/lib/ai/json";
 import { resolveSheetImportModel } from "@/lib/ai/provider";
-import type { JudgePair } from "@/lib/sheetImport/dedupe";
+import { chunk } from "@/lib/arrays";
+import { JUDGE_BATCH, type JudgePair } from "@/lib/sheetImport/dedupe";
 
 const SYSTEM = `You decide whether two short descriptions of money movements name the same purchase or payment.
 Each pair has an incoming description from an imported spreadsheet, an existing description already in the person's records, and how many days apart the two dates are. Amounts already match.
@@ -17,23 +19,21 @@ const VerdictsSchema = z.object({
 });
 
 function parse(text: string, ids: Set<string>): Set<string> {
-  const body = text.replace(/```(?:json)?/g, "");
-  const start = body.indexOf("{");
-  const end = body.lastIndexOf("}");
-  if (start < 0 || end < start) throw new Error("no JSON in judge reply");
-  const { verdicts } = VerdictsSchema.parse(
-    JSON.parse(body.slice(start, end + 1)),
-  );
+  const { verdicts } = VerdictsSchema.parse(extractJsonObject(text));
   const answered = new Set(verdicts.map((v) => v.id));
   if ([...ids].some((id) => !answered.has(id))) {
     throw new Error("judge skipped a pair");
   }
   return new Set(
-    verdicts.filter((v) => v.verdict === "same" && ids.has(v.id)).map((v) => v.id),
+    verdicts
+      .filter((v) => v.verdict === "same" && ids.has(v.id))
+      .map((v) => v.id),
   );
 }
 
-export async function judgeDuplicates(pairs: JudgePair[]): Promise<Set<string>> {
+export async function judgeDuplicates(
+  pairs: JudgePair[],
+): Promise<Set<string>> {
   if (!pairs.length) return new Set();
   const ids = new Set(pairs.map((p) => p.id));
   const prompt = JSON.stringify(
@@ -52,4 +52,14 @@ export async function judgeDuplicates(pairs: JudgePair[]): Promise<Set<string>> 
     maxOutputTokens: 8000,
   });
   return parse(text, ids);
+}
+
+export async function judgeAllDuplicates(
+  pairs: JudgePair[],
+): Promise<Set<string>> {
+  const same = new Set<string>();
+  for (const batch of chunk(pairs, JUDGE_BATCH)) {
+    for (const id of await judgeDuplicates(batch)) same.add(id);
+  }
+  return same;
 }

@@ -2,27 +2,33 @@
 
 import { z } from "zod";
 
-import { isSupportedCurrency } from "@/lib/constants/currencies";
-import { roundToScale } from "@/lib/currency";
-import { csvExternalId } from "@/lib/csv/ledgerDraft";
+import { judgeAllDuplicates } from "@/lib/ai/duplicateJudge";
+import { proposeSheetRecipe } from "@/lib/ai/sheetRecipe";
+import { SHEET_REQUEST_ROWS } from "@/lib/constants/sheetImport";
 import { findCandidatesForMany } from "@/lib/data/duplicates";
 import { existingExternalRefs } from "@/lib/data/ledgerWrites";
-import type { DuplicateStep } from "@/lib/constants/sheetImport";
-import type { CandidateMatch } from "@/lib/imageExtract";
-import { candidateMatchOf } from "@/lib/ledger/candidates";
 import { getRates } from "@/lib/rates";
 import { getUser } from "@/lib/session";
-import { transactionContentHash } from "@/lib/transactions";
-import { judgeDuplicates } from "@/lib/ai/duplicateJudge";
-import { proposeSheetRecipe } from "@/lib/ai/sheetRecipe";
+import {
+  CheckRowSchema,
+  type CheckRow,
+  type SheetRowCheck,
+} from "@/lib/sheetImport/check";
 import {
   assignJudged,
+  checksOf,
+  candidatesByRow,
   deterministicMatches,
-  JUDGE_BATCH,
-  type LadderRow,
+  exactTransactionIds,
+  exactLookupIds,
+  exactMatchesOf,
+  ladderRowsOf,
+  legacyIdOf,
+  usedTransactionIds,
+  type ExactMatch,
 } from "@/lib/sheetImport/dedupe";
-import { sheetFingerprint } from "@/lib/sheetImport/fingerprint";
 import { MAX_ENCODED_CHARS } from "@/lib/sheetImport/encode";
+import { sheetFingerprint } from "@/lib/sheetImport/fingerprint";
 import type { SheetRecipe } from "@/lib/sheetImport/recipe";
 
 import type { ActionResult } from "./transactions";
@@ -30,18 +36,23 @@ import type { ActionResult } from "./transactions";
 export async function readSheetLayout(
   encodedWorkbook: string,
 ): Promise<ActionResult<{ recipe: SheetRecipe }>> {
-  if (typeof encodedWorkbook !== "string" || !encodedWorkbook.trim()) {
-    return { ok: false, error: "The file is empty" };
-  }
-  if (encodedWorkbook.length > MAX_ENCODED_CHARS) {
-    return { ok: false, error: "The file is too large to read" };
-  }
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const workbook = EncodedWorkbookSchema.safeParse(encodedWorkbook);
+  if (!workbook.success) {
+    return {
+      ok: false,
+      error:
+        typeof encodedWorkbook === "string" &&
+        encodedWorkbook.length > MAX_ENCODED_CHARS
+          ? "The file is too large to read"
+          : "The file is empty",
+    };
+  }
   try {
     return {
       ok: true,
-      data: { recipe: await proposeSheetRecipe(encodedWorkbook) },
+      data: { recipe: await proposeSheetRecipe(workbook.data) },
     };
   } catch (error) {
     console.error("readSheetLayout failed", error);
@@ -52,59 +63,26 @@ export async function readSheetLayout(
   }
 }
 
-const CheckRowSchema = z.object({
-  occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  kind: z.enum(["income", "expense"]),
-  amount: z.number().positive(),
-  currency: z.string().nullable(),
-  description: z.string(),
-  fingerprintKey: z.string(),
-  occurrence: z.number().int().positive(),
-});
+const EncodedWorkbookSchema = z
+  .string()
+  .max(MAX_ENCODED_CHARS)
+  .refine((text) => text.trim().length > 0);
 
 const ClaimInputSchema = z.object({
   source: z.string(),
-  rows: z.array(CheckRowSchema),
+  rows: z.array(CheckRowSchema).max(SHEET_REQUEST_ROWS),
 });
 
 const CheckInputSchema = ClaimInputSchema.extend({
   used: z.array(z.string()),
 });
 
-type CheckRow = z.infer<typeof CheckRowSchema>;
-
 export type SheetClaimInput = z.infer<typeof ClaimInputSchema>;
 
 export type SheetCheckInput = z.infer<typeof CheckInputSchema>;
 
-export type SheetRowState = "new" | "already_imported" | "duplicate";
-
-export interface SheetRowCheck {
-  externalId: string;
-  state: SheetRowState;
-  step: DuplicateStep | null;
-  match: CandidateMatch | null;
-}
-
 const JUDGE_FAILED =
   "Could not compare these rows with your records right now. Try again.";
-
-interface ExactMatch {
-  step: DuplicateStep;
-  transactionId: string;
-}
-
-function legacyIdOf(row: CheckRow): string | null {
-  return row.currency && isSupportedCurrency(row.currency)
-    ? transactionContentHash({
-        occurredOn: row.occurredOn,
-        amount: roundToScale(row.amount, row.currency),
-        currency: row.currency,
-        description: row.description.trim() || null,
-        kind: row.kind,
-      }).slice(0, 32)
-    : null;
-}
 
 async function exactMatchesFor(
   userId: string,
@@ -116,111 +94,72 @@ async function exactMatchesFor(
   );
   const legacyIds = rows.map(legacyIdOf);
   const taken = source
-    ? await existingExternalRefs(userId, source, [
-        ...externalIds.map(csvExternalId),
-        ...legacyIds.filter((id): id is string => id !== null),
-      ])
+    ? await existingExternalRefs(
+        userId,
+        source,
+        exactLookupIds(externalIds, legacyIds),
+      )
     : new Map<string, string>();
-  const exact = externalIds.map((id, index): ExactMatch | null => {
-    const own = taken.get(csvExternalId(id));
-    if (own) return { step: "external_id", transactionId: own };
-    const legacy = legacyIds[index];
-    const old = legacy ? taken.get(legacy) : undefined;
-    return old ? { step: "legacy_hash", transactionId: old } : null;
-  });
-  return { externalIds, exact };
+  return { externalIds, exact: exactMatchesOf(externalIds, legacyIds, taken) };
 }
 
 export async function claimSheetRows(
   input: SheetClaimInput,
 ): Promise<ActionResult<{ transactionIds: string[] }>> {
-  const parsed = ClaimInputSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Invalid rows" };
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const parsed = ClaimInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid rows" };
   const source = parsed.data.source.trim().toLowerCase();
   const { exact } = await exactMatchesFor(user.id, source, parsed.data.rows);
   return {
     ok: true,
-    data: {
-      transactionIds: exact.flatMap((match) =>
-        match ? [match.transactionId] : [],
-      ),
-    },
+    data: { transactionIds: exactTransactionIds(exact) },
   };
 }
 
 export async function checkSheetRows(
   input: SheetCheckInput,
 ): Promise<ActionResult<{ checks: SheetRowCheck[] }>> {
-  const parsed = CheckInputSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Invalid rows" };
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const parsed = CheckInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid rows" };
 
   const { rows } = parsed.data;
   const source = parsed.data.source.trim().toLowerCase();
   const { externalIds, exact } = await exactMatchesFor(user.id, source, rows);
-  const exactStep = (index: number): DuplicateStep | null =>
-    exact[index]?.step ?? null;
-
-  const ladderRows: (LadderRow | null)[] = rows.map((row, index) =>
-    row.currency && isSupportedCurrency(row.currency) && !exactStep(index)
-      ? { ...row, currency: row.currency }
-      : null,
-  );
-  const queried = ladderRows.flatMap((row, index) =>
-    row ? [{ index, row }] : [],
-  );
+  const ladderRows = ladderRowsOf(rows, exact);
   const rates = await getRates()
     .then((r) => r.rates)
     .catch(() => null);
-  const used = new Set([
-    ...parsed.data.used,
-    ...exact.flatMap((match) => (match ? [match.transactionId] : [])),
-  ]);
+  const used = usedTransactionIds(parsed.data.used, exact);
   const found = await findCandidatesForMany(
     user.id,
-    queried.map(({ row }) => row),
+    ladderRows.flatMap((row) => (row ? [row] : [])),
     rates,
   );
-  const candidates = rows.map(() => [] as (typeof found)[number]);
-  queried.forEach(({ index }, i) => {
-    candidates[index] = found[i].filter((c) => !used.has(c.id));
-  });
+  const candidates = candidatesByRow(ladderRows, found, used);
 
   const { matches, pairs } = deterministicMatches(
     ladderRows,
     candidates,
     source,
   );
-  let judged = matches;
   try {
-    const same = new Set<string>();
-    for (let i = 0; i < pairs.length; i += JUDGE_BATCH) {
-      for (const id of await judgeDuplicates(pairs.slice(i, i + JUDGE_BATCH))) {
-        same.add(id);
-      }
-    }
-    judged = assignJudged(matches, pairs, same);
+    const same = await judgeAllDuplicates(pairs);
+    return {
+      ok: true,
+      data: {
+        checks: checksOf(
+          externalIds,
+          exact,
+          assignJudged(matches, pairs, same),
+        ),
+      },
+    };
   } catch (error) {
     console.error("judgeDuplicates failed", error);
     return { ok: false, error: JUDGE_FAILED };
   }
-
-  return {
-    ok: true,
-    data: {
-      checks: externalIds.map((externalId, index) => {
-        const exact = exactStep(index);
-        const match = judged[index];
-        return {
-          externalId,
-          state: exact ? "already_imported" : match ? "duplicate" : "new",
-          step: exact ?? match?.step ?? null,
-          match: match ? candidateMatchOf(match.candidate) : null,
-        };
-      }),
-    },
-  };
 }
