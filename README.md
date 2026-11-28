@@ -7,7 +7,7 @@ instalable como PWA. Live: [money.itsmatias.com](https://money.itsmatias.com).
 Incluye: landing pública en `/`, sync de Bybit, import de planillas y CSV de
 cualquier banco o billetera (.xlsx, .xls, .ods, .numbers, CSV) leídas por IA, import desde screenshots (también como share target de la PWA), cuenta de
 efectivo con retiros y cambios, reminders con feed iCal, asistente de chat con
-la API key propia del usuario (Groq o Google), analytics con PostHog EU y
+la API key propia del usuario (Groq o Google, detrás de un feature flag), analytics con PostHog EU y
 banner de cookies, y baseline de SEO/AEO (sitemap, robots, JSON-LD, `llms.txt`).
 
 Stack: Next.js 16 + React 19 + TypeScript + Tailwind v4 + shadcn/ui + **Turso
@@ -15,9 +15,13 @@ Stack: Next.js 16 + React 19 + TypeScript + Tailwind v4 + shadcn/ui + **Turso
 TanStack React Query + Zustand + Vercel AI SDK. Deploy: Vercel.
 
 > Migrado desde Supabase a Turso + Better Auth el 2026-05-25 por portabilidad
-> (un único `.db` exportable). El schema de tablas no cambió: `transactions`,
-> `user_settings`, `fx_rates_cache`, `api_integrations`. Lo que perdió:
-> Row-Level Security: todas las queries filtran `user_id` explícito en código.
+> (un único `.db` exportable). Lo que perdió: Row-Level Security: todas las
+> queries filtran `user_id` explícito en código. Desde entonces la app pasó a un
+> libro mayor de partida doble: lee y escribe en las tablas `ledger_*`
+> (`ledger_transactions`, `ledger_entries`, `ledger_external_ids`,
+> `ledger_revisions`, `ledger_accounts`) más `accounts`, `user_settings`,
+> `fx_rates_daily`, `api_integrations`, etc. (todas en `src/lib/db/schema.ts`).
+> La tabla `transactions` anterior queda solo para los scripts de `scripts/`.
 
 ---
 
@@ -57,11 +61,23 @@ GOOGLE_CLIENT_ID=...apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-...
 AUTH_DISABLE_SIGNUPS=
 
-# import de planillas (Experiential Labs, key del servidor)
+# cifrado AES-256-GCM de las credenciales de integraciones (32 bytes en base64)
+INTEGRATIONS_ENC_KEY=$(openssl rand -base64 32)
+INTEGRATIONS_ENC_KEY_OLD=      # solo al rotar la clave
+
+# Bearer que Vercel manda a /api/cron/*
+CRON_SECRET=$(openssl rand -base64 32)
+
+# import de planillas y juez de repetidos (Experiential Labs, key del servidor)
 EXPLABS_API_KEY=
 
-# opcional, solo produccion
-NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=
+# feature flags del navegador ("1" para activar, apagados por defecto)
+NEXT_PUBLIC_ASSISTANT_ENABLED=
+NEXT_PUBLIC_BUDGET_ENABLED=
+
+# opcional
+TURSO_EMBEDDED_REPLICA_PATH=   # réplica local embebida para lecturas rápidas
+NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=   # solo producción
 ```
 
 ### 4. Aplicar el schema
@@ -93,6 +109,8 @@ onboarding pide al menos 1 moneda + la moneda base.
 - `npm run db:generate`: generar migration SQL desde `src/lib/db/schema.ts`
 - `npm run db:migrate`: aplicar migrations a Turso
 - `npm run db:studio`: abrir Drizzle Studio en el browser
+- `npm run seed:dev`: cargar datos de prueba en la DB de desarrollo
+- `npm run check:tokens`: verificar los tokens de `tailwind-merge`
 
 ---
 
@@ -108,7 +126,11 @@ onboarding pide al menos 1 moneda + la moneda base.
    - `NEXT_PUBLIC_BETTER_AUTH_URL` (igual)
    - `GOOGLE_CLIENT_ID`
    - `GOOGLE_CLIENT_SECRET`
+   - `INTEGRATIONS_ENC_KEY` (y `INTEGRATIONS_ENC_KEY_OLD` al rotar)
+   - `CRON_SECRET` (el cron de tasas lo valida)
    - `EXPLABS_API_KEY` (import de planillas)
+   - `NEXT_PUBLIC_ASSISTANT_ENABLED`, `NEXT_PUBLIC_BUDGET_ENABLED` (opcionales)
+   - `TURSO_EMBEDDED_REPLICA_PATH` (opcional)
 4. Deploy.
 5. Crear tu cuenta una vez (Google).
 6. **Single-user lockdown:** una vez creada tu cuenta, setear
@@ -129,69 +151,67 @@ src/
     privacy/                  # política de privacidad (pública)
     (auth)/login/             # Google (Better Auth)
     (app)/                    # rutas protegidas (auth + onboarding)
-      home/                   # inicio logueado (servido desde el layout de la app)
-      dashboard/              # proyección de gasto y gastos inusuales
+      home/, dashboard/       # inicio logueado; proyección de gasto y gastos inusuales
       month/[ym]/             # vista mensual
       screenshot-import/      # import desde screenshot (share target)
-      settings/               # tabs General, Accounts, Cash, Data, Assistant
+      settings/               # tabs General y Accounts
     onboarding/               # primer setup (currencies + base)
     api/auth/[...all]/        # Better Auth route handler
     api/rates/                # proxy + cache de open.er-api.com
     api/cron/fx-rates/        # cron diario: tasas del día en fx_rates_daily
     api/chat/                 # asistente (Vercel AI SDK, key del usuario)
+    api/screenshot/extract/   # extracción de transacciones desde una imagen
+    api/session/expired/      # limpia la cookie de una sesión inválida
     api/calendar/, api/share/ # feed iCal de reminders, share target de screenshots
     robots.ts, sitemap.ts     # SEO/AEO (ver lib/seo.ts)
-    layout.tsx, manifest.ts
   components/
-    landing/                  # landing pública (copy en landing.json)
-    assistant/                # widget de chat del asistente
-    consent/                  # banner de cookies (PostHog)
-    dashboard/                # tarjetas de proyección y gastos inusuales
-    auth/                     # loginCard + useLogin
-    transactions/             # balanceHero (Monthly/Daily tabs), sourceFilter, monthView, amountsToggle, ...
-    layout/                   # header, baseCurrencyPicker, themeToggle
-    reminders/                # upcomingBanner, reminderRow, reminderForm
-    onboarding/               # onboardingForm
-    settings/                 # csvImportCard, integrations*
-    providers/                # query, theme, toaster
-    screenshot/               # screenshotImporter (drawer + share target page)
     ui/                       # shadcn primitives (kebab-case por vendoring)
-  hooks/                      # useSettings, useRates, useTimezone, useCsvImport
+    transactions/             # dashboard, filas, quick-add, transferencias, vista mensual
+    cash/                     # retiros y cambios de efectivo (CashActionDrawer)
+    settings/                 # cuentas, integraciones, import de planillas (sheet/) y CSV (csv/)
+    dashboard/, reminders/, assistant/, screenshot/, onboarding/, auth/, layout/
+    landing/, legal/, consent/, pwa/, providers/
+  hooks/                      # useSettings, useRates, useRatesByDate, useMoney, useHideAmounts, ...
   lib/
-    actions/                  # server actions (transactions, settings, csv, integrations)
-    constants/currencies.ts   # scale de almacenamiento (ISO 4217; cripto 6) + displayDecimals opcional (cripto 2)
+    ledger/                   # núcleo del libro mayor: cuentas, builders, posting, valuación, movimientos
+    data/                     # lecturas y escrituras a Turso (ledgerWrites, monthData, sheetImports, ...)
+    actions/                  # server actions (transactions, transfers, cash, settings, integrations, ...)
+    sheetImport/              # lógica pura del import de planillas (receta, dedupe, plan, review)
+    csv/                      # parse + detect + normalize + presets (Wise)
+    fx/                       # tasas históricas y de cripto
+    ai/                       # provider, prompt, herramientas del asistente, receta, juez de repetidos, screenshots
+    integrations/             # adaptador de Bybit + cifrado de credenciales
+    constants/                # monedas (scale de almacenamiento), fuentes, proveedores de IA, tags
     schemas/                  # Zod
-    db/                       # schema.ts + libSQL client (lazy proxy)
-    auth.ts                   # Better Auth server config
-    authClient.ts             # Better Auth browser client
-    session.ts                # getUser() / requireUser()
-    currency.ts               # convert / format / round (puro)
-    rates.ts                  # fetch + cache (server-only)
-    totals.ts                 # day/month totals
-    dates.ts                  # helpers de fecha (date-fns + tz)
-    integrations/             # Bybit adapter (funding history)
-    ai/                       # provider, prompt, tools del asistente, extracción de screenshots
-    analytics.ts, consent.ts  # PostHog EU vía /relay, consentimiento
-    seo.ts                    # SITE_URL, crawlers de IA, rutas privadas
-    csv/                      # parse + detect + normalize
+    db/                       # schema.ts + cliente libSQL (proxy lazy)
+    auth.ts, authClient.ts, session.ts   # Better Auth (server, browser) y getUser()/requireUser()
+    currency.ts, rates.ts, dates.ts      # convert/format/round, fetch + cache de tasas, fechas con tz
+    featureFlags.ts           # NEXT_PUBLIC_ASSISTANT_ENABLED / NEXT_PUBLIC_BUDGET_ENABLED
+    analytics.ts, consent.ts, seo.ts
   stores/uiStore.ts           # Zustand (lastCurrency)
-  hooks/useHideAmounts.tsx    # mask totals via mt_hide_amounts cookie
-  types/db.ts                 # tipos derivados de Drizzle ($inferSelect)
+  types/                      # db.ts (derivados de Drizzle), ledger.ts (Movement, MovementLine, ...)
   proxy.ts                    # ex-middleware (Next 16): cookie check + gate (/ público)
 drizzle/migrations/           # SQL generado por drizzle-kit
+scripts/                      # backfills, seed:dev, migrate-to-ledger, evals del import de planillas
 ```
 
 ---
 
 ## Decisiones clave
 
-- **Snapshot de FX por fila**: cada `transactions` row guarda un
-  `fx_rates_snapshot` (JSON USD-based) al cargar. Los totales siempre se
-  calculan con esa snapshot, así no se mueven aunque cambien las tasas o la
-  moneda base, salvo las cuentas con costo de transferencia (abajo). `useRates`
-  (tasas de hoy) queda solo para estimados en vivo: el preview de
-  `quickAddForm`, el de transferencias y el "≈" en moneda base bajo "Total
-  balance" de cuentas sin costo de transferencia.
+- **Libro mayor de partida doble**: cada movimiento es una `ledger_transactions`
+  con sus `ledger_entries` (una por cuenta y moneda, en unidades menores
+  enteras). Las cuentas son `asset` (las que ves como tabs), `expense`,
+  `income`, `bridge`, `pending`, `transit` y `equity` (saldos iniciales). Los
+  roles de línea son `amount`, `fee`, `spread` y `withdrawal`. Cada edición
+  guarda una versión previa en `ledger_revisions`. Todo se escribe con los
+  builders de `src/lib/ledger/` y `src/lib/data/ledgerWrites.ts`.
+- **Valuación con tasas diarias**: no hay snapshot de FX por fila. Cada línea se
+  valúa con la tasa de `fx_rates_daily` de su propia fecha (o la anterior más
+  cercana), vía `src/lib/ledger/valuation.ts`; por eso los totales cambian si se
+  elige otra moneda base. `useRates` (tasas de hoy) queda solo para estimados
+  en vivo: el preview de `quickAddForm`, el de transferencias y la proyección de
+  gasto.
 - **Privacy toggle**: ojito al lado de "Total balance" / "Total spent"
   enmascara los aggregates. Persistido en cookie `mt_hide_amounts`
   (server-readable, sin flash al recargar).
@@ -201,17 +221,15 @@ drizzle/migrations/           # SQL generado por drizzle-kit
 - **Huso horario**: `occurred_on` es un `date` puro asignado al cargar (día del
   dispositivo, o del override en settings). Cambiar el huso **no** re-mapea
   registros viejos.
-- **Transferencias**: toda fila con `transfer_group` guarda el monto **neto en
-  tránsito**, ya descontadas las comisiones. Cada comisión es una fila de gasto
-  aparte, sin `transfer_group`, en la cuenta que la cobró: `transferfee:<grupo>`
-  para el origen y `transferfee:<grupo>:dest` para el destino. Así la comisión
-  suma una sola vez, tanto en el tab de la cuenta (que cuenta las
-  transferencias) como en All (que las excluye). Si el destino está en otra
-  moneda, el monto recibido se carga en esa moneda y la tasa real queda
-  implícita en el par de montos, no se guarda aparte. Se carga desde el toggle
-  "Transfer" del quick-add (panel del botón +), o marcando una fila existente desde el menú.
-  Disponible en cuentas csv y en cash (solo con cash habilitado), nunca en
-  cuentas sincronizadas ni en el tab All.
+- **Transferencias**: una sola `ledger_transactions` con una pata de salida en la
+  cuenta origen y otra de entrada en el destino. Mientras no se acredita, el
+  monto espera en una cuenta `transit` (banner y panel "in transit", se
+  acredita después con la fecha real). Las comisiones son líneas con rol `fee`
+  contra la cuenta `Fees`, una por cuenta que la cobró. Si el destino está en
+  otra moneda, el monto recibido se carga en esa moneda y la tasa real queda
+  implícita en el par de montos (el puente `bridge` equilibra cada moneda). Se
+  carga desde el toggle "Transfer" del quick-add (panel del botón +), o marcando
+  una fila existente desde el menú. Constructores en `src/lib/ledger/builders.ts`.
 - **Monedas por cuenta**: cada cuenta puede declarar una o varias monedas en
   Settings > Accounts (`accounts.currency`, código simple o array JSON; ver
   `src/lib/accountCurrencies.ts`). Sin declarar acepta cualquier moneda; Settings
@@ -220,48 +238,36 @@ drizzle/migrations/           # SQL generado por drizzle-kit
   cobrada de un retiro se validan contra lo declarado. Gastos e ingresos
   comunes en otra moneda se permiten (tarjeta en el exterior). Una cuenta con
   una sola moneda declarada muestra su saldo en esa moneda, sin convertir.
-- **Costo de transferencia**: en una cuenta con una sola moneda declarada
-  (distinta de la base), cada fila en esa moneda se valúa a la cotización de
-  la última transferencia entrante de ese día o anterior (varias el mismo día se
-  combinan; la transferencia conserva la suya). Encadena entre cuentas y se
-  aplica en el server reescribiendo el snapshot de la fila
-  (`src/lib/costBasis.ts`, `getValuedTransactions`), así filas, totales,
-  dashboard y asistente usan lo mismo. El snapshot reescrito nunca se persiste.
   Totales por día en moneda base o, con la preferencia `mt_day_totals`, en la
   moneda de la cuenta del tab.
-- **Withdrawals y efectivo**: un retiro puede vivir como una sola fila de gasto
-  (`withdrawal:<grupo>`, sin `transfer_group`), y entonces el monto entero
-  cuenta como gasto y no queda saldo en efectivo. "Move to Cash" en el menú de
-  la fila agrega la pata que falta (`withdrawal:<grupo>:in`, ingreso en la
-  cuenta Cash, monto pre-rellenado desde la nota y editable) y estampa el
-  `transfer_group` compartido en el gasto existente, que conserva id, nota,
-  comisión y `budget_month`. Habilita `cash_enabled` si estaba apagado, si no
-  la pata nueva sería invisible. "Undo move to Cash" borra la pata de efectivo
-  y devuelve el `external_id` sin sufijo. La comisión del cajero NO se borra al
-  deshacer: es plata efectivamente pagada.
-- **Mes de presupuesto**: transfers y withdrawals (fila con `transfer_group`
-  o `external_id` de withdrawal/fee) se pueden mover al mes siguiente desde
-  el menú de la fila (`budget_month`, nullable). `occurred_on` nunca se
-  toca; todo bucketing mensual en dashboard lee `effectiveYearMonth(tx)`
-  (`budget_month ?? occurred_on.slice(0, 7)`), no `occurred_on` directo.
-  En la vista mensual la fila movida sigue visible en su mes real (badge
-  "Moved to {mes}", monto atenuado, no suma en los totales) y aparece
-  además en el mes destino dentro de un grupo "Carried over from {mes}"
-  (badge "From {mes}", ese sí suma en los totales, con sus propios totales
-  en la cabecera del grupo). El mes destino se calcula una sola vez desde
-  el `occurred_on` más viejo del grupo, y solo se marcan las patas cuyo mes
-  natural difiera de ese destino. Una fila con `budget_month` queda
-  bloqueada para cambiarle la fecha o mergearla como duplicada hasta que
-  se la devuelva a su mes real.
+- **Withdrawals y efectivo**: un retiro es una transacción del libro con líneas
+  de rol `withdrawal` (`src/lib/ledger/withdrawals.ts`). Puede vivir solo con
+  la pata del banco (el monto entero cuenta como gasto y no queda saldo en
+  efectivo); "Move to Cash" en el menú de la fila agrega la pata de efectivo
+  (monto pre-rellenado desde la nota y editable), y "Undo move to Cash" la
+  quita. La comisión del cajero NO se borra al deshacer: es plata efectivamente
+  pagada. Los retiros y cambios nuevos se cargan desde el dashboard o desde el
+  tab de la cuenta de efectivo (`CashActionDrawer`), no desde Settings.
+- **Mes de presupuesto**: transferencias, retiros y movimientos propios (no los
+  cambios de moneda) se pueden mover al mes siguiente desde el menú de la fila
+  (`budget_month` en `ledger_transactions`, nullable). `occurred_on` nunca se
+  toca; todo bucketing mensual lee `effectiveYearMonth({ occurredOn,
+  budgetMonth })` (`src/lib/dates.ts`), no `occurred_on` directo. En la vista
+  mensual la fila movida sigue visible en su mes real (badge "Moved to {mes}",
+  monto atenuado, no suma en los totales) y aparece además en el mes destino
+  dentro de un grupo "Carried over from {mes}" (badge "From {mes}", ese sí suma
+  en los totales, con sus propios totales en la cabecera del grupo). Una fila con
+  `budget_month` queda bloqueada para cambiarle la fecha o mergearla como
+  duplicada hasta que se la devuelva a su mes real.
 - **Auth**: solo Google OAuth vía Better Auth (email+password apagado el
   2026-10-06; las cuentas viejas con contraseña entran con Google y se
   vinculan solas). `AUTH_DISABLE_SIGNUPS=true` bloquea registros nuevos
   (single-user). El OTP por email se descartó el 2026-06-11: dependía de
   Resend y nunca se configuró en prod.
 - **Tasas**: [open.er-api.com](https://open.er-api.com): gratis sin API key,
-  incluye VND. Cacheada en `fx_rates_cache` (Turso). Si el proveedor cae, se
-  sirve la cache stale.
-- **Tasas históricas**: un cron de Vercel (01:00 UTC, `CRON_SECRET`) guarda
+  incluye VND. Cacheada en `fx_rates_cache` (Turso) para estimados en vivo. Si el
+  proveedor cae, se sirve la cache stale.
+- **Tasas históricas** (base de toda la valuación): un cron de Vercel (01:00 UTC, `CRON_SECRET`) guarda
   cada día las tasas de open.er-api + Bybit en `fx_rates_daily` (una fila por
   fecha UTC). El pasado se cargó una sola vez con
   `tsx scripts/backfill-fx-rates.ts --apply` (fiat de
@@ -275,7 +281,11 @@ drizzle/migrations/           # SQL generado por drizzle-kit
   cookies) y opción para cambiarlo en Settings. `?notrack=1` en cualquier URL
   excluye ese navegador (`?notrack=0` lo vuelve a incluir).
 - **Asistente**: chat opcional que corre con la API key propia del usuario
-  (Groq o Google, en Settings → Assistant). Sin key del sistema como fallback.
+  (Groq o Google, en Settings → General). Sin key del sistema como fallback. El
+  widget solo aparece con `NEXT_PUBLIC_ASSISTANT_ENABLED=1`
+  (`src/lib/featureFlags.ts`); `NEXT_PUBLIC_BUDGET_ENABLED=1` activa el panel de
+  presupuesto. Chat y screenshots usan la key del usuario; el import de planillas
+  y el juez de repetidos usan la key del servidor `EXPLABS_API_KEY`.
 - **Import de planillas y CSV**: genérico para cualquier usuario, cuenta y
   archivo. La IA (claude-haiku-5.5 vía Experiential Labs, key del servidor,
   gratis para el usuario) lee las primeras y últimas filas de cada pestaña y
