@@ -13,6 +13,7 @@ import {
 import { tableLayoutKeys } from "@/lib/sheetImport/layout";
 import type { SheetRecipe } from "@/lib/sheetImport/recipe";
 import { reviewRows } from "@/lib/sheetImport/review";
+import { withIndexes } from "@/lib/sheetImport/selection";
 import type { SheetGrid } from "@/lib/sheetImport/workbook";
 
 export function useSheetReview(recipe: SheetRecipe | null, grids: SheetGrid[]) {
@@ -68,6 +69,10 @@ export function useSheetReview(recipe: SheetRecipe | null, grids: SheetGrid[]) {
     });
   }
 
+  function setRows(indexes: readonly number[], on: boolean) {
+    setToggled((current) => withIndexes(current, indexes, on));
+  }
+
   function reset() {
     setCurrency("");
     setCurrencyMap({});
@@ -91,6 +96,7 @@ export function useSheetReview(recipe: SheetRecipe | null, grids: SheetGrid[]) {
     notRead,
     mapCurrency,
     toggleRow,
+    setRows,
     clearToggled,
     reset,
   };

@@ -3,7 +3,9 @@
 import { toast } from "sonner";
 
 import {
+  allRowsSelected,
   canSubmitImport,
+  duplicateIndexes,
   needsCurrency,
   selectedRowCount,
 } from "@/lib/sheetImport/selection";
@@ -95,6 +97,17 @@ export function useSheetImport() {
     checks.invalidate();
   }
 
+  const duplicates = duplicateIndexes(checks.checks);
+  const allDuplicatesSelected = allRowsSelected(
+    duplicates,
+    checks.checks,
+    review.toggled,
+  );
+
+  function toggleAllDuplicates() {
+    review.setRows(duplicates, !allDuplicatesSelected);
+  }
+
   const selectedCount = selectedRowCount(
     review.rows,
     checks.checks,
@@ -139,6 +152,9 @@ export function useSheetImport() {
     checkError: checks.checkError,
     checking: checks.checking,
     selectedCount,
+    duplicateCount: duplicates.length,
+    allDuplicatesSelected,
+    toggleAllDuplicates,
     canSubmit,
     setMode: input.setMode,
     setPasted: input.setPasted,

@@ -21,6 +21,53 @@ export function isRowSelected(
   return toggled.has(index) ? !byDefault : byDefault;
 }
 
+export function duplicateIndexes(
+  checks: ReadonlyArray<SheetRowCheck> | null,
+): number[] {
+  if (!checks) return [];
+  return checks.flatMap((check, index) =>
+    check.state === "duplicate" ? [index] : [],
+  );
+}
+
+export function allRowsSelected(
+  indexes: readonly number[],
+  checks: ReadonlyArray<SheetRowCheck> | null,
+  toggled: ReadonlySet<number>,
+): boolean {
+  return (
+    indexes.length > 0 &&
+    indexes.every((index) => isRowSelected(index, checks?.[index], toggled))
+  );
+}
+
+export function withIndexes(
+  toggled: ReadonlySet<number>,
+  indexes: readonly number[],
+  on: boolean,
+): ReadonlySet<number> {
+  const next = new Set(toggled);
+  for (const index of indexes) {
+    if (on) next.add(index);
+    else next.delete(index);
+  }
+  return next;
+}
+
+export function duplicatesToggleLabel(
+  count: number,
+  allTicked: boolean,
+): string {
+  if (allTicked) {
+    return count === 1
+      ? "Untick the possible duplicate"
+      : "Untick all possible duplicates";
+  }
+  return count === 1
+    ? "Tick the possible duplicate"
+    : `Tick all ${count} possible duplicates`;
+}
+
 export function selectedRowCount(
   rows: ReadonlyArray<SheetRow>,
   checks: ReadonlyArray<SheetRowCheck> | null,
