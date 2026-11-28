@@ -1,25 +1,16 @@
 "use client";
 
+import type { CsvRow } from "@/lib/csv/types";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Papa from "papaparse";
 import { toast } from "sonner";
 
-import {
-  getLastImportDate,
-  importCsvRows,
-  type CsvRow,
-} from "@/lib/actions/csvImport";
+import { getLastImportDate, importCsvRows } from "@/lib/actions/csvImport";
 import { kindOfSource } from "@/lib/constants/sources";
 import { detectMapping } from "@/lib/csv/detect";
-import {
-  normalizeRow,
-  normalizeRowDetailed,
-} from "@/lib/csv/normalize";
-import {
-  initialCsvState,
-  type CsvInitialFile,
-} from "@/lib/csv/initialImport";
+import { normalizeRow, normalizeRowDetailed } from "@/lib/csv/normalize";
+import { initialCsvState, type CsvInitialFile } from "@/lib/csv/initialImport";
 import { addOneDay } from "@/lib/csv/parsing";
 import {
   CSV_PRESETS,
@@ -218,17 +209,17 @@ export function useCsvImport(initial?: CsvInitialFile, onReset?: () => void) {
 
   const canSubmit = Boolean(
     source.trim() &&
-      !sourceReserved &&
-      mapping.dateCol &&
-      (mapping.signConvention === "debit-credit-cols"
-        ? mapping.debitCol && mapping.creditCol
-        : mapping.signConvention === "direction-column"
-          ? mapping.amountCol && mapping.directionCol
-          : mapping.amountCol) &&
-      (mapping.currencyMode === "fixed"
-        ? mapping.currencyFixed
-        : mapping.currencyCol) &&
-      totalNormalized.ok > 0,
+    !sourceReserved &&
+    mapping.dateCol &&
+    (mapping.signConvention === "debit-credit-cols"
+      ? mapping.debitCol && mapping.creditCol
+      : mapping.signConvention === "direction-column"
+        ? mapping.amountCol && mapping.directionCol
+        : mapping.amountCol) &&
+    (mapping.currencyMode === "fixed"
+      ? mapping.currencyFixed
+      : mapping.currencyCol) &&
+    totalNormalized.ok > 0,
   );
 
   function submit() {

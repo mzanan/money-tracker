@@ -1,4 +1,13 @@
-import type { CsvRow } from "@/lib/actions/csvImport";
+import type { CsvRow } from "@/lib/csv/types";
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export function PreviewTable({
   rows,
@@ -15,34 +24,32 @@ export function PreviewTable({
         Preview ({okCount} to import
         {cutoffCount > 0 ? ` · ${cutoffCount} before cutoff` : ""})
       </p>
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-xs">
-          <thead className="bg-muted text-muted-foreground">
-            <tr>
-              <th className="px-2 py-1.5 text-left">Date</th>
-              <th className="px-2 py-1.5 text-left">Kind</th>
-              <th className="px-2 py-1.5 text-right">Amount</th>
-              <th className="px-2 py-1.5 text-left">Currency</th>
-              <th className="px-2 py-1.5 text-left">Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((p, i) => (
-              <tr key={i} className="border-t">
-                <td className="px-2 py-1.5">{p.normalized.occurredOn}</td>
-                <td className="px-2 py-1.5">{p.normalized.kind}</td>
-                <td className="px-2 py-1.5 text-right font-mono">
-                  {p.normalized.amount}
-                </td>
-                <td className="px-2 py-1.5">{p.normalized.currency}</td>
-                <td className="max-w-xs truncate px-2 py-1.5">
-                  {p.normalized.description ?? ""}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Date</TableHead>
+            <TableHead>Kind</TableHead>
+            <TableHead className="text-right">Amount</TableHead>
+            <TableHead>Currency</TableHead>
+            <TableHead>Description</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((p, i) => (
+            <TableRow key={i}>
+              <TableCell>{p.normalized.occurredOn}</TableCell>
+              <TableCell>{p.normalized.kind}</TableCell>
+              <TableCell className="text-right font-mono">
+                {p.normalized.amount}
+              </TableCell>
+              <TableCell>{p.normalized.currency}</TableCell>
+              <TableCell className="max-w-xs truncate">
+                {p.normalized.description ?? ""}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }

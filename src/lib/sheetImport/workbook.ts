@@ -1,7 +1,6 @@
 import * as XLSX from "xlsx";
 import * as cptable from "xlsx/dist/cpexcel.full";
 
-import { columnLetter } from "@/lib/sheetImport/columns";
 import {
   hasSignature,
   isSpreadsheetBinary,
@@ -162,5 +161,3 @@ export function readWorkbook(data: ArrayBuffer | Uint8Array): ReadWorkbook {
   );
   return { sheets, warnings };
 }
-
-export { columnLetter };

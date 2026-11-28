@@ -5,37 +5,7 @@ import type {
 } from "@/lib/sheetImport/recipe";
 import type { SheetRowIssue } from "@/lib/sheetImport/apply";
 import type { ReadingChange, ReadingConflict } from "@/lib/sheetImport/layout";
-import { CURRENCY_CODES } from "@/lib/constants/currencies";
-import { SKIP_CURRENCY } from "@/lib/sheetImport/review";
-import type { SelectOption } from "@/types/select";
-
-export const SHEET_FILE_ACCEPT =
-  ".xlsx,.xlsm,.xlsb,.xls,.ods,.numbers,.csv,.tsv,.txt,text/csv";
-
-export const MAX_LISTED_ISSUES = 50;
-
-export const NO_COLUMN = "none";
-
-export const DATE_ORDER_OPTIONS: SelectOption[] = [
-  { value: "dmy", label: "Day / month / year" },
-  { value: "mdy", label: "Month / day / year" },
-  { value: "ymd", label: "Year / month / day" },
-];
-
-export const EXPENSE_SIGN_OPTIONS: SelectOption[] = [
-  { value: "negative", label: "Negative (-50)" },
-  { value: "positive", label: "Positive (50)" },
-];
-
-export const DECIMAL_OPTIONS: SelectOption[] = [
-  { value: ",", label: "Comma (1.250,50)" },
-  { value: ".", label: "Point (1,250.50)" },
-];
-
-export const CURRENCY_MAP_OPTIONS: SelectOption[] = [
-  { value: SKIP_CURRENCY, label: "Not supported: skip these rows" },
-  ...CURRENCY_CODES.map((code) => ({ value: code, label: code })),
-];
+import { NO_COLUMN } from "@/lib/constants/sheetImport";
 
 export function withDecimal(
   format: NumberFormat,
@@ -63,6 +33,15 @@ export function withAmount(
 ): Partial<TableRecipe> {
   if (!table.amount) return {};
   return { amount: { ...table.amount, ...patch } as TableRecipe["amount"] };
+}
+
+export function withFirstRow(value: string): Partial<TableRecipe> | null {
+  const row = Number(value);
+  return Number.isInteger(row) && row > 0 ? { firstDataRow: row } : null;
+}
+
+export function withDescription(column: string): Partial<TableRecipe> {
+  return { descriptionColumns: column === NO_COLUMN ? [] : [column] };
 }
 
 export function issueLabel(issue: SheetRowIssue): string {
