@@ -246,31 +246,28 @@ async function insertTransactions(
 }
 
 export async function postLedgerTransaction(
-  userId: string,
+  scope: UserScope,
   draft: LedgerDraft,
   options: {
     replaceId?: string;
     id?: string;
-    scope?: UserScope;
     expected?: LedgerDraft;
   } = {},
 ): Promise<string> {
   const error = postingError(draft);
   if (error) throw new LedgerPostingError(error);
   const transactionId = options.replaceId ?? options.id ?? crypto.randomUUID();
-  const write = (scope: UserScope) =>
+  await scope.atomic((txScope) =>
     options.replaceId
-      ? replaceTransaction(scope, transactionId, draft, options.expected)
-      : insertTransactions(scope, [{ id: transactionId, draft }]);
-  if (options.scope) await write(options.scope);
-  else await forUser(userId).transaction(write);
+      ? replaceTransaction(txScope, transactionId, draft, options.expected)
+      : insertTransactions(txScope, [{ id: transactionId, draft }]),
+  );
   return transactionId;
 }
 
 export async function postLedgerTransactions(
-  userId: string,
+  scope: UserScope,
   drafts: ReadonlyArray<{ id?: string; draft: LedgerDraft }>,
-  scope?: UserScope,
 ): Promise<string[]> {
   for (const { draft } of drafts) {
     const error = postingError(draft);
@@ -281,22 +278,18 @@ export async function postLedgerTransactions(
     id: id ?? crypto.randomUUID(),
     draft,
   }));
-  const write = (txScope: UserScope) => insertTransactions(txScope, writes);
-  if (scope) await write(scope);
-  else await forUser(userId).transaction(write);
+  await scope.atomic((txScope) => insertTransactions(txScope, writes));
   return writes.map(({ id }) => id);
 }
 
 export async function existingExternalIds(
-  userId: string,
+  scope: UserScope,
   origin: string,
   externalIds: ReadonlyArray<string>,
-  scope?: UserScope,
 ): Promise<Set<string>> {
-  const s = scope ?? forUser(userId);
   const found = new Set<string>();
   for (const batch of chunk([...new Set(externalIds)], READ_CHUNK)) {
-    const rows = await s
+    const rows = await scope
       .select({ external_id: ledger_external_ids.external_id })
       .from(
         ledger_external_ids,
@@ -439,52 +432,48 @@ export async function firstSourceDate(
 }
 
 export async function getLedgerRecordsBetween(
-  userId: string,
+  scope: UserScope,
   start: string,
   end: string,
-  scope?: UserScope,
 ): Promise<LedgerRecord[]> {
-  const s = scope ?? forUser(userId);
-  const rows = await s
+  const rows = await scope
     .selectDistinct({ id: ledger_entries.transaction_id })
     .from(ledger_entries, between(ledger_entries.occurred_on, start, end));
   const records = await getLedgerRecords(
-    userId,
+    scope,
     rows.map((row) => row.id),
-    s,
   );
   return [...records.values()];
 }
 
 export async function deleteLedgerTransactions(
-  userId: string,
+  scope: UserScope,
   transactionIds: ReadonlyArray<string>,
-  scope?: UserScope,
 ): Promise<number> {
   if (transactionIds.length === 0) return 0;
-  const remove = async (tx: UserScope) => {
+  const remove = async (txScope: UserScope) => {
     let deleted = 0;
     for (const ids of chunk([...transactionIds], READ_CHUNK)) {
-      await tx.delete(
+      await txScope.delete(
         ledger_entries,
         inArray(ledger_entries.transaction_id, ids),
       );
-      await tx.delete(
+      await txScope.delete(
         ledger_external_ids,
         inArray(ledger_external_ids.transaction_id, ids),
       );
-      await tx.delete(
+      await txScope.delete(
         ledger_revisions,
         inArray(ledger_revisions.transaction_id, ids),
       );
-      const rows = await tx
+      const rows = await txScope
         .delete(ledger_transactions, inArray(ledger_transactions.id, ids))
         .returning({ id: ledger_transactions.id });
       deleted += rows.length;
     }
     return deleted;
   };
-  return scope ? remove(scope) : forUser(userId).transaction(remove);
+  return scope.atomic(remove);
 }
 
 export interface LedgerRecord {
@@ -493,11 +482,9 @@ export interface LedgerRecord {
 }
 
 export async function getLedgerRecords(
-  userId: string,
+  scope: UserScope,
   transactionIds: ReadonlyArray<string>,
-  scope?: UserScope,
 ): Promise<Map<string, LedgerRecord>> {
-  const s = scope ?? forUser(userId);
   const ids = [...new Set(transactionIds)];
   if (ids.length === 0) return new Map();
   const byChunk = async <T>(
@@ -511,20 +498,20 @@ export async function getLedgerRecords(
   const [transactions, entries, accounts, externalIds, scaleOf] =
     await Promise.all([
       byChunk((chunk) =>
-        s.selectFrom(
+        scope.selectFrom(
           ledger_transactions,
           inArray(ledger_transactions.id, chunk),
         ),
       ),
       byChunk((chunk) =>
-        s.selectFrom(
+        scope.selectFrom(
           ledger_entries,
           inArray(ledger_entries.transaction_id, chunk),
         ),
       ),
-      s.selectFrom(ledger_accounts),
+      scope.selectFrom(ledger_accounts),
       byChunk((chunk) =>
-        s
+        scope
           .select({
             transaction_id: ledger_external_ids.transaction_id,
             origin: ledger_external_ids.origin,
@@ -585,10 +572,9 @@ export async function getLedgerRecords(
 }
 
 export async function getLedgerRecord(
-  userId: string,
+  scope: UserScope,
   transactionId: string,
-  scope?: UserScope,
 ): Promise<LedgerRecord | null> {
-  const records = await getLedgerRecords(userId, [transactionId], scope);
+  const records = await getLedgerRecords(scope, [transactionId]);
   return records.get(transactionId) ?? null;
 }

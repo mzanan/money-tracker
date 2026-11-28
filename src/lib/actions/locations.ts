@@ -1,17 +1,17 @@
 "use server";
 
-import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { actionErrorMessage } from "@/lib/actionError";
-import { forUser } from "@/lib/db/scope";
-import { locations } from "@/lib/db/schema";
+import { deleteLocationById, insertLocation } from "@/lib/data/locations";
 import { isValidCalendarDate } from "@/lib/dates";
 import { getUser } from "@/lib/session";
 
 import type { ActionResult } from "./transactions";
 
-function cleanDate(value: string | null | undefined): string | null | undefined {
+function cleanDate(
+  value: string | null | undefined,
+): string | null | undefined {
   const trimmed = value?.trim();
   if (!trimmed) return null;
   return isValidCalendarDate(trimmed) ? trimmed : undefined;
@@ -41,7 +41,7 @@ export async function createLocation(input: {
   if (!user) return { ok: false, error: "Not authenticated" };
 
   try {
-    await forUser(user.id).insert(locations, {
+    await insertLocation(user.id, {
       label,
       start_date: startDate,
       end_date: endDate,
@@ -61,7 +61,7 @@ export async function deleteLocation(id: string): Promise<ActionResult> {
   if (!user) return { ok: false, error: "Not authenticated" };
 
   try {
-    await forUser(user.id).delete(locations, eq(locations.id, id));
+    await deleteLocationById(user.id, id);
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {

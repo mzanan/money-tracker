@@ -29,8 +29,8 @@ export async function deleteSource(
 
   try {
     const deleted = await forUser(user.id).transaction(async (txScope) => {
-      const ids = await getSourceTransactionIds(user.id, value, txScope);
-      const records = await getLedgerRecords(user.id, ids, txScope);
+      const ids = await getSourceTransactionIds(txScope, value);
+      const records = await getLedgerRecords(txScope, ids);
       const removed: string[] = [];
       for (const record of records.values()) {
         const [first, ...rest] = draftsWithoutSource(record, value);
@@ -38,15 +38,14 @@ export async function deleteSource(
           removed.push(record.movement.id);
           continue;
         }
-        await postLedgerTransaction(user.id, first, {
+        await postLedgerTransaction(txScope, first, {
           replaceId: record.movement.id,
-          scope: txScope,
         });
         for (const draft of rest) {
-          await postLedgerTransaction(user.id, draft, { scope: txScope });
+          await postLedgerTransaction(txScope, draft);
         }
       }
-      await deleteLedgerTransactions(user.id, removed, txScope);
+      await deleteLedgerTransactions(txScope, removed);
       return records.size;
     });
 

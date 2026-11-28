@@ -185,15 +185,26 @@ function scopeFor(userId: string, executor: Executor) {
 
 export type UserScope = ReturnType<typeof scopeFor> & {
   transaction: <R>(run: (scope: UserScope) => Promise<R>) => Promise<R>;
+  atomic: <R>(run: (scope: UserScope) => Promise<R>) => Promise<R>;
 };
+
+function buildScope(
+  userId: string,
+  executor: Executor,
+  inTransaction: boolean,
+): UserScope {
+  const scope: UserScope = {
+    ...scopeFor(userId, executor),
+    transaction: (run) =>
+      executor.transaction((tx) => run(buildScope(userId, tx, true))),
+    atomic: (run) => (inTransaction ? run(scope) : scope.transaction(run)),
+  };
+  return scope;
+}
 
 export function forUser(userId: string, executor: Executor = db): UserScope {
   if (!userId) throw new Error("forUser requires a user id");
-  return {
-    ...scopeFor(userId, executor),
-    transaction: (run) =>
-      executor.transaction((tx) => run(forUser(userId, tx))),
-  };
+  return buildScope(userId, executor, executor !== db);
 }
 
 export function shared(executor: Executor = db) {

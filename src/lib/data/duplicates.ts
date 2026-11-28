@@ -1,6 +1,7 @@
 import { dayWindow, daysAround } from "@/lib/dates";
 import { relativeUsdDiff, toUsdPair } from "@/lib/currency";
 import { getLedgerRecordsBetween } from "@/lib/data/ledgerWrites";
+import { forUser } from "@/lib/db/scope";
 import { flowCandidateOf, type FlowCandidate } from "@/lib/ledger/candidates";
 
 import type { FxRates } from "@/types/db";
@@ -41,7 +42,7 @@ export async function getFlowCandidatesBetween(
   start: string,
   end: string,
 ): Promise<FlowCandidate[]> {
-  const records = await getLedgerRecordsBetween(userId, start, end);
+  const records = await getLedgerRecordsBetween(forUser(userId), start, end);
   return records.flatMap(({ movement }) => {
     const candidate = flowCandidateOf(movement);
     return candidate &&

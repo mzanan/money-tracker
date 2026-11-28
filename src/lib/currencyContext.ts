@@ -1,13 +1,8 @@
-import { forUser } from "@/lib/db/scope";
-import { user_settings } from "@/lib/db/schema";
+import { getUserCurrencies } from "@/lib/data/userSettings";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 
 export async function buildCurrencyContext(userId: string) {
-  const settings = await forUser(userId)
-    .select({ currencies: user_settings.currencies })
-    .from(user_settings)
-    .limit(1)
-    .then((rows) => rows[0]);
+  const settings = await getUserCurrencies(userId);
   if (!settings) return null;
   const rates = (await getRates()).rates;
   return { rates, userCurrencies: settings.currencies };

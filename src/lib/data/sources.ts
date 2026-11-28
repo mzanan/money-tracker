@@ -15,11 +15,11 @@ import {
   ledger_entries,
   ledger_external_ids,
   ledger_transactions,
-  user_settings,
 } from "@/lib/db/schema";
 import { EXTERNAL_ID_PREFIX, isCsvExternalId } from "@/lib/externalIds";
 import { isSyncable } from "@/lib/integrations";
 import { sourcesOf } from "@/lib/ledger/movements";
+import { getArchivedSources } from "@/lib/data/userSettings";
 import { suggestedAccountCurrencies } from "@/lib/accountCurrencies";
 
 const assetAccounts = eq(ledger_accounts.kind, "asset");
@@ -93,22 +93,20 @@ export async function getLastEntryDate(
 }
 
 export async function getSourceTransactionIds(
-  userId: string,
+  scope: UserScope,
   source: string,
-  scope?: UserScope,
 ): Promise<string[]> {
-  const s = scope ?? forUser(userId);
-  const rows = await s
+  const rows = await scope
     .selectDistinct({ id: ledger_entries.transaction_id })
     .from(ledger_entries, and(assetAccounts, eq(ledger_accounts.key, source)))
     .innerJoin(
       ledger_accounts,
       and(
         eq(ledger_entries.account_id, ledger_accounts.id),
-        s.owns(ledger_accounts),
+        scope.owns(ledger_accounts),
       ),
     );
-  const pending = await s
+  const pending = await scope
     .select({ id: ledger_transactions.id })
     .from(
       ledger_transactions,
@@ -118,13 +116,11 @@ export async function getSourceTransactionIds(
 }
 
 export async function staleCsvTransactionIds(
-  userId: string,
+  scope: UserScope,
   source: string,
   keep: ReadonlySet<string>,
-  scope?: UserScope,
 ): Promise<string[]> {
-  const s = scope ?? forUser(userId);
-  const refs = await s
+  const refs = await scope
     .select({
       transaction_id: ledger_external_ids.transaction_id,
       external_id: ledger_external_ids.external_id,
@@ -144,7 +140,7 @@ export async function staleCsvTransactionIds(
     ),
   ];
   if (candidates.length === 0) return [];
-  const records = await getLedgerRecords(userId, candidates, s);
+  const records = await getLedgerRecords(scope, candidates);
   return candidates.filter((id) => {
     const movement = records.get(id)?.movement;
     return (
@@ -184,15 +180,11 @@ export async function getTransferSources(
 ): Promise<string[]> {
   const [rows, settings] = await Promise.all([
     getImportedSources(userId),
-    forUser(userId)
-      .select({ archived: user_settings.archived_sources })
-      .from(user_settings)
-      .limit(1)
-      .then((r) => r[0]),
+    getArchivedSources(userId),
   ]);
   return withoutArchived(
     tabSourcesFrom(rows.map((r) => r.source)),
-    settings?.archived ?? [],
+    settings?.archived_sources ?? [],
   ).filter((s) => s !== excludeSource && kindOfSource(s) !== "api");
 }
 

@@ -1,13 +1,20 @@
 "use server";
 
-import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { absorbDateRange, absorbPlan } from "@/lib/absorb";
 import { actionErrorMessage } from "@/lib/actionError";
 import { dateInTz } from "@/lib/dates";
 import { forUser } from "@/lib/db/scope";
-import { api_integrations, user_settings } from "@/lib/db/schema";
+import {
+  getAutoSyncRows,
+  getIntegration,
+  getIntegrationCredentials,
+  insertIntegration,
+  removeIntegration,
+  updateIntegration,
+} from "@/lib/data/integrations";
+import { getArchivedSources, getUserTimezone } from "@/lib/data/userSettings";
 import {
   deleteLedgerTransactions,
   existingExternalIds,
@@ -41,33 +48,30 @@ async function postSynced(
 ): Promise<{ imported: number; absorbed: number }> {
   return forUser(userId).transaction(async (txScope) => {
     const taken = await existingExternalIds(
-      userId,
+      txScope,
       syncSource,
       drafts.map(({ externalId }) => externalId),
-      txScope,
     );
     const fresh = freshSynced(drafts, taken);
     if (fresh.length === 0) return { imported: 0, absorbed: 0 };
     const absorbable = fresh.filter((draft) => draft.absorbable);
     const direct = fresh.filter((draft) => !draft.absorbable);
     await postLedgerTransactions(
-      userId,
-      direct.map(({ id, draft }) => ({ id, draft })),
       txScope,
+      direct.map(({ id, draft }) => ({ id, draft })),
     );
     if (absorbable.length === 0) {
       return { imported: fresh.length, absorbed: 0 };
     }
     const { start, end } = absorbDateRange(absorbable.map(({ row }) => row));
-    const records = await getLedgerRecordsBetween(userId, start, end, txScope);
+    const records = await getLedgerRecordsBetween(txScope, start, end);
     const plan = absorbPlan(absorbable, records, syncSource);
-    await postLedgerTransactions(userId, plan.writes, txScope);
-    await deleteLedgerTransactions(userId, plan.absorbedIds, txScope);
+    await postLedgerTransactions(txScope, plan.writes);
+    await deleteLedgerTransactions(txScope, plan.absorbedIds);
     if (plan.feeDrafts.length > 0) {
       await postLedgerTransactions(
-        userId,
-        plan.feeDrafts.map((draft) => ({ draft })),
         txScope,
+        plan.feeDrafts.map((draft) => ({ draft })),
       );
     }
     return { imported: fresh.length, absorbed: plan.absorbedIds.length };
@@ -91,17 +95,7 @@ export async function saveIntegration(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const scope = forUser(user.id);
-  const existing = await scope
-    .select({
-      provider: api_integrations.provider,
-      api_key: api_integrations.api_key,
-      api_secret: api_integrations.api_secret,
-      extra: api_integrations.extra,
-    })
-    .from(api_integrations, eq(api_integrations.provider, input.provider))
-    .limit(1)
-    .then((rows) => rows[0]);
+  const existing = await getIntegrationCredentials(user.id, input.provider);
 
   const apiKey = input.apiKey?.trim() || null;
   const apiSecret = input.apiSecret?.trim() || null;
@@ -147,7 +141,7 @@ export async function saveIntegration(
             Date.now() - input.initialSinceDays * 24 * 60 * 60 * 1000,
           ).toISOString()
         : undefined;
-      await scope.insert(api_integrations, {
+      await insertIntegration(user.id, {
         provider: input.provider,
         api_key: encryptSecret(apiKey!, aad),
         api_secret: apiSecret ? encryptSecret(apiSecret, aad) : null,
@@ -161,11 +155,7 @@ export async function saveIntegration(
       if (apiKey) set.api_key = encryptSecret(apiKey, aad);
       if (apiSecret) set.api_secret = encryptSecret(apiSecret, aad);
       if (input.extra) set.extra = input.extra;
-      await scope.update(
-        api_integrations,
-        set,
-        eq(api_integrations.provider, input.provider),
-      );
+      await updateIntegration(user.id, input.provider, set);
     }
     revalidatePath("/settings");
     return { ok: true };
@@ -187,10 +177,7 @@ export async function deleteIntegration(
   }
 
   try {
-    await forUser(user.id).delete(
-      api_integrations,
-      eq(api_integrations.provider, provider),
-    );
+    await removeIntegration(user.id, provider);
     revalidatePath("/settings");
     return { ok: true };
   } catch (error) {
@@ -215,11 +202,7 @@ export async function setIntegrationAutoSync(
   }
 
   try {
-    await forUser(user.id).update(
-      api_integrations,
-      { auto_sync: enabled },
-      eq(api_integrations.provider, provider),
-    );
+    await updateIntegration(user.id, provider, { auto_sync: enabled });
     revalidatePath("/settings");
     return { ok: true };
   } catch (error) {
@@ -241,18 +224,10 @@ export async function syncIntegration(
     return { ok: false, error: "Unknown provider" };
   }
 
-  const scope = forUser(user.id);
-  const integration = await scope
-    .selectFrom(api_integrations, eq(api_integrations.provider, provider))
-    .limit(1)
-    .then((rows) => rows[0]);
+  const integration = await getIntegration(user.id, provider);
   if (!integration) return { ok: false, error: "Integration not connected" };
 
-  const settings = await scope
-    .select({ timezone: user_settings.timezone })
-    .from(user_settings)
-    .limit(1)
-    .then((rows) => rows[0]);
+  const settings = await getUserTimezone(user.id);
   if (!settings) return { ok: false, error: "Settings not found" };
   const timezone = await resolveTimezone(settings.timezone);
 
@@ -279,11 +254,7 @@ export async function syncIntegration(
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Sync failed";
-    await scope.update(
-      api_integrations,
-      { last_error: message },
-      eq(api_integrations.provider, provider),
-    );
+    await updateIntegration(user.id, provider, { last_error: message });
     revalidatePath("/settings");
     return { ok: false, error: message };
   }
@@ -325,14 +296,10 @@ export async function syncIntegration(
     }
   }
 
-  await scope.update(
-    api_integrations,
-    {
-      last_error: null,
-      ...(normalized.length > 0 ? { last_synced_at: syncStartedAt } : {}),
-    },
-    eq(api_integrations.provider, provider),
-  );
+  await updateIntegration(user.id, provider, {
+    last_error: null,
+    ...(normalized.length > 0 ? { last_synced_at: syncStartedAt } : {}),
+  });
 
   revalidatePath("/", "layout");
 
@@ -350,21 +317,9 @@ export async function autoSyncIntegrations(): Promise<
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const scope = forUser(user.id);
   const [integrationRows, settingsRow] = await Promise.all([
-    scope
-      .select({
-        provider: api_integrations.provider,
-        auto_sync: api_integrations.auto_sync,
-        last_synced_at: api_integrations.last_synced_at,
-        last_error: api_integrations.last_error,
-      })
-      .from(api_integrations),
-    scope
-      .select({ archived_sources: user_settings.archived_sources })
-      .from(user_settings)
-      .limit(1)
-      .then((rows) => rows[0]),
+    getAutoSyncRows(user.id),
+    getArchivedSources(user.id),
   ]);
 
   const archived = settingsRow?.archived_sources ?? [];

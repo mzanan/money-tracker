@@ -1,11 +1,11 @@
 import { asc, eq } from "drizzle-orm";
 
-import { forUser } from "@/lib/db/scope";
+import { forUser, type UserScope } from "@/lib/db/scope";
 import { recurring_payments } from "@/lib/db/schema";
 import { getUserSettings } from "@/lib/data/userSettings";
 import { userToday } from "@/lib/preferences.server";
 import { requireUser } from "@/lib/session";
-import type { RecurringPayment } from "@/types/db";
+import type { RecurringPayment, RecurringPaymentInsert } from "@/types/db";
 
 export interface RemindersData {
   reminders: RecurringPayment[];
@@ -41,4 +41,42 @@ export async function getRemindersData(): Promise<RemindersData> {
     completedReminders,
     today: await userToday(settings?.timezone),
   };
+}
+
+export async function getReminder(
+  userId: string,
+  id: string,
+): Promise<RecurringPayment | undefined> {
+  return forUser(userId)
+    .selectFrom(recurring_payments, eq(recurring_payments.id, id))
+    .limit(1)
+    .then((rows) => rows[0]);
+}
+
+export async function insertReminder(
+  userId: string,
+  values: Omit<RecurringPaymentInsert, "user_id">,
+): Promise<string> {
+  const [inserted] = await forUser(userId)
+    .insert(recurring_payments, values)
+    .returning({ id: recurring_payments.id });
+  return inserted.id;
+}
+
+export async function updateReminderById(
+  scope: UserScope,
+  id: string,
+  values: Partial<Omit<RecurringPaymentInsert, "user_id">>,
+): Promise<void> {
+  await scope.update(recurring_payments, values, eq(recurring_payments.id, id));
+}
+
+export async function deleteReminderById(
+  userId: string,
+  id: string,
+): Promise<void> {
+  await forUser(userId).delete(
+    recurring_payments,
+    eq(recurring_payments.id, id),
+  );
 }

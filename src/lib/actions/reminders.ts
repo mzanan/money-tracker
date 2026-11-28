@@ -1,12 +1,17 @@
 "use server";
 
-import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { ActionError, actionErrorMessage } from "@/lib/actionError";
 import { amountValidationError } from "@/lib/currency";
 import { forUser } from "@/lib/db/scope";
-import { recurring_payments, user_settings } from "@/lib/db/schema";
+import {
+  deleteReminderById,
+  getReminder,
+  insertReminder,
+  updateReminderById,
+} from "@/lib/data/reminders";
+import { getUserTimezone } from "@/lib/data/userSettings";
 import {
   findCrossSourceCandidates,
   getFlowCandidatesBetween,
@@ -71,22 +76,20 @@ export async function createReminder(
 
   const d = parsed.data;
   try {
-    const [inserted] = await forUser(user.id)
-      .insert(recurring_payments, {
-        label: d.label,
-        amount: d.amount ?? null,
-        currency: d.currency?.trim() || null,
-        frequency: d.frequency,
-        interval_months: normalizeInterval(d.frequency, d.intervalMonths),
-        installments_total: d.installmentsTotal ?? null,
-        last_paid_on: d.lastPaidOn ?? null,
-        next_due_on: d.nextDueOn,
-        source: d.source?.trim() || null,
-        note: d.note?.trim() || null,
-      })
-      .returning({ id: recurring_payments.id });
+    const id = await insertReminder(user.id, {
+      label: d.label,
+      amount: d.amount ?? null,
+      currency: d.currency?.trim() || null,
+      frequency: d.frequency,
+      interval_months: normalizeInterval(d.frequency, d.intervalMonths),
+      installments_total: d.installmentsTotal ?? null,
+      last_paid_on: d.lastPaidOn ?? null,
+      next_due_on: d.nextDueOn,
+      source: d.source?.trim() || null,
+      note: d.note?.trim() || null,
+    });
     revalidatePath("/", "layout");
-    return { ok: true, data: { id: inserted.id } };
+    return { ok: true, data: { id } };
   } catch (error) {
     return {
       ok: false,
@@ -115,23 +118,20 @@ export async function updateReminder(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
+  const scope = forUser(user.id);
   const d = parsed.data;
   try {
-    await forUser(user.id).update(
-      recurring_payments,
-      {
-        label: d.label,
-        amount: d.amount ?? null,
-        currency: d.currency?.trim() || null,
-        frequency: d.frequency,
-        interval_months: normalizeInterval(d.frequency, d.intervalMonths),
-        installments_total: d.installmentsTotal ?? null,
-        last_paid_on: d.lastPaidOn ?? null,
-        next_due_on: d.nextDueOn,
-        note: d.note?.trim() || null,
-      },
-      eq(recurring_payments.id, d.id),
-    );
+    await updateReminderById(scope, d.id, {
+      label: d.label,
+      amount: d.amount ?? null,
+      currency: d.currency?.trim() || null,
+      frequency: d.frequency,
+      interval_months: normalizeInterval(d.frequency, d.intervalMonths),
+      installments_total: d.installmentsTotal ?? null,
+      last_paid_on: d.lastPaidOn ?? null,
+      next_due_on: d.nextDueOn,
+      note: d.note?.trim() || null,
+    });
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -184,10 +184,7 @@ export async function getReminderPayOptions(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const reminder = await forUser(user.id)
-    .selectFrom(recurring_payments, eq(recurring_payments.id, id))
-    .limit(1)
-    .then((rows) => rows[0]);
+  const reminder = await getReminder(user.id, id);
   if (!reminder) return { ok: false, error: "Reminder not found" };
 
   const recentRows = (await getFlowCandidatesBetween(user.id, day, day))
@@ -236,17 +233,10 @@ export async function markReminderPaid(
   if (!user) return { ok: false, error: "Not authenticated" };
 
   const scope = forUser(user.id);
-  const reminder = await scope
-    .selectFrom(recurring_payments, eq(recurring_payments.id, id))
-    .limit(1)
-    .then((rows) => rows[0]);
+  const reminder = await getReminder(scope.userId, id);
   if (!reminder) return { ok: false, error: "Reminder not found" };
 
-  const settings = await scope
-    .select({ timezone: user_settings.timezone })
-    .from(user_settings)
-    .limit(1)
-    .then((rows) => rows[0]);
+  const settings = await getUserTimezone(scope.userId);
 
   let day = paidOn;
   if (!day || !isValidCalendarDate(day)) {
@@ -256,7 +246,7 @@ export async function markReminderPaid(
   try {
     const linkId = options?.linkTransactionId;
     if (linkId) {
-      const record = await getLedgerRecord(user.id, linkId);
+      const record = await getLedgerRecord(scope, linkId);
       if (!record) return { ok: false, error: "Transaction not found" };
       if (
         record.movement.recurringId != null &&
@@ -281,48 +271,39 @@ export async function markReminderPaid(
     let expenseAdded = false;
     await scope.transaction(async (txScope) => {
       if (linkId) {
-        const record = await getLedgerRecord(user.id, linkId, txScope);
+        const record = await getLedgerRecord(txScope, linkId);
         if (!record) throw new ActionError("Transaction not found");
         const { draft } = record;
         if (draft.recurringId != null && draft.recurringId !== id) {
           throw new ActionError(LINKED_ELSEWHERE_ERROR);
         }
         await postLedgerTransaction(
-          user.id,
+          txScope,
           {
             ...draft,
             comment: draft.comment || reminder.label,
             recurringId: reminder.id,
           },
-          { replaceId: linkId, scope: txScope, expected: draft },
+          { replaceId: linkId, expected: draft },
         );
       }
-      await txScope.update(
-        recurring_payments,
-        {
-          last_paid_on: resolvedDay,
-          next_due_on: computeNextDue(
-            resolvedDay,
-            reminder.frequency,
-            reminder.interval_months,
-          ),
-          installments_paid: installmentsPaid,
-          active: completed ? false : reminder.active,
-        },
-        eq(recurring_payments.id, id),
-      );
+      await updateReminderById(txScope, id, {
+        last_paid_on: resolvedDay,
+        next_due_on: computeNextDue(
+          resolvedDay,
+          reminder.frequency,
+          reminder.interval_months,
+        ),
+        installments_paid: installmentsPaid,
+        active: completed ? false : reminder.active,
+      });
       if (expenseDraft) {
         const [ref] = expenseDraft.externalRefs;
-        const taken = await existingExternalIds(
-          user.id,
-          ref.origin,
-          [ref.externalId],
-          txScope,
-        );
+        const taken = await existingExternalIds(txScope, ref.origin, [
+          ref.externalId,
+        ]);
         if (taken.size === 0) {
-          await postLedgerTransaction(user.id, expenseDraft, {
-            scope: txScope,
-          });
+          await postLedgerTransaction(txScope, expenseDraft);
           expenseAdded = true;
         }
       }
@@ -344,12 +325,9 @@ export async function stopReminder(id: string): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
+  const scope = forUser(user.id);
   try {
-    await forUser(user.id).update(
-      recurring_payments,
-      { active: false },
-      eq(recurring_payments.id, id),
-    );
+    await updateReminderById(scope, id, { active: false });
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -365,10 +343,7 @@ export async function deleteReminder(id: string): Promise<ActionResult> {
   if (!user) return { ok: false, error: "Not authenticated" };
 
   try {
-    await forUser(user.id).delete(
-      recurring_payments,
-      eq(recurring_payments.id, id),
-    );
+    await deleteReminderById(user.id, id);
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {

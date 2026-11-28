@@ -22,6 +22,7 @@ import {
   StartImportSchema,
 } from "@/lib/sheetImport/importInput";
 import { chunkRowLogs, type SheetRowLog } from "@/lib/sheetImport/log";
+import { forUser } from "@/lib/db/scope";
 import { getUser } from "@/lib/session";
 
 import { importCsvRows } from "./csvImport";
@@ -77,19 +78,20 @@ export async function importSheetChunk(
 > {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
   const parsed = ChunkInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid rows" };
   const { importId, rows } = parsed.data;
   const open = await getOpenSheetImport(user.id, importId);
   if (!open) return { ok: false, error: "This import is no longer open" };
   const ids = rows.map((r) => csvExternalId(r.csv.externalId ?? ""));
-  const before = await existingExternalIds(user.id, open.source, ids);
+  const before = await existingExternalIds(scope, open.source, ids);
   const result = await importCsvRows({
     source: open.source,
     rows: rows.map((r) => r.csv),
   });
   if (!result.ok) return result;
-  const after = await existingExternalIds(user.id, open.source, ids);
+  const after = await existingExternalIds(scope, open.source, ids);
   await recordSheetRows(
     user.id,
     open.id,

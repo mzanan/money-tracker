@@ -1,10 +1,7 @@
 "use server";
 
-import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-import { forUser } from "@/lib/db/scope";
-import { accounts } from "@/lib/db/schema";
 import {
   invalidAccountCurrencies,
   serializeAccountCurrencies,
@@ -19,7 +16,13 @@ import {
 } from "@/lib/constants/sources";
 import { accountPurposeError } from "@/lib/accountPurpose";
 import type { AccountPurpose } from "@/lib/constants/accountPurposes";
-import { listAccounts } from "@/lib/data/accounts";
+import {
+  deleteAccountBySource,
+  insertAccountIfMissing,
+  listAccounts,
+  saveAccountLabel,
+  upsertAccountDetails,
+} from "@/lib/data/accounts";
 import { getImportedSources } from "@/lib/data/sources";
 import { getUser } from "@/lib/session";
 
@@ -49,16 +52,10 @@ export async function upsertAccountLabel(
   const trimmedLabel = capitalizeLabel(label.trim());
   if (!trimmedLabel) return { ok: false, error: "Name is required" };
 
-  const [row] = await forUser(user.id)
-    .insert(accounts, { source: normalizedSource, label: trimmedLabel })
-    .onConflictDoUpdate({
-      target: [accounts.user_id, accounts.source],
-      set: { label: trimmedLabel },
-    })
-    .returning({ id: accounts.id });
+  const id = await saveAccountLabel(user.id, normalizedSource, trimmedLabel);
 
   revalidatePath("/", "layout");
-  return { ok: true, data: { id: row.id } };
+  return { ok: true, data: { id } };
 }
 
 export async function createAccount(
@@ -85,9 +82,7 @@ export async function createAccount(
     return { ok: false, error: `An account named "${label}" already exists` };
   }
 
-  await forUser(user.id)
-    .insert(accounts, { source, label })
-    .onConflictDoNothing();
+  await insertAccountIfMissing(user.id, source, label);
 
   revalidatePath("/", "layout");
   return { ok: true, data: { source } };
@@ -110,16 +105,12 @@ export async function setAccountCurrencies(
   }
   const currency = serializeAccountCurrencies(currencies);
 
-  await forUser(user.id)
-    .insert(accounts, {
-      source: normalizedSource,
-      label: labelForSource(normalizedSource),
-      currency,
-    })
-    .onConflictDoUpdate({
-      target: [accounts.user_id, accounts.source],
-      set: { currency },
-    });
+  await upsertAccountDetails(
+    user.id,
+    normalizedSource,
+    labelForSource(normalizedSource),
+    { currency },
+  );
 
   revalidatePath("/", "layout");
   return { ok: true };
@@ -143,16 +134,12 @@ export async function setAccountPurpose(
   if (inputError) return { ok: false, error: inputError };
 
   const values = { purpose, expected_on: expectedOn };
-  await forUser(user.id)
-    .insert(accounts, {
-      source: normalizedSource,
-      label: labelForSource(normalizedSource),
-      ...values,
-    })
-    .onConflictDoUpdate({
-      target: [accounts.user_id, accounts.source],
-      set: values,
-    });
+  await upsertAccountDetails(
+    user.id,
+    normalizedSource,
+    labelForSource(normalizedSource),
+    values,
+  );
 
   revalidatePath("/", "layout");
   return { ok: true };
@@ -170,10 +157,8 @@ export async function removeAccount(
   const guardError = guardEditable(normalizedSource);
   if (guardError) return { ok: false, error: guardError };
 
-  const deleted = await forUser(user.id)
-    .delete(accounts, eq(accounts.source, normalizedSource))
-    .returning({ id: accounts.id });
+  const removed = await deleteAccountBySource(user.id, normalizedSource);
 
   revalidatePath("/", "layout");
-  return { ok: true, data: { removed: deleted.length > 0 } };
+  return { ok: true, data: { removed } };
 }

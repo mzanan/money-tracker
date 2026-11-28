@@ -21,6 +21,7 @@ import { openingLines } from "@/lib/ledger/builders";
 import { emptyDraft } from "@/lib/ledger/posting";
 import { canTakeOpening } from "@/lib/openingBalance";
 import { userToday } from "@/lib/preferences.server";
+import { forUser } from "@/lib/db/scope";
 import { getUser } from "@/lib/session";
 
 import type { ActionResult } from "./transactions";
@@ -53,6 +54,7 @@ export async function setOpeningBalance(
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
 
   try {
     const currencyError = await sourceCurrencyError(
@@ -69,14 +71,14 @@ export async function setOpeningBalance(
       externalId,
     );
     const existing = existingId
-      ? await getLedgerRecord(user.id, existingId)
+      ? await getLedgerRecord(scope, existingId)
       : null;
     const occurredOn =
       parsed.data.occurredOn ??
       (await firstSourceDate(user.id, source)) ??
       (await userToday((await getUserSettings(user.id))?.timezone));
     await postLedgerTransaction(
-      user.id,
+      scope,
       {
         ...emptyDraft(occurredOn),
         lines: openingLines(

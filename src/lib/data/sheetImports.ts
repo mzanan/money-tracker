@@ -203,11 +203,9 @@ export async function undoSheetImport(
     externalIds,
   );
   const deleted = await scope.transaction(async (txScope) => {
-    const removed = await deleteLedgerTransactions(
-      userId,
-      [...transactionIds],
-      txScope,
-    );
+    const removed = await deleteLedgerTransactions(txScope, [
+      ...transactionIds,
+    ]);
     await txScope.update(
       sheet_imports,
       { undone_at: sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))` },
