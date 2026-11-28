@@ -1,14 +1,14 @@
-import { eq } from "drizzle-orm";
 import { cache } from "react";
 
 import { supportedOrDefault } from "@/lib/constants/currencies";
-import { db } from "@/lib/db";
+import { findUserIdByCalendarToken } from "@/lib/db/preAuth";
+import { forUser } from "@/lib/db/scope";
 import { user_settings } from "@/lib/db/schema";
 import type { AssistantSettings, ClientSettings } from "@/types/db";
 
 export const getUserSettings = cache(
   async (userId: string): Promise<ClientSettings | null> => {
-    const rows = await db
+    const rows = await forUser(userId)
       .select({
         user_id: user_settings.user_id,
         currencies: user_settings.currencies,
@@ -26,7 +26,6 @@ export const getUserSettings = cache(
         updated_at: user_settings.updated_at,
       })
       .from(user_settings)
-      .where(eq(user_settings.user_id, userId))
       .limit(1);
     const row = rows[0];
     if (!row) return null;
@@ -41,7 +40,7 @@ export const getUserSettings = cache(
 
 export const getAssistantSettings = cache(
   async (userId: string): Promise<AssistantSettings | null> => {
-    const rows = await db
+    const rows = await forUser(userId)
       .select({
         base_currency: user_settings.base_currency,
         timezone: user_settings.timezone,
@@ -50,7 +49,6 @@ export const getAssistantSettings = cache(
         ai_api_key: user_settings.ai_api_key,
       })
       .from(user_settings)
-      .where(eq(user_settings.user_id, userId))
       .limit(1);
     return rows[0] ?? null;
   },
@@ -58,10 +56,9 @@ export const getAssistantSettings = cache(
 
 export const getCalendarToken = cache(
   async (userId: string): Promise<string | null> => {
-    const rows = await db
+    const rows = await forUser(userId)
       .select({ calendar_token: user_settings.calendar_token })
       .from(user_settings)
-      .where(eq(user_settings.user_id, userId))
       .limit(1);
     return rows[0]?.calendar_token ?? null;
   },
@@ -70,10 +67,5 @@ export const getCalendarToken = cache(
 export async function getUserIdByCalendarToken(
   token: string,
 ): Promise<string | null> {
-  const rows = await db
-    .select({ user_id: user_settings.user_id })
-    .from(user_settings)
-    .where(eq(user_settings.calendar_token, token))
-    .limit(1);
-  return rows[0]?.user_id ?? null;
+  return findUserIdByCalendarToken(token);
 }

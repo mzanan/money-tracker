@@ -5,7 +5,7 @@ import type {
   DuplicateStep,
   SheetRowStatus,
 } from "@/lib/constants/sheetImport";
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import {
   ledger_external_ids,
   sheet_import_layouts,
@@ -52,16 +52,13 @@ export async function getSavedLayouts(
   const byHash = new Map(signatures.map((s) => [layoutHash(s), s]));
   const out = new Map<string, { conventions: Conventions; lastSource: string }>();
   if (!byHash.size) return out;
-  const rows = await db
-    .select()
-    .from(sheet_import_layouts)
-    .where(
-      and(
-        eq(sheet_import_layouts.user_id, userId),
-        eq(sheet_import_layouts.recipe_version, RECIPE_VERSION),
-        inArray(sheet_import_layouts.signature, [...byHash.keys()]),
-      ),
-    );
+  const rows = await forUser(userId).selectFrom(
+    sheet_import_layouts,
+    and(
+      eq(sheet_import_layouts.recipe_version, RECIPE_VERSION),
+      inArray(sheet_import_layouts.signature, [...byHash.keys()]),
+    ),
+  );
   for (const row of rows) {
     const parsed = ConventionsSchema.safeParse(row.conventions);
     const signature = byHash.get(row.signature);
@@ -82,15 +79,13 @@ export async function saveLayouts(
 ): Promise<void> {
   for (const layout of layouts) {
     const values = {
-      user_id: userId,
       signature: layoutHash(layout.signature),
       recipe_version: RECIPE_VERSION,
       conventions: layout.conventions,
       last_source: source,
     };
-    await db
-      .insert(sheet_import_layouts)
-      .values(values)
+    await forUser(userId)
+      .insert(sheet_import_layouts, values)
       .onConflictDoUpdate({
         target: [sheet_import_layouts.user_id, sheet_import_layouts.signature],
         set: {
@@ -108,9 +103,8 @@ export async function createSheetImport(
   source: string,
   fileName: string,
 ): Promise<string> {
-  const [row] = await db
-    .insert(sheet_imports)
-    .values({ user_id: userId, source, file_name: fileName })
+  const [row] = await forUser(userId)
+    .insert(sheet_imports, { source, file_name: fileName })
     .returning({ id: sheet_imports.id });
   return row.id;
 }
@@ -119,15 +113,11 @@ export async function getOpenSheetImport(
   userId: string,
   importId: string,
 ): Promise<{ id: string; source: string } | null> {
-  const [row] = await db
+  const [row] = await forUser(userId)
     .select({ id: sheet_imports.id, source: sheet_imports.source })
-    .from(sheet_imports)
-    .where(
-      and(
-        eq(sheet_imports.id, importId),
-        eq(sheet_imports.user_id, userId),
-        isNull(sheet_imports.undone_at),
-      ),
+    .from(
+      sheet_imports,
+      and(eq(sheet_imports.id, importId), isNull(sheet_imports.undone_at)),
     );
   return row ?? null;
 }
@@ -137,11 +127,12 @@ export async function recordSheetRows(
   importId: string,
   rows: ReadonlyArray<SheetRowLog>,
 ): Promise<void> {
+  const scope = forUser(userId);
   for (const batch of inChunks([...rows])) {
-    await db.insert(sheet_import_rows).values(
+    await scope.insert(
+      sheet_import_rows,
       batch.map((row) => ({
         import_id: importId,
-        user_id: userId,
         sheet: row.sheet,
         row: row.row,
         status: row.status,
@@ -158,41 +149,31 @@ export async function refreshSheetImportCounts(
   userId: string,
   importId: string,
 ): Promise<void> {
-  const counts = await db
+  const scope = forUser(userId);
+  const counts = await scope
     .select({ status: sheet_import_rows.status, total: count() })
-    .from(sheet_import_rows)
-    .where(
-      and(
-        eq(sheet_import_rows.user_id, userId),
-        eq(sheet_import_rows.import_id, importId),
-      ),
-    )
+    .from(sheet_import_rows, eq(sheet_import_rows.import_id, importId))
     .groupBy(sheet_import_rows.status);
   const total = (statuses: SheetRowStatus[]) =>
     counts
       .filter((c) => statuses.includes(c.status))
       .reduce((sum, c) => sum + c.total, 0);
-  await db
-    .update(sheet_imports)
-    .set({
+  await scope.update(
+    sheet_imports,
+    {
       imported_count: total(["imported"]),
       skipped_count: total(["already_imported", "duplicate", "excluded"]),
       not_read_count: total(["not_read"]),
-    })
-    .where(
-      and(eq(sheet_imports.id, importId), eq(sheet_imports.user_id, userId)),
-    );
+    },
+    eq(sheet_imports.id, importId),
+  );
 }
 
 export async function getRecentSheetImports(
   userId: string,
 ): Promise<SheetImportSummary[]> {
-  const rows = await db
-    .select()
-    .from(sheet_imports)
-    .where(
-      and(eq(sheet_imports.user_id, userId), isNull(sheet_imports.undone_at)),
-    )
+  const rows = await forUser(userId)
+    .selectFrom(sheet_imports, isNull(sheet_imports.undone_at))
     .orderBy(desc(sheet_imports.created_at))
     .limit(RECENT_IMPORTS);
   return rows.map((row) => ({
@@ -212,12 +193,12 @@ export async function undoSheetImport(
 ): Promise<number> {
   const open = await getOpenSheetImport(userId, importId);
   if (!open) return 0;
-  const logged = await db
+  const scope = forUser(userId);
+  const logged = await scope
     .select({ externalId: sheet_import_rows.external_id })
-    .from(sheet_import_rows)
-    .where(
+    .from(
+      sheet_import_rows,
       and(
-        eq(sheet_import_rows.user_id, userId),
         eq(sheet_import_rows.import_id, importId),
         eq(sheet_import_rows.status, "imported"),
       ),
@@ -225,30 +206,28 @@ export async function undoSheetImport(
   const externalIds = logged.flatMap((r) => (r.externalId ? [r.externalId] : []));
   const transactionIds = new Set<string>();
   for (const batch of inChunks(externalIds)) {
-    const found = await db
+    const found = await scope
       .select({ id: ledger_external_ids.transaction_id })
-      .from(ledger_external_ids)
-      .where(
+      .from(
+        ledger_external_ids,
         and(
-          eq(ledger_external_ids.user_id, userId),
           eq(ledger_external_ids.origin, open.source),
           inArray(ledger_external_ids.external_id, batch),
         ),
       );
     for (const row of found) transactionIds.add(row.id);
   }
-  const deleted = await db.transaction(async (tx) => {
+  const deleted = await scope.transaction(async (txScope) => {
     const removed = await deleteLedgerTransactions(
       userId,
       [...transactionIds],
-      tx,
+      txScope,
     );
-    await tx
-      .update(sheet_imports)
-      .set({ undone_at: sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))` })
-      .where(
-        and(eq(sheet_imports.id, importId), eq(sheet_imports.user_id, userId)),
-      );
+    await txScope.update(
+      sheet_imports,
+      { undone_at: sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))` },
+      eq(sheet_imports.id, importId),
+    );
     return removed;
   });
   return deleted;

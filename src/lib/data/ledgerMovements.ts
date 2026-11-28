@@ -1,9 +1,8 @@
-import { eq } from "drizzle-orm";
 import { cache } from "react";
 
 import { parseAccountCurrencies } from "@/lib/accountCurrencies";
 import { getUserSettings } from "@/lib/data/userSettings";
-import { db } from "@/lib/db";
+import { forUser, shared } from "@/lib/db/scope";
 import {
   accounts,
   fx_rates_daily,
@@ -24,6 +23,7 @@ import type { LedgerData } from "@/types/ledger";
 
 export const getLedgerData = cache(
   async (userId: string, today: string): Promise<LedgerData> => {
+    const scope = forUser(userId);
     const [
       txRows,
       entryRows,
@@ -34,35 +34,22 @@ export const getLedgerData = cache(
       rateRows,
       declaredRows,
     ] = await Promise.all([
-      db
-        .select()
-        .from(ledger_transactions)
-        .where(eq(ledger_transactions.user_id, userId)),
-      db
-        .select()
-        .from(ledger_entries)
-        .where(eq(ledger_entries.user_id, userId)),
-      db
-        .select()
-        .from(ledger_accounts)
-        .where(eq(ledger_accounts.user_id, userId)),
-      db
+      scope.selectFrom(ledger_transactions),
+      scope.selectFrom(ledger_entries),
+      scope.selectFrom(ledger_accounts),
+      scope
         .select({
           transaction_id: ledger_external_ids.transaction_id,
           origin: ledger_external_ids.origin,
           external_id: ledger_external_ids.external_id,
         })
-        .from(ledger_external_ids)
-        .where(eq(ledger_external_ids.user_id, userId)),
+        .from(ledger_external_ids),
       getScaleOf(),
       getUserSettings(userId),
-      db
+      shared()
         .select({ date: fx_rates_daily.date, rates: fx_rates_daily.rates })
         .from(fx_rates_daily),
-      db
-        .select({ currency: accounts.currency })
-        .from(accounts)
-        .where(eq(accounts.user_id, userId)),
+      scope.select({ currency: accounts.currency }).from(accounts),
     ]);
 
     const movements = buildMovements(

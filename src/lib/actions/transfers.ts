@@ -6,7 +6,7 @@ import { z } from "zod";
 import { actionErrorMessage } from "@/lib/actionError";
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import { BUDGET_MONTH_LOCK_ERROR } from "@/lib/budgetMonth";
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { accountCurrencyError } from "@/lib/accountCurrencies";
 import { getAccountCurrencies } from "@/lib/data/accounts";
 import {
@@ -387,7 +387,7 @@ export async function markAsTransfer(
       scaleOf,
     });
     const splitFee = feeOnlyDraft(draft, manualFeeNote(draft.note));
-    await db.transaction(async (dbTx) => {
+    await forUser(user.id).transaction(async (txScope) => {
       await postLedgerTransaction(
         user.id,
         {
@@ -399,10 +399,10 @@ export async function markAsTransfer(
             mirrorRef(mirrorSource, movement.id),
           ],
         },
-        { replaceId: movement.id, executor: dbTx, expected: draft },
+        { replaceId: movement.id, scope: txScope, expected: draft },
       );
       if (splitFee) {
-        await postLedgerTransaction(user.id, splitFee, { executor: dbTx });
+        await postLedgerTransaction(user.id, splitFee, { scope: txScope });
       }
     });
     revalidatePath("/", "layout");
@@ -578,11 +578,11 @@ export async function markPairAsTransfer(
       return fee ? [fee] : [];
     });
     const keepId = expense.record.movement.id;
-    await db.transaction(async (dbTx) => {
+    await forUser(user.id).transaction(async (txScope) => {
       await deleteLedgerTransactions(
         user.id,
         [income.record.movement.id],
-        dbTx,
+        txScope,
       );
       await postLedgerTransaction(
         user.id,
@@ -596,10 +596,10 @@ export async function markPairAsTransfer(
           lines,
           externalRefs: [...keep.externalRefs, ...other.externalRefs],
         },
-        { replaceId: keepId, executor: dbTx, expected: keep },
+        { replaceId: keepId, scope: txScope, expected: keep },
       );
       for (const fee of splitFees) {
-        await postLedgerTransaction(user.id, fee, { executor: dbTx });
+        await postLedgerTransaction(user.id, fee, { scope: txScope });
       }
     });
     revalidatePath("/", "layout");
@@ -625,13 +625,13 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
   if (!first) return { ok: false, error: "Not a transfer" };
 
   try {
-    await db.transaction(async (dbTx) => {
+    await forUser(user.id).transaction(async (txScope) => {
       await postLedgerTransaction(user.id, first, {
         replaceId: record.movement.id,
-        executor: dbTx,
+        scope: txScope,
       });
       for (const draft of rest) {
-        await postLedgerTransaction(user.id, draft, { executor: dbTx });
+        await postLedgerTransaction(user.id, draft, { scope: txScope });
       }
     });
     revalidatePath("/", "layout");

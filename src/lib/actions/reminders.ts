@@ -1,11 +1,11 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { ActionError, actionErrorMessage } from "@/lib/actionError";
 import { amountValidationError } from "@/lib/currency";
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { recurring_payments, user_settings } from "@/lib/db/schema";
 import {
   findCrossSourceCandidates,
@@ -71,10 +71,8 @@ export async function createReminder(
 
   const d = parsed.data;
   try {
-    const [inserted] = await db
-      .insert(recurring_payments)
-      .values({
-        user_id: user.id,
+    const [inserted] = await forUser(user.id)
+      .insert(recurring_payments, {
         label: d.label,
         amount: d.amount ?? null,
         currency: d.currency?.trim() || null,
@@ -119,9 +117,9 @@ export async function updateReminder(
 
   const d = parsed.data;
   try {
-    await db
-      .update(recurring_payments)
-      .set({
+    await forUser(user.id).update(
+      recurring_payments,
+      {
         label: d.label,
         amount: d.amount ?? null,
         currency: d.currency?.trim() || null,
@@ -131,13 +129,9 @@ export async function updateReminder(
         last_paid_on: d.lastPaidOn ?? null,
         next_due_on: d.nextDueOn,
         note: d.note?.trim() || null,
-      })
-      .where(
-        and(
-          eq(recurring_payments.id, d.id),
-          eq(recurring_payments.user_id, user.id),
-        ),
-      );
+      },
+      eq(recurring_payments.id, d.id),
+    );
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -190,15 +184,8 @@ export async function getReminderPayOptions(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const reminder = await db
-    .select()
-    .from(recurring_payments)
-    .where(
-      and(
-        eq(recurring_payments.id, id),
-        eq(recurring_payments.user_id, user.id),
-      ),
-    )
+  const reminder = await forUser(user.id)
+    .selectFrom(recurring_payments, eq(recurring_payments.id, id))
     .limit(1)
     .then((rows) => rows[0]);
   if (!reminder) return { ok: false, error: "Reminder not found" };
@@ -248,23 +235,16 @@ export async function markReminderPaid(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const reminder = await db
-    .select()
-    .from(recurring_payments)
-    .where(
-      and(
-        eq(recurring_payments.id, id),
-        eq(recurring_payments.user_id, user.id),
-      ),
-    )
+  const scope = forUser(user.id);
+  const reminder = await scope
+    .selectFrom(recurring_payments, eq(recurring_payments.id, id))
     .limit(1)
     .then((rows) => rows[0]);
   if (!reminder) return { ok: false, error: "Reminder not found" };
 
-  const settings = await db
+  const settings = await scope
     .select({ timezone: user_settings.timezone })
     .from(user_settings)
-    .where(eq(user_settings.user_id, user.id))
     .limit(1)
     .then((rows) => rows[0]);
 
@@ -299,9 +279,9 @@ export async function markReminderPaid(
         : reminderExpenseDraft(reminder, resolvedDay, await getScaleOf());
 
     let expenseAdded = false;
-    await db.transaction(async (dbTx) => {
+    await scope.transaction(async (txScope) => {
       if (linkId) {
-        const record = await getLedgerRecord(user.id, linkId, dbTx);
+        const record = await getLedgerRecord(user.id, linkId, txScope);
         if (!record) throw new ActionError("Transaction not found");
         const { draft } = record;
         if (draft.recurringId != null && draft.recurringId !== id) {
@@ -314,12 +294,12 @@ export async function markReminderPaid(
             comment: draft.comment || reminder.label,
             recurringId: reminder.id,
           },
-          { replaceId: linkId, executor: dbTx, expected: draft },
+          { replaceId: linkId, scope: txScope, expected: draft },
         );
       }
-      await dbTx
-        .update(recurring_payments)
-        .set({
+      await txScope.update(
+        recurring_payments,
+        {
           last_paid_on: resolvedDay,
           next_due_on: computeNextDue(
             resolvedDay,
@@ -328,24 +308,20 @@ export async function markReminderPaid(
           ),
           installments_paid: installmentsPaid,
           active: completed ? false : reminder.active,
-        })
-        .where(
-          and(
-            eq(recurring_payments.id, id),
-            eq(recurring_payments.user_id, user.id),
-          ),
-        );
+        },
+        eq(recurring_payments.id, id),
+      );
       if (expenseDraft) {
         const [ref] = expenseDraft.externalRefs;
         const taken = await existingExternalIds(
           user.id,
           ref.origin,
           [ref.externalId],
-          dbTx,
+          txScope,
         );
         if (taken.size === 0) {
           await postLedgerTransaction(user.id, expenseDraft, {
-            executor: dbTx,
+            scope: txScope,
           });
           expenseAdded = true;
         }
@@ -369,15 +345,11 @@ export async function stopReminder(id: string): Promise<ActionResult> {
   if (!user) return { ok: false, error: "Not authenticated" };
 
   try {
-    await db
-      .update(recurring_payments)
-      .set({ active: false })
-      .where(
-        and(
-          eq(recurring_payments.id, id),
-          eq(recurring_payments.user_id, user.id),
-        ),
-      );
+    await forUser(user.id).update(
+      recurring_payments,
+      { active: false },
+      eq(recurring_payments.id, id),
+    );
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -393,14 +365,10 @@ export async function deleteReminder(id: string): Promise<ActionResult> {
   if (!user) return { ok: false, error: "Not authenticated" };
 
   try {
-    await db
-      .delete(recurring_payments)
-      .where(
-        and(
-          eq(recurring_payments.id, id),
-          eq(recurring_payments.user_id, user.id),
-        ),
-      );
+    await forUser(user.id).delete(
+      recurring_payments,
+      eq(recurring_payments.id, id),
+    );
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {

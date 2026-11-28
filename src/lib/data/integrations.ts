@@ -1,13 +1,11 @@
-import { eq } from "drizzle-orm";
-
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { api_integrations } from "@/lib/db/schema";
 import type { IntegrationProvider, IntegrationSummary } from "@/types/db";
 
 export async function getIntegrationSummaries(
   userId: string,
 ): Promise<Map<IntegrationProvider, IntegrationSummary>> {
-  const integrations = await db
+  const integrations = await forUser(userId)
     .select({
       provider: api_integrations.provider,
       import_income: api_integrations.import_income,
@@ -15,8 +13,7 @@ export async function getIntegrationSummaries(
       last_synced_at: api_integrations.last_synced_at,
       last_error: api_integrations.last_error,
     })
-    .from(api_integrations)
-    .where(eq(api_integrations.user_id, userId));
+    .from(api_integrations);
 
   return new Map<IntegrationProvider, IntegrationSummary>(
     integrations.map((i) => [

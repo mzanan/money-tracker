@@ -1,6 +1,5 @@
 "use server";
 
-import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
@@ -8,7 +7,7 @@ import { ActionError } from "@/lib/actionError";
 import { normalizeSource } from "@/lib/constants/sources";
 import { isValidAmountForCurrency, roundToScale } from "@/lib/currency";
 import { daysBefore, isValidCalendarDate } from "@/lib/dates";
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { user_settings } from "@/lib/db/schema";
 import { findCrossSourceCandidates } from "@/lib/data/duplicates";
 import {
@@ -90,10 +89,10 @@ export async function importScreenshotRows(input: {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const settings = await db
+  const scope = forUser(user.id);
+  const settings = await scope
     .select({ timezone: user_settings.timezone })
     .from(user_settings)
-    .where(eq(user_settings.user_id, user.id))
     .limit(1)
     .then((rows) => rows[0]);
   if (!settings) return { ok: false, error: "Settings not found" };
@@ -159,9 +158,9 @@ export async function importScreenshotRows(input: {
         externalRefs: [{ origin: source, externalId }],
       };
 
-      await db.transaction(async (dbTx) => {
+      await scope.transaction(async (txScope) => {
         const replaced = row.replaceId
-          ? await getLedgerRecord(user.id, row.replaceId, dbTx)
+          ? await getLedgerRecord(user.id, row.replaceId, txScope)
           : null;
         if (
           row.replaceId &&
@@ -171,15 +170,15 @@ export async function importScreenshotRows(input: {
         ) {
           throw new ActionError("Replaced movement not found");
         }
-        await postLedgerTransaction(user.id, draft, { executor: dbTx });
+        await postLedgerTransaction(user.id, draft, { scope: txScope });
         if (!replaced) return;
-        await deleteLedgerTransactions(user.id, [replaced.movement.id], dbTx);
+        await deleteLedgerTransactions(user.id, [replaced.movement.id], txScope);
         const fees = feeOnlyDraft(
           replaced.draft,
           manualFeeNote(replaced.draft.note),
         );
         if (fees) {
-          await postLedgerTransaction(user.id, fees, { executor: dbTx });
+          await postLedgerTransaction(user.id, fees, { scope: txScope });
         }
       });
       imported += 1;
@@ -222,10 +221,9 @@ export async function previewCandidatesAction(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const settings = await db
+  const settings = await forUser(user.id)
     .select({ timezone: user_settings.timezone })
     .from(user_settings)
-    .where(eq(user_settings.user_id, user.id))
     .limit(1)
     .then((rows) => rows[0]);
   const today = await userToday(settings?.timezone);

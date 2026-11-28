@@ -1,11 +1,11 @@
 "use server";
 
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { actionErrorMessage } from "@/lib/actionError";
 import { getSelectableSources } from "@/lib/data/sources";
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { user_settings } from "@/lib/db/schema";
 import { normalizeFixedLabel } from "@/lib/fixedExpenses";
 import { encryptSecret } from "@/lib/integrations/crypto";
@@ -39,10 +39,8 @@ export async function saveOnboarding(
   const onboardedAt = new Date().toISOString();
 
   try {
-    await db
-      .insert(user_settings)
-      .values({
-        user_id: user.id,
+    await forUser(user.id)
+      .insert(user_settings, {
         currencies: parsed.data.currencies,
         base_currency: parsed.data.baseCurrency,
         timezone,
@@ -74,10 +72,9 @@ export async function setDefaultSource(source: string): Promise<ActionResult> {
   if (source !== "all") {
     const [sources, archivedRow] = await Promise.all([
       getSelectableSources(user.id),
-      db
+      forUser(user.id)
         .select({ archived_sources: user_settings.archived_sources })
         .from(user_settings)
-        .where(eq(user_settings.user_id, user.id))
         .limit(1)
         .then((rows) => rows[0]),
     ]);
@@ -90,10 +87,7 @@ export async function setDefaultSource(source: string): Promise<ActionResult> {
   }
 
   try {
-    await db
-      .update(user_settings)
-      .set({ default_source: source })
-      .where(eq(user_settings.user_id, user.id));
+    await forUser(user.id).update(user_settings, { default_source: source });
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -122,19 +116,17 @@ export async function setSourceArchived(
   const remaining = sql`(SELECT value FROM json_each(${user_settings.archived_sources}) WHERE value != ${source})`;
 
   try {
-    await db
-      .update(user_settings)
-      .set(
-        archived
-          ? {
+    await forUser(user.id).update(
+      user_settings,
+      archived
+        ? {
               archived_sources: sql`(SELECT json_group_array(value) FROM (SELECT value FROM ${remaining} UNION ALL SELECT ${source}))`,
               default_source: sql`CASE WHEN ${user_settings.default_source} = ${source} THEN NULL ELSE ${user_settings.default_source} END`,
             }
-          : {
-              archived_sources: sql`(SELECT json_group_array(value) FROM ${remaining})`,
-            },
-      )
-      .where(eq(user_settings.user_id, user.id));
+        : {
+            archived_sources: sql`(SELECT json_group_array(value) FROM ${remaining})`,
+          },
+    );
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -176,10 +168,7 @@ export async function setFixedLabels(labels: string[]): Promise<ActionResult> {
   }
 
   try {
-    await db
-      .update(user_settings)
-      .set({ fixed_labels: normalized })
-      .where(eq(user_settings.user_id, user.id));
+    await forUser(user.id).update(user_settings, { fixed_labels: normalized });
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -205,14 +194,11 @@ export async function saveAssistantKey(
   if (!user) return { ok: false, error: "Not authenticated" };
 
   try {
-    await db
-      .update(user_settings)
-      .set({
-        ai_provider: parsed.data.provider,
-        ai_model: parsed.data.model?.trim() || null,
-        ai_api_key: encryptSecret(parsed.data.apiKey, `${user.id}:ai`),
-      })
-      .where(eq(user_settings.user_id, user.id));
+    await forUser(user.id).update(user_settings, {
+      ai_provider: parsed.data.provider,
+      ai_model: parsed.data.model?.trim() || null,
+      ai_api_key: encryptSecret(parsed.data.apiKey, `${user.id}:ai`),
+    });
     revalidatePath("/settings");
     return { ok: true };
   } catch (error) {
@@ -228,10 +214,11 @@ export async function removeAssistantKey(): Promise<ActionResult> {
   if (!user) return { ok: false, error: "Not authenticated" };
 
   try {
-    await db
-      .update(user_settings)
-      .set({ ai_provider: null, ai_model: null, ai_api_key: null })
-      .where(eq(user_settings.user_id, user.id));
+    await forUser(user.id).update(user_settings, {
+      ai_provider: null,
+      ai_model: null,
+      ai_api_key: null,
+    });
     revalidatePath("/settings");
     return { ok: true };
   } catch (error) {
@@ -259,14 +246,11 @@ export async function updateSettings(
   const timezone = parsed.data.timezone?.trim() || null;
 
   try {
-    await db
-      .update(user_settings)
-      .set({
-        currencies: parsed.data.currencies,
-        base_currency: parsed.data.baseCurrency,
-        timezone,
-      })
-      .where(eq(user_settings.user_id, user.id));
+    await forUser(user.id).update(user_settings, {
+      currencies: parsed.data.currencies,
+      base_currency: parsed.data.baseCurrency,
+      timezone,
+    });
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {

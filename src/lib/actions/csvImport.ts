@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { actionErrorMessage } from "@/lib/actionError";
 import { MANUAL_SOURCE } from "@/lib/constants/sources";
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { csv_import_locks } from "@/lib/db/schema";
 import {
   csvDraft,
@@ -59,9 +59,8 @@ async function acquireReplaceLock(
   const staleBefore = new Date(
     Date.now() - REPLACE_LOCK_STALE_MS,
   ).toISOString();
-  const acquired = await db
-    .insert(csv_import_locks)
-    .values({ user_id: userId, source })
+  const acquired = await forUser(userId)
+    .insert(csv_import_locks, { source })
     .onConflictDoUpdate({
       target: [csv_import_locks.user_id, csv_import_locks.source],
       set: { created_at: sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))` },
@@ -76,15 +75,13 @@ async function releaseReplaceLock(
   source: string,
   token: string,
 ): Promise<void> {
-  await db
-    .delete(csv_import_locks)
-    .where(
-      and(
-        eq(csv_import_locks.user_id, userId),
-        eq(csv_import_locks.source, source),
-        eq(csv_import_locks.created_at, token),
-      ),
-    );
+  await forUser(userId).delete(
+    csv_import_locks,
+    and(
+      eq(csv_import_locks.source, source),
+      eq(csv_import_locks.created_at, token),
+    ),
+  );
 }
 
 export async function getLastImportDate(
@@ -170,19 +167,19 @@ export async function importCsvRows(
     for (let i = 0; i < unique.length; i += BATCH_SIZE) {
       const batch = unique.slice(i, i + BATCH_SIZE);
       try {
-        imported += await db.transaction(async (dbTx) => {
+        imported += await forUser(user.id).transaction(async (txScope) => {
           const taken = await existingExternalIds(
             user.id,
             source,
             batch.flatMap(({ externalIds }) => externalIds),
-            dbTx,
+            txScope,
           );
           await postLedgerTransactions(
             user.id,
             batch.flatMap((item) =>
               postableCsvDrafts(item, taken).map((draft) => ({ draft })),
             ),
-            dbTx,
+            txScope,
           );
           return batch.filter(({ externalIds }) => !taken.has(externalIds[0]))
             .length;
@@ -201,14 +198,14 @@ export async function importCsvRows(
     if (input.replace) {
       try {
         const keep = new Set(drafts.flatMap(({ externalIds }) => externalIds));
-        await db.transaction(async (dbTx) => {
+        await forUser(user.id).transaction(async (txScope) => {
           const staleIds = await staleCsvTransactionIds(
             user.id,
             source,
             keep,
-            dbTx,
+            txScope,
           );
-          await deleteLedgerTransactions(user.id, staleIds, dbTx);
+          await deleteLedgerTransactions(user.id, staleIds, txScope);
         });
       } catch (error) {
         return {

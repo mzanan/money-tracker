@@ -1,6 +1,4 @@
-import { eq } from "drizzle-orm";
-
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { locations } from "@/lib/db/schema";
 import { getLedgerData } from "@/lib/data/ledgerMovements";
 import { getUserSettings } from "@/lib/data/userSettings";
@@ -25,7 +23,7 @@ export async function getMonthPageData(
 
   const [ledger, places] = await Promise.all([
     getLedgerData(user.id, todayInTz(timezone)),
-    db.select().from(locations).where(eq(locations.user_id, user.id)),
+    forUser(user.id).selectFrom(locations),
   ]);
 
   return { yearMonth, ledger, places };
