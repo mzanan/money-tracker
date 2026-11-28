@@ -1,14 +1,11 @@
-import { eq } from "drizzle-orm";
-
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { user_settings } from "@/lib/db/schema";
 import { getRates, RatesUnavailableError } from "@/lib/rates";
 
 export async function buildCurrencyContext(userId: string) {
-  const settings = await db
+  const settings = await forUser(userId)
     .select({ currencies: user_settings.currencies })
     .from(user_settings)
-    .where(eq(user_settings.user_id, userId))
     .limit(1)
     .then((rows) => rows[0]);
   if (!settings) return null;

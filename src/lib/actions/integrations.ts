@@ -1,12 +1,12 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { absorbDateRange, absorbPlan } from "@/lib/absorb";
 import { actionErrorMessage } from "@/lib/actionError";
 import { dateInTz } from "@/lib/dates";
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { api_integrations, user_settings } from "@/lib/db/schema";
 import {
   deleteLedgerTransactions,
@@ -39,12 +39,12 @@ async function postSynced(
   syncSource: string,
   drafts: ReadonlyArray<SyncedDraft>,
 ): Promise<{ imported: number; absorbed: number }> {
-  return db.transaction(async (dbTx) => {
+  return forUser(userId).transaction(async (txScope) => {
     const taken = await existingExternalIds(
       userId,
       syncSource,
       drafts.map(({ externalId }) => externalId),
-      dbTx,
+      txScope,
     );
     const fresh = freshSynced(drafts, taken);
     if (fresh.length === 0) return { imported: 0, absorbed: 0 };
@@ -53,21 +53,21 @@ async function postSynced(
     await postLedgerTransactions(
       userId,
       direct.map(({ id, draft }) => ({ id, draft })),
-      dbTx,
+      txScope,
     );
     if (absorbable.length === 0) {
       return { imported: fresh.length, absorbed: 0 };
     }
     const { start, end } = absorbDateRange(absorbable.map(({ row }) => row));
-    const records = await getLedgerRecordsBetween(userId, start, end, dbTx);
+    const records = await getLedgerRecordsBetween(userId, start, end, txScope);
     const plan = absorbPlan(absorbable, records, syncSource);
-    await postLedgerTransactions(userId, plan.writes, dbTx);
-    await deleteLedgerTransactions(userId, plan.absorbedIds, dbTx);
+    await postLedgerTransactions(userId, plan.writes, txScope);
+    await deleteLedgerTransactions(userId, plan.absorbedIds, txScope);
     if (plan.feeDrafts.length > 0) {
       await postLedgerTransactions(
         userId,
         plan.feeDrafts.map((draft) => ({ draft })),
-        dbTx,
+        txScope,
       );
     }
     return { imported: fresh.length, absorbed: plan.absorbedIds.length };
@@ -91,20 +91,15 @@ export async function saveIntegration(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const existing = await db
+  const scope = forUser(user.id);
+  const existing = await scope
     .select({
       provider: api_integrations.provider,
       api_key: api_integrations.api_key,
       api_secret: api_integrations.api_secret,
       extra: api_integrations.extra,
     })
-    .from(api_integrations)
-    .where(
-      and(
-        eq(api_integrations.user_id, user.id),
-        eq(api_integrations.provider, input.provider),
-      ),
-    )
+    .from(api_integrations, eq(api_integrations.provider, input.provider))
     .limit(1)
     .then((rows) => rows[0]);
 
@@ -152,8 +147,7 @@ export async function saveIntegration(
             Date.now() - input.initialSinceDays * 24 * 60 * 60 * 1000,
           ).toISOString()
         : undefined;
-      await db.insert(api_integrations).values({
-        user_id: user.id,
+      await scope.insert(api_integrations, {
         provider: input.provider,
         api_key: encryptSecret(apiKey!, aad),
         api_secret: apiSecret ? encryptSecret(apiSecret, aad) : null,
@@ -167,15 +161,11 @@ export async function saveIntegration(
       if (apiKey) set.api_key = encryptSecret(apiKey, aad);
       if (apiSecret) set.api_secret = encryptSecret(apiSecret, aad);
       if (input.extra) set.extra = input.extra;
-      await db
-        .update(api_integrations)
-        .set(set)
-        .where(
-          and(
-            eq(api_integrations.user_id, user.id),
-            eq(api_integrations.provider, input.provider),
-          ),
-        );
+      await scope.update(
+        api_integrations,
+        set,
+        eq(api_integrations.provider, input.provider),
+      );
     }
     revalidatePath("/settings");
     return { ok: true };
@@ -197,14 +187,10 @@ export async function deleteIntegration(
   }
 
   try {
-    await db
-      .delete(api_integrations)
-      .where(
-        and(
-          eq(api_integrations.user_id, user.id),
-          eq(api_integrations.provider, provider),
-        ),
-      );
+    await forUser(user.id).delete(
+      api_integrations,
+      eq(api_integrations.provider, provider),
+    );
     revalidatePath("/settings");
     return { ok: true };
   } catch (error) {
@@ -229,15 +215,11 @@ export async function setIntegrationAutoSync(
   }
 
   try {
-    await db
-      .update(api_integrations)
-      .set({ auto_sync: enabled })
-      .where(
-        and(
-          eq(api_integrations.user_id, user.id),
-          eq(api_integrations.provider, provider),
-        ),
-      );
+    await forUser(user.id).update(
+      api_integrations,
+      { auto_sync: enabled },
+      eq(api_integrations.provider, provider),
+    );
     revalidatePath("/settings");
     return { ok: true };
   } catch (error) {
@@ -259,23 +241,16 @@ export async function syncIntegration(
     return { ok: false, error: "Unknown provider" };
   }
 
-  const integration = await db
-    .select()
-    .from(api_integrations)
-    .where(
-      and(
-        eq(api_integrations.user_id, user.id),
-        eq(api_integrations.provider, provider),
-      ),
-    )
+  const scope = forUser(user.id);
+  const integration = await scope
+    .selectFrom(api_integrations, eq(api_integrations.provider, provider))
     .limit(1)
     .then((rows) => rows[0]);
   if (!integration) return { ok: false, error: "Integration not connected" };
 
-  const settings = await db
+  const settings = await scope
     .select({ timezone: user_settings.timezone })
     .from(user_settings)
-    .where(eq(user_settings.user_id, user.id))
     .limit(1)
     .then((rows) => rows[0]);
   if (!settings) return { ok: false, error: "Settings not found" };
@@ -304,15 +279,11 @@ export async function syncIntegration(
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Sync failed";
-    await db
-      .update(api_integrations)
-      .set({ last_error: message })
-      .where(
-        and(
-          eq(api_integrations.user_id, user.id),
-          eq(api_integrations.provider, provider),
-        ),
-      );
+    await scope.update(
+      api_integrations,
+      { last_error: message },
+      eq(api_integrations.provider, provider),
+    );
     revalidatePath("/settings");
     return { ok: false, error: message };
   }
@@ -354,18 +325,14 @@ export async function syncIntegration(
     }
   }
 
-  await db
-    .update(api_integrations)
-    .set({
+  await scope.update(
+    api_integrations,
+    {
       last_error: null,
       ...(normalized.length > 0 ? { last_synced_at: syncStartedAt } : {}),
-    })
-    .where(
-      and(
-        eq(api_integrations.user_id, user.id),
-        eq(api_integrations.provider, provider),
-      ),
-    );
+    },
+    eq(api_integrations.provider, provider),
+  );
 
   revalidatePath("/", "layout");
 
@@ -383,20 +350,19 @@ export async function autoSyncIntegrations(): Promise<
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
+  const scope = forUser(user.id);
   const [integrationRows, settingsRow] = await Promise.all([
-    db
+    scope
       .select({
         provider: api_integrations.provider,
         auto_sync: api_integrations.auto_sync,
         last_synced_at: api_integrations.last_synced_at,
         last_error: api_integrations.last_error,
       })
-      .from(api_integrations)
-      .where(eq(api_integrations.user_id, user.id)),
-    db
+      .from(api_integrations),
+    scope
       .select({ archived_sources: user_settings.archived_sources })
       .from(user_settings)
-      .where(eq(user_settings.user_id, user.id))
       .limit(1)
       .then((rows) => rows[0]),
   ]);

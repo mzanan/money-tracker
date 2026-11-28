@@ -1,6 +1,6 @@
 import { desc, lte } from "drizzle-orm";
 
-import { db } from "@/lib/db";
+import { shared } from "@/lib/db/scope";
 import { fx_rates_daily } from "@/lib/db/schema";
 import { isValidCalendarDate } from "@/lib/dates";
 import { INCOMPLETE_DAILY_SOURCES } from "@/lib/fx/historicalRates";
@@ -18,7 +18,7 @@ export async function writeFxRatesDaily(row: FxRatesDailyRow): Promise<void> {
     source: row.source,
     fetched_at: new Date().toISOString(),
   };
-  await db
+  await shared()
     .insert(fx_rates_daily)
     .values({ date: row.date, ...values })
     .onConflictDoUpdate({ target: fx_rates_daily.date, set: values });
@@ -30,7 +30,7 @@ export async function readFxRatesForDate(
   if (!isValidCalendarDate(date)) {
     throw new Error(`Invalid calendar date: ${date}`);
   }
-  const row = await db
+  const row = await shared()
     .select({
       date: fx_rates_daily.date,
       rates: fx_rates_daily.rates,
@@ -45,7 +45,7 @@ export async function readFxRatesForDate(
 }
 
 export async function listCompleteFxRatesDates(): Promise<Set<string>> {
-  const rows = await db
+  const rows = await shared()
     .select({ date: fx_rates_daily.date, source: fx_rates_daily.source })
     .from(fx_rates_daily);
   return new Set(

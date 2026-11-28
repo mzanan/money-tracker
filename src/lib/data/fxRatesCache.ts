@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 
-import { db } from "@/lib/db";
+import { shared } from "@/lib/db/scope";
 import { fx_rates_cache } from "@/lib/db/schema";
 import type { FxRates } from "@/types/db";
 
@@ -12,9 +12,8 @@ export interface FxRatesCacheRow {
 }
 
 export async function readFxRatesCache(): Promise<FxRatesCacheRow | null> {
-  const row = await db
-    .select()
-    .from(fx_rates_cache)
+  const row = await shared()
+    .selectFrom(fx_rates_cache)
     .where(eq(fx_rates_cache.base, "USD"))
     .limit(1)
     .then((rows) => rows[0]);
@@ -34,7 +33,7 @@ export async function writeFxRatesCache(entry: FxRatesCacheRow): Promise<void> {
     provider_updated_at: entry.providerUpdatedAt,
     next_update_at: entry.nextUpdateAt,
   };
-  await db
+  await shared()
     .insert(fx_rates_cache)
     .values({ base: "USD", ...values })
     .onConflictDoUpdate({ target: fx_rates_cache.base, set: values });

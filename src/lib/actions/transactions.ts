@@ -1,12 +1,12 @@
 "use server";
 
-import { desc, eq } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { actionErrorMessage } from "@/lib/actionError";
 import { trackActivation } from "@/lib/activation";
 import { amountValidationError, feeAmountError } from "@/lib/currency";
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { ledger_transactions } from "@/lib/db/schema";
 import {
   createTransactionSchema,
@@ -55,10 +55,9 @@ export type ActionResult<T = void> =
   | { ok: false; error: string };
 
 async function hasLedgerTransactions(userId: string): Promise<boolean> {
-  const rows = await db
+  const rows = await forUser(userId)
     .select({ id: ledger_transactions.id })
     .from(ledger_transactions)
-    .where(eq(ledger_transactions.user_id, userId))
     .limit(1);
   return rows.length > 0;
 }
@@ -372,8 +371,8 @@ export async function mergeTransactions(
       (line) => line.role === "fee",
     );
 
-    await db.transaction(async (dbTx) => {
-      await deleteLedgerTransactions(user.id, [removeId], dbTx);
+    await forUser(user.id).transaction(async (txScope) => {
+      await deleteLedgerTransactions(user.id, [removeId], txScope);
       await postLedgerTransaction(
         user.id,
         {
@@ -387,7 +386,7 @@ export async function mergeTransactions(
             ...removed.draft.externalRefs,
           ],
         },
-        { replaceId: keepId, executor: dbTx },
+        { replaceId: keepId, scope: txScope },
       );
     });
     revalidatePath("/", "layout");
@@ -431,10 +430,9 @@ export async function getUsedTags(): Promise<ActionResult<string[]>> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const rows = await db
+  const rows = await forUser(user.id)
     .select({ tags: ledger_transactions.tags })
     .from(ledger_transactions)
-    .where(eq(ledger_transactions.user_id, user.id))
     .orderBy(desc(ledger_transactions.occurred_on));
 
   return { ok: true, data: dedupeTags(rows.flatMap((row) => row.tags)) };

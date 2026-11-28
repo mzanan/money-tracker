@@ -18,7 +18,7 @@ import {
   postLedgerTransaction,
 } from "@/lib/data/ledgerWrites";
 import { getScaleOf } from "@/lib/data/cryptoAssets";
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { feeLines, flowLines, transferPosting } from "@/lib/ledger/builders";
 import {
   hasSyncedRef,
@@ -510,10 +510,10 @@ export async function moveWithdrawalToCash(
       { amount: cashAmount, currency: cashCurrency },
       await getScaleOf(),
     );
-    await db.transaction(async (dbTx) => {
+    await forUser(user.id).transaction(async (txScope) => {
       await postLedgerTransaction(user.id, next, {
         replaceId: movement.id,
-        executor: dbTx,
+        scope: txScope,
         expected: draft,
       });
     });

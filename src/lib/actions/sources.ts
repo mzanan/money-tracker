@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { actionErrorMessage } from "@/lib/actionError";
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import {
   deleteLedgerTransactions,
   getLedgerRecords,
@@ -28,9 +28,9 @@ export async function deleteSource(
   if (!value) return { ok: false, error: "Account name required" };
 
   try {
-    const deleted = await db.transaction(async (dbTx) => {
-      const ids = await getSourceTransactionIds(user.id, value, dbTx);
-      const records = await getLedgerRecords(user.id, ids, dbTx);
+    const deleted = await forUser(user.id).transaction(async (txScope) => {
+      const ids = await getSourceTransactionIds(user.id, value, txScope);
+      const records = await getLedgerRecords(user.id, ids, txScope);
       const removed: string[] = [];
       for (const record of records.values()) {
         const [first, ...rest] = draftsWithoutSource(record, value);
@@ -40,13 +40,13 @@ export async function deleteSource(
         }
         await postLedgerTransaction(user.id, first, {
           replaceId: record.movement.id,
-          executor: dbTx,
+          scope: txScope,
         });
         for (const draft of rest) {
-          await postLedgerTransaction(user.id, draft, { executor: dbTx });
+          await postLedgerTransaction(user.id, draft, { scope: txScope });
         }
       }
-      await deleteLedgerTransactions(user.id, removed, dbTx);
+      await deleteLedgerTransactions(user.id, removed, txScope);
       return records.size;
     });
 

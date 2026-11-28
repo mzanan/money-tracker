@@ -1,6 +1,4 @@
-import { eq } from "drizzle-orm";
-
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { api_integrations, locations } from "@/lib/db/schema";
 import { listAccountSources } from "@/lib/data/accounts";
 import { getLedgerData } from "@/lib/data/ledgerMovements";
@@ -28,13 +26,11 @@ export async function getHomePageData(): Promise<HomePageData> {
   const settings = await getUserSettings(user.id);
   const timezone = await resolveTimezone(settings?.timezone);
 
+  const scope = forUser(user.id);
   const [ledger, integrationsRows, places, accountSources] = await Promise.all([
     getLedgerData(user.id, todayInTz(timezone)),
-    db
-      .select({ provider: api_integrations.provider })
-      .from(api_integrations)
-      .where(eq(api_integrations.user_id, user.id)),
-    db.select().from(locations).where(eq(locations.user_id, user.id)),
+    scope.select({ provider: api_integrations.provider }).from(api_integrations),
+    scope.selectFrom(locations),
     listAccountSources(user.id),
   ]);
   const movements = ledger.movements;

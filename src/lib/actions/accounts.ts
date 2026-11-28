@@ -1,9 +1,9 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { accounts } from "@/lib/db/schema";
 import {
   invalidAccountCurrencies,
@@ -49,9 +49,8 @@ export async function upsertAccountLabel(
   const trimmedLabel = capitalizeLabel(label.trim());
   if (!trimmedLabel) return { ok: false, error: "Name is required" };
 
-  const [row] = await db
-    .insert(accounts)
-    .values({ user_id: user.id, source: normalizedSource, label: trimmedLabel })
+  const [row] = await forUser(user.id)
+    .insert(accounts, { source: normalizedSource, label: trimmedLabel })
     .onConflictDoUpdate({
       target: [accounts.user_id, accounts.source],
       set: { label: trimmedLabel },
@@ -86,9 +85,8 @@ export async function createAccount(
     return { ok: false, error: `An account named "${label}" already exists` };
   }
 
-  await db
-    .insert(accounts)
-    .values({ user_id: user.id, source, label })
+  await forUser(user.id)
+    .insert(accounts, { source, label })
     .onConflictDoNothing();
 
   revalidatePath("/", "layout");
@@ -112,10 +110,8 @@ export async function setAccountCurrencies(
   }
   const currency = serializeAccountCurrencies(currencies);
 
-  await db
-    .insert(accounts)
-    .values({
-      user_id: user.id,
+  await forUser(user.id)
+    .insert(accounts, {
       source: normalizedSource,
       label: labelForSource(normalizedSource),
       currency,
@@ -147,10 +143,8 @@ export async function setAccountPurpose(
   if (inputError) return { ok: false, error: inputError };
 
   const values = { purpose, expected_on: expectedOn };
-  await db
-    .insert(accounts)
-    .values({
-      user_id: user.id,
+  await forUser(user.id)
+    .insert(accounts, {
       source: normalizedSource,
       label: labelForSource(normalizedSource),
       ...values,
@@ -176,11 +170,8 @@ export async function removeAccount(
   const guardError = guardEditable(normalizedSource);
   if (guardError) return { ok: false, error: guardError };
 
-  const deleted = await db
-    .delete(accounts)
-    .where(
-      and(eq(accounts.user_id, user.id), eq(accounts.source, normalizedSource)),
-    )
+  const deleted = await forUser(user.id)
+    .delete(accounts, eq(accounts.source, normalizedSource))
     .returning({ id: accounts.id });
 
   revalidatePath("/", "layout");

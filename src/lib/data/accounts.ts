@@ -1,7 +1,7 @@
-import { and, eq, inArray, isNotNull } from "drizzle-orm";
+import { eq, inArray, isNotNull } from "drizzle-orm";
 import { cache } from "react";
 
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { accounts } from "@/lib/db/schema";
 import {
   accountCurrencyError,
@@ -20,14 +20,13 @@ export type { AccountLabels } from "@/lib/constants/sources";
 export { resolveSourceLabel } from "@/lib/constants/sources";
 
 export async function listAccounts(userId: string): Promise<Account[]> {
-  return db.select().from(accounts).where(eq(accounts.user_id, userId));
+  return forUser(userId).selectFrom(accounts);
 }
 
 export async function listAccountSources(userId: string): Promise<string[]> {
-  const rows = await db
+  const rows = await forUser(userId)
     .select({ source: accounts.source })
-    .from(accounts)
-    .where(eq(accounts.user_id, userId));
+    .from(accounts);
   return rows.map((row) => row.source);
 }
 
@@ -35,10 +34,8 @@ export async function getAccountBySource(
   userId: string,
   source: string,
 ): Promise<Account | null> {
-  const rows = await db
-    .select()
-    .from(accounts)
-    .where(and(eq(accounts.user_id, userId), eq(accounts.source, source)))
+  const rows = await forUser(userId)
+    .selectFrom(accounts, eq(accounts.source, source))
     .limit(1);
   return rows[0] ?? null;
 }
@@ -53,29 +50,22 @@ export const getAccountCurrencies = cache(async function getAccountCurrencies(
   sources?: string[],
 ): Promise<AccountCurrencies> {
   if (sources?.length === 0) return {};
-  const rows = await db
+  const rows = await forUser(userId)
     .select({ source: accounts.source, currency: accounts.currency })
-    .from(accounts)
-    .where(
-      and(
-        eq(accounts.user_id, userId),
-        sources ? inArray(accounts.source, sources) : undefined,
-      ),
-    );
+    .from(accounts, sources ? inArray(accounts.source, sources) : undefined);
   return declaredAccountCurrencies(rows);
 });
 
 export const getHeldAccounts = cache(async function getHeldAccounts(
   userId: string,
 ): Promise<HeldAccounts> {
-  const rows = await db
+  const rows = await forUser(userId)
     .select({
       source: accounts.source,
       purpose: accounts.purpose,
       expected_on: accounts.expected_on,
     })
-    .from(accounts)
-    .where(and(eq(accounts.user_id, userId), isNotNull(accounts.purpose)));
+    .from(accounts, isNotNull(accounts.purpose));
   return heldAccountsFrom(rows);
 });
 

@@ -7,7 +7,7 @@ import {
   withoutArchived,
 } from "@/lib/constants/sources";
 import { getLedgerRecords } from "@/lib/data/ledgerWrites";
-import { db, type DbTx } from "@/lib/db";
+import { forUser, type UserScope } from "@/lib/db/scope";
 import {
   accounts,
   api_integrations,
@@ -22,23 +22,25 @@ import { isSyncable } from "@/lib/integrations";
 import { sourcesOf } from "@/lib/ledger/movements";
 import { suggestedAccountCurrencies } from "@/lib/accountCurrencies";
 
-const assetEntriesOf = (userId: string) =>
-  and(eq(ledger_entries.user_id, userId), eq(ledger_accounts.kind, "asset"));
+const assetAccounts = eq(ledger_accounts.kind, "asset");
 
 async function ledgerSourceCounts(
   userId: string,
 ): Promise<Array<{ source: string; count: number }>> {
-  const rows = await db
+  const scope = forUser(userId);
+  const rows = await scope
     .select({
       source: ledger_accounts.key,
       count: sql<number>`count(distinct ${ledger_entries.transaction_id})`,
     })
-    .from(ledger_entries)
+    .from(ledger_entries, assetAccounts)
     .innerJoin(
       ledger_accounts,
-      eq(ledger_entries.account_id, ledger_accounts.id),
+      and(
+        eq(ledger_entries.account_id, ledger_accounts.id),
+        scope.owns(ledger_accounts),
+      ),
     )
-    .where(assetEntriesOf(userId))
     .groupBy(ledger_accounts.key);
   return rows
     .map((row) => ({ source: row.source, count: Number(row.count) }))
@@ -53,22 +55,19 @@ export async function getLastEntryDate(
   userId: string,
   source: string,
 ): Promise<string | null> {
-  const [row] = await db
+  const scope = forUser(userId);
+  const [row] = await scope
     .select({ last: max(ledger_entries.occurred_on) })
-    .from(ledger_entries)
-    .innerJoin(
-      ledger_accounts,
-      eq(ledger_entries.account_id, ledger_accounts.id),
-    )
-    .where(
+    .from(
+      ledger_entries,
       and(
-        assetEntriesOf(userId),
+        assetAccounts,
         eq(ledger_accounts.key, source),
         notExists(
-          db
+          scope
             .select({ id: ledger_external_ids.transaction_id })
-            .from(ledger_external_ids)
-            .where(
+            .from(
+              ledger_external_ids,
               and(
                 eq(
                   ledger_external_ids.transaction_id,
@@ -82,6 +81,13 @@ export async function getLastEntryDate(
             ),
         ),
       ),
+    )
+    .innerJoin(
+      ledger_accounts,
+      and(
+        eq(ledger_entries.account_id, ledger_accounts.id),
+        scope.owns(ledger_accounts),
+      ),
     );
   return row?.last ?? null;
 }
@@ -89,24 +95,24 @@ export async function getLastEntryDate(
 export async function getSourceTransactionIds(
   userId: string,
   source: string,
-  executor: typeof db | DbTx = db,
+  scope?: UserScope,
 ): Promise<string[]> {
-  const rows = await executor
+  const s = scope ?? forUser(userId);
+  const rows = await s
     .selectDistinct({ id: ledger_entries.transaction_id })
-    .from(ledger_entries)
+    .from(ledger_entries, and(assetAccounts, eq(ledger_accounts.key, source)))
     .innerJoin(
       ledger_accounts,
-      eq(ledger_entries.account_id, ledger_accounts.id),
-    )
-    .where(and(assetEntriesOf(userId), eq(ledger_accounts.key, source)));
-  const pending = await executor
-    .select({ id: ledger_transactions.id })
-    .from(ledger_transactions)
-    .where(
       and(
-        eq(ledger_transactions.user_id, userId),
-        eq(ledger_transactions.transit_destination, source),
+        eq(ledger_entries.account_id, ledger_accounts.id),
+        s.owns(ledger_accounts),
       ),
+    );
+  const pending = await s
+    .select({ id: ledger_transactions.id })
+    .from(
+      ledger_transactions,
+      eq(ledger_transactions.transit_destination, source),
     );
   return [...new Set([...rows, ...pending].map((row) => row.id))];
 }
@@ -115,20 +121,15 @@ export async function staleCsvTransactionIds(
   userId: string,
   source: string,
   keep: ReadonlySet<string>,
-  executor: typeof db | DbTx = db,
+  scope?: UserScope,
 ): Promise<string[]> {
-  const refs = await executor
+  const s = scope ?? forUser(userId);
+  const refs = await s
     .select({
       transaction_id: ledger_external_ids.transaction_id,
       external_id: ledger_external_ids.external_id,
     })
-    .from(ledger_external_ids)
-    .where(
-      and(
-        eq(ledger_external_ids.user_id, userId),
-        eq(ledger_external_ids.origin, source),
-      ),
-    );
+    .from(ledger_external_ids, eq(ledger_external_ids.origin, source));
   const csvRefs = refs.filter((ref) => isCsvExternalId(ref.external_id));
   const kept = new Set(
     csvRefs
@@ -143,7 +144,7 @@ export async function staleCsvTransactionIds(
     ),
   ];
   if (candidates.length === 0) return [];
-  const records = await getLedgerRecords(userId, candidates, executor);
+  const records = await getLedgerRecords(userId, candidates, s);
   return candidates.filter((id) => {
     const movement = records.get(id)?.movement;
     return (
@@ -163,10 +164,7 @@ export async function getImportedSources(
 ): Promise<ImportedSource[]> {
   const [rows, accountRows] = await Promise.all([
     ledgerSourceCounts(userId),
-    db
-      .select({ source: accounts.source })
-      .from(accounts)
-      .where(eq(accounts.user_id, userId)),
+    forUser(userId).select({ source: accounts.source }).from(accounts),
   ]);
 
   const sources = [...rows];
@@ -186,10 +184,9 @@ export async function getTransferSources(
 ): Promise<string[]> {
   const [rows, settings] = await Promise.all([
     getImportedSources(userId),
-    db
+    forUser(userId)
       .select({ archived: user_settings.archived_sources })
       .from(user_settings)
-      .where(eq(user_settings.user_id, userId))
       .limit(1)
       .then((r) => r[0]),
   ]);
@@ -202,10 +199,7 @@ export async function getTransferSources(
 export async function getUserSources(userId: string): Promise<string[]> {
   const [rows, accountRows] = await Promise.all([
     ledgerSources(userId),
-    db
-      .select({ source: accounts.source })
-      .from(accounts)
-      .where(eq(accounts.user_id, userId)),
+    forUser(userId).select({ source: accounts.source }).from(accounts),
   ]);
 
   const set = new Set(rows.filter(Boolean));
@@ -216,10 +210,9 @@ export async function getUserSources(userId: string): Promise<string[]> {
 export async function getSelectableSources(userId: string): Promise<string[]> {
   const [sources, integrationRows] = await Promise.all([
     getUserSources(userId),
-    db
+    forUser(userId)
       .select({ provider: api_integrations.provider })
-      .from(api_integrations)
-      .where(eq(api_integrations.user_id, userId)),
+      .from(api_integrations),
   ]);
 
   const set = new Set(sources);
@@ -239,16 +232,19 @@ export async function getCsvSources(userId: string): Promise<string[]> {
 export async function getSuggestedAccountCurrencies(
   userId: string,
 ): Promise<Record<string, string>> {
-  const used = await db
+  const scope = forUser(userId);
+  const used = await scope
     .selectDistinct({
       source: ledger_accounts.key,
       currency: ledger_accounts.currency,
     })
-    .from(ledger_entries)
+    .from(ledger_entries, assetAccounts)
     .innerJoin(
       ledger_accounts,
-      eq(ledger_entries.account_id, ledger_accounts.id),
-    )
-    .where(assetEntriesOf(userId));
+      and(
+        eq(ledger_entries.account_id, ledger_accounts.id),
+        scope.owns(ledger_accounts),
+      ),
+    );
   return suggestedAccountCurrencies(used);
 }

@@ -1,8 +1,7 @@
 import { cookies } from "next/headers";
-import { eq } from "drizzle-orm";
 
 import type { DetectedTransaction } from "@/lib/ai/screenshotExtract";
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { user_settings } from "@/lib/db/schema";
 import type { CandidateMatch } from "@/lib/imageExtract";
 import { candidateMatchOf } from "@/lib/ledger/candidates";
@@ -81,10 +80,9 @@ export async function getScreenshotImportPageData(
 
   let initialCandidates: Record<number, CandidateMatch[]> = {};
   if (initial?.items && initial.items.length > 0) {
-    const settings = await db
+    const settings = await forUser(userId)
       .select({ timezone: user_settings.timezone })
       .from(user_settings)
-      .where(eq(user_settings.user_id, userId))
       .limit(1)
       .then((rows) => rows[0]);
     const today = await userToday(settings?.timezone);

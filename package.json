@@ -12,7 +12,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "seed:dev": "tsx scripts/seedDevData.ts",
-    "check:tokens": "tsx scripts/checkTwMergeTokens.ts"
+    "check:tokens": "tsx scripts/checkTwMergeTokens.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.143",
@@ -67,6 +68,7 @@
     "prettier-plugin-tailwindcss": "^0.8.0",
     "tailwindcss": "^4",
     "tsx": "^4.22.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.12"
   }
 }

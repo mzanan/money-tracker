@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc } from "drizzle-orm";
 
 import {
   filterTransactionSummaries,
@@ -11,7 +11,7 @@ import {
   type TransactionSummary,
 } from "@/lib/assistantStats";
 import { convert } from "@/lib/currency";
-import { db } from "@/lib/db";
+import { forUser } from "@/lib/db/scope";
 import { recurring_payments } from "@/lib/db/schema";
 import { getRates } from "@/lib/rates";
 import { heldSourceSet } from "@/lib/accountPurpose";
@@ -175,10 +175,8 @@ export async function getRecurringPayments(
   baseCurrency: string,
 ): Promise<RecurringPaymentSummary[]> {
   const [reminders, rates] = await Promise.all([
-    db
-      .select()
-      .from(recurring_payments)
-      .where(eq(recurring_payments.user_id, userId))
+    forUser(userId)
+      .selectFrom(recurring_payments)
       .orderBy(asc(recurring_payments.next_due_on)),
     getRates()
       .then((result) => result.rates)
