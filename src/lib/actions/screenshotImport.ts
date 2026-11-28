@@ -8,7 +8,7 @@ import { normalizeSource } from "@/lib/constants/sources";
 import { isValidAmountForCurrency, roundToScale } from "@/lib/currency";
 import { daysBefore, isValidCalendarDate } from "@/lib/dates";
 import { forUser } from "@/lib/db/scope";
-import { user_settings } from "@/lib/db/schema";
+import { getUserTimezone } from "@/lib/data/userSettings";
 import { findCrossSourceCandidates } from "@/lib/data/duplicates";
 import {
   deleteLedgerTransactions,
@@ -90,11 +90,7 @@ export async function importScreenshotRows(input: {
   if (!user) return { ok: false, error: "Not authenticated" };
 
   const scope = forUser(user.id);
-  const settings = await scope
-    .select({ timezone: user_settings.timezone })
-    .from(user_settings)
-    .limit(1)
-    .then((rows) => rows[0]);
+  const settings = await getUserTimezone(user.id);
   if (!settings) return { ok: false, error: "Settings not found" };
 
   const scaleOf = await getScaleOf();
@@ -160,7 +156,7 @@ export async function importScreenshotRows(input: {
 
       await scope.transaction(async (txScope) => {
         const replaced = row.replaceId
-          ? await getLedgerRecord(user.id, row.replaceId, txScope)
+          ? await getLedgerRecord(txScope, row.replaceId)
           : null;
         if (
           row.replaceId &&
@@ -170,15 +166,15 @@ export async function importScreenshotRows(input: {
         ) {
           throw new ActionError("Replaced movement not found");
         }
-        await postLedgerTransaction(user.id, draft, { scope: txScope });
+        await postLedgerTransaction(txScope, draft);
         if (!replaced) return;
-        await deleteLedgerTransactions(user.id, [replaced.movement.id], txScope);
+        await deleteLedgerTransactions(txScope, [replaced.movement.id]);
         const fees = feeOnlyDraft(
           replaced.draft,
           manualFeeNote(replaced.draft.note),
         );
         if (fees) {
-          await postLedgerTransaction(user.id, fees, { scope: txScope });
+          await postLedgerTransaction(txScope, fees);
         }
       });
       imported += 1;
@@ -221,11 +217,7 @@ export async function previewCandidatesAction(
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const settings = await forUser(user.id)
-    .select({ timezone: user_settings.timezone })
-    .from(user_settings)
-    .limit(1)
-    .then((rows) => rows[0]);
+  const settings = await getUserTimezone(user.id);
   const today = await userToday(settings?.timezone);
 
   const queries = rows.map((row) => ({

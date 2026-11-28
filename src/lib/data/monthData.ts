@@ -1,5 +1,4 @@
-import { forUser } from "@/lib/db/scope";
-import { locations } from "@/lib/db/schema";
+import { listLocations } from "@/lib/data/locations";
 import { getLedgerData } from "@/lib/data/ledgerMovements";
 import { getUserSettings } from "@/lib/data/userSettings";
 import { todayInTz } from "@/lib/dates";
@@ -23,7 +22,7 @@ export async function getMonthPageData(
 
   const [ledger, places] = await Promise.all([
     getLedgerData(user.id, todayInTz(timezone)),
-    forUser(user.id).selectFrom(locations),
+    listLocations(user.id),
   ]);
 
   return { yearMonth, ledger, places };

@@ -1,13 +1,11 @@
 "use server";
 
-import { desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { actionErrorMessage } from "@/lib/actionError";
 import { trackActivation } from "@/lib/activation";
 import { amountValidationError, feeAmountError } from "@/lib/currency";
 import { forUser } from "@/lib/db/scope";
-import { ledger_transactions } from "@/lib/db/schema";
 import {
   createTransactionSchema,
   updateTransactionSchema,
@@ -20,6 +18,10 @@ import {
   getLedgerRecords,
   postLedgerTransaction,
 } from "@/lib/data/ledgerWrites";
+import {
+  hasLedgerTransactions,
+  listTransactionTags,
+} from "@/lib/data/ledgerReads";
 import { getScaleOf } from "@/lib/data/cryptoAssets";
 import { getUser } from "@/lib/session";
 import {
@@ -53,14 +55,6 @@ import { normalizeTags } from "@/lib/transactions";
 export type ActionResult<T = void> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
-
-async function hasLedgerTransactions(userId: string): Promise<boolean> {
-  const rows = await forUser(userId)
-    .select({ id: ledger_transactions.id })
-    .from(ledger_transactions)
-    .limit(1);
-  return rows.length > 0;
-}
 
 export async function createTransaction(
   input: CreateTransactionInput,
@@ -102,6 +96,7 @@ export async function createTransaction(
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
 
   try {
     const scaleOf = await getScaleOf();
@@ -119,7 +114,7 @@ export async function createTransaction(
         : feeLines(source, { amount: fee, currency }, occurredOn, scaleOf)),
     ];
     const firstEntry = !(await hasLedgerTransactions(user.id));
-    const id = await postLedgerTransaction(user.id, {
+    const id = await postLedgerTransaction(scope, {
       occurredOn,
       occurredAt: new Date().toISOString(),
       note: parsed.data.note?.trim() || null,
@@ -162,9 +157,10 @@ export async function updateTransaction(
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
 
   try {
-    const record = await getLedgerRecord(user.id, parsed.data.id);
+    const record = await getLedgerRecord(scope, parsed.data.id);
     if (!record) return { ok: false, error: "Transaction not found" };
     const { movement, draft } = record;
     const flow = simpleFlow(movement);
@@ -234,7 +230,7 @@ export async function updateTransaction(
         : dateChanged
           ? withLegDate(details, legSource, parsed.data.occurredOn)
           : details;
-    await postLedgerTransaction(user.id, next, {
+    await postLedgerTransaction(scope, next, {
       replaceId: movement.id,
       expected: draft,
     });
@@ -254,6 +250,7 @@ export async function updateTransactionSource(
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
 
   const normalized = normalizeSource(source);
   if (!normalized) return { ok: false, error: "Invalid account name" };
@@ -262,7 +259,7 @@ export async function updateTransactionSource(
   }
 
   try {
-    const record = await getLedgerRecord(user.id, id);
+    const record = await getLedgerRecord(scope, id);
     if (!record) return { ok: false, error: "Transaction not found" };
     const { movement, draft } = record;
     if (hasSyncedRef(movement)) {
@@ -279,11 +276,10 @@ export async function updateTransactionSource(
     if (normalized === current) {
       return { ok: false, error: "Pick a different account" };
     }
-    await postLedgerTransaction(
-      user.id,
-      withSource(draft, current, normalized),
-      { replaceId: movement.id, expected: draft },
-    );
+    await postLedgerTransaction(scope, withSource(draft, current, normalized), {
+      replaceId: movement.id,
+      expected: draft,
+    });
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -300,15 +296,16 @@ export async function setTransactionFixed(
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
   if (isFixed !== null && typeof isFixed !== "boolean") {
     return { ok: false, error: "Invalid data" };
   }
 
   try {
-    const record = await getLedgerRecord(user.id, id);
+    const record = await getLedgerRecord(scope, id);
     if (!record) return { ok: false, error: "Transaction not found" };
     await postLedgerTransaction(
-      user.id,
+      scope,
       { ...record.draft, isFixed },
       { replaceId: record.movement.id, expected: record.draft },
     );
@@ -328,12 +325,13 @@ export async function mergeTransactions(
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
   if (keepId === removeId) {
     return { ok: false, error: "Pick two different transactions" };
   }
 
   try {
-    const records = await getLedgerRecords(user.id, [keepId, removeId]);
+    const records = await getLedgerRecords(scope, [keepId, removeId]);
     const keep = records.get(keepId);
     const removed = records.get(removeId);
     if (!keep || !removed) return { ok: false, error: "Transaction not found" };
@@ -371,10 +369,10 @@ export async function mergeTransactions(
       (line) => line.role === "fee",
     );
 
-    await forUser(user.id).transaction(async (txScope) => {
-      await deleteLedgerTransactions(user.id, [removeId], txScope);
+    await scope.transaction(async (txScope) => {
+      await deleteLedgerTransactions(txScope, [removeId]);
       await postLedgerTransaction(
-        user.id,
+        txScope,
         {
           ...keep.draft,
           note,
@@ -386,7 +384,7 @@ export async function mergeTransactions(
             ...removed.draft.externalRefs,
           ],
         },
-        { replaceId: keepId, scope: txScope },
+        { replaceId: keepId },
       );
     });
     revalidatePath("/", "layout");
@@ -402,9 +400,10 @@ export async function mergeTransactions(
 export async function deleteTransaction(id: string): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
 
   try {
-    const record = await getLedgerRecord(user.id, id);
+    const record = await getLedgerRecord(scope, id);
     if (!record) return { ok: false, error: "Transaction not found" };
     if (isTransferMovement(record.movement)) {
       return {
@@ -415,7 +414,7 @@ export async function deleteTransaction(id: string): Promise<ActionResult> {
     if (isSyncedMovement(record.movement)) {
       return { ok: false, error: "Synced transactions can't be deleted" };
     }
-    await deleteLedgerTransactions(user.id, [id]);
+    await deleteLedgerTransactions(scope, [id]);
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
@@ -430,10 +429,7 @@ export async function getUsedTags(): Promise<ActionResult<string[]>> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const rows = await forUser(user.id)
-    .select({ tags: ledger_transactions.tags })
-    .from(ledger_transactions)
-    .orderBy(desc(ledger_transactions.occurred_on));
+  const rows = await listTransactionTags(user.id);
 
   return { ok: true, data: dedupeTags(rows.flatMap((row) => row.tags)) };
 }

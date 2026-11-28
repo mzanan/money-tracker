@@ -14,6 +14,7 @@ import {
   postLedgerTransaction,
 } from "@/lib/data/ledgerWrites";
 import { getScaleOf } from "@/lib/data/cryptoAssets";
+import { forUser } from "@/lib/db/scope";
 import { creditedLines } from "@/lib/ledger/builders";
 import { isInTransit } from "@/lib/ledger/movements";
 import { getUser } from "@/lib/session";
@@ -49,8 +50,9 @@ export async function creditTransfer(
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
 
-  const record = await getLedgerRecord(user.id, txId);
+  const record = await getLedgerRecord(scope, txId);
   if (!record) return { ok: false, error: "Transaction not found" };
   const { movement, draft } = record;
   const destination = draft.transitDestination;
@@ -82,7 +84,7 @@ export async function creditTransfer(
       scaleOf,
     });
     await postLedgerTransaction(
-      user.id,
+      scope,
       { ...draft, transitDestination: null, lines },
       { replaceId: movement.id, expected: draft },
     );

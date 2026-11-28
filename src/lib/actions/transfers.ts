@@ -189,6 +189,7 @@ export async function recordTransfer(
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
 
   const accountCurrencies = await getAccountCurrencies(user.id, [
     source,
@@ -215,7 +216,7 @@ export async function recordTransfer(
     const scaleOf = await getScaleOf();
     const id = crypto.randomUUID();
     await postLedgerTransaction(
-      user.id,
+      scope,
       {
         occurredOn,
         occurredAt: new Date().toISOString(),
@@ -258,11 +259,12 @@ export async function markAsTransfer(
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
 
   const mirrorSource = normalizeSource(rawMirrorSource);
   if (!mirrorSource) return { ok: false, error: "Invalid account name" };
 
-  const record = await getLedgerRecord(user.id, txId);
+  const record = await getLedgerRecord(scope, txId);
   if (!record) return { ok: false, error: "Transaction not found" };
   const { movement, draft } = record;
   if (isTransferMovement(movement)) {
@@ -387,9 +389,9 @@ export async function markAsTransfer(
       scaleOf,
     });
     const splitFee = feeOnlyDraft(draft, manualFeeNote(draft.note));
-    await forUser(user.id).transaction(async (txScope) => {
+    await scope.transaction(async (txScope) => {
       await postLedgerTransaction(
-        user.id,
+        txScope,
         {
           ...draft,
           transitDestination: pending ? mirrorSource : null,
@@ -399,10 +401,10 @@ export async function markAsTransfer(
             mirrorRef(mirrorSource, movement.id),
           ],
         },
-        { replaceId: movement.id, scope: txScope, expected: draft },
+        { replaceId: movement.id, expected: draft },
       );
       if (splitFee) {
-        await postLedgerTransaction(user.id, splitFee, { scope: txScope });
+        await postLedgerTransaction(txScope, splitFee);
       }
     });
     revalidatePath("/", "layout");
@@ -422,11 +424,12 @@ export async function markPairAsTransfer(
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
   if (txId1 === txId2) {
     return { ok: false, error: "Pick two different transactions" };
   }
 
-  const records = await getLedgerRecords(user.id, [txId1, txId2]);
+  const records = await getLedgerRecords(scope, [txId1, txId2]);
   const recordA = records.get(txId1);
   const recordB = records.get(txId2);
   if (!recordA || !recordB) {
@@ -578,14 +581,10 @@ export async function markPairAsTransfer(
       return fee ? [fee] : [];
     });
     const keepId = expense.record.movement.id;
-    await forUser(user.id).transaction(async (txScope) => {
-      await deleteLedgerTransactions(
-        user.id,
-        [income.record.movement.id],
-        txScope,
-      );
+    await scope.transaction(async (txScope) => {
+      await deleteLedgerTransactions(txScope, [income.record.movement.id]);
       await postLedgerTransaction(
-        user.id,
+        txScope,
         {
           ...keep,
           note: keep.note ?? other.note,
@@ -596,10 +595,10 @@ export async function markPairAsTransfer(
           lines,
           externalRefs: [...keep.externalRefs, ...other.externalRefs],
         },
-        { replaceId: keepId, scope: txScope, expected: keep },
+        { replaceId: keepId, expected: keep },
       );
       for (const fee of splitFees) {
-        await postLedgerTransaction(user.id, fee, { scope: txScope });
+        await postLedgerTransaction(txScope, fee);
       }
     });
     revalidatePath("/", "layout");
@@ -615,8 +614,9 @@ export async function markPairAsTransfer(
 export async function unmarkTransfer(txId: string): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
 
-  const record = await getLedgerRecord(user.id, txId);
+  const record = await getLedgerRecord(scope, txId);
   if (!record || !isTransferMovement(record.movement)) {
     return { ok: false, error: "Not a transfer" };
   }
@@ -625,13 +625,12 @@ export async function unmarkTransfer(txId: string): Promise<ActionResult> {
   if (!first) return { ok: false, error: "Not a transfer" };
 
   try {
-    await forUser(user.id).transaction(async (txScope) => {
-      await postLedgerTransaction(user.id, first, {
+    await scope.transaction(async (txScope) => {
+      await postLedgerTransaction(txScope, first, {
         replaceId: record.movement.id,
-        scope: txScope,
       });
       for (const draft of rest) {
-        await postLedgerTransaction(user.id, draft, { scope: txScope });
+        await postLedgerTransaction(txScope, draft);
       }
     });
     revalidatePath("/", "layout");
@@ -650,8 +649,9 @@ export async function setBudgetMonthShift(
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
 
-  const record = await getLedgerRecord(user.id, txId);
+  const record = await getLedgerRecord(scope, txId);
   if (!record) return { ok: false, error: "Transaction not found" };
   const { movement, draft } = record;
 
@@ -670,7 +670,7 @@ export async function setBudgetMonthShift(
 
   try {
     await postLedgerTransaction(
-      user.id,
+      scope,
       { ...draft, budgetMonth },
       { replaceId: movement.id },
     );

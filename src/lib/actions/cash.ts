@@ -159,6 +159,7 @@ export async function recordCashWithdrawal(
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
   const chargedError = await sourceCurrencyError(
     user.id,
     source,
@@ -174,7 +175,7 @@ export async function recordCashWithdrawal(
     ]);
     const id = crypto.randomUUID();
     await postLedgerTransaction(
-      user.id,
+      scope,
       {
         ...emptyDraft(occurredOn),
         note: `Cash withdrawal from ${resolveSourceLabel(source, accountLabels)}`,
@@ -239,12 +240,13 @@ export async function recordCashExchange(
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
 
   try {
     const scaleOf = await getScaleOf();
     const id = crypto.randomUUID();
     await postLedgerTransaction(
-      user.id,
+      scope,
       {
         ...emptyDraft(occurredOn),
         note: `Cash exchange ${outCurrency} → ${inCurrency}`,
@@ -305,6 +307,7 @@ export async function recordWithdrawalExpense(
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
   const chargedError = await sourceCurrencyError(
     user.id,
     source,
@@ -331,7 +334,7 @@ export async function recordWithdrawalExpense(
     if (!conversion.ok) return conversion;
     const id = crypto.randomUUID();
     await postLedgerTransaction(
-      user.id,
+      scope,
       {
         ...emptyDraft(occurredOn),
         note: conversion.note,
@@ -371,9 +374,10 @@ export async function convertToWithdrawal(
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
 
   try {
-    const record = await getLedgerRecord(user.id, id);
+    const record = await getLedgerRecord(scope, id);
     if (!record) return { ok: false, error: "Transaction not found" };
     const { movement, draft } = record;
     if (isTransferMovement(movement)) {
@@ -418,7 +422,7 @@ export async function convertToWithdrawal(
     if (!conversion.ok) return conversion;
     const priorFees = draft.lines.filter((line) => line.role === "fee");
     await postLedgerTransaction(
-      user.id,
+      scope,
       {
         ...draft,
         note: conversion.note,
@@ -445,16 +449,17 @@ export async function undoMoveWithdrawalToCash(
 ): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
 
   try {
-    const record = await getLedgerRecord(user.id, id);
+    const record = await getLedgerRecord(scope, id);
     if (!record) return { ok: false, error: "Transaction not found" };
     const { draft } = record;
     const group = withdrawalGroupOf(draft);
     if (!group || !hasCashLeg(draft) || !bankWithdrawalLine(draft)) {
       return { ok: false, error: "Not a withdrawal with a cash entry" };
     }
-    await postLedgerTransaction(user.id, withoutCashLeg(draft, group), {
+    await postLedgerTransaction(scope, withoutCashLeg(draft, group), {
       replaceId: record.movement.id,
       expected: draft,
     });
@@ -487,9 +492,10 @@ export async function moveWithdrawalToCash(
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
 
   try {
-    const record = await getLedgerRecord(user.id, id);
+    const record = await getLedgerRecord(scope, id);
     if (!record) return { ok: false, error: "Transaction not found" };
     const { movement, draft } = record;
     if (!isWithdrawalMovement(movement)) {
@@ -510,12 +516,9 @@ export async function moveWithdrawalToCash(
       { amount: cashAmount, currency: cashCurrency },
       await getScaleOf(),
     );
-    await forUser(user.id).transaction(async (txScope) => {
-      await postLedgerTransaction(user.id, next, {
-        replaceId: movement.id,
-        scope: txScope,
-        expected: draft,
-      });
+    await postLedgerTransaction(scope, next, {
+      replaceId: movement.id,
+      expected: draft,
     });
     revalidatePath("/", "layout");
     return { ok: true };

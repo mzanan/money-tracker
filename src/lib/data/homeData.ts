@@ -1,5 +1,5 @@
-import { forUser } from "@/lib/db/scope";
-import { api_integrations, locations } from "@/lib/db/schema";
+import { getConnectedProviders } from "@/lib/data/integrations";
+import { listLocations } from "@/lib/data/locations";
 import { listAccountSources } from "@/lib/data/accounts";
 import { getLedgerData } from "@/lib/data/ledgerMovements";
 import { getUserSettings } from "@/lib/data/userSettings";
@@ -26,11 +26,10 @@ export async function getHomePageData(): Promise<HomePageData> {
   const settings = await getUserSettings(user.id);
   const timezone = await resolveTimezone(settings?.timezone);
 
-  const scope = forUser(user.id);
   const [ledger, integrationsRows, places, accountSources] = await Promise.all([
     getLedgerData(user.id, todayInTz(timezone)),
-    scope.select({ provider: api_integrations.provider }).from(api_integrations),
-    scope.selectFrom(locations),
+    getConnectedProviders(user.id),
+    listLocations(user.id),
     listAccountSources(user.id),
   ]);
   const movements = ledger.movements;

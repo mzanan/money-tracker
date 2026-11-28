@@ -1,12 +1,14 @@
 "use server";
 
-import { and, eq, lt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { actionErrorMessage } from "@/lib/actionError";
 import { MANUAL_SOURCE } from "@/lib/constants/sources";
 import { forUser } from "@/lib/db/scope";
-import { csv_import_locks } from "@/lib/db/schema";
+import {
+  acquireCsvImportLock,
+  releaseCsvImportLock,
+} from "@/lib/data/csvImportLocks";
 import type { CsvRow } from "@/lib/csv/types";
 import {
   csvDraft,
@@ -35,10 +37,6 @@ export interface CsvImportInput {
 const REPLACE_LOCK_STALE_MS = 10 * 60 * 1000;
 const BATCH_SIZE = 500;
 
-// Single atomic UPSERT: acquires a free lock, or steals one only if it's
-// stale, in one statement. Avoids a separate SELECT+DELETE+INSERT reclaim,
-// which is not atomic and lets two callers both believe they hold the lock.
-// Returns the lock's created_at as an ownership token for releaseReplaceLock.
 async function acquireReplaceLock(
   userId: string,
   source: string,
@@ -46,29 +44,7 @@ async function acquireReplaceLock(
   const staleBefore = new Date(
     Date.now() - REPLACE_LOCK_STALE_MS,
   ).toISOString();
-  const acquired = await forUser(userId)
-    .insert(csv_import_locks, { source })
-    .onConflictDoUpdate({
-      target: [csv_import_locks.user_id, csv_import_locks.source],
-      set: { created_at: sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))` },
-      setWhere: lt(csv_import_locks.created_at, staleBefore),
-    })
-    .returning({ created_at: csv_import_locks.created_at });
-  return acquired[0]?.created_at ?? null;
-}
-
-async function releaseReplaceLock(
-  userId: string,
-  source: string,
-  token: string,
-): Promise<void> {
-  await forUser(userId).delete(
-    csv_import_locks,
-    and(
-      eq(csv_import_locks.source, source),
-      eq(csv_import_locks.created_at, token),
-    ),
-  );
+  return acquireCsvImportLock(userId, source, staleBefore);
 }
 
 export async function getLastImportDate(
@@ -156,17 +132,15 @@ export async function importCsvRows(
       try {
         imported += await forUser(user.id).transaction(async (txScope) => {
           const taken = await existingExternalIds(
-            user.id,
+            txScope,
             source,
             batch.flatMap(({ externalIds }) => externalIds),
-            txScope,
           );
           await postLedgerTransactions(
-            user.id,
+            txScope,
             batch.flatMap((item) =>
               postableCsvDrafts(item, taken).map((draft) => ({ draft })),
             ),
-            txScope,
           );
           return batch.filter(({ externalIds }) => !taken.has(externalIds[0]))
             .length;
@@ -186,13 +160,8 @@ export async function importCsvRows(
       try {
         const keep = new Set(drafts.flatMap(({ externalIds }) => externalIds));
         await forUser(user.id).transaction(async (txScope) => {
-          const staleIds = await staleCsvTransactionIds(
-            user.id,
-            source,
-            keep,
-            txScope,
-          );
-          await deleteLedgerTransactions(user.id, staleIds, txScope);
+          const staleIds = await staleCsvTransactionIds(txScope, source, keep);
+          await deleteLedgerTransactions(txScope, staleIds);
         });
       } catch (error) {
         return {
@@ -206,7 +175,7 @@ export async function importCsvRows(
     }
   } finally {
     if (input.replace && lockToken) {
-      await releaseReplaceLock(user.id, source, lockToken);
+      await releaseCsvImportLock(user.id, source, lockToken);
     }
   }
 

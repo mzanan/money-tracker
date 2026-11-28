@@ -86,3 +86,56 @@ export async function sourceCurrencyError(
     side,
   });
 }
+
+type AccountEdit = Partial<
+  Pick<Account, "label" | "currency" | "purpose" | "expected_on">
+>;
+
+export async function saveAccountLabel(
+  userId: string,
+  source: string,
+  label: string,
+): Promise<string> {
+  const [row] = await forUser(userId)
+    .insert(accounts, { source, label })
+    .onConflictDoUpdate({
+      target: [accounts.user_id, accounts.source],
+      set: { label },
+    })
+    .returning({ id: accounts.id });
+  return row.id;
+}
+
+export async function insertAccountIfMissing(
+  userId: string,
+  source: string,
+  label: string,
+): Promise<void> {
+  await forUser(userId)
+    .insert(accounts, { source, label })
+    .onConflictDoNothing();
+}
+
+export async function upsertAccountDetails(
+  userId: string,
+  source: string,
+  label: string,
+  details: AccountEdit,
+): Promise<void> {
+  await forUser(userId)
+    .insert(accounts, { source, label, ...details })
+    .onConflictDoUpdate({
+      target: [accounts.user_id, accounts.source],
+      set: details,
+    });
+}
+
+export async function deleteAccountBySource(
+  userId: string,
+  source: string,
+): Promise<boolean> {
+  const deleted = await forUser(userId)
+    .delete(accounts, eq(accounts.source, source))
+    .returning({ id: accounts.id });
+  return deleted.length > 0;
+}

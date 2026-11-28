@@ -223,6 +223,27 @@ describe("forUser query shape", () => {
     ).toThrow();
   });
 
+  it("joins an open transaction instead of nesting one", async () => {
+    const run = forUser(A).transaction(async (txScope) => {
+      await txScope.atomic(async (inner) => {
+        expect(inner).toBe(txScope);
+        await inner.insert(schema.recurring_payments, {
+          id: "MARK_A-rollback",
+          label: "MARK_A rollback",
+          frequency: "MONTHLY",
+          next_due_on: "2026-12-01",
+        });
+      });
+      throw new Error("rollback");
+    });
+    await expect(run).rejects.toThrow("rollback");
+    const rows = await forUser(A).selectFrom(
+      schema.recurring_payments,
+      eq(schema.recurring_payments.id, "MARK_A-rollback"),
+    );
+    expect(rows).toEqual([]);
+  });
+
   it("rejects an empty user id", () => {
     expect(() => forUser("")).toThrow();
   });
@@ -242,9 +263,9 @@ describe("two-user leakage", () => {
       getLedgerData(A, TODAY),
       getActiveReminders(A),
       getUserSettings(A),
-      getSourceTransactionIds(A, "wise"),
+      getSourceTransactionIds(forUser(A), "wise"),
       getSuggestedAccountCurrencies(A),
-      getLedgerRecordsBetween(A, "2026-01-01", "2026-12-31"),
+      getLedgerRecordsBetween(forUser(A), "2026-01-01", "2026-12-31"),
     ]);
     const text = JSON.stringify(results);
     expect(text).toContain("MARK_A");
@@ -257,7 +278,7 @@ describe("two-user leakage", () => {
     const { existingExternalIds, sourceBalanceMinor } = await import(
       "@/lib/data/ledgerWrites"
     );
-    const found = await existingExternalIds(A, "wise", [
+    const found = await existingExternalIds(forUser(A), "wise", [
       "MARK_A-ext",
       "LEAK_B-ext",
     ]);

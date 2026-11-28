@@ -23,6 +23,7 @@ import { flowLines, minorOf, transferPosting } from "@/lib/ledger/builders";
 import { mirrorRef } from "@/lib/ledger/edits";
 import { emptyDraft, type LedgerDraft } from "@/lib/ledger/posting";
 import { getUser } from "@/lib/session";
+import { forUser } from "@/lib/db/scope";
 
 import type { ActionResult } from "./transactions";
 
@@ -57,6 +58,7 @@ export async function recordHeldReturn(
 
   const user = await getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
+  const scope = forUser(user.id);
 
   try {
     const [held, scaleOf] = await Promise.all([
@@ -125,7 +127,7 @@ export async function recordHeldReturn(
         },
       });
     }
-    await postLedgerTransactions(user.id, drafts);
+    await postLedgerTransactions(scope, drafts);
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {

@@ -1,8 +1,6 @@
 import { cookies } from "next/headers";
 
 import type { DetectedTransaction } from "@/lib/ai/screenshotExtract";
-import { forUser } from "@/lib/db/scope";
-import { user_settings } from "@/lib/db/schema";
 import type { CandidateMatch } from "@/lib/imageExtract";
 import { candidateMatchOf } from "@/lib/ledger/candidates";
 import { userToday } from "@/lib/preferences.server";
@@ -10,6 +8,7 @@ import { SHARE_ERROR_CODES, type ShareErrorCode } from "@/lib/screenshotShare";
 
 import { findCrossSourceCandidates } from "./duplicates";
 import { getUserSources } from "./sources";
+import { getUserTimezone } from "./userSettings";
 
 const SHARE_COOKIE = "mt_share_payload";
 
@@ -80,11 +79,7 @@ export async function getScreenshotImportPageData(
 
   let initialCandidates: Record<number, CandidateMatch[]> = {};
   if (initial?.items && initial.items.length > 0) {
-    const settings = await forUser(userId)
-      .select({ timezone: user_settings.timezone })
-      .from(user_settings)
-      .limit(1)
-      .then((rows) => rows[0]);
+    const settings = await getUserTimezone(userId);
     const today = await userToday(settings?.timezone);
     initialCandidates = await buildInitialCandidates(
       userId,
