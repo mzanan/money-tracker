@@ -13,6 +13,7 @@ const surfaceVariants = cva("rounded-card", {
     padding: {
       none: "",
       xs: "p-3",
+      row: "px-3 py-2",
       list: "px-1 py-1",
       sm: "px-4 py-4",
       md: "px-5 py-5",

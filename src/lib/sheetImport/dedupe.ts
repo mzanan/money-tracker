@@ -1,6 +1,11 @@
+import { isSupportedCurrency } from "@/lib/constants/currencies";
 import type { DuplicateStep } from "@/lib/constants/sheetImport";
+import { csvContentId, csvExternalId } from "@/lib/csv/ledgerDraft";
+import { roundToScale } from "@/lib/currency";
+import { dayDiff } from "@/lib/dates";
 import { EXTERNAL_ID_PREFIX } from "@/lib/externalIds";
-import type { FlowCandidate } from "@/lib/ledger/candidates";
+import { candidateMatchOf, type FlowCandidate } from "@/lib/ledger/candidates";
+import type { CheckRow, SheetRowCheck } from "@/lib/sheetImport/check";
 import { fold } from "@/lib/sheetImport/parse";
 import { SHEET_ID_PREFIX } from "@/lib/sheetImport/fingerprint";
 
@@ -42,13 +47,6 @@ export function judgeTokens(text: string | null): string[] {
 
 export function judgeText(text: string | null): string {
   return judgeTokens(text).join(" ").slice(0, MAX_JUDGE_CHARS);
-}
-
-function dayGap(a: string, b: string): number {
-  return Math.round(
-    Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) /
-      86_400_000,
-  );
 }
 
 function isSheetImport(candidate: FlowCandidate): boolean {
@@ -120,7 +118,7 @@ export function deterministicMatches(
         candidate,
         incoming: judgeText(row.description),
         existing: judgeText(candidate.note),
-        dayGap: dayGap(row.occurredOn, candidate.occurredOn),
+        dayGap: Math.abs(dayDiff(row.occurredOn, candidate.occurredOn)),
       });
     }
   });
@@ -142,4 +140,100 @@ export function assignJudged(
     out[pair.row] = { step: "ai", candidate: pair.candidate };
   }
   return out;
+}
+
+export interface ExactMatch {
+  step: DuplicateStep;
+  transactionId: string;
+}
+
+export function legacyIdOf(row: CheckRow): string | null {
+  return row.currency && isSupportedCurrency(row.currency)
+    ? csvContentId({
+        occurredOn: row.occurredOn,
+        amount: roundToScale(row.amount, row.currency),
+        currency: row.currency,
+        description: row.description.trim() || null,
+        kind: row.kind,
+      })
+    : null;
+}
+
+export function exactLookupIds(
+  externalIds: ReadonlyArray<string>,
+  legacyIds: ReadonlyArray<string | null>,
+): string[] {
+  return [
+    ...externalIds.map(csvExternalId),
+    ...legacyIds.filter((id): id is string => id !== null),
+  ];
+}
+
+export function exactMatchesOf(
+  externalIds: ReadonlyArray<string>,
+  legacyIds: ReadonlyArray<string | null>,
+  taken: ReadonlyMap<string, string>,
+): (ExactMatch | null)[] {
+  return externalIds.map((id, index): ExactMatch | null => {
+    const own = taken.get(csvExternalId(id));
+    if (own) return { step: "external_id", transactionId: own };
+    const legacy = legacyIds[index];
+    const old = legacy ? taken.get(legacy) : undefined;
+    return old ? { step: "legacy_hash", transactionId: old } : null;
+  });
+}
+
+export function ladderRowsOf(
+  rows: ReadonlyArray<CheckRow>,
+  exact: ReadonlyArray<ExactMatch | null>,
+): (LadderRow | null)[] {
+  return rows.map((row, index) =>
+    row.currency && isSupportedCurrency(row.currency) && !exact[index]
+      ? { ...row, currency: row.currency }
+      : null,
+  );
+}
+
+export function exactTransactionIds(
+  exact: ReadonlyArray<ExactMatch | null>,
+): string[] {
+  return exact.flatMap((match) => (match ? [match.transactionId] : []));
+}
+
+export function usedTransactionIds(
+  claimed: ReadonlyArray<string>,
+  exact: ReadonlyArray<ExactMatch | null>,
+): Set<string> {
+  return new Set([...claimed, ...exactTransactionIds(exact)]);
+}
+
+export function candidatesByRow(
+  ladderRows: ReadonlyArray<LadderRow | null>,
+  found: ReadonlyArray<FlowCandidate[]>,
+  used: ReadonlySet<string>,
+): FlowCandidate[][] {
+  const candidates = ladderRows.map(() => [] as FlowCandidate[]);
+  let next = 0;
+  ladderRows.forEach((row, index) => {
+    if (!row) return;
+    candidates[index] = found[next++].filter((c) => !used.has(c.id));
+  });
+  return candidates;
+}
+
+export function checksOf(
+  externalIds: ReadonlyArray<string>,
+  exact: ReadonlyArray<ExactMatch | null>,
+  judged: ReadonlyArray<LadderMatch | null>,
+): SheetRowCheck[] {
+  return externalIds.map((externalId, index) => {
+    const exactStep = exact[index]?.step ?? null;
+    const match = judged[index];
+    return {
+      externalId,
+      state: exactStep ? "already_imported" : match ? "duplicate" : "new",
+      step: exactStep ?? match?.step ?? null,
+      match: match ? candidateMatchOf(match.candidate) : null,
+    };
+  });
 }

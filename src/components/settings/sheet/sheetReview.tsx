@@ -3,7 +3,8 @@
 import { Loader2Icon, SlidersHorizontalIcon } from "lucide-react";
 
 import { CURRENCY_CODES } from "@/lib/constants/currencies";
-import { CURRENCY_MAP_OPTIONS } from "@/lib/sheetImport/corrections";
+import { CURRENCY_MAP_OPTIONS } from "@/lib/constants/sheetImport";
+import { duplicatesToggleLabel } from "@/lib/sheetImport/selection";
 
 import { Button } from "@/components/ui/button";
 import { CurrencySelect } from "@/components/ui/currencySelect";
@@ -60,9 +61,7 @@ export function SheetReview({
         ))}
         {sheet.missingCurrency > 0 && (
           <div className="grid gap-1.5">
-            <Label>
-              Currency <span className="text-destructive">*</span>
-            </Label>
+            <Label required>Currency</Label>
             <CurrencySelect
               value={sheet.currency || undefined}
               onValueChange={sheet.changeCurrency}
@@ -111,6 +110,20 @@ export function SheetReview({
         />
       )}
 
+      {sheet.duplicateCount > 0 && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-fit"
+          onClick={sheet.toggleAllDuplicates}
+        >
+          {duplicatesToggleLabel(
+            sheet.duplicateCount,
+            sheet.allDuplicatesSelected,
+          )}
+        </Button>
+      )}
+
       <SheetPreviewTable
         rows={sheet.rows}
         checks={sheet.checks}
@@ -135,7 +148,7 @@ export function SheetReview({
           disabled={!sheet.canSubmit || sheet.pending}
           className="flex-1"
         >
-          {(sheet.pending || (!sheet.checks && sheet.rows.length > 0)) && (
+          {(sheet.pending || sheet.checking) && (
             <Loader2Icon className="animate-spin" />
           )}
           Import {sheet.selectedCount} transactions

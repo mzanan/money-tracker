@@ -1,4 +1,4 @@
-import type { CsvRow } from "@/lib/actions/csvImport";
+import type { CsvRow } from "@/lib/csv/types";
 import {
   EXPENSE_DIRECTIONS,
   INCOME_DIRECTIONS,

@@ -19,6 +19,11 @@ import {
   parseSheetDate,
   sectionMonth,
 } from "@/lib/sheetImport/parse";
+import {
+  allRowsSelected,
+  duplicateIndexes,
+  withIndexes,
+} from "@/lib/sheetImport/selection";
 import { SheetRecipeSchema, type TableRecipe } from "@/lib/sheetImport/recipe";
 import {
   MAX_FILE_BYTES,
@@ -752,7 +757,12 @@ const checks: [string, () => boolean][] = [
     "32 saved conventions keep new rows below the old end",
     () => {
       const old = readWorkbook(
-        bytesOf(sheetOf([["Fecha", "Concepto", "Importe"], ["03/01/2024", "A", "5"]])),
+        bytesOf(
+          sheetOf([
+            ["Fecha", "Concepto", "Importe"],
+            ["03/01/2024", "A", "5"],
+          ]),
+        ),
       ).sheets;
       const grown = readWorkbook(
         bytesOf(
@@ -813,7 +823,12 @@ const checks: [string, () => boolean][] = [
     "34 same columns with another date order are flagged, not silently re-read",
     () => {
       const grids = readWorkbook(
-        bytesOf(sheetOf([["Date", "Description", "Amount"], ["03/01/2024", "A", "5"]])),
+        bytesOf(
+          sheetOf([
+            ["Date", "Description", "Amount"],
+            ["03/01/2024", "A", "5"],
+          ]),
+        ),
       ).sheets;
       const keys = tableLayoutKeys({ tables: [BASE] }, grids);
       const saved = new Map([[keys[0]!, conventionsOf(BASE)]]);
@@ -833,7 +848,12 @@ const checks: [string, () => boolean][] = [
     "35 a tab the AI leaves out is not imported again by a saved reading",
     () => {
       const grids = readWorkbook(
-        bytesOf(sheetOf([["Date", "Description", "Amount"], ["03/01/2024", "A", "5"]])),
+        bytesOf(
+          sheetOf([
+            ["Date", "Description", "Amount"],
+            ["03/01/2024", "A", "5"],
+          ]),
+        ),
       ).sheets;
       const keys = tableLayoutKeys({ tables: [BASE] }, grids);
       const saved = new Map([[keys[0]!, conventionsOf(BASE)]]);
@@ -853,7 +873,12 @@ const checks: [string, () => boolean][] = [
     "36 a matching reading keeps the saved skip words",
     () => {
       const grids = readWorkbook(
-        bytesOf(sheetOf([["Date", "Description", "Amount"], ["03/01/2024", "A", "5"]])),
+        bytesOf(
+          sheetOf([
+            ["Date", "Description", "Amount"],
+            ["03/01/2024", "A", "5"],
+          ]),
+        ),
       ).sheets;
       const keys = tableLayoutKeys({ tables: [BASE] }, grids);
       const saved = new Map([
@@ -876,15 +901,18 @@ const checks: [string, () => boolean][] = [
     "37 a different reading that changes no row keeps the saved one silently",
     () => {
       const grids = readWorkbook(
-        bytesOf(sheetOf([["Date", "Description", "Amount"], ["05/01/2024", "A", "4,50"]])),
+        bytesOf(
+          sheetOf([
+            ["Date", "Description", "Amount"],
+            ["05/01/2024", "A", "4,50"],
+          ]),
+        ),
       ).sheets;
       const keys = tableLayoutKeys({ tables: [BASE] }, grids);
       const saved = new Map([[keys[0]!, conventionsOf(BASE)]]);
       const reconciled = reconcileRecipe(
         {
-          tables: [
-            { ...BASE, numberFormat: { decimal: ",", thousands: "" } },
-          ],
+          tables: [{ ...BASE, numberFormat: { decimal: ",", thousands: "" } }],
         },
         keys,
         saved,
@@ -909,7 +937,11 @@ const checks: [string, () => boolean][] = [
         ["Shell gas", "Shell gas station 123", true],
         ["gas shell", "Shell gas station", false],
         ["", "anything", false],
-        ["x".repeat(30) + " " + "y".repeat(40), "x".repeat(30) + " " + "y".repeat(40), true],
+        [
+          "x".repeat(30) + " " + "y".repeat(40),
+          "x".repeat(30) + " " + "y".repeat(40),
+          true,
+        ],
       ];
       return cases.every(
         ([a, b, expected]) =>
@@ -939,7 +971,11 @@ const checks: [string, () => boolean][] = [
         currency: "EUR",
         description: "gas",
       };
-      const { matches, pairs } = deterministicMatches([row], [[existing]], "bank");
+      const { matches, pairs } = deterministicMatches(
+        [row],
+        [[existing]],
+        "bank",
+      );
       return matches[0] === null && pairs.length === 1;
     },
   ],
@@ -992,6 +1028,34 @@ const checks: [string, () => boolean][] = [
         reconciled.conflicts.length === 0 &&
         reconciled.recipe.tables[0]!.import === false &&
         reconciled.matchedKeys.length === 0
+      );
+    },
+  ],
+  [
+    "42 tick all possible duplicates flips only duplicate rows",
+    () => {
+      const check = (state: "new" | "already_imported" | "duplicate") => ({
+        externalId: state,
+        state,
+        step: null,
+        match: null,
+      });
+      const rowChecks = [
+        check("new"),
+        check("duplicate"),
+        check("already_imported"),
+        check("duplicate"),
+      ];
+      const dups = duplicateIndexes(rowChecks);
+      const on = withIndexes(new Set([0]), dups, true);
+      const off = withIndexes(on, dups, false);
+      return (
+        dups.join() === "1,3" &&
+        [...on].sort().join() === "0,1,3" &&
+        allRowsSelected(dups, rowChecks, on) &&
+        [...off].join() === "0" &&
+        !allRowsSelected(dups, rowChecks, off) &&
+        !allRowsSelected([], rowChecks, on)
       );
     },
   ],

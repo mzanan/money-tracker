@@ -1,21 +1,24 @@
-import { createHash } from "node:crypto";
 import { and, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 
-import type {
-  DuplicateStep,
-  SheetRowStatus,
+import { chunk } from "@/lib/arrays";
+import {
+  SHEET_REQUEST_ROWS,
+  type SheetRowStatus,
 } from "@/lib/constants/sheetImport";
 import { forUser } from "@/lib/db/scope";
 import {
-  ledger_external_ids,
   sheet_import_layouts,
   sheet_import_rows,
   sheet_imports,
 } from "@/lib/db/schema";
-import { deleteLedgerTransactions } from "@/lib/data/ledgerWrites";
+import {
+  deleteLedgerTransactions,
+  transactionIdsForExternalIds,
+} from "@/lib/data/ledgerWrites";
 import { ConventionsSchema, type Conventions } from "@/lib/sheetImport/layout";
+import { layoutHash } from "@/lib/sheetImport/layoutHash";
+import type { SheetRowLog } from "@/lib/sheetImport/log";
 import { RECIPE_VERSION } from "@/lib/sheetImport/recipe";
-import { inChunks } from "@/lib/sheetImport/review";
 
 const RECENT_IMPORTS = 5;
 
@@ -29,28 +32,15 @@ export interface SheetImportSummary {
   createdAt: string;
 }
 
-export interface SheetRowLog {
-  sheet: string;
-  row: number;
-  status: SheetRowStatus;
-  step: DuplicateStep | null;
-  reason: string | null;
-  externalId: string | null;
-  matchedTransactionId: string | null;
-}
-
-export function layoutHash(signature: string): string {
-  return createHash("sha256")
-    .update(`v${RECIPE_VERSION}|${signature}`)
-    .digest("hex");
-}
-
 export async function getSavedLayouts(
   userId: string,
   signatures: string[],
 ): Promise<Map<string, { conventions: Conventions; lastSource: string }>> {
   const byHash = new Map(signatures.map((s) => [layoutHash(s), s]));
-  const out = new Map<string, { conventions: Conventions; lastSource: string }>();
+  const out = new Map<
+    string,
+    { conventions: Conventions; lastSource: string }
+  >();
   if (!byHash.size) return out;
   const rows = await forUser(userId).selectFrom(
     sheet_import_layouts,
@@ -77,25 +67,26 @@ export async function saveLayouts(
   source: string,
   layouts: ReadonlyArray<{ signature: string; conventions: Conventions }>,
 ): Promise<void> {
-  for (const layout of layouts) {
-    const values = {
-      signature: layoutHash(layout.signature),
-      recipe_version: RECIPE_VERSION,
-      conventions: layout.conventions,
-      last_source: source,
-    };
-    await forUser(userId)
-      .insert(sheet_import_layouts, values)
-      .onConflictDoUpdate({
-        target: [sheet_import_layouts.user_id, sheet_import_layouts.signature],
-        set: {
-          recipe_version: values.recipe_version,
-          conventions: values.conventions,
-          last_source: values.last_source,
-          updated_at: new Date().toISOString(),
-        },
-      });
-  }
+  if (!layouts.length) return;
+  await forUser(userId)
+    .insert(
+      sheet_import_layouts,
+      layouts.map((layout) => ({
+        signature: layoutHash(layout.signature),
+        recipe_version: RECIPE_VERSION,
+        conventions: layout.conventions,
+        last_source: source,
+      })),
+    )
+    .onConflictDoUpdate({
+      target: [sheet_import_layouts.user_id, sheet_import_layouts.signature],
+      set: {
+        recipe_version: sql`excluded.recipe_version`,
+        conventions: sql`excluded.conventions`,
+        last_source: sql`excluded.last_source`,
+        updated_at: new Date().toISOString(),
+      },
+    });
 }
 
 export async function createSheetImport(
@@ -128,7 +119,7 @@ export async function recordSheetRows(
   rows: ReadonlyArray<SheetRowLog>,
 ): Promise<void> {
   const scope = forUser(userId);
-  for (const batch of inChunks([...rows])) {
+  for (const batch of chunk(rows, SHEET_REQUEST_ROWS)) {
     await scope.insert(
       sheet_import_rows,
       batch.map((row) => ({
@@ -203,20 +194,14 @@ export async function undoSheetImport(
         eq(sheet_import_rows.status, "imported"),
       ),
     );
-  const externalIds = logged.flatMap((r) => (r.externalId ? [r.externalId] : []));
-  const transactionIds = new Set<string>();
-  for (const batch of inChunks(externalIds)) {
-    const found = await scope
-      .select({ id: ledger_external_ids.transaction_id })
-      .from(
-        ledger_external_ids,
-        and(
-          eq(ledger_external_ids.origin, open.source),
-          inArray(ledger_external_ids.external_id, batch),
-        ),
-      );
-    for (const row of found) transactionIds.add(row.id);
-  }
+  const externalIds = logged.flatMap((r) =>
+    r.externalId ? [r.externalId] : [],
+  );
+  const transactionIds = await transactionIdsForExternalIds(
+    userId,
+    open.source,
+    externalIds,
+  );
   const deleted = await scope.transaction(async (txScope) => {
     const removed = await deleteLedgerTransactions(
       userId,

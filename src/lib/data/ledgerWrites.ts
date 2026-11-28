@@ -1,6 +1,7 @@
 import { ActionError } from "@/lib/actionError";
 import { and, between, eq, inArray, like, min, sum } from "drizzle-orm";
 
+import { chunk } from "@/lib/arrays";
 import { getAccountLabels } from "@/lib/data/accounts";
 import { forUser, type UserScope } from "@/lib/db/scope";
 import {
@@ -61,13 +62,7 @@ async function ensureAccounts(
 
 const WRITE_CHUNK = 100;
 
-function chunked<T>(items: ReadonlyArray<T>, size = WRITE_CHUNK): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    out.push(items.slice(i, i + size));
-  }
-  return out;
-}
+const READ_CHUNK = 500;
 
 interface DraftWrite {
   id: string;
@@ -93,7 +88,7 @@ async function writeEntries(
       legacy_tx_id: line.legacyTxId,
     })),
   );
-  for (const batch of chunked(entryRows)) {
+  for (const batch of chunk(entryRows, WRITE_CHUNK)) {
     await scope.insert(ledger_entries, batch);
   }
   const refRows = writes.flatMap(({ id, draft }) =>
@@ -103,7 +98,7 @@ async function writeEntries(
       transaction_id: id,
     })),
   );
-  for (const batch of chunked(refRows)) {
+  for (const batch of chunk(refRows, WRITE_CHUNK)) {
     await scope.insert(ledger_external_ids, batch);
   }
 }
@@ -238,7 +233,7 @@ async function insertTransactions(
   scope: UserScope,
   writes: ReadonlyArray<DraftWrite>,
 ) {
-  for (const batch of chunked(writes)) {
+  for (const batch of chunk(writes, WRITE_CHUNK)) {
     await scope.insert(
       ledger_transactions,
       batch.map(({ id, draft }) => ({
@@ -300,7 +295,7 @@ export async function existingExternalIds(
 ): Promise<Set<string>> {
   const s = scope ?? forUser(userId);
   const found = new Set<string>();
-  for (const batch of chunked([...new Set(externalIds)], 500)) {
+  for (const batch of chunk([...new Set(externalIds)], READ_CHUNK)) {
     const rows = await s
       .select({ external_id: ledger_external_ids.external_id })
       .from(
@@ -315,6 +310,28 @@ export async function existingExternalIds(
   return found;
 }
 
+export async function transactionIdsForExternalIds(
+  userId: string,
+  origin: string,
+  externalIds: ReadonlyArray<string>,
+): Promise<Set<string>> {
+  const scope = forUser(userId);
+  const found = new Set<string>();
+  for (const batch of chunk([...externalIds], READ_CHUNK)) {
+    const rows = await scope
+      .select({ id: ledger_external_ids.transaction_id })
+      .from(
+        ledger_external_ids,
+        and(
+          eq(ledger_external_ids.origin, origin),
+          inArray(ledger_external_ids.external_id, batch),
+        ),
+      );
+    for (const row of rows) found.add(row.id);
+  }
+  return found;
+}
+
 export async function existingExternalRefs(
   userId: string,
   origin: string,
@@ -322,7 +339,7 @@ export async function existingExternalRefs(
 ): Promise<Map<string, string>> {
   const scope = forUser(userId);
   const found = new Map<string, string>();
-  for (const batch of chunked([...new Set(externalIds)], 500)) {
+  for (const batch of chunk([...new Set(externalIds)], READ_CHUNK)) {
     const rows = await scope
       .select({
         external_id: ledger_external_ids.external_id,
@@ -447,7 +464,7 @@ export async function deleteLedgerTransactions(
   if (transactionIds.length === 0) return 0;
   const remove = async (tx: UserScope) => {
     let deleted = 0;
-    for (const ids of chunked([...transactionIds], 500)) {
+    for (const ids of chunk([...transactionIds], READ_CHUNK)) {
       await tx.delete(
         ledger_entries,
         inArray(ledger_entries.transaction_id, ids),
@@ -484,10 +501,11 @@ export async function getLedgerRecords(
   const ids = [...new Set(transactionIds)];
   if (ids.length === 0) return new Map();
   const byChunk = async <T>(
-    fetch: (chunk: string[]) => Promise<T[]>,
+    fetch: (part: string[]) => Promise<T[]>,
   ): Promise<T[]> => {
     const rows: T[] = [];
-    for (const chunk of chunked(ids, 500)) rows.push(...(await fetch(chunk)));
+    for (const part of chunk(ids, READ_CHUNK))
+      rows.push(...(await fetch(part)));
     return rows;
   };
   const [transactions, entries, accounts, externalIds, scaleOf] =

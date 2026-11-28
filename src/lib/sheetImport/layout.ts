@@ -226,6 +226,26 @@ export function withTable(
   };
 }
 
+export function withReading(
+  recipe: SheetRecipe,
+  conflict: ReadingConflict,
+  choice: ReadingChoice,
+): SheetRecipe {
+  return withTable(
+    recipe,
+    conflict.table,
+    choice === "saved" ? conflict.saved : conflict.fresh,
+  );
+}
+
+export function patchTable(
+  recipe: SheetRecipe,
+  index: number,
+  patch: Partial<TableRecipe>,
+): SheetRecipe {
+  return withTable(recipe, index, { ...recipe.tables[index], ...patch });
+}
+
 export function layoutsToSave(
   recipe: SheetRecipe,
   keys: (string | null)[],
@@ -235,4 +255,14 @@ export function layoutsToSave(
       ? [{ signature: keys[i]!, conventions: conventionsOf(table) }]
       : [],
   );
+}
+
+export function uniqueSignatures(keys: ReadonlyArray<string | null>): string[] {
+  return [...new Set(keys.filter((key): key is string => !!key))];
+}
+
+export function conventionsBySignature(
+  layouts: ReadonlyArray<{ signature: string; conventions: Conventions }>,
+): Map<string, Conventions> {
+  return new Map(layouts.map((l) => [l.signature, l.conventions]));
 }

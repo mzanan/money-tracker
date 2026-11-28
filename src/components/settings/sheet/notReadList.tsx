@@ -1,4 +1,5 @@
-import { issueLabel, MAX_LISTED_ISSUES } from "@/lib/sheetImport/corrections";
+import { MAX_LISTED_ISSUES } from "@/lib/constants/sheetImport";
+import { issueLabel } from "@/lib/sheetImport/corrections";
 import type { SheetRowIssue } from "@/lib/sheetImport/apply";
 
 import { ErrorText } from "@/components/ui/errorText";

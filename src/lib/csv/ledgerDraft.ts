@@ -1,4 +1,4 @@
-import type { CsvRow } from "@/lib/actions/csvImport";
+import type { CsvRow } from "@/lib/csv/types";
 import { isValidAmountForCurrency, roundToScale } from "@/lib/currency";
 import { isSupportedCurrency } from "@/lib/constants/currencies";
 import { isValidCalendarDate } from "@/lib/dates";
@@ -41,6 +41,16 @@ export function csvExternalId(providedId: string): string {
   return `${EXTERNAL_ID_PREFIX.csv}${providedId.trim().toLowerCase().slice(0, 64)}`;
 }
 
+export function csvContentId(row: {
+  occurredOn: string;
+  amount: number;
+  currency: string;
+  description: string | null;
+  kind: string;
+}): string {
+  return transactionContentHash(row).slice(0, 32);
+}
+
 export function csvDraft(
   row: CsvRow,
   source: string,
@@ -62,7 +72,7 @@ export function csvDraft(
   const providedId = row.externalId?.trim();
   const externalId = providedId
     ? csvExternalId(providedId)
-    : transactionContentHash({ ...row, amount }).slice(0, 32);
+    : csvContentId({ ...row, amount });
   const money = { amount, currency: row.currency };
   const spent = csvSpent(row, scaleOf);
   const lines = spent

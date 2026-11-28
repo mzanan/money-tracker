@@ -7,6 +7,7 @@ import { actionErrorMessage } from "@/lib/actionError";
 import { MANUAL_SOURCE } from "@/lib/constants/sources";
 import { forUser } from "@/lib/db/scope";
 import { csv_import_locks } from "@/lib/db/schema";
+import type { CsvRow } from "@/lib/csv/types";
 import {
   csvDraft,
   postableCsvDrafts,
@@ -23,21 +24,7 @@ import { getScaleOf } from "@/lib/data/cryptoAssets";
 import { isSyncable } from "@/lib/integrations";
 import { getUser } from "@/lib/session";
 
-import type { Money } from "@/types/ledger";
-
 import type { ActionResult } from "./transactions";
-
-export interface CsvRow {
-  kind: "income" | "expense";
-  amount: number;
-  currency: string;
-  occurredOn: string;
-  occurredAt?: string;
-  description: string | null;
-  externalId?: string | null;
-  feeAmount?: number;
-  spent?: Money;
-}
 
 export interface CsvImportInput {
   source: string;
