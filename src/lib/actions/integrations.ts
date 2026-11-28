@@ -101,8 +101,6 @@ export async function saveIntegration(
   const apiSecret = input.apiSecret?.trim() || null;
   const aad = `${user.id}:${input.provider}`;
 
-  // First connect requires both credentials. On edit, blank fields keep the
-  // stored values — the secret is never sent to the client to be echoed back.
   if (!existing) {
     if (!apiKey) return { ok: false, error: "API key is required" };
     if (input.provider === "bybit" && !apiSecret) {
